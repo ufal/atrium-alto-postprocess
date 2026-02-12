@@ -81,11 +81,11 @@ def pre_filter_line(line: str) -> tuple[str, str]:
 
     # Fast check for very short or non-text content
     if n_chars < 4 or len(unique_symbols) < 3:
-        return "Non-text", ""
+        return "Non-text", clean_text
 
     letters = sum(c.isalpha() for c in clean_text)
     if letters / n_chars < 0.3:  # Mostly symbols/numbers
-        return "Non-text", ""
+        return "Non-text", clean_text
 
     return "Process", clean_text
 

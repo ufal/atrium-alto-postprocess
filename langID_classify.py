@@ -111,12 +111,14 @@ def main():
 
             # 1. Parse Splits (Outgoing)
             # This detects "divi- {divided}" -> returns "divided", "divi", "ded"
+            # or returns "text", "", "" if no split detected.
             merged_text, outgoing_prefix, outgoing_suffix = parse_line_splits(line)
 
-            # 2. Handle Incoming Split (from previous line)
+            # 2. Current Line's Split State
+            current_split_ws = outgoing_prefix
             current_split_we = ""  # Default: no split ending on this line
 
-            if expected_incoming_suffix:
+            if expected_incoming_suffix != "":
                 # The previous line said we expect 'ded' here.
                 # Remove 'ded' from the visual text of THIS line.
                 stripped_candidate = merged_text.lstrip()
@@ -126,13 +128,10 @@ def main():
                     # Record it as the "End" of the split
                     current_split_we = expected_incoming_suffix
 
-            # 3. Map Columns
-            current_split_ws = outgoing_prefix  # The "divi" part
-
-            # 4. Update state for NEXT line
+            # 3. Update state for NEXT line
             expected_incoming_suffix = outgoing_suffix
 
-            # 5. Pre-filter
+            # 4. Pre-filter
             cat, clean_merged = pre_filter_line(merged_text)
 
             if cat != "Process":
