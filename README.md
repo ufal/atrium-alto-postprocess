@@ -147,6 +147,35 @@ PAGE_TXT/
 └── ...
 ```
 
+#### GLM method
+
+> [!WARNING]
+> The method is **GPU**-bound, slower than the LayoutReader method, and requires `gpuram48G` card.
+
+    python3 extract_LLM_ALTO_2_TXT.py
+
+that uses uses the GLM-4v-9b multimodal large language model [^10] to perform generative OCR directly from page images.
+
+Unlike the previous methods that parse existing ALTO XML text, this script basically uses source page images to generate 
+text prompted as `Transcribe all text on this page exactly as it appears`, Trims whitespace and resizes high-resolution 
+images to fit model constraints
+
+> [!NOTE]
+> This method is significantly slower than parsing XML but often yields higher quality text for complex 
+layouts or degraded scans. It specifically patches the transformers configuration to run the GLM-4v architecture.
+
+Example of per-page text files: [PAGE_TXT_LLM](data_samples/PAGE_TXT_LLM) 📁.
+```
+PAGE_TXT_LLM/
+├── <file1>
+│   ├── <file1>-<page>.txt 
+│   └── ...
+├── <file2>
+│   ├── <file2>-<page>.txt 
+│   └── ...
+└── ...
+```
+
 ---
 
 ### ▶ Step 4: Classify Page Text Quality & Language
@@ -265,3 +294,4 @@ before the Handwritten Text Recognition (HTR) processing is applied.
 [^8]: https://github.com/K4TEL/atrium-alto-postprocess
 [^7]: https://ufal.mff.cuni.cz/home-page
 [^9]: https://github.com/ppaanngggg/layoutreader
+[^10]: https://huggingface.co/THUDM/glm-4v-9b
