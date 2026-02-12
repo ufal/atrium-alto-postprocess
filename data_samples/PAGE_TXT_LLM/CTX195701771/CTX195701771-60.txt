@@ -1,0 +1,18 @@
+Tabela osteometryczna oraz indeksy wytrzymałości kości kończyn.
+Měry a indexy
+dle Duversta/
+humerus
+radius
+ulna
+Fyziologická délka
+*197 mm
+185,5 mm
+215 mm
+Nejmenší obvod
+53 mm
+42 mm
+23 mm
+Index robusticity
+26,8
+22,6
+10,7

@@ -1,0 +1,26 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 12 Výkop 12505
+Hloubka: 0,6 m Tvar: obdélný
+Povrch: jednoduchý
+Zlom stěny: ostrý Sklon stěny: :
+Povrch stěny hladký přímý
+Zlom dna : ostrý Sklon dna :
+Povrch dna : hladký plochý
+Profil: Úhel: °
+Výplň : 12120, 12121, 12123
+Jiné :
+Stratigraficky pod : 12120, 12121, 12123
+Stratigraficky nad 12132, 12133, 12118, 12131, 12122
+Číslo řezu : 10
+Číslo plánu : 8, 9
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop hrobové jámy H24
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 25/12/15
+Vykopal: B Zaznamenal: Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/15

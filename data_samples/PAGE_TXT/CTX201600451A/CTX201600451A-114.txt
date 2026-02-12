@@ -1,0 +1,28 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 12 Výkop 12508
+Hloubka: 0,54 m Tvar: obdélník se zaoblenými rohy
+Povrch: jednoduchý
+Zlom stěny: nelze určit Sklon stěny: :
+Povrch stěny hladký přímý
+Zlom dna : nelze určit Sklon dna :
+Povrch dna :
+Profil: Úhel: °
+Výplň : 12132,12133
+Jiné :
+ad zlom stěny: porušeno mladšími zásahy, zlom dna a stěny +
+dno - nedokopáno
+Stratigraficky pod : 12132, 12133
+Stratigraficky nad 12130, 12118
+Číslo řezu : 10
+Číslo plánu : 9
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop hrobové jámy H29
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 25/12/15
+Vykopal: B Zaznamenal: Kindelmanová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/15

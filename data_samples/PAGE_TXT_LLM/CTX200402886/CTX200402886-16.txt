@@ -1,0 +1,149 @@
+KOMPONENTY
+Rubriky vyplňuje heslár. PRESNÁ DATAČE uveděte, jen je-li to možné, a to libovolným způsobem včetně do 25 znaku. V rubrice AKTIVITY můžete použít až 5 hesel, podle kterých lomítkem, avšak pouze u dále
+nedefinovaných komponentů. PRESNÁ LOKALIZACE uveděte pouze tehdy, není-li totiž s lokalizací cele akce. V rubrice
+NÁDV. VÝSKA uveděte nadmorskou výšku v metrech (od-do). URCÍL vyplňte, není-li o určení autora zapsu, a přípovědi,
+ zda jste o určení podle materiálu, nebo drohotného zdroje (literatura, inventarní kniha).
+A
+B
+C
+D
+E
+F
+G
+H
+I
+KULTURA
+ri.a
+KULTURA
+vs2
+KULTURA
+novove
+KULTURA
+KULTURA
+KULTURA
+KULTURA
+KULTURA
+KULTURA
+PŘESNÁ DATAČE
+0 - 180 n. l.
+PŘESNÁ DATAČE
+2. pol. 14. stol.
+PŘESNÁ DATAČE
+17. - 19. stol.
+PŘESNÁ DATAČE
+PŘESNÁ DATAČE
+PŘESNÁ DATAČE
+PŘESNÁ DATAČE
+PŘESNÁ DATAČE
+PŘESNÁ DATAČE
+PŘESNÁ DATAČE
+PŘES. LOK. 1.
+2.
+2.
+2.
+2.
+2.
+2.
+2.
+2.
+2.
+3.
+3.
+3.
+3.
+3.
+3.
+3.
+3.
+3.
+4.
+4.
+4.
+4.
+4.
+4.
+4.
+4.
+4.
+5.
+5.
+5.
+5.
+5.
+5.
+5.
+5.
+5.
+5.
+AKTIVITY
+Sid/ / /
+Sid
+Sid
+Sid
+Sid
+Sid
+Sid
+Sid
+Sid
+Sid
+1.
+1.
+1.
+1.
+1.
+1.
+1.
+1.
+1.
+1.
+6.
+6.
+6.
+6.
+6.
+6.
+6.
+6.
+6.
+6.
+AREÁL
+MĚSTO
+URČÍL aut. záp.
+MĚSTO
+URČÍL aut. záp.
+MĚSTO
+URČÍL aut. záp.
+MĚSTO
+URČÍL aut. záp.
+MĚSTO
+URČÍL aut. záp.
+MĚSTO
+URČÍL aut. záp.
+MĚSTO
+URČÍL aut. záp.
+NÁDM. V.
+309 - 312
+309 - 312
+309 - 312
+309 - 312
+309 - 312
+309 - 312
+309 - 312
+309 - 312
+309 - 312
+Created by Radek Siroky
+PM
+01 Hlavní ARÚ
+Created on 4/11/2002 12:15:00
+mater.
+dr. z. d.
+mater.
+dr. z. d.
+mater.
+dr. z. d.
+mater.
+dr. z. d.
+mater.
+dr. z. d.
+mater.
+dr. z. d.

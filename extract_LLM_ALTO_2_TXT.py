@@ -9,11 +9,11 @@ Refactored to fix ChatGLMConfig errors and input formatting.
 import os
 import pandas as pd
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers.modeling_utils import PreTrainedModel
 from PIL import Image, ImageFile, ImageOps
 from pathlib import Path
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
 # --- Configuration ---
 INPUT_CSV = "alto_statistics_pages.csv"
@@ -22,9 +22,11 @@ MODEL_PATH = "THUDM/glm-4v-9b"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Image settings
-MAX_RESOLUTION = 3840
+MAX_RESOLUTION = 1344
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 Image.MAX_IMAGE_PIXELS = None
+
+
 
 def trim_whitespace(image, padding=20):
     """Crops the image to content bounding box."""
@@ -41,8 +43,9 @@ def trim_whitespace(image, padding=20):
             lower = min(height, lower + padding)
             return image.crop((left, upper, right, lower))
     except Exception:
-        pass # Fallback to original if trim fails
+        pass
     return image
+
 
 def resize_if_huge(image, max_dim=MAX_RESOLUTION):
     """Downscales image if too large."""
@@ -60,45 +63,47 @@ def load_model():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 
     print(f"Loading configuration from {MODEL_PATH}...")
-    # Load the configuration explicitly first
     config = AutoConfig.from_pretrained(MODEL_PATH, trust_remote_code=True)
 
-    # --- START OF FIX ---
-    # Check if the attribute is missing and patch it
-    if not hasattr(config, "num_hidden_layers"):
-        # If 'num_layers' exists (ChatGLM standard), use it
-        if hasattr(config, "num_layers"):
-            print(f"Patching Config: Mapping num_layers ({config.num_layers}) to num_hidden_layers")
-            config.num_hidden_layers = config.num_layers
-        else:
-            # Fallback: Hardcode to 40 (standard for GLM-4-9B) if even num_layers is missing
-            # This handles cases where the config object is severely malformed
-            print("Patching Config: Hardcoding num_hidden_layers to 40")
-            config.num_hidden_layers = 40
-            config.num_layers = 40  # Ensure consistency
-    # --- END OF FIX ---
+    # --- FIX 1: Patch Tokenizer ---
+    if not hasattr(tokenizer, "batch_encode_plus"):
+        def patched_batch_encode_plus(batch_text_or_text_pairs, **kwargs):
+            return tokenizer(batch_text_or_text_pairs, **kwargs)
 
-    print(f"Loading model from {MODEL_PATH} with patched config...")
+        tokenizer.batch_encode_plus = patched_batch_encode_plus
+
+    # --- FIX 2: Patch Config for Architecture ---
+    if not hasattr(config, "num_hidden_layers"):
+        config.num_hidden_layers = getattr(config, "num_layers", 40)
+
+    # --- FIX 3: Patch Config for Init ---
+    if not hasattr(config, "max_length"):
+        config.max_length = getattr(config, "seq_length", 8192)
+
+    print(f"Loading model from {MODEL_PATH}...")
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_PATH,
-        config=config,  # Pass the patched config object here
+        config=config,
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,
         low_cpu_mem_usage=True
     ).to(DEVICE)
 
-    # Double-check the model's internal config reference just to be safe
-    if not hasattr(model.config, "num_hidden_layers"):
-        model.config.num_hidden_layers = model.config.num_layers
+    # --- FIX 4: Cleanup Config for Generation ---
+    # 1. Remove max_length to prevent the "modified config" error
+    if hasattr(model.config, "max_length"):
+        del model.config.max_length
+
+    # 2. Silence warnings about 'temperature' and 'top_p' being used with do_sample=False
+    # We explicitly unset them in the model's internal generation config
+    model.generation_config.temperature = None
+    model.generation_config.top_p = None
 
     model.eval()
     return tokenizer, model
 
 
 def extract_single_page_glm(tokenizer, model, image_path):
-    """
-    Runs inference using tokenizer.apply_chat_template
-    """
     try:
         # 1. Load & Preprocess
         image = Image.open(image_path).convert("RGB")
@@ -106,7 +111,6 @@ def extract_single_page_glm(tokenizer, model, image_path):
         image = resize_if_huge(image)
 
         # 2. Construct Chat Input
-        # GLM-4v expects the image object inside the message list
         messages = [
             {
                 "role": "user",
@@ -115,7 +119,7 @@ def extract_single_page_glm(tokenizer, model, image_path):
             }
         ]
 
-        # 3. Format Inputs using the Chat Template
+        # 3. Format Inputs
         inputs = tokenizer.apply_chat_template(
             messages,
             add_generation_prompt=True,
@@ -128,26 +132,37 @@ def extract_single_page_glm(tokenizer, model, image_path):
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=2048,
-                do_sample=False, # Deterministic
-                temperature=0.1  # Low temperature for accuracy if do_sample were True
+                max_new_tokens=4096,
+                do_sample=False,  # Deterministic (Greedy Search)
+                # temperature=0.1,      <-- REMOVED to stop warning
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id,
             )
 
         # 5. Decode
-        # Slice outputs to remove the input tokens (echo)
-        outputs = outputs[:, inputs['input_ids'].shape[1]:]
-        generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        input_length = inputs['input_ids'].shape[1]
+        output_tokens = outputs[:, input_length:]
+
+        generated_text = tokenizer.decode(output_tokens[0], skip_special_tokens=True)
 
         return generated_text
 
     except Exception as e:
-        # Check for CUDA OOM specifically to give better feedback
         if "CUDA out of memory" in str(e):
             print(f"⚠️ OOM Error on {image_path}. Skipping.")
             torch.cuda.empty_cache()
         else:
             print(f"⚠️ Error processing {image_path}: {e}")
         return None
+
+    except Exception as e:
+        if "CUDA out of memory" in str(e):
+            print(f"⚠️ OOM Error on {image_path}. Skipping.")
+            torch.cuda.empty_cache()
+        else:
+            print(f"⚠️ Error processing {image_path}: {e}")
+        return None
+
 
 def main():
     if not os.path.exists(INPUT_CSV):
@@ -182,7 +197,6 @@ def main():
             if backup_image_path.exists():
                 image_path = backup_image_path
             else:
-                # Silent skip to keep progress bar clean, enable logging if needed
                 continue
 
         # --- Output Check ---
@@ -201,6 +215,7 @@ def main():
                 f.write(text)
 
     print("Done.")
+
 
 if __name__ == "__main__":
     main()

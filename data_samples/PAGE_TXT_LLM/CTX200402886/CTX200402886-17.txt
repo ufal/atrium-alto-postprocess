@@ -1,0 +1,73 @@
+J
+KULTURA
+PRESNA DATACE
+AKTIVITY
+AREÁL
+NÁD.M.V.
+PRES.LOK.1. 2. :
+3. :
+4. :
+5. :
+6. :
+URČÍL aut.záp.
+dr.zd.
+KULTURA
+PRESNA DATACE
+AKTIVITY
+AREÁL
+NÁD.M.V.
+PRES.LOK.1. 2. :
+3. :
+4. :
+5. :
+6. :
+URČÍL aut.záp.
+dr.zd.
+L
+KULTURA
+PRESNA DATACE
+AKTIVITY
+AREÁL
+NÁD.M.V.
+PRES.LOK.1. 2. :
+3. :
+4. :
+5. :
+6. :
+URČÍL aut.záp.
+dr.zd.
+M
+KULTURA
+PRESNA DATACE
+AKTIVITY
+AREÁL
+NÁD.M.V.
+PRES.LOK.1. 2. :
+3. :
+4. :
+5. :
+6. :
+URČÍL aut.záp.
+dr.zd.
+NEMOVITÉ OBJEKTY
+Jednotlivé objekty nebo skupiny objektů charakterizujte kombinací 1-4 heselé v libovolném gramatickém tvaru,
+hesla oddělte čárkou. Nezapomínejte uvádět komponenty (A-X). Pokud to lze, uvedte i počet jednotek, příp. hrubý
+odhad ( 1-xxx-xxx).
+Komp. Druh/Charakteristika objektu (ú) Počet Komp. Druh/Charakteristika objektu (ú) Počet
+A
+vrstva
+B
+vrstva
+B
+sklep
+1
+B
+mělký objekt
+1
+C
+sklep
+1
+Created by Radek Siroky
+PM
+01 Hlavení ARU
+Created on 4/11/2002 12:15:00

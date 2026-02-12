@@ -1,0 +1,43 @@
+Vrsta 0113 (n: 50ks)
+Secale cereale
+15,00
+Avena sp.
+1,00
+Triticum aestivum
+5,00
+Hordeum vulgare
+2,00
+Juniperus communis
+2,00
+Cerealia indeterminata
+1,00
+Corylus avellana
+1,00
+Chenopodium album
+1,00
+Quercus sp.
+1,00
+Indeterminata
+3,00
+
+Plzeň - Sedláckova ulice
+Secale cereale
+30%
+Avena sp.
+2%
+Triticum aestivum
+10%
+Hordeum vulgare
+4%
+Indeterminata
+6%
+Cerealia indeterminata
+40%
+Juniperus communis
+2%
+Corylus avellana
+2%
+Quercus sp.
+2%
+Chenopodium album
+2%

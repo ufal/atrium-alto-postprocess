@@ -1,0 +1,26 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 13 Výkop 13502
+Hloubka: 1,0 m Tvar: obdélník se zaoblenými rohy
+Povrch: jednoduchý
+Zlom stěny: ostrý Sklon stěny: :
+Povrch stěny hladký přímý
+Zlom dna : ostrý Sklon dna :
+Povrch dna : hladký plochý
+Profil: Úhel: °
+Výplň : 13112,13119,13120
+Jiné :
+Stratigraficky pod : 13112, 13119, 13120
+Stratigraficky nad 13127, 13114
+Číslo řezu : 18
+Číslo plánu : 15, 16, 17
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop- hrobová jáma H15
+Totožno s kont. : Výzkumná metoda lopata Vloženo : 26/12/15
+Vykopal: B Zaznamenal: Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/17

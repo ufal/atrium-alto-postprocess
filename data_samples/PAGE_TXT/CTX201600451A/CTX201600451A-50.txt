@@ -1,0 +1,49 @@
+Naleziště :
+Kočí - sv. Bartoloměj
+Rok :
+2015
+Areál:
+•v, v ,
+Bližší učeni:
+sonda 13
+Druh kontextu :
+Uloženina
+Číslo kontextu :
+13100
+Druh : vrstva
+Síla : 0,1 m
+Jemná komponenta :
+Zastoupení: 100%
+Barva: střední
+Složení:
+šeď
+písčitý/á
+hlína
+Pevnost: středně ulehlá
+Hrubá komponenta :
+Zastoupení: %
+Hranice : ostrá
+Materiál:
+Další popis :
+Stratigraficky pod --
+Stratigraficky nad 13101
+Číslo řezu : 18
+Číslo plánu :
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : 187-190
+Druh : K, Ko, Fe, hliněná kulička
+Poznámky : drn
+Totožné s kont. :
+Výzkumná metoda : škrabka Vloženo :
+25/12/15
+Vykopal: B
+Datum :
+Zaznamenal :
+Datum :
+P. Kindelmann
+03/09/15
+Kontrola : JF
+Datum: 07/11/15

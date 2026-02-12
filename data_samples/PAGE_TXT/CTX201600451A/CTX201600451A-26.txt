@@ -1,0 +1,48 @@
+Naleziště :
+Kočí - sv. Bartoloměj
+Rok :
+2015
+Areál:
+•v, v ,
+Bližší učeni:
+sonda 12
+Druh kontextu :
+Uloženina
+Číslo kontextu :
+12116
+Druh : vrstva
+Síla : m
+Jemná komponenta :
+Zastoupení: 100%
+Barva: světlá šedá
+Složení:
+okr
+jíl
+Pevnost: ulehlá
+Hrubá komponenta :
+Zastoupení: %
+Hranice : ostrá
+Materiál:
+Další popis : ad síla: baze nedosaženo
+Stratigraficky pod 12115, 12501, 12500, 12504, 12124, 12137, 12138, 12503
+Stratigraficky nad 12129
+Číslo řezu : 10, 12
+Číslo plánu : 7, 8, 9, 11
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Poznámky :
+Totožné s kont. :
+Výzkumná metoda : škrabka Vloženo :
+24/12/15
+Vykopal: B
+Datum :
+Zaznamenal :
+Datum :
+P. Kinelmann
+04/09/15
+Kontrola : JF
+Datum: 07/11/15

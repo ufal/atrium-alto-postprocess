@@ -1,0 +1,19 @@
+MOVITÉ NÁLEZY
+Movité nálezy uvedené podle komponentu materiálu. V rubrice DRUH NÁLEZU/POCET/POZNÁMKA uvedte jednotlivé
+druhů předmětů z daného materiálu s kvantifikací (je-li možná) a event. Poznamkou. Při výčtu předmětů využijte
+v maximální míře uvedena hesla (v libovolném gramatickém tvaru), které vyrážejí vskutku pouze k blíže specifikaci a
+poznamce. Nestáčí-li k výčtu naležených radku, rozdělte stránku do dvou sloupců.
+ULOŽENÍ
+IDENT. Č.
+Komp. Materiál
+Druh nalezu/počet/poznámka (Komp.) (Materiál)
+(Druh nalezu)
+A
+keramika
+B
+keramika
+paleobot.m.
+Created by Radek Siroky
+PM
+01 Hlásiči ARU
+Created on 4/11/2002 12:15:00

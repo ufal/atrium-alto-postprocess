@@ -1,0 +1,45 @@
+Hmotnosti zastoupení keramických tříd ve vrstvě 1077 (n: 64ks, hm: 353g)
+120
+100
+80
+60
+40
+20
+0
+PM107
+4
+PM109
+80
+PM201
+109
+PM203
+113
+PM204
+4
+PM205
+4
+PM212
+32
+PM301
+1
+PM309
+6
+keramické třídy
+
+Procentuální zastoupení keramických tříd ve vrstvě 1077 (n: 64ks)
+PM309
+2%
+PM212
+9%
+PM205
+1%
+PM204
+1%
+PM107
+1%
+PM109
+23%
+PM201
+31%
+PM203
+32%

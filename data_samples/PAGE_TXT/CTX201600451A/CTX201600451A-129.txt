@@ -1,0 +1,27 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 15 Výkop 15500
+Hloubka: 0,1 m Tvar: obdélník
+Povrch: jednoduchý
+Zlom stěny: nezkoumáno Sklon stěny: :
+Povrch stěny
+Zlom dna : nezkoumáno Sklon dna :
+Povrch dna :
+Profil: Úhel: °
+Výplň: 15902
+Jiné :
+ad hloubka: není úplná, výška odhalené části
+Stratigraficky pod : 15902
+Stratigraficky nad 15104, 15106
+Číslo řezu : 25
+Číslo plánu : 24
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop pro zeď 15902
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 27/12/15
+Vykopal: B Zaznamenal: Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 08/11/15

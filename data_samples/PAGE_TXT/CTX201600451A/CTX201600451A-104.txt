@@ -1,0 +1,28 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 11 Výkop 11500
+Hloubka: 0,4 m Tvar: nelze určit
+Povrch: jednoduchý
+Zlom stěny: ostrý Sklon stěny: :
+Povrch stěny hladký přímý
+Zlom dna : nelze určit Sklon dna :
+Povrch dna :
+Profil: Úhel: °
+Výplň: 11901
+Jiné :
+zkoumán pouze výsek výkopu, celkový tvar proto neurčitelný,
+vkop zdivem vyplněn, proto nelze popsat jeho dno
+Stratigraficky pod : 11901
+Stratigraficky nad 11104, 11106
+Číslo řezu : 4
+Číslo plánu :
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop pro základovou zeď sakristie
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 24/12/15
+Vykopal: B Zaznamenal: M.Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/15

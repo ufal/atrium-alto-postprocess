@@ -1,0 +1,26 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 12 Výkop 12501
+Hloubka: 1,0 m Tvar: obdélný
+Povrch: jednoduchý
+Zlom stěny: ostrý Sklon stěny: :
+Povrch stěny hladký konvexní
+Zlom dna : ostrý Sklon dna :
+Povrch dna : hladký plochý
+Profil: Úhel: °
+Výplň : 12901, 12107, 12108
+Jiné :
+Stratigraficky pod : 12107, 12108, 12901
+Stratigraficky nad 12105, 12106, 12114,12115, 12104, 12111, 12117
+Číslo řezu : 10
+Číslo plánu :
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop pro zeď 12901 (sakristie)
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 24/12/15
+Vykopal: B Zaznamenal: Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/15

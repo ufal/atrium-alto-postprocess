@@ -1,0 +1,26 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 Sonda 12 Výkop 12500
+Hloubka: 0,86 m Tvar: obdélný
+Povrch: jednoduchý
+Zlom stěny: ostrý Sklon stěny: :
+Povrch stěny nepravidelný konvexní
+Zlom dna : ostrý Sklon dna :
+Povrch dna : hladký plochý
+Profil: Úhel: °
+Výplň : 12903, 12105, 12106, 12114
+Jiné :
+Stratigraficky pod : 12903, 12105, 12106, 12114
+Stratigraficky nad 12115, 12116, 12134, 12110, 12111, 12104, 12136, 1
+Číslo řezu : 10, 12
+Číslo plánu : 6
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop pro zeď 12903
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 25/12/15
+Vykopal: B Zaznamenal: Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/15

@@ -1,0 +1,27 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 13 Výkop 13501
+Hloubka: 1,0 m Tvar: nepravidlený obdélník
+Povrch: jednoduchý
+Zlom stěny: ostrý Sklon stěny: :
+Povrch stěny hladký přímý
+Zlom dna : pozvolný Sklon dna :
+Povrch dna : hladký plochý
+Profil: Úhel: °
+Výplň : 13106,13110,13111
+Jiné :
+Stratigraficky pod : 13111, 13106, 13110
+Stratigraficky nad 13108, 13117, 13132, 13123, 13121, 13122, 13114
+Číslo řezu : 18
+Číslo plánu : 14, 15, 16, 17
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : stratigraficky nad: 13119, 13112
+hrobová jáma hrobu H12
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 26/12/15
+Vykopal: B Zaznamenal: Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/15

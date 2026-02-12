@@ -1,0 +1,85 @@
+ZPRÁVA O ARCHEOLOGICKÉ AKCI
+System ARCHIV – ARU AVČR Praha , odd. prostorové archeologie
+
+AKCE
+Záskrtněte nekterou z možnosti, nebo vyplňte podle hesláru. V rubrice DRUH AKCE můžete uvést max. tří hesla (čísla),
+oddělena lomítkem. V rubrice ANALÝZY uvedte libovolný počet hesel, oddělených lomítkem.
+
+Soubor:
+ZPRÁVA
+(Hlásoki)
+DALŠÍ KAT. Ú.
+(RZ-BZO)
+Plzeň
+OKRES
+PR.Č.AKCE (pro ARU)
+(NaI. Zpr.)
+Admin. O.
+Plzeň - město
+PM
+(Liter.)
+Mater.)
+PODNET
+DRUH AKCE
+ANALÝZY
+(Jiní.zd.)
+INZ
+PABOT
+ROK (OD-DO)
+PŘESNÉ DATUM
+Kaiser L.
+INSTITUTE
+ZIPo.p.s.
+2002
+8.-11.7.
+
+LOKALIZACE / OKOLNOSTI / JINE OZNACENI (max. 110 znaku)
+DRUH MAPY
+Č. MÁPY
+severni cast Sedlackovy ul., ppč 5262, 5263, 5255/1
+ZM25
+12-33-16
+ZM10
+Pozn.: Souradnice všech bodů
+jednoho místa uvedu od Z.J
+s.c. jednoho listu
+1: 1000
+JINÝ:
+NALEZISTE JE
+PŘESNOST LOKALIZACE
+v daném Bode
+1 písmé (geodeticky)
+Zakladni udaj , blize oznacuje naleziste / akci.Podle moznosti
+uvedete tratove jmeno, ppč., jmeno majitele pozemku, udaj o
+povodne vlezu atd.
+na dane linii
+2 s rozptylem cca 25 m
+Rozvedete v POZNAMCE.
+v ploše mezi body
+3 s rozptylem 200-300 m
+v Okruhu bodu
+4 pouze kat.uzemi
+SOUHRADNICE (mm od Z: J sekani cary)
+1. 400 : 177 2. 398 : 169 3. 396 : 168 4. 399 : 168 5. 398 : 167 6. 398 : 167 7. 397 : 163
+8. : 9. : 10. : 11. : 12. :
+Vice nez 6 paru souradnic uvadejte jen u dalk. vykopu. V techto případech uvedte presnou lokalizaci jednotlivych
+komponent
+ZAPSAL: Kaiser L.
+ROK ZAP: 2003
+PODPIS:
+
+POZNÁMKA (Doplňuji popis naleziště či nalezu ; pokracujte na volném vloženém listě.)
+Zachraneny archeologicky vyzkum pri stavbe horkovodu. Zlisten charakter podlozi, uroven pudnho typu na
+který nasledala vrstva z starsi doby rimske. Zlisteny dva stredoveke objekty zanikle ve druhe polovine 14.
+stoleti a zaklady barokni zbrojnice...
+
+LITERATURA (Výber , seznamu poskytuje a noveluje materialove prace s dalšími odkazy)
+Příjmení , jm. autora(ů) , rok publ. , str. , zkratka citace (názvu časopisu , názvu monografie )
+
+NALEZOVE ZPRÁVY (U čj. nalezu, zprav příp.příp. "NZ", u čj. mimo ARU do závorky zkratku instituce )
+22/02 (ZIP o.p.s.); 381/03 (ZIP o.p.s.)
+
+Created by Radek Siroky
+PM
+01 Hlásoki ARU
+Created on 4/11/2002 12:15:00

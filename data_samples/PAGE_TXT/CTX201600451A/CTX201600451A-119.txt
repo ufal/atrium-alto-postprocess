@@ -1,0 +1,27 @@
+Naleziště : Rok: Areál: Bližší určení: Druh kontextu: Číslo kontextu:
+Kočí - sv. Bartoloměj 2015 sonda 13 Výkop 13504
+Hloubka: 1,0 m Tvar: obdélník
+Povrch: jednoduchý
+Zlom stěny: nelze určit Sklon stěny: :
+Povrch stěny
+Zlom dna : Sklon dna :
+Povrch dna : nelze určit
+Profil: Úhel: °
+Výplň: 13901
+Jiné :
+ad hloubka - není úplná, dna nedosaženo
+Stratigraficky pod : 13901
+Stratigraficky nad 13114, 13128, 13129
+Číslo řezu : 18
+Číslo plánu : 15, 16
+Vzorky :
+Fotografie :
+Ostatní dok. :
+Nálezy :
+Číslo sáčku : - ¬
+Druh :
+Foto :
+Poznámky : výkop pro zeď 13901, zeď výkop zcela vyplňuje, proto nelze určit většinu jeho charakteristik
+Totožno s kont. : Výzkumná metoda škrabka Vloženo : 26/12/15
+Vykopal: B Zaznamenal: Kindelmannová Kontrola: JF
+Datum: Datum: 04/09/15 Datum: 07/11/15
