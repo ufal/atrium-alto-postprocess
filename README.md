@@ -99,7 +99,7 @@ It reads the CSV from Step 2.
 * **Input 2:** `../PAGE_ALTO/` (input directory with ALTO XML files split into pages from Step 1)
 * **Output:** `../PAGE_TXT/` or `../PAGE_TXT_LR/` (directory containing raw text files)
 
-#### LayoutReader method 
+#### 1st choice: LayoutReader method 
 
 > [!CAUTION]
 > The model responsible for spatial layout analysis requires a **GPU** to run efficiently.
@@ -122,8 +122,8 @@ PAGE_TXT_LR/
 │   └── ...
 └── ...
 ```
-
-#### alto-tools method
+---
+#### 2nd option: alto-tools method
 
 > [!NOTE]
 > The method is **CPU**-bound and faster than the LayoutReader method, but the text lines may not be in the correct 
@@ -139,15 +139,13 @@ Example of per-page text files: [PAGE_TXT](data_samples/PAGE_TXT) 📁.
 ```
 PAGE_TXT/
 ├── <file1>
-│   ├── <file1>-<page>.txt 
-│   └── ...
 ├── <file2>
 │   ├── <file2>-<page>.txt 
 │   └── ...
 └── ...
 ```
-
-#### GLM method
+---
+#### 3rd alternative: GLM method (LLM-based)
 
 > [!WARNING]
 > The method is **GPU**-bound, slower than the LayoutReader method, and requires `gpuram48G` card.
@@ -168,16 +166,12 @@ Example of per-page text files: [PAGE_TXT_LLM](data_samples/PAGE_TXT_LLM) 📁.
 ```
 PAGE_TXT_LLM/
 ├── <file1>
-│   ├── <file1>-<page>.txt 
-│   └── ...
 ├── <file2>
 │   ├── <file2>-<page>.txt 
 │   └── ...
 └── ...
 ```
-
 ---
-
 ### ▶ Step 4: Classify Page Text Quality & Language
 
 This is a key ⌛ time-consuming step that analyzes the text quality of each page, 
