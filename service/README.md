@@ -72,21 +72,21 @@ atrium-alto-postprocess/
 
 The pipeline utilizes a cascade of three distinct models to process text, balancing structural understanding with semantic quality checks.
 
-| Model          | Purpose                                                                                       | Source                       |
-|----------------|-----------------------------------------------------------------------------------------------|------------------------------|
-| **LayoutLMv3** | **Reading Order:** Reorders words in ALTO XML files based on 2D spatial layout.               | `hantian/layoutreader` [^9]  |
-| **FastText**   | **Language ID:** Identifies the language of a text line to ensure it matches expectations.    | `facebook/fasttext` [^2]     |
-| **DistilGPT2** | **Perplexity:** Calculates how "surprising" the text is. High perplexity indicates OCR noise. | `distilbert/distilgpt2` [^6] |
+| Model          | Purpose                                                                                        | Source               |
+|----------------|------------------------------------------------------------------------------------------------|----------------------|
+| **LayoutLMv3** | **Reading Order:** Reorders words (text lines) in ALTO XML files based on 2D spatial layout.   | by `hantian` [^9]    |
+| **FastText**   | **Language ID:** Identifies the language of a text line to ensure it matches expectations.     | by `facebook` [^2]   |
+| **DistilGPT2** | **Perplexity:** Calculates how "surprising" the text is - high perplexity indicates OCR noise. | by `distilbert` [^6] |
 
 ## Quality Categories 🪧
 
 The service classifies every text line into one of three structural categories based on Perplexity (PPL) and Language Confidence scores:
 
-| Label      | Description                                                          | Criteria (Approximate)                      |
-|------------|----------------------------------------------------------------------|---------------------------------------------|
-| `Clear` 🟢 | **High Quality.** Fluent text in a known language.                   | High Lang Confidence + Low Perplexity.      |
-| `Noisy` 🟡 | **Usable but Rough.** Text with minor OCR errors or mixed fragments. | Moderate Perplexity or Language Confidence. |
-| `Trash` 🔴 | **Unusable.** Strange language, or uncommon text formatting.         | Very High Perplexity or Unknown Language.   |
+| Label      | Description                                                                 | Criteria (Approximate)                      |
+|------------|-----------------------------------------------------------------------------|---------------------------------------------|
+| `Clear` 🟢 | **High Quality.** Fluent text in a known language. Mainly clean formatting. | High Lang Confidence + Low Perplexity.      |
+| `Noisy` 🟡 | **Usable but Rough.** Text with minor OCR errors or mixed fragments.        | Moderate Perplexity or Language Confidence. |
+| `Trash` 🔴 | **Unusable.** Strange language, or uncommon text formatting.                | Very High Perplexity or Unknown Language.   |
 
 ## API Usage 📡
 
@@ -148,7 +148,7 @@ Example JSON response:
 
 ### 1. Prerequisites
 
-* **Python 3.10+**
+* **Python 3.10+** virtual environment [^5].
 * **NodeJS** (For client-side development - `export NODE_OPTIONS=--openssl-legacy-provider` common fix for Webpack 4 compatibility with NodeJS 17+`).
 * **Standard CPU** (Sufficient for **Client-side** development).
 * **CUDA-capable GPU** (Recommended for **Server-side** inference speed, though CPU is supported). [^3]
@@ -161,9 +161,9 @@ create a virtual environment [^5], and install all of the required packages:
 
 ```bash
 # Create and activate virtual environment
-git clone https://github.com/ufal/atrium-alto-prostprocess.git
+git clone https://github.com/ufal/atrium-alto-postprocess.git
 cd atrium-alto-postprocess
-chmod + x setup_api_server.sh
+chmod +x setup_api_server.sh
 ./setup_api_server.sh
 ```
 
@@ -195,7 +195,6 @@ window and run the following command from the project root:
 ```bash
 # Activate environment if not already active
 source venv/bin/activate
-
 # Run the API service
 python service/text_api.py
 
@@ -206,16 +205,15 @@ python service/text_api.py
 Open two terminal windows (or tabs) and run the following commands:
 
 ```bash
-source venv-api/bin/activate
-cd atrium-alto-postprocess/service/
+source venv/bin/activate
+cd atrium-alto-postprocess/service
 ```
 
 Then, in each window, execute the respective commands:
 
-| **Server Console (Window 1)**                                                                                                                                                                         | **Client Console (Window 2)**                                                                                                                                                                                        |
-|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **1. Start the API:**<br><br>Run the FastAPI server from the service directory.<br><br>`python3 api.py`<br><br>You should see startup logs indicating the server is running on `http://0.0.0.0:8000`. | **2. Send a Request:**<br><br> Top-3 Classification of `image.png`:<br><br>`python3 test_api.py -<br/> -f .../image.png -v v5.3 --top 3`<br><br> where `-f` and `-v` stand for **input file** and **model version**. |
-
+| **Server Console (Window 1)**                                                                                                                                                                              | **Client Console (Window 2)**                                                                       |
+|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| **1. Start the API:**<br><br>Run the FastAPI server from the service directory.<br><br>`python3 text_api.py`<br><br>You should see startup logs indicating the server is running on `http://0.0.0.0:8000`. | **2. Send a Request:**`curl -X POST "http://localhost:8000/process" -F "file=@/path/to/image.xml"`. |
 
 ### Client Side Test 🎨
 
@@ -258,7 +256,7 @@ environment is activated in your **first console window**: [^3]
 ```bash
 cd atrium-alto-postprocess
 source venv-api/bin/activate
-uvicorn service.api:app --reload
+uvicorn service.text_api:app --reload
 ```
 
 The server will start at http://0.0.0.0:8000 (access to use the built-in visual testing tool).
