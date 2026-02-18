@@ -27,7 +27,7 @@ Before you begin, set up your environment.
     ```
 4.  Download the FastText model 😊 for language identification:
     ```bash
-    wget (https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin) -O lid.176.bin
+    wget `https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin` -O lid.176.bin
     ```
 You are now ready to start the workflow.
 

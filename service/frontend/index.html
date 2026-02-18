@@ -1,0 +1,285 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Atrium Text Processor</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                display: flex;
+                min-height: 100vh;
+                flex-direction: column;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                color: #333;
+                line-height: 1.6;
+                margin: 0;
+                background-color: #f8f9fa;
+            }
+            main {
+                flex: 1;
+                width: 100%;
+                max-width: 1100px; /* Wider for data tables */
+                margin: 2rem auto;
+                padding: 0 1rem;
+                background: white;
+                box-shadow: 0 0 15px rgba(0,0,0,0.05);
+                border-radius: 8px;
+            }
+
+            /* Tab Navigation */
+            .tabs-nav {
+                display: flex;
+                border-bottom: 2px solid #eee;
+                margin-bottom: 2rem;
+                padding-top: 1rem;
+            }
+            .tab-btn {
+                padding: 1rem 2rem;
+                background: none;
+                border: none;
+                border-bottom: 3px solid transparent;
+                cursor: pointer;
+                font-size: 1rem;
+                font-weight: 600;
+                color: #666;
+                transition: all 0.2s;
+            }
+            .tab-btn:hover { color: #007bff; }
+            .tab-btn.active {
+                border-bottom-color: #007bff;
+                color: #007bff;
+            }
+
+            /* Tab Content */
+            .tab-content { display: none; }
+            .tab-content.active { display: block; animation: fadeIn 0.3s; }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(5px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            h1 { margin-bottom: 0.5rem; color: #111; }
+            h2 { margin-top: 2rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 0.5rem; }
+
+            /* Upload Box */
+            .upload-box {
+                border: 2px dashed #ccc;
+                padding: 3rem;
+                text-align: center;
+                border-radius: 8px;
+                background: #fdfdfd;
+                transition: border-color 0.3s;
+                cursor: pointer;
+            }
+            .upload-box:hover { border-color: #007bff; background: #f0f7ff; }
+            .file-selected-text { margin-top: 10px; font-weight: 600; color: #007bff; }
+
+            /* Form Controls */
+            .form-group {
+                margin-top: 1.5rem;
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+                align-items: center;
+            }
+            select { padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 1rem; min-width: 200px; }
+
+            .btn-primary {
+                background-color: #007bff;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                display: block;
+                margin: 2rem auto 0;
+                transition: background 0.2s;
+            }
+            .btn-primary:hover { background-color: #0056b3; }
+
+            /* Results Table */
+            .results-container { margin-top: 2rem; }
+
+            .data-table-wrapper {
+                overflow-x: auto;
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+                max-height: 600px;
+                overflow-y: auto;
+            }
+
+            table.data-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+            table.data-table th {
+                background-color: #f8f9fa;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                border-bottom: 2px solid #ddd;
+            }
+            table.data-table td {
+                padding: 8px 12px;
+                border-bottom: 1px solid #eee;
+                vertical-align: top;
+            }
+            table.data-table tr:hover { background-color: #f1f1f1; }
+
+            /* Badges */
+            .badge {
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: bold;
+                text-transform: uppercase;
+                display: inline-block;
+            }
+            .badge-clear { background-color: #d4edda; color: #155724; }
+            .badge-noisy { background-color: #fff3cd; color: #856404; }
+            .badge-trash { background-color: #f8d7da; color: #721c24; }
+
+            /* Raw Text Area */
+            .raw-text-box {
+                background: #272822;
+                color: #f8f8f2;
+                padding: 1rem;
+                border-radius: 4px;
+                font-family: monospace;
+                white-space: pre-wrap;
+                max-height: 300px;
+                overflow-y: auto;
+                font-size: 0.85rem;
+                margin-top: 1rem;
+            }
+
+            .loading { display: none; text-align: center; margin: 2rem; color: #666; }
+
+            /* Utils */
+            .summary-stats {
+                display: flex;
+                gap: 20px;
+                margin-bottom: 1rem;
+                background: #e9ecef;
+                padding: 1rem;
+                border-radius: 4px;
+            }
+            .stat-item { font-weight: 500; }
+            .stat-value { font-weight: bold; color: #007bff; }
+
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    </head>
+    <body>
+        <main>
+            <h1>ATRIUM Text Processor</h1>
+            <p class="text-muted">Extract, clean, and classify text from ALTO XML or raw text files.</p>
+
+            <nav class="tabs-nav">
+                <button class="tab-btn active" data-tab="tab-run">Run Processor</button>
+                <button class="tab-btn" data-tab="tab-about">About</button>
+                <button class="tab-btn" data-tab="tab-api">API Docs</button>
+            </nav>
+
+            <div id="tab-run" class="tab-content active">
+                <form id="processForm">
+                    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" name="file" accept=".xml,.txt" required style="display:none">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <p style="margin-top: 10px; color: #666;">
+                            <strong>Click to upload</strong> (ALTO XML or TXT)
+                        </p>
+                        <p id="fileNameDisplay" class="file-selected-text"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <div>
+                            <label for="taskType"><strong>Processing Mode:</strong></label><br>
+                            <select id="taskType" name="task_type">
+                                <option value="auto" selected>Auto-Detect (Based on extension)</option>
+                                <option value="alto">ALTO XML (Layout Analysis + Extraction)</option>
+                                <option value="text">Plain Text (Cleaning + Classification)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Start Processing</button>
+                </form>
+
+                <div id="loading" class="loading">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+                        <circle cx="12" cy="12" r="10"></circle>
+                    </svg><br>
+                    Running AI Models (LayoutLMv3 / FastText / GPT2)...
+                </div>
+
+                <div id="results" class="results-container"></div>
+            </div>
+
+            <div id="tab-about" class="tab-content">
+                <h2>How it Works</h2>
+                <p>This service processes historical document text to separate high-quality content from OCR noise.</p>
+
+                <h3>1. Layout Analysis (ALTO Only)</h3>
+                <p>If you upload an XML file, we use <strong>LayoutLMv3</strong> to reorder words based on their 2D bounding boxes, ensuring multi-column text is read in the correct order.</p>
+
+                <h3>2. Split Word Reconstruction</h3>
+                <p>We automatically merge hyphenated words at the end of lines (e.g., <code>divi-</code> + <code>ded</code> &rarr; <code>divided</code>) using extracted hyphenation flags.</p>
+
+                <h3>3. Quality Classification</h3>
+                <p>Every line is analyzed using two models:</p>
+                <ul>
+                    <li><strong>FastText:</strong> Identifies the language (e.g., English, German, Czech).</li>
+                    <li><strong>DistilGPT2:</strong> Calculates <em>Perplexity</em> (how "surprising" or garbled the text looks).</li>
+                </ul>
+                <p>Based on these metrics, lines are categorized as:</p>
+                <ul>
+                    <li><span class="badge badge-clear">Clear</span> Fluent text in a target language.</li>
+                    <li><span class="badge badge-noisy">Noisy</span> Text with OCR errors or mixed fragments.</li>
+                    <li><span class="badge badge-trash">Trash</span> Headers, page numbers, or severe OCR garbage.</li>
+                </ul>
+            </div>
+
+            <div id="tab-api" class="tab-content">
+                <h2>API Endpoint 🔗</h2>
+                <code>POST /process</code>
+
+                <h3>Parameters</h3>
+                <ul>
+                    <li><code>file</code>: The document file (@page.xml or @book.txt)</li>
+                    <li><code>task_type</code>: "alto", "text", or "auto"</li>
+                </ul>
+
+                <h3>Example Response</h3>
+                <pre style="background:#f4f4f4; padding:1rem; border-radius:4px;">
+{
+  "type": "alto_xml",
+  "filename": "page_01.xml",
+  "cleaned_lines": [
+    {
+      "line_num": 1,
+      "text": "The quick brown fox...",
+      "lang": "eng",
+      "perplexity": 12.5,
+      "category": "Clear"
+    }
+  ]
+}</pre>
+            </div>
+        </main>
+
+        <script src="script.js"></script>
+    </body>
+</html>
