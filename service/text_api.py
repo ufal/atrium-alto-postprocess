@@ -1,13 +1,45 @@
+"""
+service/text_api.py
+FastAPI wrapper for the text processing service.
+"""
 import os
 import shutil
 import tempfile
+from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
-# Import our manager
+# Local import
 from text_inference import text_manager
 
-app = FastAPI(title="Text Processing & Layout Service")
+app = FastAPI(title="Atrium Text Processor")
+
+# CORS setup
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- STATIC FILES ---
+# Resolve path to frontend folder relative to this file
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+
+@app.get("/")
+async def root():
+    index_path = FRONTEND_DIR / "index.html"
+    if index_path.exists():
+        with open(index_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return {"message": "Service Running. Index not found."}
 
 
 @app.get("/info")
@@ -22,17 +54,15 @@ async def info():
 @app.post("/process")
 async def process_document(
         file: UploadFile = File(...),
-        task_type: str = Form("auto", description="auto, alto, or text")
+        task_type: str = Form("auto")
 ):
     """
     Upload a file (XML or TXT).
     Returns cleaned text lines with quality metrics.
     """
-
-    # 1. Validate File
     filename = file.filename.lower()
 
-    # Auto-detect task
+    # Auto-detect logic
     if task_type == "auto":
         if filename.endswith(".xml"):
             task_type = "alto"
@@ -41,21 +71,18 @@ async def process_document(
         else:
             raise HTTPException(400, "Unknown file extension. Specify task_type='alto' or 'text'")
 
-    # 2. Save to Temp (Critical for "Very Long" files)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as tmp:
+    # Save temp file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
 
     try:
-        # 3. Process based on type
         if task_type == "alto":
             result = text_manager.process_alto(tmp_path)
         else:
             result = text_manager.process_text_file(tmp_path)
 
-        # Add metadata
         result['filename'] = file.filename
-
         return JSONResponse(content=result)
 
     except Exception as e:
@@ -64,7 +91,6 @@ async def process_document(
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
     finally:
-        # 4. Cleanup Temp File
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
@@ -72,5 +98,5 @@ async def process_document(
 if __name__ == "__main__":
     import uvicorn
 
-    # Run with: python text_api.py
+    # Run from root of project with: python service/text_api.py
     uvicorn.run(app, host="0.0.0.0", port=8000)
