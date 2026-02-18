@@ -3,11 +3,11 @@
 
 ### Goal: Serve historical text cleaning and quality estimation models via a lightweight REST API
 
-**Scope:** This service provides a **FastAPI** interface for the Atrium Text Processing pipeline. 
+**Scope:** This service provides a **FastAPI** interface for the ATRIUM Text Processing pipeline. 
 It allows users to upload ALTO XML or raw text files to perform intelligent layout analysis, 
-split-word reconstruction, and line-level quality classification (e.g., Clear, Noisy, Trash) using 
-**LayoutLMv3**, **FastText**, and **DistilGPT2** [^9] [^2] [^6]. It includes a static HTML frontend for immediate testing.
-
+split-word reconstruction, and line-level quality classification (e.g., `Clear`, `Noisy`, `Trash`) using 
+**LayoutLMv3**, **FastText**, and **DistilGPT2** [^9] [^2] [^6]. It includes a static HTML 
+frontend for immediate testing.
 
 ### Table of contents 📑
 
@@ -17,7 +17,14 @@ split-word reconstruction, and line-level quality classification (e.g., Clear, N
 * [Quality Categories 🪧](#quality-categories-)
 * [API Usage 📡](#api-usage-)
 * [Installation & Setup 🛠](#installation--setup-)
+  * [Prerequisites](#1-prerequisites)
+  * [Install Dependencies](#2-install-dependencies)
+  * [Model Weights](#3-model-weights)
 * [Quick API Test Launch 🚀](#quick-api-test-launch-)
+* [Launch Instructions](#launch-instructions)
+  * [Client Side Test 🎨](#client-side-test-)
+  * [Running the Server 🚀](#running-the-server-)
+  * [Using the client-side test interface](#using-the-client-side-test-interface)
 * [Contacts 📧](#contacts-)
 * [Acknowledgements 🙏](#acknowledgements-)
 
@@ -54,6 +61,7 @@ atrium-alto-postprocess/
 │   │   └── script.js        # Logic for the web interface
 │   ├── requirements.txt     # Python dependencies
 │   └── README.md            # This file - API service documentation
+├── setup_api_server.sh      # Shell script to set up the Python environment and install dependencies
 ├── README.md                # Project overview and documentation
 ├── LICENSE                  # Open source license
 └── ...                      # other project files
@@ -74,11 +82,11 @@ The pipeline utilizes a cascade of three distinct models to process text, balanc
 
 The service classifies every text line into one of three structural categories based on Perplexity (PPL) and Language Confidence scores:
 
-| Label   | Description                                                             | Criteria (Approximate)                      |
-|---------|-------------------------------------------------------------------------|---------------------------------------------|
-| `Clear` | 🟢 **High Quality.** Fluent text in a known language.                   | High Lang Confidence + Low Perplexity.      |
-| `Noisy` | 🟡 **Usable but Rough.** Text with minor OCR errors or mixed fragments. | Moderate Perplexity or Language Confidence. |
-| `Trash` | 🔴 **Unusable.** Headers, page numbers, or severe OCR garbage.          | Very High Perplexity or Unknown Language.   |
+| Label      | Description                                                          | Criteria (Approximate)                      |
+|------------|----------------------------------------------------------------------|---------------------------------------------|
+| `Clear` 🟢 | **High Quality.** Fluent text in a known language.                   | High Lang Confidence + Low Perplexity.      |
+| `Noisy` 🟡 | **Usable but Rough.** Text with minor OCR errors or mixed fragments. | Moderate Perplexity or Language Confidence. |
+| `Trash` 🔴 | **Unusable.** Strange language, or uncommon text formatting.         | Very High Perplexity or Unknown Language.   |
 
 ## API Usage 📡
 
@@ -140,22 +148,30 @@ Example JSON response:
 
 ### 1. Prerequisites
 
-* **Python 3.10+** 
-* **CUDA-capable GPU** (Recommended for LayoutLMv3 inference speed, though CPU is supported) [^3].
+* **Python 3.10+**
+* **NodeJS** (For client-side development - `export NODE_OPTIONS=--openssl-legacy-provider` common fix for Webpack 4 compatibility with NodeJS 17+`).
+* **Standard CPU** (Sufficient for **Client-side** development).
+* **CUDA-capable GPU** (Recommended for **Server-side** inference speed, though CPU is supported). [^3]
+
 
 ### 2. Install Dependencies
 
-Navigate to the project root and install the required packages using a virtual environment:
+Navigate to the root `atrium-alto-postprocess` directory, then run a setup script to 
+create a virtual environment [^5], and install all of the required packages:
 
 ```bash
 # Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies (ensure pytorch is installed according to your CUDA version)
-pip install -r service/requirements.txt
-
+git clone https://github.com/ufal/atrium-alto-prostprocess.git
+cd atrium-alto-postprocess
+chmod + x setup_api_server.sh
+./setup_api_server.sh
 ```
+
+Key libraries include: fastapi, uvicorn, python-multipart, pillow, torch, timm, transformers. These
+libraries can be found in `service/requirements.txt` available for manual installation if needed.
+
+> [!NOTE] The virtual environment name is stated in the setup script and can be changed to the already existing
+> one if needed.
 
 ### 3. Model Weights
 
@@ -173,11 +189,8 @@ wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/m
 
 ## Quick API Test Launch 🚀
 
-Use this guide to verify the processing service is running correctly.
-
-### Launch Instructions
-
-Open a terminal window and run the following command from the project root:
+Use this guide to verify the processing service is running correctly. Open a terminal 
+window and run the following command from the project root:
 
 ```bash
 # Activate environment if not already active
@@ -188,58 +201,87 @@ python service/text_api.py
 
 ```
 
-You should see startup logs indicating the server is running on `http://0.0.0.0:8000`.
+## Launch Instructions
 
-## Client Side Test 🎨
-
-The service comes with a built-in testing tool accessible via a web browser.
-
-1. Open your browser to `http://localhost:8000`.
-2. Click the upload box to select an `.xml` (ALTO) or `.txt` file.
-3. Click **Start Processing**.
-4. View the extracted text and quality tables in the browser.
-
-
-
-
-
-
-## Installation & Setup 🛠
-
-### 1. Prerequisites
-
-* **Python 3.10+**
-* **CUDA-capable GPU** (Recommended for LayoutLMv3 speed, though CPU is supported).
-
-
-### 3. Model Weights
-
-The service attempts to load models automatically. However, **FastText** requires a specific binary file.
-Create a `models` directory in the project root and download the binary:
+Open two terminal windows (or tabs) and run the following commands:
 
 ```bash
-mkdir models
-wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" -O models/lid.176.bin
-
+source venv-api/bin/activate
+cd atrium-alto-postprocess/service/
 ```
 
-*Note: LayoutLMv3 and DistilGPT2 will be downloaded by Hugging Face Transformers on the first run.*
+Then, in each window, execute the respective commands:
 
-## Quick API Test Launch 🚀
+| **Server Console (Window 1)**                                                                                                                                                                         | **Client Console (Window 2)**                                                                                                                                                                                        |
+|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **1. Start the API:**<br><br>Run the FastAPI server from the service directory.<br><br>`python3 api.py`<br><br>You should see startup logs indicating the server is running on `http://0.0.0.0:8000`. | **2. Send a Request:**<br><br> Top-3 Classification of `image.png`:<br><br>`python3 test_api.py -<br/> -f .../image.png -v v5.3 --top 3`<br><br> where `-f` and `-v` stand for **input file** and **model version**. |
 
-Use this guide to verify the processing service is running.
 
-### Launch Instructions
+### Client Side Test 🎨
 
-Run the server from the root of the project:
+This API service includes a lightweight vanilla JS frontend (`service/frontend/script.js`) for immediate testing. 
+However, the full LINDAT client integration is developed separately. [^5]
+
+For client-side development, open a **second console window** and follow these steps:
+
+1.  **Clone the repository** and place `atrium-alto-postprocess` project files to `lindat-common` directory
+    ```bash
+    git clone [https://github.com/ufal/lindat-common.git](https://github.com/ufal/lindat-common.git)
+    cd lindat-common
+    cp -r atrium-alto-postprocess .
+    # or
+    mv atrium-alto-postprocess .
+    ```
+
+2.  **Install NodeJS environment** (unless you already have one) and **Install dependencies for development:**
+    ```bash
+    curl -o- [https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh](https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh) | bash
+    nvm install stable
+    nvm use stable
+    export NODE_OPTIONS=--openssl-legacy-provider
+    npm install
+    ```
+
+3. **Run development server:**
+    ```bash
+    make run
+    ```
+
+For further details, please refer to the **LINDAT Common Development Guide**:
+[https://github.com/ufal/lindat-common/?tab=readme-ov-file#development](https://github.com/ufal/lindat-common/?tab=readme-ov-file#development).
+
+### Running the Server 🚀
+
+To start the API server with hot-reloading enabled (useful for development), ensure your virtual 
+environment is activated in your **first console window**: [^3]
 
 ```bash
-# From project root
-python service/text_api.py
-
+cd atrium-alto-postprocess
+source venv-api/bin/activate
+uvicorn service.api:app --reload
 ```
-You should see startup logs indicating the server is running on `http://0.0.0.0:8000`.
 
+The server will start at http://0.0.0.0:8000 (access to use the built-in visual testing tool).
+
+### Using the client-side test interface
+
+Assuming your **second console** output ends like this:
+
+```commandline
+> lindat-common@3.5.0 start
+> webpack-dev-server -p --debug --quiet
+
+(node:2985155) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+> Project is running at http://localhost:8080/
+> webpack output is served from /
+> Content not from webpack is served from /home.../lindat-common
+```
+
+Open the URL `http://localhost:8080` in your web browser to access the LINDAT client interface. 
+
+Follow the file tree to the `atrium-alto-postprocess/service/frontend` directory. The frontend interface
+will open and allow you to upload images and test the API.
 
 ## Contacts 📧
 
@@ -250,6 +292,10 @@ You should see startup logs indicating the server is running on `http://0.0.0.0:
 * **Developed by** UFAL [^7] 👥
 * **Funded by** ATRIUM [^4]  💰
 * **Shared by** ATRIUM [^4] & UFAL [^7] 🔗
+* **Model type:** 
+  - **LayoutLMv3** for layout analysis [^9]
+  - **FastText** for language identification [^2]
+  - **DistilGPT2** for perplexity estimation [^6]
 
 **©️ 2026 UFAL & ATRIUM**
 
@@ -259,7 +305,7 @@ You should see startup logs indicating the server is running on `http://0.0.0.0:
 [^2]: https://huggingface.co/facebook/fasttext-language-identification
 [^3]: https://developer.nvidia.com/cuda-python
 [^4]: https://atrium-research.eu/
-[^5]: https://github.com/K4TEL/atrium-nlp-enrich
+[^5]: https://docs.python.org/3/library/venv.html
 [^6]: https://huggingface.co/distilbert/distilgpt2
 [^8]: https://github.com/K4TEL/atrium-alto-postprocess
 [^7]: https://ufal.mff.cuni.cz/home-page
