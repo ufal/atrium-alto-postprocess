@@ -100,3 +100,8 @@ if __name__ == "__main__":
 
     # Run from root of project with: python service/text_api.py
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
+    # export NODE_OPTIONS=--openssl-legacy-provider
+    # npm install
