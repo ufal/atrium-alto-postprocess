@@ -18,17 +18,24 @@ Before you begin, set up your environment.
     ```bash
     pip install -r requirements.txt
     ```
-3.  Clone and install `alto-tools` 🔧, which is used for statistics and text extraction:
+3. Download the FastText model 😊 for language identification:
+    ```bash
+    wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" -O lid.176.bin
+    ```
+4. Clone and install `alto-tools` 🔧, which is used for statistics and text extraction in low memory environments:
     ```bash
     git clone https://github.com/cneud/alto-tools.git
     cd alto-tools
     pip install .
     cd .. 
     ```
-4.  Download the FastText model 😊 for language identification:
+5. Copy `v3` folder from the `layoutreader` 🔧 repository [^9] to the project directory for the LR-based text extraction method:
     ```bash
-    wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" -O lid.176.bin
-    ```
+    git clone https://github.com/ppaanngggg/layoutreader.git
+    cp -r layoutreader/v3/ ./
+    rm -rf layoutreader/
+   ```
+
 You are now ready to start the workflow.
 
 ---
@@ -99,7 +106,7 @@ It reads the CSV from Step 2.
 * **Input 2:** `../PAGE_ALTO/` (input directory with ALTO XML files split into pages from Step 1)
 * **Output:** `../PAGE_TXT/` or `../PAGE_TXT_LR/` (directory containing raw text files)
 
-#### 1st choice: LayoutReader method 
+#### 1st choice: LayoutReader 🔧 method 
 
 > [!CAUTION]
 > The model responsible for spatial layout analysis requires a **GPU** to run efficiently.
@@ -123,7 +130,7 @@ PAGE_TXT_LR/
 └── ...
 ```
 ---
-#### 2nd option: alto-tools method
+#### 2nd option: alto-tools 🔧 method
 
 > [!NOTE]
 > The method is **CPU**-bound and faster than the LayoutReader method, but the text lines may not be in the correct 
@@ -145,7 +152,7 @@ PAGE_TXT/
 └── ...
 ```
 ---
-#### 3rd alternative: GLM method (LLM-based)
+#### 3rd alternative: GLM 🔧 method (LLM-based)
 
 > [!WARNING]
 > The method is **GPU**-bound, slower than the LayoutReader method, and requires `gpuram48G` card.
@@ -267,7 +274,6 @@ before the Handwritten Text Recognition (HTR) processing is applied.
 
 ---
 
-
 ## Acknowledgements 🙏
 
 **For support write to:** lutsai.k@gmail.com responsible for this GitHub repository [^8] 🔗
@@ -275,8 +281,13 @@ before the Handwritten Text Recognition (HTR) processing is applied.
 - **Developed by** UFAL [^7] 👥
 - **Funded by** ATRIUM [^4]  💰
 - **Shared by** ATRIUM [^4] & UFAL [^7] 🔗
+- **Models used**: 
+  - FastText [^2] for language identification
+  - DistilGPT2 [^6] for perplexity scoring
+  - GLM-4v-9b [^10] for generative OCR (LLM-based method)
+  - LayoutLMv3 [^9] for layout-aware text extraction
 
-**©️ 2025 UFAL & ATRIUM**
+**©️ 2026 UFAL & ATRIUM**
 
 
 [^1]: https://github.com/cneud/alto-tools
