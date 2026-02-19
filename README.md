@@ -9,6 +9,21 @@ to identify and categorize noisy or unreliable OCR output.
 
 ---
 
+## 📖 Table of Contents
+
+- [ ⚙️ Setup](#-setup)
+- [🛤️ Workflow Stages](#workflow-stages)
+  - [Step 1: Split Document-Specific ALTOs into Pages ✂️](#-step-1-split-document-specific-altos-into-pages)
+  - [Step 2: Create Page Statistics Table 📈](#-step-2-create-page-statistics-table)
+  - [Step 3: Extract text from ALTO XML ⛏️](#-step-3-extract-text-from-alto-xml)
+    - [LayoutReader method 📐](#1st-choice-layoutreader--method-)
+    - [alto-tools method 🧰](#2nd-option-alto-tools--method)
+    - [GLM method 🤖](#3rd-alternative-glm--method-llm-based)
+  - [Step 4: Classify Page Text Quality \& Language 🗂️](#-step-4-classify-page-text-quality--language)
+    - [4.1 Classify Lines (GPU Bound) 🚀](#41-classify-lines-gpu-bound)
+    - [4.2 Aggregate Statistics (Memory Bound) 🧠](#42-aggregate-statistics-memory-bound)
+- [Acknowledgements 🙏](#acknowledgements-)
+
 ## ⚙️ Setup
 
 Before you begin, set up your environment.
@@ -40,22 +55,22 @@ You are now ready to start the workflow.
 
 ---
 
-## Workflow Stages
+## 🛤️ Workflow Stages
 
-The process is divided into sequential steps, starting from raw ALTO files and ending 
-with extracted linguistic and statistic data.
+The process is divided into sequential steps, starting from raw ALTO files 📄 and ending
+with extracted linguistic and statistic data 📊.
 
-### ▶ Step 1: Split Document-Specific ALTOs into Pages
+### ▶️ Step 1: Split Document-Specific ALTOs into Pages ✂️
 
-First, ensure you have a directory 📁 containing your document-level `<file>.alto.xml` files. 
-This script will split them into individual page-specific XML files.
+First, ensure you have a directory 📁 containing your document-level `<file>.alto.xml` files.
+This script will split them into individual page-specific XML files 📄.
 
     python3 page_split.py <input_dir> <output_dir>
 
-Each page-specific file retains the header from its original source document.
+Each page-specific file retains the header from its original source document 📌.
 
-* **Input:** `../ALTO/` (input directory with ALTO XML documents)
-* **Output:** `../PAGE_ALTO/` (output directory with ALTO XML files split into pages)
+* **Input 📥:** `../ALTO/` (input directory with ALTO XML documents)
+* **Output 📤:** `../PAGE_ALTO/` (output directory with ALTO XML files split into pages)
 
 Example of the output directory with divided per-page XML files: [PAGE_ALTO](data_samples/PAGE_ALTO) 📁.
 
@@ -72,10 +87,10 @@ PAGE_ALTO/
 
 ---
 
-### ▶ Step 2: Create Page Statistics Table
+### ▶️ Step 2: Create Page Statistics Table 📈
 
-Next, use the output directory from Step 1 as the input for this script to generate a 
-foundational CSV statistics file.
+Next, use the output directory from Step 1 as the input for this script to generate a
+foundational CSV statistics file 📑.
 
     python3 alto_stats_create.py <input_dir> -o output.csv
 
@@ -88,8 +103,8 @@ This script writes a CSV file line-by-line, capturing metadata for each page:
 
 The extraction is powered by the **alto-tools** framework [^1].
 
-* **Input:** `../PAGE_ALTO/` (input directory with ALTO XML files split into pages from Step 1)
-* **Output:** `output.csv` (table with page-level statistics and paths to ALTO files)
+* **Input 📥:** `../PAGE_ALTO/` (input directory with ALTO XML files split into pages from Step 1)
+* **Output 📤:** `output.csv` (table with page-level statistics and paths to ALTO files)
 
 > [!IMPORTANT]
 > This statistics table is the basis for subsequent processing steps.
@@ -97,14 +112,14 @@ The extraction is powered by the **alto-tools** framework [^1].
 
 ---
 
-### ▶ Step 3: Extract text from ALTO XML
+### ▶️ Step 3: Extract text from ALTO XML ⛏️
 
-This script runs in parallel (using multiple **CPU** cores) to extract text from ALTO XMLs into `.txt` files. 
+This script runs in parallel ⚡ (using multiple **CPU** cores 💻) to extract text from ALTO XMLs into `.txt` files.
 It reads the CSV from Step 2.
 
-* **Input 1:** `output.csv` (from Step 2)
-* **Input 2:** `../PAGE_ALTO/` (input directory with ALTO XML files split into pages from Step 1)
-* **Output:** `../PAGE_TXT/` or `../PAGE_TXT_LR/` (directory containing raw text files)
+* **Input 1 📥:** `output.csv` (from Step 2)
+* **Input 2 📥:** `../PAGE_ALTO/` (input directory with ALTO XML files split into pages from Step 1)
+* **Output 📤:** `../PAGE_TXT/` or `../PAGE_TXT_LR/` (directory containing raw text files)
 
 #### 1st choice: LayoutReader 🔧 method 
 
@@ -179,10 +194,10 @@ PAGE_TXT_LLM/
 └── ...
 ```
 ---
-### ▶ Step 4: Classify Page Text Quality & Language
+### ▶️ Step 4: Classify Page Text Quality & Language 🗂️
 
-This is a key ⌛ time-consuming step that analyzes the text quality of each page, 
-line-by-line, counting lines of defined types, to filter out OCR noise.
+This is a key ⌛ time-consuming step that analyzes the text quality of each page,
+line-by-line, counting lines of defined types, to filter out OCR noise 🔇.
 
 It uses the [FastText language identification model](https://huggingface.co/facebook/fasttext-language-identification) 😊 
 and perplexity scores from [distilGPT2](https://huggingface.co/distilbert/distilgpt2) 😊 to detect noise [^2] [^6].
@@ -193,11 +208,11 @@ NER and UDPipe for CONLL-U files with lemmas & POS tags [^5].
 
 As the script processes, it aggregates line counts for each page into categories 🪧:
 
--   **Clear** - High-confidence, low-perplexity, common language.
--   **Noisy (Rough)** - Medium or Low-confidence, high-perplexity, or other OCR issues.
--   **Trash** - Hard to guess language, very high perplexity, or non-prose. 
--   **Non-text** - Failed heuristic checks (e.g., mostly digits/symbols).
--   **Empty** - Line contains only whitespace.
+* ✅ **Clear** - High-confidence, low-perplexity, common language.
+* ⚠️ **Noisy (Rough)** - Medium or Low-confidence, high-perplexity, or other OCR issues.
+* 🗑️ **Trash** - Hard to guess language, very high perplexity, or non-prose.
+* 🔣 **Non-text** - Failed heuristic checks (e.g., mostly digits/symbols).
+* 🫙 **Empty** - Line contains only whitespace.
 
 > [!NOTE]
 > This script generates two primary output directories: 
@@ -207,28 +222,30 @@ As the script processes, it aggregates line counts for each page into categories
 All of the input-output files and changeable parameters are available in [config_langID.txt](config_langID.txt) 📎 where
 variables are divided into two sections according to the processing stage of Step 4 (classification or aggregation).
 
-#### 4.1 Classify Lines (GPU Bound)
-This script reads the extracted text files, batches lines together, and runs the FastText 
-and DistilGPT2 models on the **GPU**. It logs results immediately to a raw CSV to save memory.
+#### 4.1 Classify Lines (GPU Bound) 🚀
+
+This script reads the extracted text files, batches lines together 📦, and runs the FastText
+and DistilGPT2 models on the **GPU** 🎮. It logs results immediately to a raw CSV to save memory 💾.
+
 
     python3 langID_classify.py
 
-* **Input 1:** `../PAGE_TXT/` from Step 3
-* **Input 2:** `output.csv` from Step 2
-* **Output:** `DOC_LINE_LANG_CLASS/` containing per-document CSVs (e.g., [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁) 
+* **Input 1 📥:** `../PAGE_TXT/` from Step 3
+* **Input 2 📥:** `output.csv` from Step 2
+* **Output 📤:** `DOC_LINE_LANG_CLASS/` containing per-document CSVs (e.g., [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁) 
 
 > [!TIP]
 > This script is resume-capable. If interrupted, run it again, and already present in the output directory files will be skipped.
 
 `<doc_name>.csv`: Detailed classification results for *every single line* within a document, with columns:
- - `file` - document identifier
- - `page_num` - page number
- - `line_num` - line number, starts from 1 for each line on the ALTO page
- - `text` - original text of the line from ALTO page
- - `lang` - predicted ISO language code of the line ([list of all possible language labels predicted by FastText model)](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200)
- - `lang_score` - confidence score of the predicted language code
- - `perplex` - perplexity score of the original line text
- - `categ` - assigned category of the line (**Clear**, **Noisy**, **Trash**, **Non-text**, or **Empty**)
+* `file` - document identifier 🆔
+* `page_num` - page number 📄
+* `line_num` - line number, starts from 1 for each line on the ALTO page 🔢
+* `text` - original text of the line from ALTO page 📝
+* `lang` - predicted ISO language code of the line ([list of all possible language labels predicted by FastText model)](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200) 🌐
+* `lang_score` - confidence score of the predicted language code 🎯
+* `perplex` - perplexity score of the original line text 📉
+* `categ` - assigned category of the line (**Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙)
 
 Example of per-document CSV file with per-line statistics: [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁.
 ```
@@ -237,26 +254,32 @@ DOC_LINE_LANG_CLASS/
 ├── <docname2>.csv
 └── ...
 ```
-#### 4.2 Aggregate Statistics (Memory Bound)
-This script processes the directory `DOC_LINE_LANG_CLASS/` with CSV files in chunks to produce the 
-final page-level statistics and per-document splits (**CPU** can handle this).
 
-    python3 langID_aggregate_STAT.py
+#### 4.2 Aggregate Statistics (Memory Bound) 🧠
 
-* **Input:**  `DOC_LINE_LANG_CLASS/` (directory with CSV files from previous step)
-* **Output 1:** `final_page_stats.csv` (The input CSV augmented with line counts: `clear_lines`, `noisy_lines`, etc.)
-* **Output 2:** `../DOC_LINE_STAT/` (Folder containing per-document CSVs)
+This script processes the directory `DOC_LINE_LANG_CLASS/` with CSV files in chunks 🧩 to produce the
+final page-level statistics and per-document splits (**CPU** can handle this 💻).
 
-`final_page_stats.csv`: Page-level summary of line counts per text category
+```
+python3 langID_aggregate_STAT.py
+```
+
+* **Input 📥:** `DOC_LINE_LANG_CLASS/` (directory with CSV files from previous step)
+* **Output 1 📤:** `final_page_stats.csv` (The input CSV augmented with line counts: `clear_lines`, `noisy_lines`, etc. ➕)
+* **Output 2 📤:** `../DOC_LINE_STAT/` (Folder containing per-document CSVs 📁)
+
+`final_page_stats.csv`: Page-level summary of line counts per text category 📋
+
+
 - *Example*: [final_page_stats.csv](final_page_stats.csv) 📎
 - *Columns*:
-   - `file` - document identifier
-   - `page` - page number
-   - `Clear` - clear lines **count**, clean and ready to be processed
-   - `Non-text` - non-text lines **count**, contain mostly digits/symbols
-   - `Trash` - trash lines **count**, unintelligible or very high perplexity (due to OCR errors)
-   - `Noisy` - noisy lines **count**, some errors but partially understandable
-   - `Empty` - empty lines **count**, contain only whitespace
+  * `file` - document identifier 🆔
+  * `page` - page number 📄
+  * `Clear` - clear lines **count**, clean and ready to be processed ✅
+  * `Non-text` - non-text lines **count**, contain mostly digits/symbols 🔣
+  * `Trash` - trash lines **count**, unintelligible or very high perplexity (due to OCR errors) 🗑️
+  * `Noisy` - noisy lines **count**, some errors but partially understandable ⚠️
+  * `Empty` - empty lines **count**, contain only whitespace 🫙
    
 
 Example of per-document CSV file with per-page statistics of line type counts: [DOC_LINE_STAT](data_samples/DOC_LINE_STAT) 📁.
