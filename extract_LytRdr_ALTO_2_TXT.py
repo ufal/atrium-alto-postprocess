@@ -3,8 +3,8 @@
 extract_LytRdr_ALTO_2_TXT.py
 
 Step 1: Extract and reorder text from ALTO XML files using LayoutReader in parallel.
-Fixed: Removed undefined variable references in parse_alto_xml.
-Enhanced: Adapted post_process_text for Justified Text alignment (wider tolerance for word gaps).
+Fixed: Switched from word-level to line-level extraction. Trusts ABBYY's <TextLine>
+       grouping to preserve tables and justified text structures.
 """
 
 import pandas as pd
@@ -65,7 +65,7 @@ def init_worker():
 
 
 def parse_alto_xml(xml_path):
-    """Parses ALTO XML to extract words, boxes, and inject SUBS_CONTENT."""
+    """Parses ALTO XML to extract unified TextLines and their collective bounding boxes."""
     try:
         tree = ET.parse(xml_path)
         root = tree.getroot()
@@ -87,14 +87,20 @@ def parse_alto_xml(xml_path):
     except (ValueError, TypeError):
         return [], [], (0, 0)
 
-    words = []
+    lines = []
     boxes = []
 
-    text_lines = find_all(root, 'TextLine')
-    for line in text_lines:
-        children = list(line)
+    text_lines_elements = find_all(root, 'TextLine')
+    for line_elem in text_lines_elements:
+        line_text = ""
+        # Initialize extremes for the unified line bounding box
+        min_x, min_y = float('inf'), float('inf')
+        max_x, max_y = float('-inf'), float('-inf')
+
+        children = list(line_elem)
         for i, child in enumerate(children):
             tag_name = child.tag.split('}')[-1]
+
             if tag_name == 'String':
                 content = child.attrib.get('CONTENT')
                 if not content:
@@ -112,7 +118,13 @@ def parse_alto_xml(xml_path):
                 except (ValueError, TypeError):
                     continue
 
-                # Check for explicit hyphenation tag in ALTO (Visual representation)
+                # Expand the line's bounding box to encompass this string
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x + w)
+                max_y = max(max_y, y + h)
+
+                # Check for explicit hyphenation tag in ALTO
                 has_hyp_tag = False
                 if i + 1 < len(children):
                     next_child = children[i + 1]
@@ -127,10 +139,19 @@ def parse_alto_xml(xml_path):
                         content += "-"
                     content = f"{content} {{{subs_content}}}"
 
-                words.append(content)
-                boxes.append([x, y, x + w, y + h])
+                line_text += content
 
-    return words, boxes, (page_w, page_h)
+            elif tag_name == 'SP':
+                # Preserve native spaces provided by OCR engine
+                line_text += " "
+
+        line_text = line_text.strip()
+        # Only append if we actually found valid text and coordinates
+        if line_text and min_x != float('inf'):
+            lines.append(line_text)
+            boxes.append([min_x, min_y, max_x, max_y])
+
+    return lines, boxes, (page_w, page_h)
 
 
 def normalize_boxes(boxes, width, height):
@@ -150,33 +171,15 @@ def normalize_boxes(boxes, width, height):
     return normalized
 
 
-def get_vertical_overlap(box1, box2):
-    """Calculates the vertical intersection ratio between two boxes."""
-    y1_max = max(box1[1], box2[1])
-    y2_min = min(box1[3], box2[3])
-    intersection = max(0, y2_min - y1_max)
-
-    height1 = box1[3] - box1[1]
-    height2 = box2[3] - box2[1]
-    min_height = min(height1, height2)
-
-    if min_height == 0: return 0
-    return intersection / min_height
-
-
-def post_process_text(ordered_words, ordered_boxes):
+def post_process_text(ordered_lines, ordered_boxes):
     """
-    Reconstructs text from reordered words/boxes.
-
-    Refined Logic:
-    1. Unites lines: Standard line breaks within a paragraph become single spaces.
-    2. Newlines: Only inserted when a new text area starts (New paragraph, new column).
-    3. Justification: Wide horizontal gaps within a line become double spaces "  ".
+    Reconstructs text from reordered line elements.
+    LayoutReader has sequenced the lines; we just need to join them logically.
     """
-    if not ordered_words:
+    if not ordered_lines:
         return ""
 
-    # 1. Calculate Median Height Robustly (Proxy for line height)
+    # Calculate Median Height (Proxy for standard line height)
     if ordered_boxes:
         heights = [(b[3] - b[1]) for b in ordered_boxes]
         valid_heights = [h for h in heights if h > 5]
@@ -185,22 +188,13 @@ def post_process_text(ordered_words, ordered_boxes):
     else:
         median_height = 10
 
-    # 2. Define Thresholds relative to font size
-
-    # Overlap > 0.5 means words share the same visual line
-    OVERLAP_THRESHOLD = 0.5
-
-    # Gaps wider than 2.0x line height are treated as "Justified/Visual" spacing -> "  "
-    WIDE_GAP_THRESHOLD = median_height * 2.0
-
     # Vertical distance to denote a new text block/paragraph.
-    # If gap is smaller than this, we treat it as a wrapped line in the same paragraph -> " "
     BLOCK_GAP_THRESHOLD = median_height * 1.5
 
     result_tokens = []
     prev_box = None
 
-    for i, (word, box) in enumerate(zip(ordered_words, ordered_boxes)):
+    for i, (line_text, box) in enumerate(zip(ordered_lines, ordered_boxes)):
         separator = ""
 
         if prev_box is None:
@@ -208,68 +202,29 @@ def post_process_text(ordered_words, ordered_boxes):
         else:
             curr_top = box[1]
             prev_bottom = prev_box[3]
+            vertical_gap = curr_top - prev_bottom
 
-            # Check for vertical overlap (Are we on the same visual line?)
-            overlap_ratio = get_vertical_overlap(prev_box, box)
+            # Logic: Should we start a new block or just a new line?
 
-            if overlap_ratio > OVERLAP_THRESHOLD:
-                # --- SAME VISUAL LINE ---
+            # Case A: Reading order jumps UP (New Column or Page Reset)
+            if vertical_gap < -median_height:
+                separator = "\n\n"
 
-                # Calculate horizontal gap
-                h_gap = box[0] - prev_box[2]
+            # Case B: Significant Drop (New Paragraph / Separated Text Area)
+            elif vertical_gap > BLOCK_GAP_THRESHOLD:
+                separator = "\n\n"
 
-                if h_gap > WIDE_GAP_THRESHOLD:
-                    # User Request: Replace long spaces (Justify) with double space
-                    separator = "  "
-                elif h_gap < 0:
-                    # Negative gap (Kerning overlap) -> no space
-                    separator = ""
-                else:
-                    # Standard word spacing
-                    separator = " "
+            # Case C: Standard Line Continuation
             else:
-                # --- NEW GEOMETRIC LINE ---
-                vertical_gap = curr_top - prev_bottom
+                separator = "\n"
 
-                # Logic: Should we start a new line or unite this with previous text?
-
-                # Case A: Reading order jumps UP (New Column or Page Reset)
-                # vertical_gap is negative (e.g. moves from bottom of Col 1 to top of Col 2)
-                if vertical_gap < -median_height:
-                    separator = "\n"
-
-                # Case B: Significant Drop (New Paragraph / Separated Text Area)
-                elif vertical_gap > BLOCK_GAP_THRESHOLD:
-                    separator = "\n"
-
-                # Case C: Standard Line Wrap (Continuation of same paragraph)
-                # Unite lines by using a space instead of a newline
-                else:
-                    separator = " "
-
-        # 3. Append Logic (Prevent redundant separators)
-        if separator == "\n":
-            # Remove trailing spaces/tabs before adding newline
-            while result_tokens and result_tokens[-1] in [" ", "  ", "\t"]:
-                result_tokens.pop()
-            # Ensure we don't have multiple empty lines unless strictly necessary
-            if result_tokens and result_tokens[-1] != "\n":
-                result_tokens.append("\n")
-
-        elif separator == "  ":
-            if result_tokens and result_tokens[-1] != "\n":
-                result_tokens.append("  ")
-
-        elif separator == " ":
-            # Only add space if previous token wasn't a newline or space
-            if result_tokens and result_tokens[-1] not in ["\n", " ", "  "]:
-                result_tokens.append(" ")
-
-        result_tokens.append(word)
+        result_tokens.append(separator)
+        result_tokens.append(line_text)
         prev_box = box
 
     final_text = "".join(result_tokens)
     return final_text.strip()
+
 
 def extract_single_page(args):
     """Worker function to process one page."""
@@ -293,10 +248,10 @@ def extract_single_page(args):
             return False
 
     try:
-        # 1. Parse content
-        words, boxes, (page_w, page_h) = parse_alto_xml(xml_path)
+        # 1. Parse content (Now yielding lines, not words)
+        lines, boxes, (page_w, page_h) = parse_alto_xml(xml_path)
 
-        if not words:
+        if not lines:
             with open(txt_path, 'w', encoding='utf-8') as f:
                 f.write("")
             return True
@@ -304,17 +259,19 @@ def extract_single_page(args):
         # 2. Normalize boxes
         norm_boxes = normalize_boxes(boxes, page_w, page_h)
 
-        full_ordered_words = []
+        full_ordered_lines = []
         full_ordered_boxes = []
 
         # 3. Process in Chunks
+        # CHUNK_SIZE of 350 will easily process entire pages in one go now
+        # since we are passing lines, not words.
         CHUNK_SIZE = 350
 
-        for i in range(0, len(words), CHUNK_SIZE):
-            chunk_words = words[i: i + CHUNK_SIZE]
+        for i in range(0, len(lines), CHUNK_SIZE):
+            chunk_lines = lines[i: i + CHUNK_SIZE]
             chunk_boxes = norm_boxes[i: i + CHUNK_SIZE]
 
-            if not chunk_words:
+            if not chunk_lines:
                 continue
 
             try:
@@ -331,10 +288,10 @@ def extract_single_page(args):
                 # Reordering
                 order_indices = parse_logits(logits, len(chunk_boxes))
 
-                chunk_ordered_words = [chunk_words[idx] for idx in order_indices]
+                chunk_ordered_lines = [chunk_lines[idx] for idx in order_indices]
                 chunk_ordered_boxes = [chunk_boxes[idx] for idx in order_indices]
 
-                full_ordered_words.extend(chunk_ordered_words)
+                full_ordered_lines.extend(chunk_ordered_lines)
                 full_ordered_boxes.extend(chunk_ordered_boxes)
 
             except RuntimeError as e:
@@ -344,7 +301,7 @@ def extract_single_page(args):
                 raise e
 
         # 4. Generate text
-        final_text = post_process_text(full_ordered_words, full_ordered_boxes)
+        final_text = post_process_text(full_ordered_lines, full_ordered_boxes)
 
         with open(txt_path, 'w', encoding='utf-8') as f:
             f.write(final_text)

@@ -30,6 +30,33 @@ LANG_SCORE_ROUGH = 0.45  # lower is trash
 LANG_SCORE_CLEAR = 0.75  # higher is clear
 
 
+
+def pre_filter_line(line: str) -> tuple[str, str]:
+    """Fast CPU heuristic to discard garbage before it hits the GPU."""
+    clean_text = line.strip()
+    if not clean_text:
+        return "Empty", ""
+
+    # Complete opening and ending " marks in the text string
+    if clean_text.startswith('"') and not clean_text.endswith('"'):
+        clean_text += '"'
+    elif clean_text.endswith('"') and not clean_text.startswith('"'):
+        clean_text = '"' + clean_text
+
+    n_chars = len(clean_text)
+    unique_symbols = set(c for c in clean_text if not c.isspace())
+
+    # Fast check for very short or non-text content
+    if n_chars < 4 or len(unique_symbols) < 3:
+        return "Non-text", clean_text
+
+    letters = sum(c.isalpha() for c in clean_text)
+    if letters / n_chars < 0.3:  # Mostly symbols/numbers
+        return "Non-text", clean_text
+
+    return "Process", clean_text
+
+
 def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> list[float]:
     """Optimized batch perplexity calculation."""
     if not texts:
@@ -68,26 +95,6 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
     except Exception as e:
         print(f"[Error] Batch PPL: {e}", file=sys.stderr)
         return [0.0] * len(texts)
-
-
-def pre_filter_line(line: str) -> tuple[str, str]:
-    """Fast CPU heuristic to discard garbage before it hits the GPU."""
-    clean_text = line.strip()
-    if not clean_text:
-        return "Empty", ""
-
-    n_chars = len(clean_text)
-    unique_symbols = set(c for c in clean_text if not c.isspace())
-
-    # Fast check for very short or non-text content
-    if n_chars < 4 or len(unique_symbols) < 3:
-        return "Non-text", clean_text
-
-    letters = sum(c.isalpha() for c in clean_text)
-    if letters / n_chars < 0.3:  # Mostly symbols/numbers
-        return "Non-text", clean_text
-
-    return "Process", clean_text
 
 
 def categorize_line(lang_code, score, ppl, text_source):

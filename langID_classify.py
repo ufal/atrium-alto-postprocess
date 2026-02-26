@@ -84,6 +84,16 @@ def main():
 
         # File Skip Logic
         if file_id != current_file_id:
+            # Document finalized: Flush the batch for the previous file before switching
+            if batch_lines:
+                process_and_write_batch(batch_lines, batch_meta, out_dir_path, ft_model, ppl_model, ppl_tok)
+                batch_lines = []
+                batch_meta = []
+
+            # Document finalized: Sort the previous document's CSV
+            if current_file_id is not None and not skipping_current_file:
+                sort_document_csv(out_dir_path, current_file_id)
+
             current_file_id = file_id
             out_path = out_dir_path / f"{file_id}.csv"
 
@@ -110,28 +120,22 @@ def main():
         for i, line in enumerate(lines, 1):
 
             # 1. Parse Splits (Outgoing)
-            # This detects "divi- {divided}" -> returns "divided", "divi", "ded"
-            # or returns "text", "", "" if no split detected.
             merged_text, outgoing_prefix, outgoing_suffix = parse_line_splits(line)
 
             # 2. Current Line's Split State
             current_split_ws = outgoing_prefix
-            current_split_we = ""  # Default: no split ending on this line
+            current_split_we = ""
 
             if expected_incoming_suffix != "":
-                # The previous line said we expect 'ded' here.
-                # Remove 'ded' from the visual text of THIS line.
                 stripped_candidate = merged_text.lstrip()
                 if stripped_candidate.startswith(expected_incoming_suffix):
-                    # Remove the suffix from text
                     merged_text = merged_text.replace(expected_incoming_suffix, "", 1).strip()
-                    # Record it as the "End" of the split
                     current_split_we = expected_incoming_suffix
 
             # 3. Update state for NEXT line
             expected_incoming_suffix = outgoing_suffix
 
-            # 4. Pre-filter
+            # 4. Pre-filter (now includes quote balancing)
             cat, clean_merged = pre_filter_line(merged_text)
 
             if cat != "Process":
@@ -153,9 +157,13 @@ def main():
                 batch_lines = []
                 batch_meta = []
 
-    # Final Batch
+    # Final Batch (catch-all at the end of the script)
     if batch_lines:
         process_and_write_batch(batch_lines, batch_meta, out_dir_path, ft_model, ppl_model, ppl_tok)
+
+    # Sort the very last document processed in the loop
+    if current_file_id is not None and not skipping_current_file:
+        sort_document_csv(out_dir_path, current_file_id)
 
 
 def process_and_write_batch(lines, meta, out_dir, ft, ppl_model, tokenizer):
@@ -193,6 +201,18 @@ def process_and_write_batch(lines, meta, out_dir, ft, ppl_model, tokenizer):
         rows_for_file = list(group)
         write_rows_to_doc(out_dir, file_id, rows_for_file)
 
+
+def sort_document_csv(output_dir, file_id):
+    """
+    Sorts the finalized document CSV by page number and line number.
+    This is called only when the document is completely finished processing.
+    """
+    out_path = Path(output_dir) / f"{file_id}.csv"
+    if out_path.exists():
+        df_csv = pd.read_csv(out_path)
+        # Sort values ascendingly by page_num and line_num
+        df_csv = df_csv.sort_values(by=['page_num', 'line_num'], ascending=[True, True])
+        df_csv.to_csv(out_path, index=False)
 
 if __name__ == "__main__":
     main()
