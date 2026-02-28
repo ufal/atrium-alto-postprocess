@@ -1,0 +1,51 @@
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,categ
+CTX195704328,1,1,Kat- obec: C H 0 D O UNY,,,pol_Latn,0.5557,1639.73,Noisy
+CTX195704328,1,2,Osada:,,,pol_Latn,0.9951,1675.95,Noisy
+CTX195704328,1,3,Trať: Čmejlova pískovna,,,ces_Latn,0.9887,388.6,Clear
+CTX195704328,1,4,,,,,0.0,0.0,Empty
+CTX195704328,1,5,tou;,,,fra_Latn,0.5493,2013.4,Noisy
+CTX195704328,1,6,Okres: Roudnice n. Labem,,,ces_Latn,0.7671,2581.08,Clear
+CTX195704328,1,7,,,,,0.0,0.0,Empty
+CTX195704328,1,8,4 - 1957,,,,0.0,0.0,Non-text
+CTX195704328,1,9,,,,,0.0,0.0,Empty
+CTX195704328,1,10,T>r«l.. a k«Uurn: ojedinělý - únětická,,,ces_Latn,1.0,534.92,Clear
+CTX195704328,1,11,pohřebiště - lužická,,,ces_Latn,1.0,143.69,Clear
+CTX195704328,1,12,ved. výzkurnu,,,ces_Latn,0.9964,626.38,Clear
+CTX195704328,1,13,Zdráva / za obdobi,,,slk_Latn,0.9585,1326.81,Noisy
+CTX195704328,1,14,veý. oddélcni,,,hun_Latn,0.4752,5289.45,Noisy
+CTX195704328,1,15,,,,,0.0,0.0,Empty
+CTX195704328,1,16,"Dne 26.1X.1957 jsem zajel do Chodoun, abych zjistil možnosti",,,ces_Latn,0.9995,556.59,Clear
+CTX195704328,1,17,"výzkumu lužického žárového pohřebiště, plánovaného na srpen 1958# Naleziště",Na,,ces_Latn,1.0,243.85,Clear
+CTX195704328,1,18,"je asi 1 km vých. od obce v malé pískovně, kde místní občané",,leziště,ces_Latn,0.9998,489.55,Clear
+CTX195704328,1,19,těží dle potřeby písek. Přilehlé pole je oseto vojtěškou. Majitel obou,,,ces_Latn,1.0,292.77,Clear
+CTX195704328,1,20,pozemků neměl námitek proti provedení výzkumu.,,,ces_Latn,1.0,363.91,Clear
+CTX195704328,1,21,"V těchto místech byl koncem r.1954 rozrušen 1 žárový hrob, obložený",ob,,ces_Latn,1.0,348.6,Clear
+CTX195704328,1,22,opukovými deskami a s keramikou s hladce vymezenými prsovitý-,,ložený,ces_Latn,0.9885,639.85,Clear
+CTX195704328,1,23,mi vypnulinami (převzal tehdy referent v zastoupení KM Teplice).,,,ces_Latn,1.0,2162.27,Clear
+CTX195704328,1,24,V r.1955 získalo odtud museum v Budyni n.Ohří další rozrušený hrob,,,ces_Latn,0.9979,713.54,Clear
+CTX195704328,1,25,"(velký okřín a zlomky dalších asi 5 nádob; další nález, okolnosti neznámy).",ne,,ces_Latn,0.9905,282.05,Clear
+CTX195704328,1,26,,,známy).,,0.0,0.0,Empty
+CTX195704328,1,27,"Při své poslední návštěvě 26.IX. jsem zjistil, že těžební",,,ces_Latn,1.0,159.57,Clear
+CTX195704328,1,28,plocha se proti roku 1955 zvětšila cca 5 krát. Odkryvem byl rozrušen,rozru,,ces_Latn,1.0,547.47,Clear
+CTX195704328,1,29,"další, v pořadí již třetí hrob, z jehož obložení se zachovaly",,šen,ces_Latn,1.0,147.89,Clear
+CTX195704328,1,30,opět opukové desky. Dále byly nalezeny v přehozeném materiálu zlomky,zlom,,ces_Latn,1.0,764.37,Clear
+CTX195704328,1,31,"z několika nádob (osudí, miska a část spodku nádoby blíže neur-",,ky,ces_Latn,1.0,223.57,Clear
+CTX195704328,1,32,citelného tvaru s mřížkovým rýhováním). Poloha všech tří hrobů ukazuje,uka,,ces_Latn,1.0,361.62,Clear
+CTX195704328,1,33,"zároveň směr, kam asi další hroby pokračují, totiž na mírnou",,zuje,ces_Latn,1.0,223.96,Clear
+CTX195704328,1,34,"vyvýšeninu, zasahující z části již do pole. Při povrchovém sběru",,,ces_Latn,1.0,204.38,Clear
+CTX195704328,1,35,byl dále nalezen kamenný únětický mlat se žlábkovým sedlem (délka,(dél,,ces_Latn,1.0,293.56,Clear
+CTX195704328,1,36,167 mm). 1——,,ka,,0.0,0.0,Non-text
+CTX195704328,1,37,"Navrhuji, aby výzkum v příštím roce byl proveden několika",,,ces_Latn,1.0,354.1,Clear
+CTX195704328,1,38,"příčnými sondami, jimiž by byl praeoex zachycen rozsah pohřebiště,",,,ces_Latn,1.0,310.17,Clear
+CTX195704328,1,39,"zejména pak prozkoumat nej bližší okolí pískovny v těch místech, kde",,,ces_Latn,1.0,225.67,Clear
+CTX195704328,1,40,bude pravděpodobně těžení pokračovat. Vzhledem k malé mocnosti or-,,,ces_Latn,1.0,222.55,Clear
+CTX195704328,1,41,o,,,,0.0,0.0,Non-text
+CTX195704328,1,42,"nice na nalezišti a poměrně malé ploše návršíčka (cca 300 m ), kde",,,ces_Latn,0.9999,375.63,Clear
+CTX195704328,1,43,"pohřebiště předpokládám, věřím, že by pohřebiště mohlo být z větší",,,ces_Latn,1.0,48.97,Clear
+CTX195704328,1,44,Poznámka: Pikte pokud možno strojern. Nn konci uvedte datum odoslání a čitelný podpis. Zprávy koreferentú a komisi,,,ces_Latn,0.9167,433.01,Clear
+CTX195704328,1,45,vyhotovto dvojmo.,,,slk_Latn,0.9645,2365.91,Noisy
+CTX195704328,1,46,/ PT -14332:55,,,,0.0,0.0,Non-text
+CTX195704328,2,1,části prozkoumáno v plánované době v příštím roce,,,ces_Latn,1.0,230.05,Clear
+CTX195704328,2,2,,,,,0.0,0.0,Empty
+CTX195704328,2,3,V Praze 1. října 1957.,,,ces_Latn,1.0,961.87,Clear
+CTX195704328,2,4,J. Hrala,,,slk_Latn,0.9996,1122.71,Noisy
