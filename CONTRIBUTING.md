@@ -5,6 +5,8 @@ Welcome! This repository [^8] provides a robust workflow for transforming raw OC
 in digital archives, such as multi-column layout reconstruction, word-split recovery, 
 and automated quality filtering.
 
+The next step: [atrium-nlp-enrich](https://github.com/ARUP-CAS/atrium-nlp-enrich)
+
 ## 🏗️ Project Contributions & Capabilities
 
 This pipeline contributes 4 major stages to the data processing lifecycle, 
