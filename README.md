@@ -12,7 +12,7 @@ to identify and categorize noisy or unreliable OCR output.
 ## 📖 Table of Contents
 
 - [ ⚙️ Setup](#-setup)
-- [🛤️ Workflow Stages](#workflow-stages)
+- [🛤️ Workflow Stages](#-workflow-stages)
   - [Step 1: Split Document-Specific ALTOs into Pages ✂️](#-step-1-split-document-specific-altos-into-pages)
   - [Step 2: Create Page Statistics Table 📈](#-step-2-create-page-statistics-table)
   - [Step 3: Extract text from ALTO XML ⛏️](#-step-3-extract-text-from-alto-xml)
