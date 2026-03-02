@@ -1,0 +1,42 @@
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,categ
+CTX196300443,1,1,CESKOSLOVENSKA AKADEM’E VEk,,,ces_Latn,0.5226,271.69,Noisy
+CTX196300443,1,2,ABCHEOLOGICKÝ ÚSTAV,,,slk_Latn,0.5711,1558.23,Noisy
+CTX196300443,1,3,Exgesitura v Plzal,,,ces_Latn,0.5132,3206.47,Noisy
+CTX196300443,1,4,48/63 Plzeň,,,slk_Latn,0.6716,3609.33,Noisy
+CTX196300443,1,5,,,,,0.0,0.0,Empty
+CTX196300443,1,6,| c.s * AxCMtOir - <• UAtAv,,,fra_Latn,0.4025,3329.57,Trash
+CTX196300443,1,7,", , , / Doe • 19",,,,0.0,0.0,Non-text
+CTX196300443,1,8,"c • /, 2.. . 2 9. ledna 1963",,,,0.0,0.0,Non-text
+CTX196300443,1,9,/P1,,,,0.0,0.0,Non-text
+CTX196300443,1,10,"Zpráva o archeologické sbírce Vlastivědného muzea v Blovicích,",,,ces_Latn,0.9993,629.79,Clear
+CTX196300443,1,11,/okres Plzeň - jih/.,,,ces_Latn,0.9974,3668.51,Clear
+CTX196300443,1,12,"Archeologická sbírka je poměrně mladého data, vznikla ponejvíce",,,ces_Latn,1.0,463.37,Clear
+CTX196300443,1,13,ze sběří ředitele muzea Škrabka a spolupracovníka J.sýkory na nově objevených,obje,,ces_Latn,1.0,276.44,Clear
+CTX196300443,1,14,eneolitických výšinných sídlištích na Blovicku v poříčí Úslavy.,,vených,ces_Latn,0.966,210.16,Clear
+CTX196300443,1,15,"Tyto sběry, doplněné ústavním depositem z výzkumu v Srbech 1960, podávají",podá,,ces_Latn,1.0,311.38,Clear
+CTX196300443,1,16,výstižný přehled západočeské chamské skupiny. Z doby bronzové je,,vají,ces_Latn,0.999,296.01,Clear
+CTX196300443,1,17,v Blovicích depot z rShraní Bda BD v Libákovicích a mohylové bronzy z Járova.,Já,,ces_Latn,0.9852,1436.44,Clear
+CTX196300443,1,18,"Mladší pravěké kultury nejsou zastoupeny, středověk jen drobnými",,rova.,ces_Latn,1.0,263.28,Clear
+CTX196300443,1,19,"nálezy. Materiál je přehledně zapsán ve 130 příri stkových položkách,",,,ces_Latn,1.0,177.86,Clear
+CTX196300443,1,20,instalace se připravuje. Muzeum vyvíjí značnou aktivitu v archeologii,,,ces_Latn,1.0,352.13,Clear
+CTX196300443,1,21,a ohlašuje nálezy exposituře / v r.1962 byl na základě jeho hlásení prOveden,prO,,ces_Latn,1.0,605.2,Clear
+CTX196300443,1,22,"výzkum v Netunicích a d./, někdy ovšem zájem blovickych pracoví-",,veden,ces_Latn,1.0,499.63,Clear
+CTX196300443,1,23,kv zavádí k nežádoucím drobným výkopům. Ústavní depositum /Srby/ shledáno,,,ces_Latn,0.9999,244.6,Clear
+CTX196300443,1,24,v pořádku.,,,ces_Latn,1.0,745.9,Clear
+CTX196300443,1,25,Přehled sbírky,,,ces_Latn,1.0,617.6,Clear
+CTX196300443,1,26,Bzí - drobné nálezy z eneol. výšinnéhoj sídliště . _,,,ces_Latn,0.998,449.96,Clear
+CTX196300443,1,27,"větší soubor z eneol.výš.sídliště - publ. Masek,AR IV 1962",,,ces_Latn,1.0,410.02,Clear
+CTX196300443,1,28,Vlkov- sběry z en eol.výš. sídli ště,,,ces_Latn,1.0,208.49,Clear
+CTX196300443,1,29,"Velký Kám en —dtto , • v v",,,ces_Latn,0.9963,1592.11,Clear
+CTX196300443,1,30,Polanka u Blovic - sběry z eneol.výs.sídliste,,,ces_Latn,0.9471,593.41,Clear
+CTX196300443,1,31,"ojedinělé kam. nástroje - Plo víc e-Hradiš tě. Spálené. Poříčí.,. Ralov, dí-",,,ces_Latn,0.9999,290.6,Clear
+CTX196300443,1,32,"rec- Myt, Nezbavětice, Radochovy , Stl to. v .",,,ces_Latn,0.9992,776.24,Clear
+CTX196300443,1,33,"Jarov - bronz, terčoví tá jehlice, 2 pečetítkové j ehlic e, tyčink. nátamek",,,ces_Latn,0.7682,842.57,Clear
+CTX196300443,1,34,z rozrušené mohyly v Cábuzí /střední d.bronz/,,,ces_Latn,0.9999,621.05,Clear
+CTX196300443,1,35,"Libákovice_- bronz.depot z rozhraní střední a mladší d.bronz., publ.",,,ces_Latn,0.9927,811.55,Clear
+CTX196300443,1,36,"V.Čtrnáct, AR XIII 1961.",,,ces_Latn,0.8254,795.85,Clear
+CTX196300443,1,37,Vrtěšíce - ojeď.nález bronz.oštěpu,,,ces_Latn,0.9991,342.57,Clear
+CTX196300443,1,38,"Vlčice - Chýlava - středověká keramika, údajně ""Z mohyl*.",,,ces_Latn,1.0,289.4,Clear
+CTX196300443,1,39,v muzeu je uložen rukopis zprávy Jana Žáka z r.1881 o výkopech mohyl,,,ces_Latn,0.9941,446.54,Clear
+CTX196300443,1,40,v Chýlinách - Hladomří /částečně publikovaných J.Smolíkem v PA/.,,,ces_Latn,1.0,413.4,Clear
+CTX196300443,2,1,"CAČ / 7 kez/.e, ~0c,A.A4-) &o a",,,ces_Latn,0.3157,963.2,Noisy

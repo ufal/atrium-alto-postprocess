@@ -128,7 +128,8 @@ It reads the CSV from Step 2.
 
     python3 extract_LytRdr_ALTO_2_TXT.py
 
-that uses the LayoutReader framework [^9] to extract text and bounding boxes of XML elements, 
+that uses the LayoutReader framework [^9] to extract text and bounding boxes of XML elements (
+specifically, `<TextLine>` elements containing `String`s with `CONTENT` attribute), 
 process them to reconstruct the reading order of lines (columns-friendly), then handle words split
 between two lines (added whole word nearby), and based on the vertical spread of text lines groups
 page contents into paragraphs and lines of the output `.txt` file.
