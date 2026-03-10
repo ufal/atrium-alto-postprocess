@@ -13,15 +13,15 @@ to identify and categorize noisy or unreliable OCR output.
 
 - [ ⚙️ Setup](#-setup)
 - [🛤️ Workflow Stages](#-workflow-stages)
-  - [Step 1: Split Document-Specific ALTOs into Pages ✂️](#-step-1-split-document-specific-altos-into-pages)
-  - [Step 2: Create Page Statistics Table 📈](#-step-2-create-page-statistics-table)
-  - [Step 3: Extract text from ALTO XML ⛏️](#-step-3-extract-text-from-alto-xml)
+  - [Step 1: Split Document-Specific ALTOs into Pages ✂️](#-step-1-split-document-specific-altos-into-pages-)
+  - [Step 2: Create Page Statistics Table 📈](#-step-2-create-page-statistics-table-)
+  - [Step 3: Extract text from ALTO XML ⛏️](#-step-3-extract-text-from-alto-xml-)
     - [LayoutReader method 📐](#1st-choice-layoutreader--method-)
     - [alto-tools method 🧰](#2nd-option-alto-tools--method)
     - [GLM method 🤖](#3rd-alternative-glm--method-llm-based)
-  - [Step 4: Classify Page Text Quality \& Language 🗂️](#-step-4-classify-page-text-quality--language)
-    - [4.1 Classify Lines (GPU Bound) 🚀](#41-classify-lines-gpu-bound)
-    - [4.2 Aggregate Statistics (Memory Bound) 🧠](#42-aggregate-statistics-memory-bound)
+  - [Step 4: Classify Page Text Quality \& Language 🗂️](#-step-4-classify-page-text-quality--language-)
+    - [4.1 Classify Lines (GPU Bound) 🚀](#41-classify-lines-gpu-bound-)
+    - [4.2 Aggregate Statistics (Memory Bound) 🧠](#42-aggregate-statistics-memory-bound-)
 - [Acknowledgements 🙏](#acknowledgements-)
 
 ## ⚙️ Setup
