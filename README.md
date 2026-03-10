@@ -203,7 +203,7 @@ line-by-line, counting lines of defined types, to filter out OCR noise 🔇.
 It uses the [FastText language identification model](https://huggingface.co/facebook/fasttext-language-identification) 😊 
 and perplexity scores from [distilGPT2](https://huggingface.co/distilbert/distilgpt2) 😊 to detect noise [^2] [^6].
 
-More post-processing of TXT files can be found in the [GitHub repository](https://github.com/K4TEL/atrium-nlp-enrich) 
+More post-processing of TXT files can be found in the [GitHub repository](https://github.com/ufal/atrium-nlp-enrich) 
 of ATRIUM project dedicated to based on NLP enrichment of the textual data using Nametag for 
 NER and UDPipe for CONLL-U files with lemmas & POS tags [^5].
 
@@ -318,9 +318,9 @@ before the Handwritten Text Recognition (HTR) processing is applied.
 [^2]: https://huggingface.co/facebook/fasttext-language-identification
 [^3]: https://github.com/ufal/ker
 [^4]: https://atrium-research.eu/
-[^5]: https://github.com/K4TEL/atrium-nlp-enrich
+[^5]: https://github.com/ufal/atrium-nlp-enrich
 [^6]: https://huggingface.co/distilbert/distilgpt2
-[^8]: https://github.com/K4TEL/atrium-alto-postprocess
+[^8]: https://github.com/ufal/atrium-alto-postprocess
 [^7]: https://ufal.mff.cuni.cz/home-page
 [^9]: https://github.com/ppaanngggg/layoutreader
 [^10]: https://huggingface.co/THUDM/glm-4v-9b
