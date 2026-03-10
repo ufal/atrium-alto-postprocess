@@ -305,7 +305,7 @@ will open and allow you to upload images and test the API.
 [^4]: https://atrium-research.eu/
 [^5]: https://docs.python.org/3/library/venv.html
 [^6]: https://huggingface.co/distilbert/distilgpt2
-[^8]: https://github.com/K4TEL/atrium-alto-postprocess
+[^8]: https://github.com/ufal/atrium-alto-postprocess
 [^7]: https://ufal.mff.cuni.cz/home-page
 [^9]: https://github.com/ppaanngggg/layoutreader
 [^10]: https://huggingface.co/THUDM/glm-4v-9b
