@@ -225,9 +225,8 @@ variables are divided into two sections according to the processing stage of Ste
 
 #### 4.1 Classify Lines (GPU Bound) 🚀
 
-This script reads the extracted text files, batches lines together 📦, and runs the FastText
-and DistilGPT2 models on the **GPU** 🎮. It logs results immediately to a raw CSV to save memory 💾.
-
+This script reads the extracted text files, batches lines together 📦, and runs the FastText [^2]
+and DistilGPT2 [^6] models on the **GPU**. It logs results immediately to a raw CSV to save memory 💾.
 
     python3 langID_classify.py
 
