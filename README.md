@@ -242,6 +242,8 @@ and DistilGPT2 [^6] models on the **GPU**. It logs results immediately to a raw 
 * `page_num` - page number 📄
 * `line_num` - line number, starts from 1 for each line on the ALTO page 🔢
 * `text` - original text of the line from ALTO page 📝
+* `split_we` - hyphen end (split word ending - first word in line)
+* `split_ws` - hyphen start (split word beginning - last word in line)
 * `lang` - predicted ISO language code of the line ([list of all possible language labels predicted by FastText model)](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200) 🌐
 * `lang_score` - confidence score of the predicted language code 🎯
 * `perplex` - perplexity score of the original line text 📉

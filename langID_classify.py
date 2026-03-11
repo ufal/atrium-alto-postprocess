@@ -44,7 +44,7 @@ def write_rows_to_doc(output_dir, file_id, rows):
             # HEADER: split_ws (start/prefix), split_we (end/suffix)
             writer.writerow([
                 "file", "page_num", "line_num", "text",
-                "split_ws", "split_we",
+                "split_we", "split_ws",
                 "lang", "lang_score", "perplex", "categ"
             ])
         writer.writerows(rows)
@@ -141,7 +141,7 @@ def main():
             if cat != "Process":
                 row_data = [
                     file_id, page_id, i, clean_merged,
-                    current_split_ws, current_split_we,
+                    current_split_we, current_split_ws,
                     "N/A", 0, 0, cat
                 ]
                 write_rows_to_doc(out_dir_path, file_id, [row_data])
@@ -149,7 +149,7 @@ def main():
 
             # 6. Add to Batch
             batch_lines.append(clean_merged)
-            batch_meta.append((file_id, page_id, i, clean_merged, current_split_ws, current_split_we))
+            batch_meta.append((file_id, page_id, i, clean_merged, current_split_we, current_split_ws))
 
             # PROCESS BATCH
             if len(batch_lines) >= BATCH_SIZE:
@@ -179,15 +179,15 @@ def process_and_write_batch(lines, meta, out_dir, ft, ppl_model, tokenizer):
 
     results = []
     for i in range(len(lines)):
-        file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
+        file_id, page_id, line_num, text_content, split_we, split_ws = meta[i]
 
         row = [
             file_id,
             page_id,
             line_num,
             text_content,
-            split_ws,
             split_we,
+            split_ws,
             langs[i],
             f"{scores[i]:.4f}",
             f"{ppls[i]:.2f}",
