@@ -62,19 +62,19 @@ archival systems. It provides:
 | `master` | Stable / Integration | Merged exclusively by a human reviewer. Do not open PRs directly into `master`. |
 
 ```text
-test  ←  feature/<issue>
-test  ←  bugfix/<issue>
-master   ←  (humans only, after test stabilises)
+test    ←  feature-<name>
+test    ←  bugfix-<name>
+master  ←  (humans only, after test stabilises)
 
 ```
 
 ### 🏷️ Branch Naming
 
-| Type             | Pattern           | Example                        |
-|------------------|-------------------|--------------------------------|
-| New feature      | `feature/<issue>` | `feature/42-api-integration`   |
-| Bug fix          | `bugfix/<issue>`  | `bugfix/17-layout-split-error` |
-| Hotfix on master | `hotfix/<issue>`  | `hotfix/99-api-timeout`        |
+| Type             | Pattern          | Example                |
+|------------------|------------------|------------------------|
+| New feature      | `feature-<name>` | `feature-regex-factor` |
+| Bug fix          | `bugfix-<name>`  | `bugfix-chunking`      |
+| Hotfix on master | `hotfix-<name>`  | `hotfix-reqs-modules`  |
 
 ---
 
@@ -85,11 +85,8 @@ master   ←  (humans only, after test stabilises)
 ```bash
 git checkout test
 git pull origin test
-git checkout -b feature/<issue-number>
-
+git checkout -b feature-<name>
 ```
-
-
 3. **Implement your changes** observing the project's code conventions.
 4. **Run the minimum tests** (see the Testing section).
 5. **Open a Pull Request** targeting the `test` branch.
@@ -107,7 +104,12 @@ Every PR must include:
 
 Use a **Draft PR** if the work is not ready for review.
 
-*Note: Do not open PRs into `master` — merging into `master` is exclusively the maintainers' responsibility.*
+**Do not open PRs into `master` — merging into `master` is exclusively the 
+maintainers' responsibility.
+
+> **Note on issue tracking:** Issues reference the commits and PRs that resolved 
+> them — not the other way around. Commit messages describe *what changed*; the issue 
+> is the place to record *why* and link the resulting commits together.
 
 ---
 
@@ -115,9 +117,8 @@ Use a **Draft PR** if the work is not ready for review.
 
 Format:
 
-```
+```text
 [type] concise description of what changed
-
 ```
 
 Allowed types:
@@ -137,14 +138,17 @@ Allowed types:
 
 ---
 
+
 ## 🧪 Code Conventions & Testing
 
 ### Code Conventions
 
-* **Formatting:** Python code should be formatted using `black` (line length 120) and `isort`.
-* **Linting:** Ensure compliance with `flake8`.
-* **Docstrings:** Use descriptive, concrete language avoiding generic templates (e.g., 
-avoid simply writing "Return value of the function").
+* **Comments:** informative but short, may be LLM-generated, added when function name does 
+not explain its functionality in detail
+* **Argument types:** set default type (e.g., `int`, `list`) for function arguments
+* **Console flags:** when a new one added, provide help message for it
+* **Config files:** when set of variables changes it should be reflected in repository documentation
+* **Generated code:** always should be manually launched and checked for mistakes before pushing
 
 ### Minimum checks before every commit
 
@@ -159,9 +163,9 @@ pre-commit run --all-files
 
 ```
 
-
-*Note: If specific scripts or extraction modules are updated, please run a smoke-test 
-against the `data_samples/` directory to verify extraction integrity.*
+> [!NOTE]
+>  If specific scripts or extraction modules are updated, please run a smoke-test 
+> against the `data_samples/` directory to verify extraction integrity.
 
 ---
 
