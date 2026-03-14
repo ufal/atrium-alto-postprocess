@@ -247,7 +247,43 @@ and DistilGPT2 [^6] models on the **GPU**. It logs results immediately to a raw 
 * `lang` - predicted ISO language code of the line ([list of all possible language labels predicted by FastText model)](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200) 🌐
 * `lang_score` - confidence score of the predicted language code 🎯
 * `perplex` - perplexity score of the original line text 📉
+* `symbol` - count of tokens with strange symbols (see below)
+* `upper` - count of words with unexpected mid-word uppercase (see below)
 * `categ` - assigned category of the line (**Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙)
+
+##### Categorisation logic
+
+`Empty` and `Non-text` are assigned by a fast CPU pre-filter (letter ratio, length, 
+unique-symbol count). The remaining three categories are assigned by `categorize_line()` in 
+`text_util_langID.py` after GPU perplexity scoring, using three structural detectors:
+
+| Detector                     | What it counts                                                                                                                                                                                               |
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `detect_strange_symbols`     | Tokens containing any character that is not alphanumeric and not in the allowed set `{ . - , + }`. Edge punctuation is stripped before inspection so trailing colons or parentheses don't inflate the count. |
+| `detect_letter_digit_letter` | Tokens with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g. `vyt1ačená`, `nalez2í`). Legitimate patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger.   |
+| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase-run at the start followed by lowercase (`XXWžkumu`). All-caps words and titles (`PhDr`, `MUDr`) are excluded.                 |
+
+Decision tree (evaluated top to bottom, first match wins):
+
+```
+sym >= 2                         → Trash
+sym == 1  AND  rep > 0           → Trash   (repeated strange symbol in token)
+fuse >= 2                        → Trash   (multiple fused tokens in line)
+sym >= 1  AND  fuse >= 1         → Trash   (symbol + fusion combined)
+
+sym == 1                         → Noisy
+fuse >= 1                        → Noisy
+upper > 0                        → Noisy
+ppl >= 1500  (only if wc >= 7)   → Noisy   (PPL gate disabled for short lines)
+
+otherwise                        → Clear
+```
+
+> [!NOTE]
+> Perplexity is **not** used to determine Trash. `distilgpt2` is an English model and 
+> assigns very high PPL to legitimate short Czech strings (place names, postal codes, 
+> form-field labels), making it unreliable as a Trash signal. It is retained only as a 
+> weak Noisy signal on lines with ≥ 7 words.
 
 Example of per-document CSV file with per-line statistics: [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁.
 ```

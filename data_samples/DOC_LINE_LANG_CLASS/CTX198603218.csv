@@ -1,26 +1,26 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,categ
-CTX198603218,1,1,"479. TUROVEC, o. Nová Ves u Chýnova, okr. Tábor",,,slk_Latn,0.5741,702.52,Noisy
-CTX198603218,1,2,"1980-81 - KULT: Středověk. LOK: ZSV Kravín, ca 6,5km JV od Tábora; Ikm sev. od silnice",,,ces_Latn,0.9978,446.28,Clear
-CTX198603218,1,3,"Planá n.Luž. - Turovec-Chýnov; v lese s pomístním názvem ""Stará ves"" /""Pustá ves""/. ZM 23-133 Tábor,",Tá,,ces_Latn,0.9868,328.75,Clear
-CTX198603218,1,4,217 od Z a 65 mm od J s.č. OKOL: Systematický výzkum zaniklé středověké vesnice Kravín. NÁLEZ:,,"bor,",ces_Latn,0.9999,430.36,Clear
-CTX198603218,1,5,"Po předchozích výzkumech v letech 1965-1967 a 1973-1974 odkryt jeden z dalších objektů ZSV, tentokrát",,,ces_Latn,1.0,333.41,Clear
-CTX198603218,1,6,"jako součást ""Experimentu na středověkém objektu"", prováděném ve spolupráci AÚ ČSAV Praha a MHRH",,,ces_Latn,1.0,353.76,Clear
-CTX198603218,1,7,Tábor. Výzkumem měla být ověřena vypovídací schopnost geodeticko-topografického průzkumu v detailní,,,ces_Latn,1.0,215.76,Clear
-CTX198603218,1,8,situaci jednoho z objektů. Archeologický výzkum byl zařazen do výzkumného úkolu systematického zkoumání,,,ces_Latn,1.0,230.03,Clear
-CTX198603218,1,9,ZSV tzv. husitského období na Táborskú. Výzkumem byl zjištěn jednoprostorový obytný objekt zemnicové-,,,ces_Latn,0.9982,242.11,Clear
-CTX198603218,1,10,"ho typu s prostým otevřeným ohništěm, zásobní jámou, svahovitou vstupní šíjí a kamennou plentou podél",,,ces_Latn,0.9998,302.46,Clear
-CTX198603218,1,11,podpovrchových částí stěn. Objekt dosahoval rozměrů 500-540 x 220-270 cm s delší osou V - Z. Jihovýchodně,Jihovýchod,,ces_Latn,1.0,239.04,Clear
-CTX198603218,1,12,"od tohoto objektu, 350 cm od stěn a 250 cm od počátku vchodu do něj, byly odkryty zbytky povrchové stavby.",stav,ně,ces_Latn,1.0,353.89,Clear
-CTX198603218,1,13,Rozkládala se na ploše cca 500 x 500 cm a její stěny byly shodně orientovány s obytným objektem. Získaný,Zís,by.,ces_Latn,1.0,320.08,Clear
-CTX198603218,1,14,materiál této sídelní jednotky /dům + oddělená hospodářská stavba/ je datován do první poloviny 15.,,kaný,ces_Latn,1.0,592.26,Clear
-CTX198603218,1,15,"století. Mezi objekty č. 1 /dům/ a č. 3 /povrchová stavba/byla odkryta oválná studna, prostě vyhloubená",,,ces_Latn,1.0,371.16,Clear
-CTX198603218,1,16,"do podloží, dosahující průměru 140-175cm a hloubky 410 cm. Ve středu dna bylo zjištěno pravidelné kruhovité",kru,,ces_Latn,1.0,580.28,Clear
-CTX198603218,1,17,"zahloubení o průměru 60cm a hloubce 20 cm, sloužící jako odkalovač. Objekt je datován do konce 13.,",,hovité,ces_Latn,1.0,572.29,Clear
-CTX198603218,1,18,či na přelom 13.-14. stol. V roce 1981 byla dále provedena preparace částí objektů z let 1973-1974a u jednoho,jed,,ces_Latn,1.0,705.79,Clear
-CTX198603218,1,19,"z nich byla odkryta 810 cm hluboká studna, roubená na sucho loženým kamením, dosahující vnitřního",,noho,ces_Latn,1.0,494.15,Clear
-CTX198603218,1,20,průměru 80-90cm. Materiál datuje objekt do první poloviny 15. stol. ULOŽ: MHRH Tábor. LIT: Shrnuta,,,ces_Latn,0.9989,449.76,Clear
-CTX198603218,1,21,"in: Krajíc R. , Přehled archeologických výzkumů středověku na Táborskú/se zaměřením na ZSO/, Archeologické",Arche,,ces_Latn,1.0,208.01,Clear
-CTX198603218,1,22,"výzkumy v jižních Čechách 1, 1983, 101-105.",,ologické,ces_Latn,0.9999,135.05,Clear
-CTX198603218,1,23,R. Krajíc,,,ces_Latn,0.9999,654.55,Clear
-CTX198603218,1,24,,,,,0.0,0.0,Empty
-CTX198603218,1,25,BZU 1982-1983 4,,,,0.0,0.0,Non-text
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,symbol,upper,categ
+CTX198603218,1,1,"479. TUROVEC, o. Nová Ves u Chýnova, okr. Tábor",,,slk_Latn,0.5741,702.52,0,0,Clear
+CTX198603218,1,2,"1980-81 - KULT: Středověk. LOK: ZSV Kravín, ca 6,5km JV od Tábora; Ikm sev. od silnice",,,ces_Latn,0.9978,446.28,0,0,Clear
+CTX198603218,1,3,"Planá n.Luž. - Turovec-Chýnov; v lese s pomístním názvem ""Stará ves"" /""Pustá ves""/. ZM 23-133 Tábor,",Tá,,ces_Latn,0.9868,328.75,0,0,Clear
+CTX198603218,1,4,217 od Z a 65 mm od J s.č. OKOL: Systematický výzkum zaniklé středověké vesnice Kravín. NÁLEZ:,,"bor,",ces_Latn,0.9999,430.36,0,0,Clear
+CTX198603218,1,5,"Po předchozích výzkumech v letech 1965-1967 a 1973-1974 odkryt jeden z dalších objektů ZSV, tentokrát",,,ces_Latn,1.0,333.41,0,0,Clear
+CTX198603218,1,6,"jako součást ""Experimentu na středověkém objektu"", prováděném ve spolupráci AÚ ČSAV Praha a MHRH",,,ces_Latn,1.0,353.76,0,0,Clear
+CTX198603218,1,7,Tábor. Výzkumem měla být ověřena vypovídací schopnost geodeticko-topografického průzkumu v detailní,,,ces_Latn,1.0,215.76,0,0,Clear
+CTX198603218,1,8,situaci jednoho z objektů. Archeologický výzkum byl zařazen do výzkumného úkolu systematického zkoumání,,,ces_Latn,1.0,230.03,0,0,Clear
+CTX198603218,1,9,ZSV tzv. husitského období na Táborskú. Výzkumem byl zjištěn jednoprostorový obytný objekt zemnicové-,,,ces_Latn,0.9982,242.11,0,0,Clear
+CTX198603218,1,10,"ho typu s prostým otevřeným ohništěm, zásobní jámou, svahovitou vstupní šíjí a kamennou plentou podél",,,ces_Latn,0.9998,302.46,0,0,Clear
+CTX198603218,1,11,podpovrchových částí stěn. Objekt dosahoval rozměrů 500-540 x 220-270 cm s delší osou V - Z. Jihovýchodně,Jihovýchod,,ces_Latn,1.0,239.04,0,0,Clear
+CTX198603218,1,12,"od tohoto objektu, 350 cm od stěn a 250 cm od počátku vchodu do něj, byly odkryty zbytky povrchové stavby.",stav,ně,ces_Latn,1.0,353.89,0,0,Clear
+CTX198603218,1,13,Rozkládala se na ploše cca 500 x 500 cm a její stěny byly shodně orientovány s obytným objektem. Získaný,Zís,by.,ces_Latn,1.0,320.08,0,0,Clear
+CTX198603218,1,14,materiál této sídelní jednotky /dům + oddělená hospodářská stavba/ je datován do první poloviny 15.,,kaný,ces_Latn,1.0,592.26,0,0,Clear
+CTX198603218,1,15,"století. Mezi objekty č. 1 /dům/ a č. 3 /povrchová stavba/byla odkryta oválná studna, prostě vyhloubená",,,ces_Latn,1.0,371.16,1,0,Noisy
+CTX198603218,1,16,"do podloží, dosahující průměru 140-175cm a hloubky 410 cm. Ve středu dna bylo zjištěno pravidelné kruhovité",kru,,ces_Latn,1.0,580.28,0,0,Clear
+CTX198603218,1,17,"zahloubení o průměru 60cm a hloubce 20 cm, sloužící jako odkalovač. Objekt je datován do konce 13.,",,hovité,ces_Latn,1.0,572.29,0,0,Clear
+CTX198603218,1,18,či na přelom 13.-14. stol. V roce 1981 byla dále provedena preparace částí objektů z let 1973-1974a u jednoho,jed,,ces_Latn,1.0,705.79,0,0,Clear
+CTX198603218,1,19,"z nich byla odkryta 810 cm hluboká studna, roubená na sucho loženým kamením, dosahující vnitřního",,noho,ces_Latn,1.0,494.15,0,0,Clear
+CTX198603218,1,20,průměru 80-90cm. Materiál datuje objekt do první poloviny 15. stol. ULOŽ: MHRH Tábor. LIT: Shrnuta,,,ces_Latn,0.9989,449.76,0,0,Clear
+CTX198603218,1,21,"in: Krajíc R. , Přehled archeologických výzkumů středověku na Táborskú/se zaměřením na ZSO/, Archeologické",Arche,,ces_Latn,1.0,208.01,1,0,Noisy
+CTX198603218,1,22,"výzkumy v jižních Čechách 1, 1983, 101-105.",,ologické,ces_Latn,0.9999,135.05,0,0,Clear
+CTX198603218,1,23,R. Krajíc,,,ces_Latn,0.9999,654.55,0,0,Clear
+CTX198603218,1,24,,,,,0.0,0.0,0,0,Empty
+CTX198603218,1,25,BZU 1982-1983 4,,,,0.0,0.0,0,0,Non-text

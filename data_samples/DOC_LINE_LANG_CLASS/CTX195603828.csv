@@ -1,45 +1,45 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,categ
-CTX195603828,1,1,Věc : Stará Kouřim / Kolín/,,,ces_Latn,1.0,1280.94,Clear
-CTX195603828,1,2,v Praze dne 6.října 1956.,,,ces_Latn,0.9909,1263.16,Clear
-CTX195603828,1,3,Výzkum slovanského hradiště,,,ces_Latn,0.9998,353.78,Clear
-CTX195603828,1,4,Zpráva za září 1956.,,,ces_Latn,1.0,303.29,Clear
-CTX195603828,1,5,,,,,0.0,0.0,Empty
-CTX195603828,1,6,"Vedoucím výzkumu • Dr ""iloš Solle ,",,,ces_Latn,0.9984,984.79,Clear
-CTX195603828,1,7,"Spolupracovali • r V. Vojáček, J.Hub.",,,ces_Latn,0.8184,598.76,Clear
-CTX195603828,1,8,"Počet dělníků : 4 stálí , 4 výpomocní.",,,ces_Latn,1.0,212.26,Clear
-CTX195603828,1,9,,,,,0.0,0.0,Empty
-CTX195603828,1,10,Práce :,,,ces_Latn,0.8918,4204.52,Clear
-CTX195603828,1,11,Pracoviště 1/56 : Práce na tomto úseku uzavřena.Rozšířenou,,,ces_Latn,0.9999,249.25,Clear
-CTX195603828,1,12,"křížovou sondou bylo ověřeno ukončení hradby středního vslu,",,,ces_Latn,1.0,306.4,Clear
-CTX195603828,1,13,připnutého k jižnímu srázu hradiska a horizontální a vertikální,verti,,ces_Latn,1.0,322.4,Clear
-CTX195603828,1,14,výzkumnou metodou zjištěn charakter opevnění přemyslovského,přemyslov,kální,ces_Latn,1.0,210.05,Clear
-CTX195603828,1,15,typu s kamennou a roštovou dřevěnou konsttukcí valového,,ského,ces_Latn,1.0,350.16,Clear
-CTX195603828,1,16,tělesa.Pozůstatky dřevěné konstrukce místy i positivně nachovány.,nacho,,ces_Latn,1.0,171.25,Clear
-CTX195603828,1,17,,,vány.,,0.0,0.0,Empty
-CTX195603828,1,18,Pracoviště 2/56: Na tomto úseku pare 826 zachyceny stopy,,,ces_Latn,0.9842,933.59,Clear
-CTX195603828,1,19,jižní hradby na okr- ji hradiska s kamennou,,,ces_Latn,0.9998,386.78,Clear
-CTX195603828,1,20,patou ve formě zřetelné kamenné podezdívky.Za touto kamennnou,,,ces_Latn,1.0,287.54,Clear
-CTX195603828,1,21,podezdívkou zjištěn sídlištní prostor s popelovitými vrstvami,,,ces_Latn,0.9992,281.81,Clear
-CTX195603828,1,22,"a nálezy , příčně členěný zídkou a řadou kůlů.e nutno zde rozlišit",roz,,ces_Latn,1.0,160.98,Clear
-CTX195603828,1,23,2 základní slovanské sídlištní fáse a třetí ve formě stavební,sta,lišit,ces_Latn,1.0,287.74,Clear
-CTX195603828,1,24,úpravy. Z nejstarší fáse pocházejí 3 hluboké zásobní LÁzE,,vební,ces_Latn,1.0,533.91,Clear
-CTX195603828,1,25,j ámy .,,,slk_Latn,0.9961,4278.16,Noisy
-CTX195603828,1,26,Pracoviště 5/56: Sondou bylo zachyceno prostorově omezené řadové,řa,,ces_Latn,1.0,704.6,Clear
-CTX195603828,1,27,pohřebiště s 20 hrobovými jamami a 57,,dové,ces_Latn,1.0,662.62,Clear
-CTX195603828,1,28,"pohřby.Hroby byly obloženy kameny,kostry v natažené poloze",,,ces_Latn,0.9995,509.09,Clear
-CTX195603828,1,29,"V-Z orientace,často etažovitě nad sebou uložené.Většina pohřbů",pohř,,ces_Latn,1.0,266.85,Clear
-CTX195603828,1,30,byla bez milodarů a bez ozdob. ' jedné čtvrtiny byly přiloženy,přilože,bů,ces_Latn,1.0,541.95,Clear
-CTX195603828,1,31,"věci osobní potřeby.""atím byl nejpříznačněxjší pohřeb muže",,ny,ces_Latn,1.0,250.48,Clear
-CTX195603828,1,32,"s 2 železnými nožíky a brouskem, a pohřeb dítěte s esovitou",,,ces_Latn,1.0,308.06,Clear
-CTX195603828,1,33,"bronzovou záušničkou ,perlovým náhrdelníkem a částí textilie.",,,ces_Latn,0.9963,377.74,Clear
-CTX195603828,1,34,"Pohřebiště lze předběžně datovat do mladší hradištní periody,",,,ces_Latn,1.0,153.53,Clear
-CTX195603828,1,35,lze je určit jako křeštanské. Významná je sama existence pohřebiště,pohře,,ces_Latn,1.0,207.66,Clear
-CTX195603828,1,36,"na hradišti, jeho umístění v těsné souvislosti s jezírkem",,biště,ces_Latn,1.0,277.58,Clear
-CTX195603828,2,1,"u Libuše.Pohřebiště není celé prokopáno,v příštím roce bude nutno",,,ces_Latn,1.0,267.32,Clear
-CTX195603828,2,2,celé prozkoumat plošným odkryvem při čemž byde naděje objeviti i,,,ces_Latn,1.0,223.28,Clear
-CTX195603828,2,3,kostel nebo jiné centrum hrobové akumulace.,,,ces_Latn,1.0,1605.74,Clear
-CTX195603828,2,4,Vystopování tohoto pohřebiště je hlavním úspěchem předchozí,,,ces_Latn,1.0,260.23,Clear
-CTX195603828,2,5,fosfátové metody.,,,ces_Latn,0.977,1333.09,Clear
-CTX195603828,2,6,,,,,0.0,0.0,Empty
-CTX195603828,2,7,Výzkum bude uzavřen po stránce výzkumné 10.10 t.r. do konce,,,ces_Latn,1.0,252.09,Clear
-CTX195603828,2,8,měsíce budou sondy zaházeny bez účasti vedoucího výzkumu.,,,ces_Latn,1.0,221.33,Clear
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,symbol,upper,categ
+CTX195603828,1,1,Věc : Stará Kouřim / Kolín/,,,ces_Latn,1.0,1280.94,0,0,Clear
+CTX195603828,1,2,v Praze dne 6.října 1956.,,,ces_Latn,0.9909,1263.16,0,0,Clear
+CTX195603828,1,3,Výzkum slovanského hradiště,,,ces_Latn,0.9998,353.78,0,0,Clear
+CTX195603828,1,4,Zpráva za září 1956.,,,ces_Latn,1.0,303.29,0,0,Clear
+CTX195603828,1,5,,,,,0.0,0.0,0,0,Empty
+CTX195603828,1,6,"Vedoucím výzkumu • Dr ""iloš Solle ,",,,ces_Latn,0.9984,984.79,1,0,Noisy
+CTX195603828,1,7,"Spolupracovali • r V. Vojáček, J.Hub.",,,ces_Latn,0.8184,598.76,1,0,Noisy
+CTX195603828,1,8,"Počet dělníků : 4 stálí , 4 výpomocní.",,,ces_Latn,1.0,212.26,0,0,Clear
+CTX195603828,1,9,,,,,0.0,0.0,0,0,Empty
+CTX195603828,1,10,Práce :,,,ces_Latn,0.8918,4204.5,0,0,Clear
+CTX195603828,1,11,Pracoviště 1/56 : Práce na tomto úseku uzavřena.Rozšířenou,,,ces_Latn,0.9999,249.25,1,0,Noisy
+CTX195603828,1,12,"křížovou sondou bylo ověřeno ukončení hradby středního vslu,",,,ces_Latn,1.0,306.4,0,0,Clear
+CTX195603828,1,13,připnutého k jižnímu srázu hradiska a horizontální a vertikální,verti,,ces_Latn,1.0,322.4,0,0,Clear
+CTX195603828,1,14,výzkumnou metodou zjištěn charakter opevnění přemyslovského,přemyslov,kální,ces_Latn,1.0,210.05,0,0,Clear
+CTX195603828,1,15,typu s kamennou a roštovou dřevěnou konsttukcí valového,,ského,ces_Latn,1.0,350.16,0,0,Clear
+CTX195603828,1,16,tělesa.Pozůstatky dřevěné konstrukce místy i positivně nachovány.,nacho,,ces_Latn,1.0,171.25,0,0,Clear
+CTX195603828,1,17,,,vány.,,0.0,0.0,0,0,Empty
+CTX195603828,1,18,Pracoviště 2/56: Na tomto úseku pare 826 zachyceny stopy,,,ces_Latn,0.9842,933.59,1,0,Noisy
+CTX195603828,1,19,jižní hradby na okr- ji hradiska s kamennou,,,ces_Latn,0.9998,386.78,0,0,Clear
+CTX195603828,1,20,patou ve formě zřetelné kamenné podezdívky.Za touto kamennnou,,,ces_Latn,1.0,287.54,0,0,Clear
+CTX195603828,1,21,podezdívkou zjištěn sídlištní prostor s popelovitými vrstvami,,,ces_Latn,0.9992,281.81,0,0,Clear
+CTX195603828,1,22,"a nálezy , příčně členěný zídkou a řadou kůlů.e nutno zde rozlišit",roz,,ces_Latn,1.0,160.98,0,0,Clear
+CTX195603828,1,23,2 základní slovanské sídlištní fáse a třetí ve formě stavební,sta,lišit,ces_Latn,1.0,287.74,0,0,Clear
+CTX195603828,1,24,úpravy. Z nejstarší fáse pocházejí 3 hluboké zásobní LÁzE,,vební,ces_Latn,1.0,533.91,0,0,Clear
+CTX195603828,1,25,j ámy .,,,slk_Latn,0.9961,4278.12,0,0,Clear
+CTX195603828,1,26,Pracoviště 5/56: Sondou bylo zachyceno prostorově omezené řadové,řa,,ces_Latn,1.0,704.6,1,0,Noisy
+CTX195603828,1,27,pohřebiště s 20 hrobovými jamami a 57,,dové,ces_Latn,1.0,662.62,0,0,Clear
+CTX195603828,1,28,"pohřby.Hroby byly obloženy kameny,kostry v natažené poloze",,,ces_Latn,0.9995,509.09,0,0,Clear
+CTX195603828,1,29,"V-Z orientace,často etažovitě nad sebou uložené.Většina pohřbů",pohř,,ces_Latn,1.0,266.85,0,0,Clear
+CTX195603828,1,30,byla bez milodarů a bez ozdob. ' jedné čtvrtiny byly přiloženy,přilože,bů,ces_Latn,1.0,541.96,0,0,Clear
+CTX195603828,1,31,"věci osobní potřeby.""atím byl nejpříznačněxjší pohřeb muže",,ny,ces_Latn,1.0,250.48,0,0,Clear
+CTX195603828,1,32,"s 2 železnými nožíky a brouskem, a pohřeb dítěte s esovitou",,,ces_Latn,1.0,308.06,0,0,Clear
+CTX195603828,1,33,"bronzovou záušničkou ,perlovým náhrdelníkem a částí textilie.",,,ces_Latn,0.9963,377.74,0,0,Clear
+CTX195603828,1,34,"Pohřebiště lze předběžně datovat do mladší hradištní periody,",,,ces_Latn,1.0,153.53,0,0,Clear
+CTX195603828,1,35,lze je určit jako křeštanské. Významná je sama existence pohřebiště,pohře,,ces_Latn,1.0,207.66,0,0,Clear
+CTX195603828,1,36,"na hradišti, jeho umístění v těsné souvislosti s jezírkem",,biště,ces_Latn,1.0,277.58,0,0,Clear
+CTX195603828,2,1,"u Libuše.Pohřebiště není celé prokopáno,v příštím roce bude nutno",,,ces_Latn,1.0,267.32,0,0,Clear
+CTX195603828,2,2,celé prozkoumat plošným odkryvem při čemž byde naděje objeviti i,,,ces_Latn,1.0,223.28,0,0,Clear
+CTX195603828,2,3,kostel nebo jiné centrum hrobové akumulace.,,,ces_Latn,1.0,1605.73,0,0,Clear
+CTX195603828,2,4,Vystopování tohoto pohřebiště je hlavním úspěchem předchozí,,,ces_Latn,1.0,260.23,0,0,Clear
+CTX195603828,2,5,fosfátové metody.,,,ces_Latn,0.977,1333.09,0,0,Clear
+CTX195603828,2,6,,,,,0.0,0.0,0,0,Empty
+CTX195603828,2,7,Výzkum bude uzavřen po stránce výzkumné 10.10 t.r. do konce,,,ces_Latn,1.0,252.09,0,0,Clear
+CTX195603828,2,8,měsíce budou sondy zaházeny bez účasti vedoucího výzkumu.,,,ces_Latn,1.0,221.33,0,0,Clear

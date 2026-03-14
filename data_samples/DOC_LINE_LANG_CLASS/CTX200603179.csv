@@ -1,73 +1,73 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,categ
-CTX200603179,1,1,"BÍTOV U KONĚPRUS, OKR. BEROUN - STAVBA ELEKTRICKÉ PŘÍPOJKY K RD",,,ces_Latn,0.9991,813.37,Clear
-CTX200603179,1,2,ČP. 10,,,ces_Latn,0.9562,853.91,Clear
-CTX200603179,1,3,NÁLEZOVÁ ZPRÁVA O ARCHEOLOGICKÉM DOHLEDU P,,,ces_Latn,1.0,215.96,Clear
-CTX200603179,1,4,*AVerPEPNeblogický ústav,,,slk_Latn,0.8139,1470.68,Noisy
-CTX200603179,1,5,ÚAPPSČ PRAHA,,,ces_Latn,0.9192,961.23,Clear
-CTX200603179,1,6,09° 1 0 -04- 2006,,,,0.0,0.0,Non-text
-CTX200603179,1,7,Zprávu podává: DANIEL STOLZ,,,ces_Latn,0.9998,199.27,Clear
-CTX200603179,1,8,,,,,0.0,0.0,Empty
-CTX200603179,1,9,"c,",,,,0.0,0.0,Non-text
-CTX200603179,1,10,Čislo jednací: 424/05 Kl,,,ces_Latn,0.8591,1644.89,Clear
-CTX200603179,1,11,,,,,0.0,0.0,Empty
-CTX200603179,1,12,Základní údaje:,,,ces_Latn,0.9988,281.92,Clear
-CTX200603179,1,13,Katastrální území: Bítov u Koněprus,,,ces_Latn,0.9999,371.38,Clear
-CTX200603179,1,14,Lokalita:,,,dan_Latn,0.2785,666.19,Trash
-CTX200603179,1,15,Parcelní čislo: 18,,,ces_Latn,0.9998,1162.34,Clear
-CTX200603179,1,16,Okres Beroun,,,ces_Latn,0.8835,45753.6,Clear
-CTX200603179,1,17,Lokalizace v mapě 1:10 000:,,,ces_Latn,1.0,1154.92,Clear
-CTX200603179,1,18,Mapový list 12-41-17 okolo bodu 68/217 mm od Z a J sekční čáry,,,ces_Latn,0.9813,1169.09,Clear
-CTX200603179,1,19,Název a druh akce: Stavba elektrické přípojky k RD čp. 10,,,ces_Latn,1.0,779.27,Clear
-CTX200603179,1,20,"Investor: Václav Kubík, Tyršova 75, 266 01 Beroun",,,ces_Latn,0.6301,819.77,Noisy
-CTX200603179,1,21,"Základní metoda archeologického výzkumu, dohled",,,ces_Latn,1.0,648.95,Clear
-CTX200603179,1,22,Doba výzkumu: únor 2005,,,ces_Latn,0.9998,957.42,Clear
-CTX200603179,1,23,,,,,0.0,0.0,Empty
-CTX200603179,1,24,Okolnosti a cil \ýzkumu:,,,ces_Latn,0.9448,1040.46,Clear
-CTX200603179,1,25,Byla provedena kontrola odkrytých výkopů.,,,ces_Latn,0.9998,406.51,Clear
-CTX200603179,1,26,,,,,0.0,0.0,Empty
-CTX200603179,1,27,Zaměřeni:,,,ces_Latn,1.0,330.74,Clear
-CTX200603179,1,28,Zaměřeni bylo provedeno do základní mapy 1:10 000.,,,ces_Latn,1.0,978.0,Clear
-CTX200603179,1,29,,,,,0.0,0.0,Empty
-CTX200603179,1,30,Popis terénni situace:,,,ces_Latn,0.547,4314.31,Noisy
-CTX200603179,1,31,Ve výkopu byly zjištěny pouze geologické situace,,,ces_Latn,1.0,548.64,Clear
-CTX200603179,1,32,,,,,0.0,0.0,Empty
-CTX200603179,1,33,Zhodnoceni:,,,ces_Latn,0.9448,1353.72,Clear
-CTX200603179,1,34,Nebyly porušeny archeologické situace.,,,ces_Latn,0.9997,3517.24,Clear
-CTX200603179,1,35,,,,,0.0,0.0,Empty
-CTX200603179,1,36,V Kladně 30. 12. 2005 Mgr. Daniel Stolz,,,ces_Latn,0.9984,256.9,Clear
-CTX200603179,3,1,ÚSTAV ARCHEOLOGICKÉ PAMÁTKOVÉ,,,ces_Latn,0.9978,493.47,Clear
-CTX200603179,3,2,PÉČE STŘEDNÍCH ČECH,,,ces_Latn,1.0,585.95,Clear
-CTX200603179,3,3,EXPERTNÍ LIST KE STAVBĚ,,,ces_Latn,1.0,7868.01,Clear
-CTX200603179,3,4,,,,,0.0,0.0,Empty
-CTX200603179,3,5,Dokument je určen pro investora stavby jako doklad realizovaného záchranného,,,ces_Latn,0.9909,914.29,Clear
-CTX200603179,3,6,výzkumu. Je nedílnou součástí konkrétní stavební akce.,,,ces_Latn,1.0,366.58,Clear
-CTX200603179,3,7,V souvislosti s jinou stavební aktivitou je neplatný.,,,ces_Latn,0.9996,504.38,Clear
-CTX200603179,3,8,"""* * —* L.A*t**? * """,,,,0.0,0.0,Non-text
-CTX200603179,3,9,"LOKALITA: BÍTOV U KONĚPRUS,PCI8TT._ . .",,,ces_Latn,0.8483,696.87,Clear
-CTX200603179,3,10,7--WE * ----- - ser- ■■ • -*-,,,,0.0,0.0,Non-text
-CTX200603179,3,11,,,,,0.0,0.0,Empty
-CTX200603179,3,12,KATASTRÁLNÍ UZEMÍ: BTOVU KONĚPRUS-A OKRES:,,,ces_Latn,0.9996,339.61,Clear
-CTX200603179,3,13,"k- - : .** - - r # * WĚ. -- "" w ' -*** * • ** v •* w",,,,0.0,0.0,Non-text
-CTX200603179,3,14,•7. - • .. -* - mxei---r- ------,,,,0.0,0.0,Non-text
-CTX200603179,3,15,"- -**,* er.**u . Je., - ». *• . r",,,,0.0,0.0,Non-text
-CTX200603179,3,16,"MAPA ZM 1:10.000 12-41-17 bodu 68/217;mmodZ a J sekční,čáry",,,ces_Latn,0.6559,769.43,Noisy
-CTX200603179,3,17,,,,,0.0,0.0,Empty
-CTX200603179,3,18,INVESTOR: VÁCLAVKUBIK- •,,,vie_Latn,0.3053,242.58,Trash
-CTX200603179,3,19,TYRSOVA5===aras ..v 277,,,lit_Latn,0.5581,22877.86,Trash
-CTX200603179,3,20,"266 01 BEROUN 2=: aEsne "" K- . - -",,,zsm_Latn,0.1651,2720.25,Trash
-CTX200603179,3,21,"• .,)*$‘ *r***.**- * uwee’-*-—+am-*-- =*=*-r-o-. ved-r n-* ■ -",,,,0.0,0.0,Non-text
-CTX200603179,3,22,- * -**=. ■■ wy ew.t-u U**okv* • -**.*=■ -,,,,0.0,0.0,Non-text
-CTX200603179,3,23,NÁZEVADRUHSTAVBY:ELEKTRICKÄPRPOJKANNK-RDČP. 10,,,ces_Latn,0.9913,441.99,Clear
-CTX200603179,3,24,,,,,0.0,0.0,Empty
-CTX200603179,3,25,DOBA VÝZKUMU: ÚNOR 2005,,,ces_Latn,0.9998,935.76,Clear
-CTX200603179,3,26,,,,,0.0,0.0,Empty
-CTX200603179,3,27,"[r "" A , 1 Ťy I] h A * ,7 *",,,,0.0,0.0,Non-text
-CTX200603179,3,28,FORMA ARCHEOLOGICKÉHO_VÝZKUMU: DOHLED,,,ces_Latn,0.9997,933.74,Clear
-CTX200603179,3,29,"(2 7 M Ä V,:",,,,0.0,0.0,Non-text
-CTX200603179,3,30,VÝSLEDEK: NEBYLY ZACHYCENY ARCHEOLOGICKÉ SITUACE. BYLO,,,ces_Latn,1.0,677.64,Clear
-CTX200603179,3,31,ZDOKUMENTOVÁNO POUZE GEOLOGICKÉ PODLOŽÍ.,,,ces_Latn,0.9998,505.83,Clear
-CTX200603179,3,32,,,,,0.0,0.0,Empty
-CTX200603179,3,33,"ÚZEMÍ ZASAŽENÉ STAVEBNÍ ČINNOSTÍ POSOUDIL: MGR. DANIEL STOLZ, .A.",,,ces_Latn,0.9896,313.69,Clear
-CTX200603179,3,34,ewa esmafkOV e,,,glg_Latn,0.5501,2858.22,Noisy
-CTX200603179,3,35,. LEACOVISTEKAAPApuc,,,fin_Latn,0.8534,15585.37,Trash
-CTX200603179,3,36,DATUM: 10.5. 2005 C.J. 119/2005 KL PODPIS: NoOL,,,pol_Latn,0.4087,421.49,Trash
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,symbol,upper,categ
+CTX200603179,1,1,"BÍTOV U KONĚPRUS, OKR. BEROUN - STAVBA ELEKTRICKÉ PŘÍPOJKY K RD",,,ces_Latn,0.9991,813.37,0,0,Clear
+CTX200603179,1,2,ČP. 10,,,ces_Latn,0.9562,853.91,0,0,Clear
+CTX200603179,1,3,NÁLEZOVÁ ZPRÁVA O ARCHEOLOGICKÉM DOHLEDU P,,,ces_Latn,1.0,215.96,0,0,Clear
+CTX200603179,1,4,*AVerPEPNeblogický ústav,,,slk_Latn,0.8139,1470.68,1,1,Noisy
+CTX200603179,1,5,ÚAPPSČ PRAHA,,,ces_Latn,0.9192,961.22,0,0,Clear
+CTX200603179,1,6,09° 1 0 -04- 2006,,,,0.0,0.0,0,0,Non-text
+CTX200603179,1,7,Zprávu podává: DANIEL STOLZ,,,ces_Latn,0.9998,199.27,0,0,Clear
+CTX200603179,1,8,,,,,0.0,0.0,0,0,Empty
+CTX200603179,1,9,"c,",,,,0.0,0.0,0,0,Non-text
+CTX200603179,1,10,Čislo jednací: 424/05 Kl,,,ces_Latn,0.8591,1644.89,1,0,Noisy
+CTX200603179,1,11,,,,,0.0,0.0,0,0,Empty
+CTX200603179,1,12,Základní údaje:,,,ces_Latn,0.9988,281.92,0,0,Clear
+CTX200603179,1,13,Katastrální území: Bítov u Koněprus,,,ces_Latn,0.9999,371.38,0,0,Clear
+CTX200603179,1,14,Lokalita:,,,dan_Latn,0.2785,666.19,0,0,Clear
+CTX200603179,1,15,Parcelní čislo: 18,,,ces_Latn,0.9998,1162.34,0,0,Clear
+CTX200603179,1,16,Okres Beroun,,,ces_Latn,0.8835,45753.25,0,0,Clear
+CTX200603179,1,17,Lokalizace v mapě 1:10 000:,,,ces_Latn,1.0,1154.91,1,0,Noisy
+CTX200603179,1,18,Mapový list 12-41-17 okolo bodu 68/217 mm od Z a J sekční čáry,,,ces_Latn,0.9813,1169.1,1,0,Noisy
+CTX200603179,1,19,Název a druh akce: Stavba elektrické přípojky k RD čp. 10,,,ces_Latn,1.0,779.27,0,0,Clear
+CTX200603179,1,20,"Investor: Václav Kubík, Tyršova 75, 266 01 Beroun",,,ces_Latn,0.6301,819.77,0,0,Clear
+CTX200603179,1,21,"Základní metoda archeologického výzkumu, dohled",,,ces_Latn,1.0,648.95,0,0,Clear
+CTX200603179,1,22,Doba výzkumu: únor 2005,,,ces_Latn,0.9998,957.42,0,0,Clear
+CTX200603179,1,23,,,,,0.0,0.0,0,0,Empty
+CTX200603179,1,24,Okolnosti a cil \ýzkumu:,,,ces_Latn,0.9448,1040.46,0,0,Clear
+CTX200603179,1,25,Byla provedena kontrola odkrytých výkopů.,,,ces_Latn,0.9998,406.51,0,0,Clear
+CTX200603179,1,26,,,,,0.0,0.0,0,0,Empty
+CTX200603179,1,27,Zaměřeni:,,,ces_Latn,1.0,330.74,0,0,Clear
+CTX200603179,1,28,Zaměřeni bylo provedeno do základní mapy 1:10 000.,,,ces_Latn,1.0,978.0,1,0,Noisy
+CTX200603179,1,29,,,,,0.0,0.0,0,0,Empty
+CTX200603179,1,30,Popis terénni situace:,,,ces_Latn,0.547,4314.3,0,0,Clear
+CTX200603179,1,31,Ve výkopu byly zjištěny pouze geologické situace,,,ces_Latn,1.0,548.65,0,0,Clear
+CTX200603179,1,32,,,,,0.0,0.0,0,0,Empty
+CTX200603179,1,33,Zhodnoceni:,,,ces_Latn,0.9448,1353.73,0,0,Clear
+CTX200603179,1,34,Nebyly porušeny archeologické situace.,,,ces_Latn,0.9997,3517.23,0,0,Clear
+CTX200603179,1,35,,,,,0.0,0.0,0,0,Empty
+CTX200603179,1,36,V Kladně 30. 12. 2005 Mgr. Daniel Stolz,,,ces_Latn,0.9984,256.9,0,0,Clear
+CTX200603179,3,1,ÚSTAV ARCHEOLOGICKÉ PAMÁTKOVÉ,,,ces_Latn,0.9978,493.47,0,0,Clear
+CTX200603179,3,2,PÉČE STŘEDNÍCH ČECH,,,ces_Latn,1.0,585.95,0,0,Clear
+CTX200603179,3,3,EXPERTNÍ LIST KE STAVBĚ,,,ces_Latn,1.0,7868.03,0,0,Clear
+CTX200603179,3,4,,,,,0.0,0.0,0,0,Empty
+CTX200603179,3,5,Dokument je určen pro investora stavby jako doklad realizovaného záchranného,,,ces_Latn,0.9909,914.29,0,0,Clear
+CTX200603179,3,6,výzkumu. Je nedílnou součástí konkrétní stavební akce.,,,ces_Latn,1.0,366.58,0,0,Clear
+CTX200603179,3,7,V souvislosti s jinou stavební aktivitou je neplatný.,,,ces_Latn,0.9996,504.38,0,0,Clear
+CTX200603179,3,8,"""* * —* L.A*t**? * """,,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,9,"LOKALITA: BÍTOV U KONĚPRUS,PCI8TT._ . .",,,ces_Latn,0.8483,696.87,1,0,Trash
+CTX200603179,3,10,7--WE * ----- - ser- ■■ • -*-,,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,11,,,,,0.0,0.0,0,0,Empty
+CTX200603179,3,12,KATASTRÁLNÍ UZEMÍ: BTOVU KONĚPRUS-A OKRES:,,,ces_Latn,0.9996,339.61,0,0,Clear
+CTX200603179,3,13,"k- - : .** - - r # * WĚ. -- "" w ' -*** * • ** v •* w",,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,14,•7. - • .. -* - mxei---r- ------,,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,15,"- -**,* er.**u . Je., - ». *• . r",,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,16,"MAPA ZM 1:10.000 12-41-17 bodu 68/217;mmodZ a J sekční,čáry",,,ces_Latn,0.6559,769.43,2,1,Trash
+CTX200603179,3,17,,,,,0.0,0.0,0,0,Empty
+CTX200603179,3,18,INVESTOR: VÁCLAVKUBIK- •,,,vie_Latn,0.3053,242.58,1,0,Noisy
+CTX200603179,3,19,TYRSOVA5===aras ..v 277,,,lit_Latn,0.5581,22877.81,1,0,Noisy
+CTX200603179,3,20,"266 01 BEROUN 2=: aEsne "" K- . - -",,,zsm_Latn,0.1651,2720.26,1,0,Noisy
+CTX200603179,3,21,"• .,)*$‘ *r***.**- * uwee’-*-—+am-*-- =*=*-r-o-. ved-r n-* ■ -",,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,22,- * -**=. ■■ wy ew.t-u U**okv* • -**.*=■ -,,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,23,NÁZEVADRUHSTAVBY:ELEKTRICKÄPRPOJKANNK-RDČP. 10,,,ces_Latn,0.9913,441.99,1,0,Noisy
+CTX200603179,3,24,,,,,0.0,0.0,0,0,Empty
+CTX200603179,3,25,DOBA VÝZKUMU: ÚNOR 2005,,,ces_Latn,0.9998,935.77,0,0,Clear
+CTX200603179,3,26,,,,,0.0,0.0,0,0,Empty
+CTX200603179,3,27,"[r "" A , 1 Ťy I] h A * ,7 *",,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,28,FORMA ARCHEOLOGICKÉHO_VÝZKUMU: DOHLED,,,ces_Latn,0.9997,933.74,1,0,Noisy
+CTX200603179,3,29,"(2 7 M Ä V,:",,,,0.0,0.0,0,0,Non-text
+CTX200603179,3,30,VÝSLEDEK: NEBYLY ZACHYCENY ARCHEOLOGICKÉ SITUACE. BYLO,,,ces_Latn,1.0,677.64,0,0,Clear
+CTX200603179,3,31,ZDOKUMENTOVÁNO POUZE GEOLOGICKÉ PODLOŽÍ.,,,ces_Latn,0.9998,505.83,0,0,Clear
+CTX200603179,3,32,,,,,0.0,0.0,0,0,Empty
+CTX200603179,3,33,"ÚZEMÍ ZASAŽENÉ STAVEBNÍ ČINNOSTÍ POSOUDIL: MGR. DANIEL STOLZ, .A.",,,ces_Latn,0.9896,313.69,0,0,Clear
+CTX200603179,3,34,ewa esmafkOV e,,,glg_Latn,0.5501,2858.25,0,1,Noisy
+CTX200603179,3,35,. LEACOVISTEKAAPApuc,,,fin_Latn,0.8534,15585.3,0,1,Noisy
+CTX200603179,3,36,DATUM: 10.5. 2005 C.J. 119/2005 KL PODPIS: NoOL,,,pol_Latn,0.4087,421.49,1,0,Noisy

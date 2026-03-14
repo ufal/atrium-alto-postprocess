@@ -1,36 +1,36 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,categ
-CTX201405311,1,1,Č. akce 45938,,,ces_Latn,0.9998,2378.35,Clear
-CTX201405311,1,2,"ARCHEOLOGICKÝ ÚSTAV AKADEMIE VĚD ČR, Praha, v.v.i.",,,ces_Latn,0.9942,323.9,Clear
-CTX201405311,1,3,"118 01 Praha 1 - Malá Strana, Letenská 4",,,ces_Latn,0.8718,1514.69,Clear
-CTX201405311,1,4,"Pracoviště Kutná Hora, Hloušecká 609, 284 01 Kutná Hora",,,ces_Latn,0.9996,253.76,Clear
-CTX201405311,1,5,"tel.: 327 511 730, e-mail: archeologiekh@seznam.cz",,,ces_Latn,0.2537,211.09,Noisy
-CTX201405311,1,6,V Kutné Hoře 1.7.2014,,,ces_Latn,1.0,321.73,Clear
-CTX201405311,1,7,Ing. Jan Přibyl,,,ces_Latn,1.0,1198.87,Clear
-CTX201405311,1,8,Mgr. Jana Přibylová,,,ces_Latn,1.0,463.09,Clear
-CTX201405311,1,9,Spodní 682,,,ces_Latn,1.0,1965.55,Clear
-CTX201405311,1,10,Spodní 682,,,ces_Latn,1.0,1965.55,Clear
-CTX201405311,1,11,625 00 Brno,,,vie_Latn,0.8475,12394.47,Trash
-CTX201405311,1,12,625 00 Brno,,,vie_Latn,0.8475,12394.47,Trash
-CTX201405311,1,13,VĚC: zpráva o provedení záchranného archeologického výzkumu při akci - Čáslav - novostavba,,,ces_Latn,1.0,388.69,Clear
-CTX201405311,1,14,"rodinného domu na ppč. 1642/17,18 v k.ú. Čáslav.",,,ces_Latn,0.9762,844.96,Clear
-CTX201405311,1,15,V souladu se zněním zákona č.20/87 Sb. v platném znění byl na základě ohlášení zahájení výkopových prací,,,ces_Latn,1.0,155.25,Clear
-CTX201405311,1,16,"proveden archeologický dohled při akci: Čáslav - novostavba rodinného domu na ppč. 1642/17, 18 v k.ú.",,,ces_Latn,0.9994,750.9,Clear
-CTX201405311,1,17,Čáslav.,,,ces_Latn,1.0,504.13,Clear
-CTX201405311,1,18,,,,,0.0,0.0,Empty
-CTX201405311,1,19,Akce probíhala na západním okraji města v poloze „Vodranty“. V těsném sousedství stavby došlo v minulosti,,,ces_Latn,1.0,413.19,Clear
-CTX201405311,1,20,"k zachycení polykulturního pravěkého a středověkého osídlení, proto nešlo dopředu vyloučit možnost, že",,,ces_Latn,1.0,238.45,Clear
-CTX201405311,1,21,v průběhu akce dojde k poškození důležitých archeologických situací.,,,ces_Latn,1.0,275.81,Clear
-CTX201405311,1,22,Archeologický dohled při stavbě proběhl formou revize (20.6.2014) skrývky ornice a výkopů základových,,,ces_Latn,1.0,248.5,Clear
-CTX201405311,1,23,pasů pro rodinný dům. Na profilech výkopů bylo patrné souvrství hnědé ornice s podorničím na intaktním,,,ces_Latn,1.0,324.79,Clear
-CTX201405311,1,24,"podloží, které tvořila intaktní spraš.",,,ces_Latn,1.0,458.12,Clear
-CTX201405311,1,25,K zachycení archeologických situací ani materiálu při akci nedošlo. Vzhledem k negativním archeologickým,,,ces_Latn,0.9999,496.01,Clear
-CTX201405311,1,26,zjištěním byl prostor stavby po ukončení dohledu uvolněn pro dokončení akce.,,,ces_Latn,1.0,160.53,Clear
-CTX201405311,1,27,"Archeologický dohled při stavbě provedl Mgr. Filip Velímský, Ph.D. (ARÚ AV ČR, Praha, v.v.i., pracoviště",,,ces_Latn,0.9998,236.76,Clear
-CTX201405311,1,28,"Kutná Hora). Terénní dokumentace je uložena v Archeologickém ústavu AV ČR, Praha, v.v.i., pracoviště",,,ces_Latn,0.9981,368.39,Clear
-CTX201405311,1,29,Kutná Hora.,,,ces_Latn,0.9509,926.82,Clear
-CTX201405311,1,30,"Závěrem je možno konstatovat, že byla dodržena všechna zákonná ustanovení o ochraně",,,ces_Latn,1.0,191.12,Clear
-CTX201405311,1,31,archeologických památek.,,,ces_Latn,0.9879,1270.38,Clear
-CTX201405311,1,32,,,,,0.0,0.0,Empty
-CTX201405311,1,33,"PhDr. Radka Šumberová, Ph.D.",,,vie_Latn,0.3957,119.13,Trash
-CTX201405311,1,34,Vedoucí pracoviště Kutná Hora,,,ces_Latn,1.0,719.62,Clear
-CTX201405311,1,35,"Zpracoval: Mgr. Filip Velímský, Ph.D.",,,ces_Latn,0.9929,189.31,Clear
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,symbol,upper,categ
+CTX201405311,1,1,Č. akce 45938,,,ces_Latn,0.9998,2378.36,0,0,Clear
+CTX201405311,1,2,"ARCHEOLOGICKÝ ÚSTAV AKADEMIE VĚD ČR, Praha, v.v.i.",,,ces_Latn,0.9942,323.9,0,0,Clear
+CTX201405311,1,3,"118 01 Praha 1 - Malá Strana, Letenská 4",,,ces_Latn,0.8718,1514.69,0,0,Noisy
+CTX201405311,1,4,"Pracoviště Kutná Hora, Hloušecká 609, 284 01 Kutná Hora",,,ces_Latn,0.9996,253.76,0,0,Clear
+CTX201405311,1,5,"tel.: 327 511 730, e-mail: archeologiekh@seznam.cz",,,ces_Latn,0.2537,211.09,1,0,Noisy
+CTX201405311,1,6,V Kutné Hoře 1.7.2014,,,ces_Latn,1.0,321.73,0,0,Clear
+CTX201405311,1,7,Ing. Jan Přibyl,,,ces_Latn,1.0,1198.87,0,0,Clear
+CTX201405311,1,8,Mgr. Jana Přibylová,,,ces_Latn,1.0,463.09,0,0,Clear
+CTX201405311,1,9,Spodní 682,,,ces_Latn,1.0,1965.55,0,0,Clear
+CTX201405311,1,10,Spodní 682,,,ces_Latn,1.0,1965.55,0,0,Clear
+CTX201405311,1,11,625 00 Brno,,,vie_Latn,0.8475,12394.47,0,0,Clear
+CTX201405311,1,12,625 00 Brno,,,vie_Latn,0.8475,12394.47,0,0,Clear
+CTX201405311,1,13,VĚC: zpráva o provedení záchranného archeologického výzkumu při akci - Čáslav - novostavba,,,ces_Latn,1.0,388.69,0,0,Clear
+CTX201405311,1,14,"rodinného domu na ppč. 1642/17,18 v k.ú. Čáslav.",,,ces_Latn,0.9762,844.96,1,0,Noisy
+CTX201405311,1,15,V souladu se zněním zákona č.20/87 Sb. v platném znění byl na základě ohlášení zahájení výkopových prací,,,ces_Latn,1.0,155.25,1,0,Noisy
+CTX201405311,1,16,"proveden archeologický dohled při akci: Čáslav - novostavba rodinného domu na ppč. 1642/17, 18 v k.ú.",,,ces_Latn,0.9994,750.9,1,0,Noisy
+CTX201405311,1,17,Čáslav.,,,ces_Latn,1.0,504.13,0,0,Clear
+CTX201405311,1,18,,,,,0.0,0.0,0,0,Empty
+CTX201405311,1,19,Akce probíhala na západním okraji města v poloze „Vodranty“. V těsném sousedství stavby došlo v minulosti,,,ces_Latn,1.0,413.19,1,0,Noisy
+CTX201405311,1,20,"k zachycení polykulturního pravěkého a středověkého osídlení, proto nešlo dopředu vyloučit možnost, že",,,ces_Latn,1.0,238.45,0,0,Clear
+CTX201405311,1,21,v průběhu akce dojde k poškození důležitých archeologických situací.,,,ces_Latn,1.0,275.81,0,0,Clear
+CTX201405311,1,22,Archeologický dohled při stavbě proběhl formou revize (20.6.2014) skrývky ornice a výkopů základových,,,ces_Latn,1.0,248.5,0,0,Clear
+CTX201405311,1,23,pasů pro rodinný dům. Na profilech výkopů bylo patrné souvrství hnědé ornice s podorničím na intaktním,,,ces_Latn,1.0,324.79,0,0,Clear
+CTX201405311,1,24,"podloží, které tvořila intaktní spraš.",,,ces_Latn,1.0,458.12,0,0,Clear
+CTX201405311,1,25,K zachycení archeologických situací ani materiálu při akci nedošlo. Vzhledem k negativním archeologickým,,,ces_Latn,0.9999,496.01,0,0,Clear
+CTX201405311,1,26,zjištěním byl prostor stavby po ukončení dohledu uvolněn pro dokončení akce.,,,ces_Latn,1.0,160.53,0,0,Clear
+CTX201405311,1,27,"Archeologický dohled při stavbě provedl Mgr. Filip Velímský, Ph.D. (ARÚ AV ČR, Praha, v.v.i., pracoviště",,,ces_Latn,0.9998,236.76,0,0,Clear
+CTX201405311,1,28,"Kutná Hora). Terénní dokumentace je uložena v Archeologickém ústavu AV ČR, Praha, v.v.i., pracoviště",,,ces_Latn,0.9981,368.39,0,0,Clear
+CTX201405311,1,29,Kutná Hora.,,,ces_Latn,0.9509,926.81,0,0,Clear
+CTX201405311,1,30,"Závěrem je možno konstatovat, že byla dodržena všechna zákonná ustanovení o ochraně",,,ces_Latn,1.0,191.12,0,0,Clear
+CTX201405311,1,31,archeologických památek.,,,ces_Latn,0.9879,1270.38,0,0,Clear
+CTX201405311,1,32,,,,,0.0,0.0,0,0,Empty
+CTX201405311,1,33,"PhDr. Radka Šumberová, Ph.D.",,,vie_Latn,0.3957,119.13,0,0,Clear
+CTX201405311,1,34,Vedoucí pracoviště Kutná Hora,,,ces_Latn,1.0,719.62,0,0,Clear
+CTX201405311,1,35,"Zpracoval: Mgr. Filip Velímský, Ph.D.",,,ces_Latn,0.9929,189.31,0,0,Clear
