@@ -11,6 +11,21 @@ The next step in the pipeline: [atrium-nlp-enrich](https://github.com/ufal/atriu
 This document describes the project's capabilities, development workflow, code conventions, 
 and rules for contributors.
 
+
+## 📦 Release History
+
+| Version    | Highlights                                                                                                                                                                                                                           | Status      |
+|:-----------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------|
+| **v0.9.1** | ALTO via (LayoutReader + language ident. + perplexity) = textlines categorized (Options to get text from ALTO XML, Split words fix and record to output, Text quality category assignment per text line)                             | Pre-release |
+| **v0.8.0** | API service draft (Added LINDAT API service and interface setup, Change of files structure logic)                                                                                                                                    | Pre-release |
+| **v0.7.0** | GLM added and LR results fixed for TextLine level (LayoutReader is processing on TextLine level now -> fix of broken line splits, Added GLM text extraction option (requires images), Added data samples of text)                    | Pre-release |
+| **v0.6.0** | LayoutReader added and KER removed (alto-tool switched to LayoutReader per String XML element, KER removed, Extracted text post-processing implemented)                                                                              | Pre-release |
+| **v0.5.0** | alto-tool extraction and result samples (KER scores explanation is included in documentation, Results samples for classified textlines are included, Only alto-tool extraction)                                                      | Pre-release |
+| **v0.4.0** | Removal of API calls + result recording per document (Merged NER and UDP -> moved API calls to separate repository, Per-document result files saving)                                                                                | Pre-release |
+| **v0.3.0** | CPU-GPU-based division into substeps + separate TXT files extraction (CPU/GPU division of script steps, Removed CSV expansion with text, Added config for textlines classification, alto-tools as an extractor of TXT from ALTO XML) | Pre-release |
+| **v0.2.0** | Per-line categorization + LINDAT API calls (Text classification update, Switch to per-textline model calls, Option of a summary stats CSV with raw texts per cell is present)                                                        | Pre-release |
+| **v0.1.0** | Per-page categorization + KER fix + LINDAT API calls (Language identification and other text processing are called per-page, KER raw suffixes fixed, NER + UDP calls included)                                                       | Pre-release |
+
 ---
 
 ## 🏗️ Project Contributions & Capabilities
