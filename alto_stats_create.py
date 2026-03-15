@@ -32,7 +32,8 @@ import argparse
 import subprocess  # To run external commands (like alto-tools)
 import pandas as pd  # To easily create the final CSV
 import re  # For regular expressions, to parse the command output
-
+from atrium_paradata import ParadataLogger
+import sys
 
 def parse_alto_tools_stats_line(line):
     """
@@ -122,16 +123,21 @@ def process_alto_files_with_alto_tools(directory_path):
     """
     results = []
     # Loop through every file in the directory
+    _total_inputs = 0
+    _skips = []
     for fname in os.listdir(directory_path):
         # Skip files that don't end in .xml
         if not fname.lower().endswith(".xml"):
             continue
 
         xml_path = os.path.join(directory_path, fname)
+        _total_inputs += 1
+
 
         # Get the statistics for this file
         stats = run_alto_tools_stats(xml_path)
         if stats is None:
+            _skips.append(xml_path)
             # An error occurred and was already printed, so just skip this file
             continue
 
@@ -157,7 +163,7 @@ def process_alto_files_with_alto_tools(directory_path):
         rec["path"] = xml_path
 
         results.append(rec)
-    return results
+    return results, _total_inputs, _skips
 
 
 def main():
@@ -182,34 +188,58 @@ def main():
     # 'first' flag is used to ensure we only write the CSV header *once*
     first = True
 
-    # --- 4. Process Subdirectories ---
-    for subdir in subdirs:
-        stats = process_alto_files_with_alto_tools(subdir)
+    _logger = ParadataLogger(
+        program="alto-postprocess",
+        config={
+            "script": "alto_stats_create",
+            "input_dir": str(args.input_folder),
+            "output_csv": str(args.output),
+        },
+        paradata_dir="paradata",
+        output_types=["csv"],
+    )
+    _total_inputs = 0
+
+    try:
+        # --- 4. Process Subdirectories ---
+        for subdir in subdirs:
+            stats, doc_inputs, doc_skips = process_alto_files_with_alto_tools(subdir)
+            _total_inputs += doc_inputs
+            _logger.log_success("csv", count=len(stats))
+            for sk in doc_skips:
+                _logger.log_skip(sk, "alto-tools failed to parse this file")
+            if stats:
+                # Convert the list of dictionaries into a pandas DataFrame
+                df = pd.DataFrame(stats)
+                if first:
+                    # First write: include the header
+                    df.to_csv(args.output, index=False, header=True)
+                    first = False
+                else:
+                    # Subsequent writes: append (mode="a") and skip the header
+                    df.to_csv(args.output, index=False, header=False, mode="a")
+                print(f"Processed {len(stats)} files from {subdir}")
+
+        # --- 5. Process Root Directory ---
+        # After processing subdirs, process any .xml files in the root folder
+        stats, doc_inputs, doc_skips = process_alto_files_with_alto_tools(args.input_folder)
+        _total_inputs += doc_inputs
+        _logger.log_success("csv", count=len(stats))
+        for sk in doc_skips:
+            _logger.log_skip(sk, "alto-tools failed to parse this file")
+
         if stats:
-            # Convert the list of dictionaries into a pandas DataFrame
             df = pd.DataFrame(stats)
             if first:
-                # First write: include the header
                 df.to_csv(args.output, index=False, header=True)
                 first = False
             else:
-                # Subsequent writes: append (mode="a") and skip the header
                 df.to_csv(args.output, index=False, header=False, mode="a")
-            print(f"Processed {len(stats)} files from {subdir}")
+            print(f"Processed {len(stats)} files from {args.input_folder}")
 
-    # --- 5. Process Root Directory ---
-    # After processing subdirs, process any .xml files in the root folder
-    stats = process_alto_files_with_alto_tools(args.input_folder)
-    if stats:
-        df = pd.DataFrame(stats)
-        if first:
-            df.to_csv(args.output, index=False, header=True)
-            first = False
-        else:
-            df.to_csv(args.output, index=False, header=False, mode="a")
-        print(f"Processed {len(stats)} files from {args.input_folder}")
-
-    print("Done.")
+        print("Done.")
+    finally:
+        _logger.finalize(input_total=_total_inputs)
 
 
 if __name__ == "__main__":

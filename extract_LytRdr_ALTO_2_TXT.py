@@ -17,6 +17,9 @@ import xml.etree.ElementTree as ET
 import torch
 from transformers import LayoutLMv3ForTokenClassification
 import numpy as np
+from atrium_paradata import ParadataLogger
+
+_SCRIPT_NAME = "extract_layoutreader"
 
 # --- Path Setup to find 'v3' ---
 script_dir = Path(__file__).resolve().parent
@@ -326,28 +329,57 @@ def main():
         # Ensure your CSV has these columns
         tasks.append((row['file'], row['page'], row['path'], OUTPUT_TEXT_DIR))
 
+
+
     use_cuda = torch.cuda.is_available()
     print(f"Device: {'CUDA' if use_cuda else 'CPU'}")
 
-    if use_cuda:
-        # CUDA: Sequential execution
-        print("CUDA detected: Running sequentially.")
-        init_worker()
-        results = []
-        for task in tqdm(tasks, desc="Processing (GPU)"):
-            results.append(extract_single_page(task))
-    else:
-        # CPU: Parallel execution
-        print(f"CPU detected: Extracting with {MAX_WORKERS} workers...")
-        with concurrent.futures.ProcessPoolExecutor(
-                max_workers=MAX_WORKERS,
-                initializer=init_worker
-        ) as executor:
-            results = list(
-                tqdm(executor.map(extract_single_page, tasks, chunksize=1), total=len(tasks), desc="Processing (CPU)"))
+    # parent directory of any path
+    page_alto_dir = Path(tasks[-1][2]).parent
 
-    success_count = sum(results)
-    print(f"Extraction complete. Success rate: {success_count / len(results):.2%}")
+    _logger = ParadataLogger(
+        program="alto-postprocess",
+        config={
+            "script": _SCRIPT_NAME,
+            "input_csv": str(INPUT_CSV),  # output.csv from alto_stats_create
+            "input_dir": str(page_alto_dir),
+            "output_dir": str(OUTPUT_TEXT_DIR),
+            "n_workers": int(MAX_WORKERS),  # if multiprocessing is used
+        },
+        paradata_dir="paradata",
+        output_types=["txt"],
+    )
+    _total_inputs = len(tasks)
+
+    try:
+        if use_cuda:
+            # CUDA: Sequential execution
+            print("CUDA detected: Running sequentially.")
+            init_worker()
+            results = []
+            for task in tqdm(tasks, desc="Processing (GPU)"):
+                results.append(extract_single_page(task))
+        else:
+            # CPU: Parallel execution
+            print(f"CPU detected: Extracting with {MAX_WORKERS} workers...")
+            with concurrent.futures.ProcessPoolExecutor(
+                    max_workers=MAX_WORKERS,
+                    initializer=init_worker
+            ) as executor:
+                results = list(
+                    tqdm(executor.map(extract_single_page, tasks, chunksize=1), total=len(tasks), desc="Processing (CPU)"))
+
+        success_count = sum(results)
+        print(f"Extraction complete. Success rate: {success_count / len(results):.2%}")
+        # log skipped files based on absent results
+        for t, r in zip(tasks, results):
+            if not r:
+                _logger.log_skip(t[0], "layoutreader processing failed")
+            else:
+                _logger.log_success("txt")
+
+    finally:
+        _logger.finalize(_total_inputs)
 
 
 if __name__ == "__main__":

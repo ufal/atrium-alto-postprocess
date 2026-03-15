@@ -25,6 +25,8 @@ from tqdm import tqdm
 from itertools import groupby
 import configparser
 from text_util_langID import *
+from atrium_paradata import ParadataLogger
+import configparser as _cp
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -157,6 +159,24 @@ def main():
     config = configparser.ConfigParser()
     config.read("config_langID.txt")
 
+    _cfg_p = config
+    _logger = ParadataLogger(
+        program="alto-postprocess",
+        config={
+            "script": "langID_classify",
+            "input_txt_dir": _cfg_p.get("CLASSIFY", "input_dir", fallback=""),
+            "input_csv": _cfg_p.get("CLASSIFY", "stats_csv", fallback=""),
+            "output_dir": _cfg_p.get("CLASSIFY", "output_dir", fallback=""),
+            "fasttext_model": _cfg_p.get("CLASSIFY", "fasttext_model", fallback="lid.176.bin"),
+            "gpt2_model": "distilgpt2",
+            "ppl_threshold": _cfg_p.get("CLASSIFY", "ppl_threshold", fallback="1500"),
+            "batch_size": _cfg_p.get("CLASSIFY", "batch_size", fallback=""),
+        },
+        paradata_dir="paradata",
+        output_types=["csv"],
+    )
+    _total_inputs = 0
+
     INPUT_CSV  = config.get("CLASSIFY", "INPUT_CSV")
     TEXT_DIR   = config.get("CLASSIFY", "TEXT_DIR")
     OUTPUT_DIR = config.get("CLASSIFY", "OUTPUT_LINES_LOG")
@@ -185,12 +205,19 @@ def main():
     )
     df = df.sort_values(by=sort_cols)
 
+    page_id = 0
     for _, row in tqdm(df.iterrows(), total=len(df)):
         file_id = str(row["file"])
+
+        prev_pi = page_id
         page_id = str(row["page"])
+        if page_id == 1:
+            if prev_pi != 0:
+                _logger.log_success("csv", int(prev_pi))
 
         # --- Document boundary ---
         if file_id != current_file_id:
+
             # Flush batch for the previous document
             if batch_lines:
                 process_and_write_batch(
@@ -216,8 +243,12 @@ def main():
             continue
 
         txt_path = Path(TEXT_DIR) / file_id / f"{file_id}-{page_id}.txt"
+
         if not txt_path.exists():
+            _logger.log_skip(str(txt_path), "not found")
             continue
+
+        _total_inputs += 1
 
         with open(txt_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -277,6 +308,9 @@ def main():
 
     if current_file_id is not None and not skipping_current_file:
         sort_document_csv(out_dir, current_file_id)
+
+
+    _logger.finalize(input_total=_total_inputs)
 
 
 if __name__ == "__main__":

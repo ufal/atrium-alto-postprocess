@@ -21,6 +21,7 @@ Example:
 import xml.etree.ElementTree as ET  # For parsing and creating XML
 import os  # For file and directory operations (paths, mkdir)
 import argparse  # For parsing command-line arguments
+from atrium_paradata import ParadataLogger
 
 
 def split_alto_xml(input_file_path, output_dir):
@@ -143,17 +144,36 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     print(f"Output will be saved to '{os.path.abspath(args.output_dir)}'\n")
 
+    _logger = ParadataLogger(
+        program="alto-postprocess",
+        config={
+            "script": "page_split",
+            "input_dir": str(input_dir),
+            "output_dir": str(output_dir),
+        },
+        paradata_dir="paradata",
+        output_types=["xml"],
+    )
+    _total_inputs = 0
+
     # --- 4. Process Each XML File ---
     # Loop through all files in the input directory, sorted by name
-    for filename in sorted(os.listdir(args.input_dir)):
-        # Only process files that end with .xml (case-insensitive)
-        if filename.lower().endswith('.xml'):
-            input_file_path = os.path.join(args.input_dir, filename)
-            print(f"Processing '{filename}'...")
+    try:
+        for filename in sorted(os.listdir(args.input_dir)):
+            # Only process files that end with .xml (case-insensitive)
+            if filename.lower().endswith('.xml'):
+                input_file_path = os.path.join(args.input_dir, filename)
+                print(f"Processing '{filename}'...")
+                _total_inputs += 1
 
-            # Call the main splitting function for this file
-            split_alto_xml(input_file_path, args.output_dir)
-
+                # Call the main splitting function for this file
+                try:
+                    split_alto_xml(input_file_path, args.output_dir)
+                    _logger.log_success("xml", count=page_count)
+                except Exception as e:
+                    _logger.log_skip(str(alto_file), str(e))
+    finally:
+        _logger.finalize(input_total=_total_inputs)
 
 # --- Standard Python Entry Point ---
 # This block checks if the script is being run directly (not imported).

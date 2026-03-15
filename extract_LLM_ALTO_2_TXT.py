@@ -14,6 +14,9 @@ from transformers.modeling_utils import PreTrainedModel
 from PIL import Image, ImageFile, ImageOps
 from pathlib import Path
 from tqdm import tqdm
+from atrium_paradata import ParadataLogger
+
+_SCRIPT_NAME = "extract_llm"
 
 # --- Configuration ---
 INPUT_CSV = "alto_statistics_pages.csv"
@@ -172,49 +175,73 @@ def main():
     df = pd.read_csv(INPUT_CSV)
     has_image_col = 'image_path' in df.columns
 
+    page_alto_dir = Path(df.iloc[0]['path']).parent
+
+    _logger = ParadataLogger(
+        program="alto-postprocess",
+        config={
+            "script": _SCRIPT_NAME,
+            "input_csv": str(INPUT_CSV),  # output.csv from alto_stats_create
+            "input_dir": str(page_alto_dir),
+            "output_dir": str(OUTPUT_TEXT_DIR),
+            "n_workers": int(MAX_WORKERS),  # if multiprocessing is used
+        },
+        paradata_dir="paradata",
+        output_types=["txt"],
+    )
+    _total_inputs = len(tasks)
+
     tokenizer, model = load_model()
 
     Path(OUTPUT_TEXT_DIR).mkdir(parents=True, exist_ok=True)
     print(f"Starting extraction for {len(df)} pages on {DEVICE}...")
 
-    for _, row in tqdm(df.iterrows(), total=len(df)):
-        file_id = row['file']
-        page_id = row['page']
+    try:
+        for _, row in tqdm(df.iterrows(), total=len(df)):
+            file_id = row['file']
+            page_id = row['page']
 
-        # --- Path Logic ---
-        if has_image_col and pd.notna(row['image_path']):
-            image_path = Path(row['image_path'].replace(".alto", ""))
-        else:
-            xml_path = Path(row['path'])
-            image_dir = xml_path.parent
-            page_str = str(page_id).zfill(2)
-            filename = f"{file_id}-{page_str}.png"
-            image_path = image_dir / filename
-
-        # --- Validation ---
-        if not image_path.exists():
-            backup_image_path = image_path.parents[1] / "onepagers" / image_path.name
-            if backup_image_path.exists():
-                image_path = backup_image_path
+            # --- Path Logic ---
+            if has_image_col and pd.notna(row['image_path']):
+                image_path = Path(row['image_path'].replace(".alto", ""))
             else:
+                xml_path = Path(row['path'])
+                image_dir = xml_path.parent
+                page_str = str(page_id).zfill(2)
+                filename = f"{file_id}-{page_str}.png"
+                image_path = image_dir / filename
+
+            # --- Validation ---
+            if not image_path.exists():
+                backup_image_path = image_path.parents[1] / "onepagers" / image_path.name
+                if backup_image_path.exists():
+                    image_path = backup_image_path
+                else:
+                    continue
+
+            # --- Output Check ---
+            save_dir = Path(OUTPUT_TEXT_DIR) / str(file_id)
+            save_dir.mkdir(parents=True, exist_ok=True)
+            txt_path = save_dir / f"{file_id}-{page_id}.txt"
+
+            if txt_path.exists():
                 continue
 
-        # --- Output Check ---
-        save_dir = Path(OUTPUT_TEXT_DIR) / str(file_id)
-        save_dir.mkdir(parents=True, exist_ok=True)
-        txt_path = save_dir / f"{file_id}-{page_id}.txt"
+            # --- Inference ---
+            _total_inputs += 1
+            text = extract_single_page_glm(tokenizer, model, image_path)
 
-        if txt_path.exists():
-            continue
+            if text:
+                _logger.log_success("txt")
+                with open(txt_path, 'w', encoding='utf-8') as f:
+                    f.write(text)
+            else:
+                _logger.log_skip(str(image_path), "failed to extract text with GLM")
 
-        # --- Inference ---
-        text = extract_single_page_glm(tokenizer, model, image_path)
+        print("Done.")
+    finally:
+        _logger.finalize(_total_inputs)
 
-        if text:
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write(text)
-
-    print("Done.")
 
 
 if __name__ == "__main__":

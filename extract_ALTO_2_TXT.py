@@ -11,6 +11,9 @@ import sys
 from pathlib import Path
 from tqdm import tqdm
 import configparser
+from atrium_paradata import ParadataLogger
+
+_SCRIPT_NAME = "extract_alto2txt"
 
 INPUT_CSV = "alto_statistics.csv"
 OUTPUT_TEXT_DIR = "../PAGE_TXT"
@@ -87,12 +90,39 @@ def main():
     for _, row in df.iterrows():
         tasks.append((row['file'], row['page'], row['path'], OUTPUT_TEXT_DIR))
 
+    # parent directory of any path
+    page_alto_dir = Path(tasks[-1][2]).parent
+
+    _logger = ParadataLogger(
+        program="alto-postprocess",
+        config={
+            "script": _SCRIPT_NAME,
+            "input_csv": str(INPUT_CSV),  # output.csv from alto_stats_create
+            "input_dir": str(page_alto_dir),
+            "output_dir": str(OUTPUT_TEXT_DIR),
+            "n_workers": int(MAX_WORKERS),  # if multiprocessing is used
+        },
+        paradata_dir="paradata",
+        output_types=["txt"],
+    )
+    _total_inputs = len(tasks)
+
     # Parallel Execution
     print(f"Extracting with {MAX_WORKERS} workers...")
-    with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        results = list(tqdm(executor.map(extract_single_page, tasks), total=len(tasks)))
+    try:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            results = list(tqdm(executor.map(extract_single_page, tasks), total=len(tasks)))
 
-    print(f"Extraction complete. Success rate: {sum(results) / len(results):.2%}")
+        print(f"Extraction complete. Success rate: {sum(results) / len(results):.2%}")
+
+        # log skipped files based on absent results
+        for t, r in zip(tasks, results):
+            if not r:
+                _logger.log_skip(t[0], "alto-tools extraction failed")
+            else:
+                _logger.log_success("txt")
+    finally:
+        _logger.finalize(_total_inputs)
 
 
 if __name__ == "__main__":
