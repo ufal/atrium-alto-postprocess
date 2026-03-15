@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd"><Description>
+<MeasurementUnit>pixel</MeasurementUnit>
+<sourceImageInformation><fileName>CTX196006127.pdf</fileName></sourceImageInformation>
+<OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-07-09</processingDateTime><processingSoftware><softwareCreator>ABBYY</softwareCreator><softwareName>ABBYY FineReader Server</softwareName><softwareVersion>14.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
+</Description>
+<Styles>
+<ParagraphStyle ID="StyleId-935996F9-5F71-4C33-8E61-0D8B8C4F65D8-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="2." LINESPACE="23.950000762939453" />
+<ParagraphStyle ID="StyleId-5F804C24-29B8-447D-87B5-D22575E10AF8-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="2." LINESPACE="23.950000762939453" />
+<ParagraphStyle ID="StyleId-FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-15AAD7D2-07A7-4F8E-9659-9D97924FAACA-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-768352A1-36B5-4E52-A7E3-3D9F5C94A5D9-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+</Styles>
+<Layout><Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="1777" WIDTH="1265">
+<TopMargin HEIGHT="420" WIDTH="1265" VPOS="0" HPOS="0">
+</TopMargin>
+<LeftMargin HEIGHT="629" WIDTH="218" VPOS="420" HPOS="0">
+</LeftMargin>
+<RightMargin HEIGHT="629" WIDTH="294" VPOS="420" HPOS="971">
+</RightMargin>
+<BottomMargin HEIGHT="728" WIDTH="1265" VPOS="1049" HPOS="0">
+</BottomMargin>
+<PrintSpace HEIGHT="629" WIDTH="753" VPOS="420" HPOS="218">
+<Illustration ID="Page2_Block1" HEIGHT="628" WIDTH="754" VPOS="421" HPOS="218"><Shape><Polygon POINTS="949,420 966,420 966,482 967,482 967,597 968,597 968,713 969,713 969,829 970,829 970,945 971,945 971,1042 951,1042 951,1043 894,1043 894,1044 778,1044 778,1045 662,1045 662,1046 546,1046 546,1047 430,1047 430,1048 315,1048 315,1049 223,1049 223,948 222,948 222,832 221,832 221,716 220,716 220,600 219,600 219,485 218,485 218,427 254,427 254,426 370,426 370,425 486,425 486,424 601,424 601,423 717,423 717,422 833,422 833,421 949,421 949,420" /></Shape></Illustration><GraphicalElement ID="Page2_Block2" HEIGHT="8" WIDTH="253" VPOS="591" HPOS="560" /><GraphicalElement ID="Page2_Block3" HEIGHT="8" WIDTH="200" VPOS="618" HPOS="586" /><GraphicalElement ID="Page2_Block4" HEIGHT="7" WIDTH="200" VPOS="837" HPOS="588" /><GraphicalElement ID="Page2_Block5" HEIGHT="7" WIDTH="254" VPOS="864" HPOS="562" /><GraphicalElement ID="Page2_Block6" HEIGHT="13" WIDTH="142" VPOS="912" HPOS="460" /><GraphicalElement ID="Page2_Block7" HEIGHT="6" WIDTH="87" VPOS="919" HPOS="373" /><GraphicalElement ID="Page2_Block8" HEIGHT="138" WIDTH="13" VPOS="601" HPOS="220" /><GraphicalElement ID="Page2_Block9" HEIGHT="142" WIDTH="13" VPOS="639" HPOS="263" /><GraphicalElement ID="Page2_Block10" HEIGHT="277" WIDTH="8" VPOS="594" HPOS="559" /><GraphicalElement ID="Page2_Block11" HEIGHT="224" WIDTH="7" VPOS="621" HPOS="585" /><GraphicalElement ID="Page2_Block12" HEIGHT="87" WIDTH="5" VPOS="622" HPOS="782" /><GraphicalElement ID="Page2_Block13" HEIGHT="94" WIDTH="4" VPOS="747" HPOS="785" /><GraphicalElement ID="Page2_Block14" HEIGHT="114" WIDTH="6" VPOS="594" HPOS="808" /><GraphicalElement ID="Page2_Block15" HEIGHT="121" WIDTH="7" VPOS="747" HPOS="810" /><GraphicalElement ID="Page2_Block16" HEIGHT="235" WIDTH="14" VPOS="593" HPOS="839" /><GraphicalElement ID="Page2_Block17" HEIGHT="279" WIDTH="22" VPOS="551" HPOS="946" />
+</PrintSpace>
+</Page>
+</Layout></alto>

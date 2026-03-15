@@ -148,8 +148,8 @@ def main():
         program="alto-postprocess",
         config={
             "script": "page_split",
-            "input_dir": str(input_dir),
-            "output_dir": str(output_dir),
+            "input_dir": str(args.input_dir),
+            "output_dir": str(args.output_dir),
         },
         paradata_dir="paradata",
         output_types=["xml"],
@@ -171,7 +171,7 @@ def main():
                     split_alto_xml(input_file_path, args.output_dir)
                     _logger.log_success("xml", count=page_count)
                 except Exception as e:
-                    _logger.log_skip(str(alto_file), str(e))
+                    _logger.log_skip(str(filename), str(e))
     finally:
         _logger.finalize(input_total=_total_inputs)
 

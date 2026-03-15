@@ -40,8 +40,8 @@ except ImportError:
         sys.exit(1)
 
 # --- Configuration ---
-INPUT_CSV = "alto_statistics.csv"
-OUTPUT_TEXT_DIR = "../PAGE_TXT_LR"
+INPUT_CSV = "test_alto_stats.csv"
+OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT_LR"
 MAX_WORKERS = 1  # Set to 1 for GPU, higher for CPU
 
 # Global variables

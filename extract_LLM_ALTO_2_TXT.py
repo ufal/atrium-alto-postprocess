@@ -19,8 +19,8 @@ from atrium_paradata import ParadataLogger
 _SCRIPT_NAME = "extract_llm"
 
 # --- Configuration ---
-INPUT_CSV = "alto_statistics_pages.csv"
-OUTPUT_TEXT_DIR = "../PAGE_TXT_LLM"
+INPUT_CSV = "test_alto_stats.csv"
+OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT_LLM"
 MODEL_PATH = "THUDM/glm-4v-9b"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

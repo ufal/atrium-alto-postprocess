@@ -22,6 +22,7 @@ to identify and categorize noisy or unreliable OCR output.
   - [Step 4: Classify Page Text Quality \& Language 🗂️](#-step-4-classify-page-text-quality--language-)
     - [4.1 Classify Lines (GPU Bound) 🚀](#41-classify-lines-gpu-bound-)
     - [4.2 Aggregate Statistics (Memory Bound) 🧠](#42-aggregate-statistics-memory-bound-)
+  - [Paradata logging 🗒️](#paradata-logging)
 - [Acknowledgements 🙏](#acknowledgements-)
 
 ## ⚙️ Setup
@@ -332,6 +333,32 @@ find files that need another round of OCR or manual correction based on the line
 majority of clean lines can be marked for further processing based on text. It is also possible to guess handwritten 
 files by the absence of clear text lines or majority of trash lines, these files can be excluded from further processing
 before the Handwritten Text Recognition (HTR) processing is applied.
+
+---
+
+## Paradata logging
+
+This project incorporates a unified provenance and paradata logging system to seamlessly track the execution 
+details of every pipeline stage. The logger automatically captures run-time metadata and saves it in a 
+structured JSON format.
+
+**What gets logged?**
+
+* **Provenance 🏛️:** Captures the tool name, repository URL, Python version, and assigns a unique `run_id` 
+to each execution.
+* **Configuration ⚙️:** Stores a complete snapshot of the runtime configuration, including script names, 
+input/output paths, and specific model choices.
+* **Timing ⏱️:** Records precise UTC start times, end times, and the total duration of the run in seconds.
+* **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes 
+performance throughput (e.g., output files generated per minute).
+* **Error Tracking 🐛:** Maintains a `skipped_files_detail` list that logs the exact filename and specific 
+error reason if a file fails to process (e.g., logging `layoutreader processing failed` during text extraction 
+or python errors like `name 'page_count' is not defined`).
+
+**Log Location & Licensing**
+By default, the JSON logs are written to a designated [paradata](paradata) 📁 directory following the naming convention 
+`<YYMMDD-HHmmss>_<program>.json`. All generated paradata log files are distributed under the **CC BY-NC 4.0** 
+license.
 
 ---
 

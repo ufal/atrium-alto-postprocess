@@ -15,8 +15,8 @@ from atrium_paradata import ParadataLogger
 
 _SCRIPT_NAME = "extract_alto2txt"
 
-INPUT_CSV = "alto_statistics.csv"
-OUTPUT_TEXT_DIR = "../PAGE_TXT"
+INPUT_CSV = "test_alto_stats.csv"
+OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT"
 MAX_WORKERS = 16
 
 def extract_single_page(args):

@@ -1,0 +1,871 @@
+{
+  "license": "CC BY-NC 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+  "program": "alto-postprocess",
+  "repository": "https://github.com/ufal/atrium-alto-postprocess",
+  "python_version": "3.11.0 (main, Oct 27 2022, 10:26:58) [GCC 11.3.0]",
+  "run_id": "260315-125926",
+  "start_time": "2026-03-15T12:59:26.672857+00:00",
+  "end_time": "2026-03-15T13:00:06.510372+00:00",
+  "duration_seconds": 39.838,
+  "config": {
+    "script": "extract_layoutreader",
+    "input_csv": "test_alto_stats.csv",
+    "input_dir": "/lnet/work/projects/atrium/ALTO/A-PAGE/CTX199600359",
+    "output_dir": "./data_samples/PAGE_TXT_LR",
+    "n_workers": 1
+  },
+  "statistics": {
+    "input_files_total": 168,
+    "successfully_processed": 0,
+    "skipped_files": 168,
+    "output_counts_by_type": {
+      "txt": 0
+    },
+    "performance_per_minute": {
+      "txt": 0.0
+    }
+  },
+  "skipped_files_detail": [
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509273+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509322+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509329+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509335+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509341+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509347+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509352+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509361+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509367+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509373+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509379+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509386+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509393+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509398+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509404+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509411+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509416+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509421+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509426+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509431+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509436+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509441+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509446+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509451+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509457+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509462+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509467+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509473+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509478+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509483+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509488+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509493+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509498+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509506+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509511+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509516+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509520+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509525+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509547+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509552+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509557+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509562+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509567+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509571+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509576+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509580+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509592+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509597+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509601+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509606+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509610+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509615+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509619+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509624+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509629+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509633+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509638+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509658+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509663+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509667+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509671+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509676+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509680+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509684+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509689+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509694+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509698+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509702+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509706+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509711+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509715+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509719+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509724+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509728+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509732+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509736+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509741+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509758+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509763+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509767+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509771+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509775+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509780+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509784+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509789+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509793+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509797+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509802+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509808+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509813+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509817+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509822+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509827+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509832+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509837+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509841+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509846+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509851+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509858+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509862+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509866+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509871+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509875+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509880+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509884+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509888+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509893+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509897+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509902+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509923+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509930+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509936+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509941+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509945+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509951+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509958+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509964+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.509968+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510015+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510024+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510031+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510036+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510042+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510047+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510053+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510059+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510066+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510073+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510080+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510086+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510092+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510098+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510104+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510110+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510115+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510123+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510129+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510136+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510142+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510148+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510154+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510159+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510165+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510170+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510176+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510181+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510186+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510191+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510198+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510204+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510209+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510216+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510223+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510231+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510237+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510243+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510248+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510255+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510261+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510267+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510294+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510317+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510323+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510344+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510349+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510353+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510360+00:00"
+    },
+    {
+      "file": "CTX199600359",
+      "reason": "layoutreader processing failed",
+      "timestamp": "2026-03-15T13:00:06.510365+00:00"
+    }
+  ]
+}

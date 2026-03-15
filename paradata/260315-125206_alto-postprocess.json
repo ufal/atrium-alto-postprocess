@@ -1,0 +1,28 @@
+{
+  "license": "CC BY-NC 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+  "program": "alto-postprocess",
+  "repository": "https://github.com/ufal/atrium-alto-postprocess",
+  "python_version": "3.11.0 (main, Oct 27 2022, 10:26:58) [GCC 11.3.0]",
+  "run_id": "260315-125206",
+  "start_time": "2026-03-15T12:52:06.842860+00:00",
+  "end_time": "2026-03-15T12:52:06.918473+00:00",
+  "duration_seconds": 0.076,
+  "config": {
+    "script": "page_split",
+    "input_dir": "../transformers/alto_postprocess/data_samples/ALTO/",
+    "output_dir": "../transformers/alto_postprocess/data_samples/A-PAGE/"
+  },
+  "statistics": {
+    "input_files_total": 1,
+    "successfully_processed": 0,
+    "skipped_files": 0,
+    "output_counts_by_type": {
+      "xml": 0
+    },
+    "performance_per_minute": {
+      "xml": 0.0
+    }
+  },
+  "skipped_files_detail": []
+}

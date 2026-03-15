@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd"><Description>
+<MeasurementUnit>pixel</MeasurementUnit>
+<sourceImageInformation><fileName>CTX196300443.pdf</fileName></sourceImageInformation>
+<OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-07-10</processingDateTime><processingSoftware><softwareCreator>ABBYY</softwareCreator><softwareName>ABBYY FineReader Server</softwareName><softwareVersion>14.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
+</Description>
+<Styles>
+<ParagraphStyle ID="StyleId-BB70A613-0E3E-4E55-980C-44DE4A48B664-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="15." LINESPACE="16.920000076293945" />
+<ParagraphStyle ID="StyleId-7DD70444-E25A-413A-A266-CA73E6997D4F-" ALIGN="Right" LEFT="0." RIGHT="9." FIRSTLINE="0." LINESPACE="2.4000000953674316" />
+<ParagraphStyle ID="StyleId-FEF42B9A-CDEF-4A0F-8F06-0AFD47B35ADA-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="7.9000000953674316" />
+<ParagraphStyle ID="StyleId-6E7C2F00-9923-4012-B075-A8959038A240-" ALIGN="Right" LEFT="0." RIGHT="9." FIRSTLINE="0." LINESPACE="21.799999237060547" />
+<ParagraphStyle ID="StyleId-A7FF5872-6653-475A-9D86-95014FE427A7-" ALIGN="Center" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="2.4000000953674316" />
+<ParagraphStyle ID="StyleId-FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-437E5854-4838-4A61-B264-A8C1E13F471A-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-82BB9629-40A2-4BB3-A42E-C2020B44AF6F-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+</Styles>
+<Layout><Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="3571" WIDTH="2571">
+<TopMargin HEIGHT="493" WIDTH="2571" VPOS="0" HPOS="0">
+</TopMargin>
+<LeftMargin HEIGHT="91" WIDTH="179" VPOS="493" HPOS="0">
+</LeftMargin>
+<RightMargin HEIGHT="91" WIDTH="1311" VPOS="493" HPOS="1260">
+</RightMargin>
+<BottomMargin HEIGHT="2987" WIDTH="2571" VPOS="584" HPOS="0">
+</BottomMargin>
+<PrintSpace HEIGHT="91" WIDTH="1081" VPOS="493" HPOS="179">
+<TextBlock ID="Page2_Block1" HEIGHT="89" WIDTH="1079" VPOS="493" HPOS="180" STYLEREFS="StyleId-BB70A613-0E3E-4E55-980C-44DE4A48B664-"><Shape><Polygon POINTS="180,493 476,493 476,494 800,494 800,495 1125,495 1125,496 1259,496 1259,582 1122,582 1122,581 798,581 798,580 473,580 473,579 181,579 181,578 180,578 180,493" /></Shape>
+<TextLine HEIGHT="81" WIDTH="1063" VPOS="499" HPOS="186"><String LANG="cs" CONTENT="CAČ" HEIGHT="54" WIDTH="107" VPOS="500" HPOS="186" /><SP HEIGHT="52" WIDTH="34" VPOS="500" HPOS="294" /><String LANG="cs" CONTENT="/" HEIGHT="44" WIDTH="28" VPOS="508" HPOS="329" /><SP HEIGHT="60" WIDTH="16" VPOS="499" HPOS="358" /><String LANG="cs" CONTENT="7" HEIGHT="60" WIDTH="97" VPOS="499" HPOS="375" /><SP HEIGHT="61" WIDTH="49" VPOS="499" HPOS="473" /><String LANG="sk" CONTENT="kez/.e," HEIGHT="59" WIDTH="196" VPOS="508" HPOS="523" /><SP HEIGHT="28" WIDTH="44" VPOS="525" HPOS="720" /><String LANG="cs" CONTENT="~0c,A.A4-)" HEIGHT="66" WIDTH="305" VPOS="513" HPOS="765" /><SP HEIGHT="50" WIDTH="42" VPOS="529" HPOS="1071" /><String LANG="cs" CONTENT="&amp;o" HEIGHT="34" WIDTH="61" VPOS="523" HPOS="1114" /><SP HEIGHT="35" WIDTH="42" VPOS="524" HPOS="1176" /><String LANG="cs" CONTENT="a" HEIGHT="29" WIDTH="30" VPOS="530" HPOS="1219" /></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+</Layout></alto>

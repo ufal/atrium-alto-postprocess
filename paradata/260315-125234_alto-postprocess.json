@@ -1,0 +1,94 @@
+{
+  "license": "CC BY-NC 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+  "program": "alto-postprocess",
+  "repository": "https://github.com/ufal/atrium-alto-postprocess",
+  "python_version": "3.11.0 (main, Oct 27 2022, 10:26:58) [GCC 11.3.0]",
+  "run_id": "260315-125234",
+  "start_time": "2026-03-15T12:52:34.783194+00:00",
+  "end_time": "2026-03-15T12:52:35.317186+00:00",
+  "duration_seconds": 0.534,
+  "config": {
+    "script": "page_split",
+    "input_dir": "../transformers/alto_postprocess/data_samples/ALTO/",
+    "output_dir": "../transformers/alto_postprocess/data_samples/A-PAGE/"
+  },
+  "statistics": {
+    "input_files_total": 13,
+    "successfully_processed": 0,
+    "skipped_files": 13,
+    "output_counts_by_type": {
+      "xml": 0
+    },
+    "performance_per_minute": {
+      "xml": 0.0
+    }
+  },
+  "skipped_files_detail": [
+    {
+      "file": "CTX195603828.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:34.813237+00:00"
+    },
+    {
+      "file": "CTX195704328.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:34.870042+00:00"
+    },
+    {
+      "file": "CTX196006127.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:34.904255+00:00"
+    },
+    {
+      "file": "CTX196300443.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:34.938616+00:00"
+    },
+    {
+      "file": "CTX197402444.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:34.963579+00:00"
+    },
+    {
+      "file": "CTX197901442.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:34.984925+00:00"
+    },
+    {
+      "file": "CTX198402945.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:35.028230+00:00"
+    },
+    {
+      "file": "CTX198603218.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:35.055461+00:00"
+    },
+    {
+      "file": "CTX199405706.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:35.075031+00:00"
+    },
+    {
+      "file": "CTX199603106.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:35.180109+00:00"
+    },
+    {
+      "file": "CTX200603179.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:35.215924+00:00"
+    },
+    {
+      "file": "CTX201405311.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:35.239285+00:00"
+    },
+    {
+      "file": "CTX201601688.alto.xml",
+      "reason": "name 'page_count' is not defined",
+      "timestamp": "2026-03-15T12:52:35.317173+00:00"
+    }
+  ]
+}
