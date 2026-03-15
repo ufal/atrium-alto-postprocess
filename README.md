@@ -304,13 +304,13 @@ python3 langID_aggregate_STAT.py
 ```
 
 * **Input 📥:** `DOC_LINE_LANG_CLASS/` (directory with CSV files from previous step)
-* **Output 1 📤:** `final_page_stats.csv` (The input CSV augmented with line counts: `clear_lines`, `noisy_lines`, etc. ➕)
+* **Output 1 📤:** `result_page_summary.csv` (The input CSV augmented with line counts: `clear_lines`, `noisy_lines`, etc. ➕)
 * **Output 2 📤:** `../DOC_LINE_STAT/` (Folder containing per-document CSVs 📁)
 
-`final_page_stats.csv`: Page-level summary of line counts per text category 📋
+`result_page_summary.csv`: Page-level summary of line counts per text category 📋
 
 
-- *Example*: [final_page_stats.csv](final_page_stats.csv) 📎
+- *Example*: [result_page_summary.csv](result_page_summary.csv) 📎
 - *Columns*:
   * `file` - document identifier 🆔
   * `page` - page number 📄
@@ -328,7 +328,7 @@ DOC_LINE_STAT/
 ├── stats_<docname2>.csv
 └── ...
 ```
-This is the end of the text quality classification and filtering step. You can now use the `final_page_stats.csv` to
+This is the end of the text quality classification and filtering step. You can now use the `result_page_summary.csv` to
 find files that need another round of OCR or manual correction based on the line type counts. The files with the 
 majority of clean lines can be marked for further processing based on text. It is also possible to guess handwritten 
 files by the absence of clear text lines or majority of trash lines, these files can be excluded from further processing
