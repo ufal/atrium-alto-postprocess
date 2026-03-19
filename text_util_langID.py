@@ -16,17 +16,20 @@ Category scheme:
   Non-text  – too short, too few letters, mostly symbols/numbers
   Trash     – structurally corrupt OCR: multiple tokens with strange symbols,
               OR a single strange-symbol token combined with heavy symbol
-              repetition within that token
+              repetition within that token, OR co-occurrence of a strange-symbol
+              token with mid-word uppercase artefacts in the same line
   Noisy     – degraded but recoverable: single strange-symbol token, mid-word
               uppercase artefacts, or elevated perplexity on longer lines
   Clear     – passes all checks
 
-NOTE on digit–letter fusions (e.g. "Ma1", "vyt1ačená", "nalez2í"):
-  Pure letter+digit adjacencies with no other strange characters are NOT
-  detected by the current symbol-based approach because all involved
-  characters are alphanumeric.  This is a known limitation of switching
-  from adjacency-based to symbol-based detection.  distilgpt2 perplexity
-  on short Czech strings is too unreliable to serve as a fallback.
+NOTE on known limitations:
+  - Very short corrupted words (≤4 chars, e.g. "LÁzE", "Nn") are not detected
+    because they are indistinguishable from abbreviations at this length.
+  - Czech-phonology impossibilities (e.g. "eý", "veý") are not checked.
+  - Broken initial characters (e.g. "I lzeň" for "Plzeň") require a word list.
+  - Digit–letter fusions at word boundaries (e.g. "kost1", "2jiStěna") are not
+    caught by detect_letter_digit_letter which requires a bounding letter on
+    both sides of the digit.
 """
 
 import sys
@@ -54,17 +57,27 @@ LANG_SCORE_CLEAR = 0.75
 
 # Characters that may legitimately appear inside a word token and should NOT
 # be treated as strange symbols:
+#
 #   '.'  – abbreviations, decimal separator  (e.g. "r.1954", "26.IX.1957")
 #   '-'  – hyphens in ranges and compounds   (e.g. "1956-1959", "80-90cm")
 #   ','  – Czech decimal separator           (e.g. "90,9g", "186,1 m")
 #   '+'  – archival list / additive notation (e.g. "+ 1 zl.", "atypické + 1")
+#   '/'  – archival separators and date fractions (e.g. "1/56", "14./15.",
+#            "A678/2015").  Genuinely corrupted tokens that contain '/' always
+#            carry at least one other strange character (~, «, &, ■, …) so
+#            suppressing '/' alone does not hide corruption.
+#   '_'  – typewriter underline used as a field-separator in older documents
+#   '—'  – Czech em dash (U+2014), standard editorial punctuation
+#   '–'  – Czech en dash (U+2013), standard editorial punctuation
+#   NOTE: '•' (U+2022 bullet) is intentionally NOT included — in this
+#   corpus it acts as a list separator and is a valid Noisy indicator.
 #
 # Everything else that is neither alphanumeric nor in this set is considered
 # a "strange symbol" and flagged by detect_strange_symbols().
 #
 # To tune sensitivity: add characters here to suppress false positives,
 # or remove characters to make detection stricter.
-ALLOWED_INTERNAL: frozenset = frozenset('.-,+()"\'')
+ALLOWED_INTERNAL: frozenset = frozenset('.-,+()"\'/_—–')
 
 # Characters stripped from the leading and trailing edges of each token
 # before inspecting its interior.  These are standard sentence-level
@@ -72,6 +85,21 @@ ALLOWED_INTERNAL: frozenset = frozenset('.-,+()"\'')
 # indicate corruption when peripheral.
 _STRIP_CHARS: str = '.,;:!?()[]"\'/\\'
 
+# Trash indicators — structural fingerprints of heavily corrupted text.
+#   RE_TRASH_MULTI_SYMBOL : two or more consecutive non-word characters
+#                           (e.g. "==", "~«", "##!") that are unlikely to
+#                           appear in legitimate text.
+#   RE_TRASH_LDL          : letter → non-alpha/non-space run → letter within a
+#                           single token (e.g. "vyt1ačená", "T>r«l", "k~Ua").
+#                           Complements detect_letter_digit_letter by also
+#                           catching symbol-based fusions.
+RE_TRASH_MULTI_SYMBOL: re.Pattern = re.compile(r'[^\w\s]{2,}')
+RE_TRASH_LDL:          re.Pattern = re.compile(r'[a-zA-Z][^a-zA-Z\s]+[a-zA-Z]')
+
+# Non-text indicator — entire string consists of digits, whitespace, and
+# common separator/punctuation characters with no alphabetic content.
+# Examples: "1956-1959", "80-90 cm", "14./15.", "100 %"
+RE_NON_TEXT: re.Pattern = re.compile(r'^[\d\s\-\u2013\u2014/:.,()%]+$')
 
 # ---------------------------------------------------------------------------
 # Structural text-quality detectors
@@ -87,18 +115,19 @@ def detect_strange_symbols(text: str) -> int:
     parentheses, or leading quotes do not inflate the count.  Only the
     interior of each token matters.
 
-    Examples with ALLOWED_INTERNAL = {'.', '-', ',', '+', '(', ')', '"', '\''}
+    Examples (with current ALLOWED_INTERNAL):
       "90,9g"             → ',' is allowed                            → 0
       "80-90cm"           → '-' is allowed                            → 0
+      "1/56"              → '/' is allowed                            → 0
+      "14./15."           → '/' and '.' both allowed                  → 0
+      "A678/2015"         → '/' allowed                               → 0
       "TYRSOVA5===aras"   → '=' is not allowed                        → 1
-      "LOKALITA:"         → ':' stripped at edge → "LOKALITA" → clean  → 0
-      "KONĚPRUS,PCI8TT._" → '_' inside is not allowed                → 1
+      "KONĚPRUS,PCI8TT._" → '_' is now allowed; no other strange char → 0
       "~0c,A.A4-)"        → '~' inside is not allowed                 → 1
-      "kez/.e"            → '/' inside is not allowed                 → 1
+      "kez/.e"            → '/' and '.' both allowed                  → 0
       "T>r«l"             → '>' and '«' are not allowed               → 1
-
-    Known limitation: pure letter–digit adjacencies (e.g. "Ma1", "kost1")
-    contain only alphanumeric characters and are therefore not flagged.
+      "—dtto"             → '—' is now allowed                        → 0
+      "•"                 → bullet is NOT allowed; still flagged        → 1
     """
     count = 0
     for word in text.split():
@@ -144,6 +173,51 @@ def detect_repeated_chars(text: str) -> int:
                 count += 1
                 break
     return count
+
+
+
+# ---------------------------------------------------------------------------
+# Pre-filter (fast CPU heuristic before GPU inference)
+# ---------------------------------------------------------------------------
+
+def pre_filter_line(line: str) -> tuple[str, str]:
+    """
+    Quick CPU-side triage.  Returns (category, cleaned_text).
+
+    Returns "Process" for lines that should proceed to model-based scoring.
+
+    Non-text detection uses both the original heuristics and the new
+    is_non_text() check (RE_NON_TEXT regex + digit-ratio), making it more
+    robust against numeric-only strings that pass the letter-ratio threshold
+    because of a trailing unit like "cm", "kg", or "m²".
+    """
+    clean_text = line.strip()
+    if not clean_text:
+        return "Empty", ""
+
+    # Balance lone quotation marks so the language model sees well-formed input
+    if clean_text.startswith('"') and not clean_text.endswith('"'):
+        clean_text += '"'
+    elif clean_text.endswith('"') and not clean_text.startswith('"'):
+        clean_text = '"' + clean_text
+
+    n_chars = len(clean_text)
+    unique_symbols = set(c for c in clean_text if not c.isspace())
+
+    if n_chars < 4 or len(unique_symbols) < 3:
+        return "Non-text", clean_text
+
+    letters = sum(c.isalpha() for c in clean_text)
+    if letters / n_chars < 0.3:
+        return "Non-text", clean_text
+
+    # Additional check: numeric / separator-only content (e.g. date ranges,
+    # measurements) that passes the letter-ratio gate because it contains a
+    # trailing alphabetic unit like "cm", "kg", "m²".
+    if is_non_text(clean_text):
+        return "Non-text", clean_text
+
+    return "Process", clean_text
 
 
 def detect_letter_digit_letter(text: str) -> int:
@@ -198,7 +272,7 @@ def detect_mid_uppercase(text: str) -> int:
     Each qualifying word contributes at most 1 to the count (per-word, not
     per-occurrence within a word).
 
-    Two OCR artifact patterns are detected:
+    Three OCR artifact patterns are detected:
 
     Pattern 1 – lowercase run → uppercase mid-word  (e.g. "dalSÍ", "obkLADem")
         Requires >= 2 consecutive lowercase letters immediately before the
@@ -208,8 +282,18 @@ def detect_mid_uppercase(text: str) -> int:
 
     Pattern 2 – word-initial uppercase run → lowercase  (e.g. "XXWžkumu")
         The word must start with >= 2 uppercase letters immediately followed by
-        a lowercase letter, AND be >= 5 characters long (excludes short acronyms
-        like "ČR", "AÚ").
+        a lowercase letter, AND be >= 5 characters long (excludes short
+        acronyms like "ČR", "AÚ").
+
+    Pattern 3 – single lowercase → uppercase in a long word  (e.g. "PřUohy",
+        "rShraní", "DrAMou", "nD-lou")
+        The word must be >= 6 characters long.  This lower threshold (vs.
+        Pattern 1's >= 2) would create false positives for common 4-char
+        Czech academic abbreviations (PhDr, MUDr, DrSc, RNDr, CSc.) — all of
+        which have <= 5 characters after stripping boundary punctuation.
+        A non-alpha character (digit, symbol) resets the "prev lower" flag so
+        that a symbol-separated uppercase does NOT trigger (e.g. "k«Uurn"
+        does not fire here; the «  interrupts the chain).
 
     Entirely uppercase words (acronyms, headings) and words shorter than 4
     characters are always skipped.
@@ -248,44 +332,30 @@ def detect_mid_uppercase(text: str) -> int:
                     and core[upper_start].islower()):
                 flagged = True
 
+        # --- Pattern 3: single lower → UPPER in a long word ---
+        # Catches "PřUohy" (Přílohy), "rShraní", "DrAMou", "nD-lou" type
+        # OCR errors where exactly one lowercase precedes a mid-word uppercase.
+        # Minimum length 6 excludes Czech academic abbreviations (≤ 5 chars).
+        # A non-alpha character (digit, symbol, punctuation) resets the
+        # prev_lower flag: "k«Uurn" must NOT trigger here — the «  breaks
+        # the letter chain and the uppercase U starts a new segment.
+        if not flagged and len(core) >= 6:
+            prev_lower = False
+            for ch in core:
+                if ch.islower():
+                    prev_lower = True
+                elif ch.isupper():
+                    if prev_lower:
+                        flagged = True
+                        break
+                    prev_lower = False   # uppercase with no preceding lower: reset
+                else:
+                    prev_lower = False   # digit, symbol, punctuation: break chain
+
         if flagged:
             count += 1
 
     return count
-
-
-# ---------------------------------------------------------------------------
-# Pre-filter (fast CPU heuristic before GPU inference)
-# ---------------------------------------------------------------------------
-
-def pre_filter_line(line: str) -> tuple[str, str]:
-    """
-    Quick CPU-side triage.  Returns (category, cleaned_text).
-
-    Returns "Process" for lines that should proceed to model-based scoring.
-    """
-    clean_text = line.strip()
-    if not clean_text:
-        return "Empty", ""
-
-    # Balance lone quotation marks so the language model sees well-formed input
-    if clean_text.startswith('"') and not clean_text.endswith('"'):
-        clean_text += '"'
-    elif clean_text.endswith('"') and not clean_text.startswith('"'):
-        clean_text = '"' + clean_text
-
-    n_chars = len(clean_text)
-    unique_symbols = set(c for c in clean_text if not c.isspace())
-
-    if n_chars < 4 or len(unique_symbols) < 3:
-        return "Non-text", clean_text
-
-    letters = sum(c.isalpha() for c in clean_text)
-    if letters / n_chars < 0.3:
-        return "Non-text", clean_text
-
-    return "Process", clean_text
-
 
 # ---------------------------------------------------------------------------
 # Perplexity (GPU batch)
@@ -349,11 +419,25 @@ def categorize_line(ppl: float, text_source: str, sym_count: int, upper_count: i
 
     Decision logic (evaluated in priority order):
 
+      RESCUE (evaluated before Trash) — sym == 2 on a long, coherent line:
+        • sym_count == 2 AND wc >= 8 AND ppl < PERPLEXITY_THRESHOLD_MIN
+          The line has enough tokens that the 2 corrupted ones are a minority,
+          and distilgpt2 assigns a low-enough score to suggest meaningful
+          surrounding content.  Classified as Noisy rather than Trash.
+          Note: this rescue does NOT fire when ppl is high (garbled throughout)
+          or when the line is short (corruption dominates).
+
       TRASH — structurally corrupt, not worth processing:
         • sym_count >= 2            multiple tokens carry strange symbols
         • sym_count == 1 AND rep_count > 0
                                     single strange-symbol token with heavy
                                     symbol repetition (e.g. "TYRSOVA5===aras")
+        • sym_count >= 1 AND upper_count >= 1
+                                    symbol corruption and mid-word uppercase
+                                    co-occur in the same line — the combination
+                                    of two independent corruption signals is a
+                                    strong indicator of full-line garbling
+                                    (e.g. "v^UlíLa uq (AAuu Aud. AnMlut")
         • fuse_count >= 2           multiple tokens contain letter–digit–letter
                                     fusions (e.g. "vyt1ačená", "by1a" in same line)
         • sym_count >= 1 AND fuse_count >= 1
@@ -376,10 +460,12 @@ def categorize_line(ppl: float, text_source: str, sym_count: int, upper_count: i
     an English model and assigns very high PPL to legitimate short Czech
     strings, making it an unreliable Trash signal.
 
-    Remaining known limitation: terminal fusions (digit at end of word,
-    e.g. "kost1") and initial fusions (digit at start, e.g. "2jiStěna") are
-    not detected because the letter–digit–letter pattern requires a bounding
-    letter on both sides of the digit.
+    Remaining known limitations:
+      - Very short corrupted words (e.g. "LÁzE", "Nn") slip through because
+        they are indistinguishable from abbreviations at ≤ 4 characters.
+      - Lines with a single sym token + single uppercase artefact are now
+        escalated to Trash.  If a future corpus shows such combinations are
+        common in legitimate text, move upper_count out of the Trash escalation.
 
     Args:
         ppl:         Perplexity from calculate_perplexity_batch.
@@ -394,9 +480,21 @@ def categorize_line(ppl: float, text_source: str, sym_count: int, upper_count: i
     fuse_count = detect_letter_digit_letter(text_source)
     wc = len(text_source.split())
 
+    # --- Rescue: sym == 2 on a long, low-perplexity line ---
+    # When exactly two tokens carry strange symbols but the surrounding words
+    # are coherent enough that distilgpt2 scores the line well below the Noisy
+    # PPL ceiling, classify as Noisy rather than escalating to Trash.
+    # wc >= 8 ensures the two bad tokens are genuinely a minority; the PPL
+    # guard ensures the remaining content is linguistically plausible.
+    # Example rescued: long lines ending in clear Czech prose where one or two
+    # corrupted tokens appear in the middle.
+    if sym_count == 2 and wc >= 8 and ppl < PERPLEXITY_THRESHOLD_MIN:
+        return "Noisy"
+
     # --- Trash ---
     if (sym_count >= 2
             or (sym_count == 1 and rep_count > 0)
+            or (sym_count >= 1 and upper_count >= 1)
             or fuse_count >= 2
             or (sym_count >= 1 and fuse_count >= 1)):
         return "Trash"
@@ -444,3 +542,277 @@ def parse_line_splits(line_text: str) -> tuple[str, str, str]:
 
     merged_text = re.sub(pattern, replace_match, clean_line)
     return merged_text, last_prefix, last_suffix
+
+
+
+# ---------------------------------------------------------------------------
+# Ratio-based quality metrics  (sections 3–4 of the analysis document)
+# ---------------------------------------------------------------------------
+
+def compute_symbol_ratio(text: str) -> float:
+    """
+    Fraction of characters in *text* that are non-alphanumeric and
+    non-whitespace (i.e. punctuation, symbols, or other noise characters).
+
+    This is the primary classification signal (section 3.1):
+      low  → Clear
+      mid  → Noisy
+      high → Trash
+
+    Returns 0.0 for empty strings.
+
+    Examples:
+      "clear text here"   → 0.0
+      "noisy, text: here" → 2/18 ≈ 0.11
+      "T>r«l ==="         → 4/10 = 0.4
+    """
+    if not text:
+        return 0.0
+    non_alnum = sum(1 for c in text if not c.isalnum() and not c.isspace())
+    return non_alnum / len(text)
+
+
+def compute_digit_ratio(text: str) -> float:
+    """
+    Fraction of characters in *text* that are ASCII digits.
+
+    Used together with length to detect Non-text strings (section 3.3).
+    Returns 0.0 for empty strings.
+    """
+    if not text:
+        return 0.0
+    return sum(c.isdigit() for c in text) / len(text)
+
+
+def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
+    """
+    Fraction of whitespace-delimited tokens that are 'valid' words
+    (section 3.2).
+
+    If *word_set* is provided, a token is valid when its lowercased,
+    boundary-stripped form appears in the set.  Supplying a domain
+    dictionary (Czech, German, English …) gives the most accurate signal.
+
+    If *word_set* is None a lightweight proxy heuristic is used:
+      a token is considered valid when it is >= 3 characters long,
+      consists predominantly of alphabetic characters (>= 70 %), and
+      contains no strange symbols outside ALLOWED_INTERNAL.
+    This proxy is consistent with the rest of the module's design and
+    requires no external resources, but is less accurate than a real
+    dictionary — accuracy note is reflected in the module docstring.
+
+    Returns 0.0 for empty or whitespace-only strings.
+
+    Thresholds from the analysis document (section 4):
+      > 0.75  → Clear
+      0.4–0.75 → Noisy
+      < 0.4   → Trash
+    """
+    words = text.split()
+    if not words:
+        return 0.0
+
+    valid = 0
+    for word in words:
+        core = word.strip(_STRIP_CHARS)
+        if not core:
+            continue
+        if word_set is not None:
+            if core.lower() in word_set:
+                valid += 1
+        else:
+            # Proxy: long enough, mostly alphabetic, no strange symbols
+            alpha = sum(c.isalpha() for c in core)
+            has_strange = any(
+                not c.isalnum() and c not in ALLOWED_INTERNAL for c in core
+            )
+            if len(core) >= 3 and alpha / len(core) >= 0.70 and not has_strange:
+                valid += 1
+
+    return valid / len(words)
+
+
+def is_non_text(text: str) -> bool:
+    """
+    Return True when *text* contains no meaningful alphabetic content.
+
+    Combines two complementary checks (section 3.3):
+      1. Regex (RE_NON_TEXT): the entire string consists only of digits,
+         whitespace, and common separator/punctuation characters.
+         Examples: "1956-1959", "80-90 cm", "14./15.", "100 %"
+      2. Heuristic: the string is short (< 15 chars) and > 40 % of its
+         characters are digits.  Catches short numeric codes and
+         measurements that slip through the regex (e.g. "4B", "2x3").
+
+    Returns False for empty strings (those are handled as "Empty").
+    """
+    if not text:
+        return False
+    if RE_NON_TEXT.match(text.strip()):
+        return True
+    if len(text) < 15 and compute_digit_ratio(text) > 0.4:
+        return True
+    return False
+
+
+
+# ---------------------------------------------------------------------------
+# Score-based classification  (section 6 of the analysis document)
+# ---------------------------------------------------------------------------
+
+def compute_quality_score(
+    valid_word_ratio: float,
+    symbol_ratio: float,
+    perplexity: float,
+    text_length: int,
+    *,
+    ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
+    length_max: int = 100,
+) -> float:
+    """
+    Compute a composite quality score in [0, 1].
+
+    Formula (section 6):
+
+        score = (
+            0.4 * valid_word_ratio
+          + 0.3 * (1 - normalized_symbol_ratio)
+          + 0.2 * normalized_perplexity
+          + 0.1 * length_score
+        )
+
+    Component definitions:
+      normalized_symbol_ratio = min(symbol_ratio, 1.0)
+      normalized_perplexity   = 1 - min(perplexity / ppl_max, 1.0)
+          High perplexity → low contribution (distilgpt2-based; use as
+          supporting signal only, not primary Trash indicator).
+      length_score            = min(text_length / length_max, 1.0)
+
+    Classification thresholds (use classify_by_score()):
+      > 0.75   → "Clear"
+      0.45–0.75 → "Noisy"
+      < 0.45   → "Trash"
+
+    Args:
+        valid_word_ratio: Fraction of tokens that are valid words [0, 1].
+                          Obtain via compute_valid_ratio().
+        symbol_ratio:     Fraction of characters that are non-alnum, non-space
+                          [0, 1].  Obtain via compute_symbol_ratio().
+        perplexity:       Raw perplexity score from calculate_perplexity_batch().
+        text_length:      Character length of the text.
+        ppl_max:          Perplexity ceiling for normalisation.
+                          Defaults to PERPLEXITY_THRESHOLD_MAX.
+        length_max:       Character count mapped to length_score = 1.0.
+                          Defaults to 100 characters.
+
+    Returns:
+        Composite quality score in [0.0, 1.0].
+    """
+    norm_symbol = min(symbol_ratio, 1.0)
+    norm_ppl    = 1.0 - min(perplexity / ppl_max, 1.0)
+    norm_len    = min(text_length / length_max, 1.0)
+
+    return (
+        0.4 * valid_word_ratio
+        + 0.3 * (1.0 - norm_symbol)
+        + 0.2 * norm_ppl
+        + 0.1 * norm_len
+    )
+
+
+def classify_by_score(score: float) -> str:
+    """
+    Map a compute_quality_score() value to a category label.
+
+    Thresholds (section 6 of the analysis document):
+      > 0.75   → "Clear"
+      0.45–0.75 → "Noisy"
+      < 0.45   → "Trash"
+
+    "Empty" and "Non-text" are handled upstream (classify_pipeline or
+    pre_filter_line) and are never returned here.
+
+    Args:
+        score: Value in [0, 1] from compute_quality_score().
+
+    Returns:
+        One of: "Clear", "Noisy", "Trash".
+    """
+    if score > 0.75:
+        return "Clear"
+    if score >= 0.45:
+        return "Noisy"
+    return "Trash"
+
+
+# ---------------------------------------------------------------------------
+# Rule-based classification pipeline  (section 5 of the analysis document)
+# ---------------------------------------------------------------------------
+
+def classify_pipeline(
+    text: str,
+    word_set: set | None = None,
+) -> str:
+    """
+    Recommended rule-based classification pipeline (section 5), implemented
+    as a standalone function that is additive to the existing categorize_line()
+    and pre_filter_line() approach.
+
+    Decision order (evaluated top-to-bottom):
+      1. Empty     – blank / whitespace-only string.
+      2. Non-text  – purely numeric / separator content (is_non_text).
+      3. Trash     – symbol_ratio > 0.5 AND valid_ratio < 0.2.
+      4. Clear     – valid_ratio > 0.75 AND symbol_ratio < 0.04.
+      5. Noisy     – valid_ratio > 0.4.
+      6. Trash     – fallback when none of the above fire.
+
+    This function intentionally does not call categorize_line() so it can
+    be used in isolation (e.g. without a GPU, without perplexity scores) or
+    combined with categorize_line() for a hybrid decision.
+
+    Integration example (hybrid, score-weighted tiebreak):
+
+        struct_cat = categorize_line(ppl, text, sym, upper)
+        pipe_cat   = classify_pipeline(text, word_set)
+        if struct_cat == pipe_cat:
+            final = struct_cat           # unanimous → confident
+        else:
+            score = compute_quality_score(
+                compute_valid_ratio(text, word_set),
+                compute_symbol_ratio(text),
+                ppl,
+                len(text),
+            )
+            final = classify_by_score(score)  # score breaks tie
+
+    Args:
+        text:     The line text to classify.
+        word_set: Optional set of known valid word forms for
+                  compute_valid_ratio().  When None the built-in proxy
+                  heuristic is used (see compute_valid_ratio docstring).
+
+    Returns:
+        One of: "Empty", "Non-text", "Trash", "Noisy", "Clear".
+    """
+    if not text or not text.strip():
+        return "Empty"
+
+    if is_non_text(text):
+        return "Non-text"
+
+    symbol_ratio = compute_symbol_ratio(text)
+    valid_ratio  = compute_valid_ratio(text, word_set)
+
+    # Fast Trash escalation: heavy noise + very few valid words
+    if symbol_ratio > 0.5 and valid_ratio < 0.2:
+        return "Trash"
+
+    # Clear: high valid-word density, very low symbol noise
+    if valid_ratio > 0.75 and symbol_ratio < 0.04:
+        return "Clear"
+
+    # Noisy: at least a moderate fraction of valid words
+    if valid_ratio > 0.4:
+        return "Noisy"
+
+    return "Trash"
