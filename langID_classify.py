@@ -38,6 +38,8 @@ CSV_HEADER = [
     "split_ws", "split_we",
     "lang", "lang_score", "perplex",
     "symbol", "upper",
+    "word_weird",    # mean per-word weirdness score [0, 1]
+    "quality_score", # composite quality score [0, 1] (higher = cleaner)
     "categ",
 ]
 
@@ -105,6 +107,17 @@ def process_and_write_batch(
     Run fastText + perplexity on a batch, compute quality flags, write rows.
 
     meta rows: (file_id, page_id, line_num, text_content, split_ws, split_we)
+
+    Classification strategy (hybrid):
+      1. categorize_line()   — existing rule-based path (sym/upper/fuse/ppl)
+      2. classify_pipeline() — ratio-based path (symbol_ratio, valid_ratio)
+      3. If both agree → use that category (high confidence).
+         If they disagree → compute_quality_score() from word-level scoring
+         breaks the tie via classify_by_score().
+
+    New CSV columns written:
+      word_weird    – mean per-word weirdness [0, 1] from score_words_in_line()
+      quality_score – composite quality signal [0, 1] from compute_quality_score()
     """
     # --- Perplexity ---
     ppls = calculate_perplexity_batch(lines, ppl_model, tokenizer, DEVICE)
@@ -120,13 +133,32 @@ def process_and_write_batch(
     for i in range(len(lines)):
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
 
-        ppl_val   = ppls[i]
-        lang      = langs[i]
-        score     = scores[i]
+        ppl_val     = ppls[i]
+        lang        = langs[i]
+        score       = scores[i]
         sym_count   = detect_strange_symbols(text_content)
         upper_count = detect_mid_uppercase(text_content)
 
-        categ = categorize_line(ppl_val, text_content, sym_count, upper_count)
+        # --- Per-word weirdness → composite quality score ---
+        word_scores = score_words_in_line(text_content)
+        weird_ratio = compute_word_weird_ratio(word_scores)
+
+        q_score = compute_quality_score(
+            valid_word_ratio=1.0 - weird_ratio,
+            symbol_ratio=compute_symbol_ratio(text_content),
+            perplexity=ppl_val,
+            text_length=len(text_content),
+        )
+
+        # --- Hybrid classification ---
+        # Run both rule paths; use the score to break any disagreement.
+        struct_cat = categorize_line(ppl_val, text_content, sym_count, upper_count)
+        pipe_cat   = classify_pipeline(text_content)
+
+        if struct_cat == pipe_cat:
+            categ = struct_cat
+        else:
+            categ = classify_by_score(q_score)
 
         row = [
             file_id,
@@ -140,6 +172,8 @@ def process_and_write_batch(
             f"{ppl_val:.2f}",
             sym_count,
             upper_count,
+            f"{weird_ratio:.4f}",
+            f"{q_score:.4f}",
             categ,
         ]
         results.append(row)
@@ -164,13 +198,13 @@ def main():
         program="alto-postprocess",
         config={
             "script": "langID_classify",
-            "input_txt_dir": _cfg_p.get("CLASSIFY", "input_dir", fallback=""),
-            "input_csv": _cfg_p.get("CLASSIFY", "stats_csv", fallback=""),
-            "output_dir": _cfg_p.get("CLASSIFY", "output_dir", fallback=""),
+            "input_txt_dir": _cfg_p.get("CLASSIFY", "TEXT_DIR", fallback=""),
+            "input_csv": _cfg_p.get("CLASSIFY", "INPUT_CSV", fallback=""),
+            "output_dir": _cfg_p.get("CLASSIFY", "OUTPUT_LINES_LOG", fallback=""),
             "fasttext_model": _cfg_p.get("CLASSIFY", "fasttext_model", fallback="lid.176.bin"),
             "gpt2_model": "distilgpt2",
             "ppl_threshold": _cfg_p.get("CLASSIFY", "ppl_threshold", fallback="1500"),
-            "batch_size": _cfg_p.get("CLASSIFY", "batch_size", fallback=""),
+            "batch_size": _cfg_p.get("CLASSIFY", "BATCH_SIZE", fallback=""),
         },
         paradata_dir="paradata",
         output_types=["csv"],
@@ -211,9 +245,6 @@ def main():
 
         prev_pi = page_id
         page_id = str(row["page"])
-        if page_id == 1:
-            if prev_pi != 0:
-                _logger.log_success("csv", int(prev_pi))
 
         # --- Document boundary ---
         if file_id != current_file_id:
@@ -226,9 +257,10 @@ def main():
                 batch_lines.clear()
                 batch_meta.clear()
 
-            # Sort the previous document's CSV
+            # Sort and log the previous document's CSV
             if current_file_id is not None and not skipping_current_file:
                 sort_document_csv(out_dir, current_file_id)
+                _logger.log_success("csv", current_file_id)
 
             current_file_id = file_id
             out_path = out_dir / f"{file_id}.csv"
@@ -274,7 +306,9 @@ def main():
             cat, clean_merged = pre_filter_line(merged_text)
 
             if cat != "Process":
-                # Pre-filtered lines: write immediately (no GPU needed)
+                # Pre-filtered lines: write immediately (no GPU needed).
+                # word_weird and quality_score are 0 / N/A for these rows
+                # because no model inference was run.
                 write_rows_to_doc(
                     out_dir,
                     file_id,
@@ -282,7 +316,8 @@ def main():
                         file_id, page_id, i, clean_merged,
                         current_split_ws, current_split_we,
                         "N/A", 0, 0,
-                        0, 0,   # symbol (sym_count), upper (upper_count)
+                        0, 0,
+                        "0.0000", "0.0000",  # word_weird, quality_score
                         cat,
                     ]],
                 )
@@ -308,6 +343,7 @@ def main():
 
     if current_file_id is not None and not skipping_current_file:
         sort_document_csv(out_dir, current_file_id)
+        _logger.log_success("csv", current_file_id)
 
 
     _logger.finalize(input_total=_total_inputs)

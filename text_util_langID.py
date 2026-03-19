@@ -358,6 +358,181 @@ def detect_mid_uppercase(text: str) -> int:
     return count
 
 # ---------------------------------------------------------------------------
+# Per-word weirdness scoring
+# ---------------------------------------------------------------------------
+
+def score_word(word: str) -> float:
+    """
+    Return a weirdness score in [0.0, 1.0] for a single whitespace-delimited
+    token by combining the four structural detectors into one number.
+
+    Signals and weights
+    -------------------
+    has_strange   (0.40) – token interior contains a character outside
+                           ALLOWED_INTERNAL and not alphanumeric.
+                           Strongest single indicator of corruption.
+    has_rep       (0.35) – a non-allowed, non-alnum character accounts for
+                           >= 40 % of the stripped token length.
+                           Indicates symbol-dominated noise ("===", "~~~~").
+    has_ldl       (0.15) – letter→digit→letter sandwich inside the token
+                           (e.g. "vyt1ačená").  Strong OCR fusion signal.
+    has_uppercase (0.10) – mid-word uppercase artefact (Patterns 1-3 from
+                           detect_mid_uppercase).  Weaker, more ambiguous.
+
+    Tokens shorter than 2 characters after boundary stripping are skipped
+    and returned as 0.0 (indistinguishable from abbreviations or initials).
+
+    The four signals are binary (0 or 1) and their weighted sum is the score.
+    Because at most all four fire simultaneously, the theoretical maximum is
+    0.40+0.35+0.15+0.10 = 1.00, so no clamping is needed in practice.
+    We still apply min(1.0, …) as a safety net.
+
+    Examples
+    --------
+    "divided"    → no signals → 0.00
+    "vyt1ačená"  → has_ldl   → 0.15
+    "obkLADem"   → has_upper → 0.10
+    "T>r«l"      → has_strange → 0.40
+    "TYRS==="    → has_strange + has_rep → 0.75
+    "v^UlíLa"   → has_strange + has_upper → 0.50
+    """
+    core = word.strip(_STRIP_CHARS)
+    if len(core) < 2:
+        return 0.0
+
+    # --- Signal 1: strange symbol ---
+    has_strange = any(
+        not ch.isalnum() and ch not in ALLOWED_INTERNAL
+        for ch in core
+    )
+
+    # --- Signal 2: repeated symbol domination ---
+    has_rep = False
+    if len(core) >= 3:
+        for ch in set(core):
+            if ch.isalnum() or ch in ALLOWED_INTERNAL:
+                continue
+            if core.count(ch) / len(core) >= 0.40:
+                has_rep = True
+                break
+
+    # --- Signal 3: letter–digit–letter fusion ---
+    has_ldl = False
+    prev2, prev1 = None, None
+    for ch in core:
+        if (prev2 is not None and prev2.isalpha()
+                and prev1 is not None and prev1.isdigit()
+                and ch.isalpha()):
+            has_ldl = True
+            break
+        prev2, prev1 = prev1, ch
+
+    # --- Signal 4: mid-word uppercase artefact ---
+    has_uppercase = False
+    if len(core) >= 4 and not core.isupper():
+        # Pattern 1: lower{2+} → UPPER
+        lower_run = 0
+        for ch in core:
+            if ch.islower():
+                lower_run += 1
+            elif ch.isupper():
+                if lower_run >= 2:
+                    has_uppercase = True
+                    break
+                lower_run = 0
+            else:
+                lower_run = 0
+
+        # Pattern 2: UPPER{2+} → lower at word start (len >= 5)
+        if not has_uppercase and len(core) >= 5:
+            upper_start = sum(
+                1 for _ in __import__('itertools').takewhile(str.isupper, core)
+            )
+            if (upper_start >= 2
+                    and upper_start < len(core)
+                    and core[upper_start].islower()):
+                has_uppercase = True
+
+        # Pattern 3: single lower → UPPER in a long word (len >= 6)
+        if not has_uppercase and len(core) >= 6:
+            prev_lower = False
+            for ch in core:
+                if ch.islower():
+                    prev_lower = True
+                elif ch.isupper():
+                    if prev_lower:
+                        has_uppercase = True
+                        break
+                    prev_lower = False
+                else:
+                    prev_lower = False
+
+    return min(
+        1.0,
+        0.40 * has_strange
+        + 0.35 * has_rep
+        + 0.15 * has_ldl
+        + 0.10 * has_uppercase,
+    )
+
+
+def score_words_in_line(text: str) -> list[tuple[str, float]]:
+    """
+    Score every whitespace-delimited token in *text* for weirdness.
+
+    Returns a list of (word, score) pairs in the same order as the tokens.
+    Each score is in [0.0, 1.0] as defined by score_word().
+
+    Returns an empty list for blank input.
+
+    Usage
+    -----
+    word_scores = score_words_in_line(text)
+    for word, s in word_scores:
+        if s > 0:
+            print(f"  weird token: {word!r}  score={s:.2f}")
+    """
+    return [(w, score_word(w)) for w in text.split()]
+
+
+def compute_word_weird_ratio(word_scores: list[tuple[str, float]]) -> float:
+    """
+    Aggregate per-word scores from score_words_in_line() to a single
+    line-level weirdness ratio in [0.0, 1.0].
+
+    Formula: arithmetic mean of all per-word scores.
+
+    A value of 0.0 means every token scored clean; 1.0 (unreachable in
+    practice) would mean every token simultaneously triggered all four
+    detectors at maximum weight.
+
+    Typical ranges in this corpus
+    ------------------------------
+    0.00        – fully clean line
+    0.00–0.05   – one borderline token in a long line
+    0.05–0.20   – one clearly corrupted token
+    0.20–0.50   – several corrupted tokens (likely Noisy → Trash boundary)
+    > 0.50      – majority of tokens corrupted → Trash
+
+    Returns 0.0 for empty input (no tokens).
+
+    Integration pattern (in process_and_write_batch)
+    ------------------------------------------------
+    word_scores  = score_words_in_line(text)
+    weird_ratio  = compute_word_weird_ratio(word_scores)
+    q_score      = compute_quality_score(
+                       valid_word_ratio = 1.0 - weird_ratio,
+                       symbol_ratio     = compute_symbol_ratio(text),
+                       perplexity       = ppl_val,
+                       text_length      = len(text),
+                   )
+    """
+    if not word_scores:
+        return 0.0
+    return sum(s for _, s in word_scores) / len(word_scores)
+
+
+# ---------------------------------------------------------------------------
 # Perplexity (GPU batch)
 # ---------------------------------------------------------------------------
 
