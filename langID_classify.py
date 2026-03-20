@@ -232,121 +232,122 @@ def main():
 
     print(f"Starting classification. Output → {OUTPUT_DIR}/")
 
-    sort_cols = (
-        ["file", "page", "line_order"]
-        if "line_order" in df.columns
-        else ["file", "page"]
-    )
-    df = df.sort_values(by=sort_cols)
+    try:
+        sort_cols = (
+            ["file", "page", "line_order"]
+            if "line_order" in df.columns
+            else ["file", "page"]
+        )
+        df = df.sort_values(by=sort_cols)
 
-    page_id = 0
-    for _, row in tqdm(df.iterrows(), total=len(df)):
-        file_id = str(row["file"])
+        page_id = 0
+        for _, row in tqdm(df.iterrows(), total=len(df)):
+            file_id = str(row["file"])
 
-        prev_pi = page_id
-        page_id = str(row["page"])
+            prev_pi = page_id  # noqa: F841  (kept for potential future use)
+            page_id = str(row["page"])
 
-        # --- Document boundary ---
-        if file_id != current_file_id:
+            # --- Document boundary ---
+            if file_id != current_file_id:
 
-            # Flush batch for the previous document
-            if batch_lines:
-                process_and_write_batch(
-                    batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
-                )
-                batch_lines.clear()
-                batch_meta.clear()
+                # Flush batch for the previous document
+                if batch_lines:
+                    process_and_write_batch(
+                        batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
+                    )
+                    batch_lines.clear()
+                    batch_meta.clear()
 
-            # Sort and log the previous document's CSV
-            if current_file_id is not None and not skipping_current_file:
-                sort_document_csv(out_dir, current_file_id)
-                _logger.log_success("csv", current_file_id)
+                # Sort and log the previous document's CSV
+                if current_file_id is not None and not skipping_current_file:
+                    sort_document_csv(out_dir, current_file_id)
+                    _logger.log_success("csv")
 
-            current_file_id = file_id
-            out_path = out_dir / f"{file_id}.csv"
+                current_file_id = file_id
+                out_path = out_dir / f"{file_id}.csv"
 
-            if out_path.exists() and file_id not in session_files:
-                skipping_current_file = True
-            else:
-                skipping_current_file = False
-                session_files.add(file_id)
+                if out_path.exists() and file_id not in session_files:
+                    skipping_current_file = True
+                else:
+                    skipping_current_file = False
+                    session_files.add(file_id)
 
-        if skipping_current_file:
-            continue
-
-        txt_path = Path(TEXT_DIR) / file_id / f"{file_id}-{page_id}.txt"
-
-        if not txt_path.exists():
-            _logger.log_skip(str(txt_path), "not found")
-            continue
-
-        _total_inputs += 1
-
-        with open(txt_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        expected_incoming_suffix = ""
-
-        for i, line in enumerate(lines, 1):
-            merged_text, outgoing_prefix, outgoing_suffix = parse_line_splits(line)
-
-            current_split_ws = outgoing_prefix
-            current_split_we = ""
-
-            if expected_incoming_suffix:
-                stripped = merged_text.lstrip()
-                if stripped.startswith(expected_incoming_suffix):
-                    merged_text = merged_text.replace(
-                        expected_incoming_suffix, "", 1
-                    ).strip()
-                    current_split_we = expected_incoming_suffix
-
-            expected_incoming_suffix = outgoing_suffix
-
-            cat, clean_merged = pre_filter_line(merged_text)
-
-            if cat != "Process":
-                # Pre-filtered lines: write immediately (no GPU needed).
-                # word_weird and quality_score are 0 / N/A for these rows
-                # because no model inference was run.
-                write_rows_to_doc(
-                    out_dir,
-                    file_id,
-                    [[
-                        file_id, page_id, i, clean_merged,
-                        current_split_ws, current_split_we,
-                        "N/A", 0, 0,
-                        0, 0,
-                        "0.0000", "0.0000",  # word_weird, quality_score
-                        cat,
-                    ]],
-                )
+            if skipping_current_file:
                 continue
 
-            batch_lines.append(clean_merged)
-            batch_meta.append(
-                (file_id, page_id, i, clean_merged, current_split_ws, current_split_we)
+            txt_path = Path(TEXT_DIR) / file_id / f"{file_id}-{page_id}.txt"
+
+            if not txt_path.exists():
+                _logger.log_skip(str(txt_path), "not found")
+                continue
+
+            _total_inputs += 1
+
+            with open(txt_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            expected_incoming_suffix = ""
+
+            for i, line in enumerate(lines, 1):
+                merged_text, outgoing_prefix, outgoing_suffix = parse_line_splits(line)
+
+                current_split_ws = outgoing_prefix
+                current_split_we = ""
+
+                if expected_incoming_suffix:
+                    stripped = merged_text.lstrip()
+                    if stripped.startswith(expected_incoming_suffix):
+                        merged_text = merged_text.replace(
+                            expected_incoming_suffix, "", 1
+                        ).strip()
+                        current_split_we = expected_incoming_suffix
+
+                expected_incoming_suffix = outgoing_suffix
+
+                cat, clean_merged = pre_filter_line(merged_text)
+
+                if cat != "Process":
+                    # Pre-filtered lines: write immediately (no GPU needed).
+                    # word_weird and quality_score are 0 / N/A for these rows
+                    # because no model inference was run.
+                    write_rows_to_doc(
+                        out_dir,
+                        file_id,
+                        [[
+                            file_id, page_id, i, clean_merged,
+                            current_split_ws, current_split_we,
+                            "N/A", 0, 0,
+                            0, 0,
+                            "0.0000", "0.0000",  # word_weird, quality_score
+                            cat,
+                        ]],
+                    )
+                    continue
+
+                batch_lines.append(clean_merged)
+                batch_meta.append(
+                    (file_id, page_id, i, clean_merged, current_split_ws, current_split_we)
+                )
+
+                if len(batch_lines) >= BATCH_SIZE:
+                    process_and_write_batch(
+                        batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
+                    )
+                    batch_lines.clear()
+                    batch_meta.clear()
+
+        # Final flush
+        if batch_lines:
+            process_and_write_batch(
+                batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
             )
 
-            if len(batch_lines) >= BATCH_SIZE:
-                process_and_write_batch(
-                    batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
-                )
-                batch_lines.clear()
-                batch_meta.clear()
+        if current_file_id is not None and not skipping_current_file:
+            sort_document_csv(out_dir, current_file_id)
+            _logger.log_success("csv")
 
-    # Final flush
-    if batch_lines:
-        process_and_write_batch(
-            batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
-        )
-
-    if current_file_id is not None and not skipping_current_file:
-        sort_document_csv(out_dir, current_file_id)
-        _logger.log_success("csv", current_file_id)
-
-
-    _logger.finalize(input_total=_total_inputs)
+    finally:
+        _logger.finalize(input_total=_total_inputs)
 
 
 if __name__ == "__main__":

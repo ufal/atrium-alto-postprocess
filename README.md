@@ -210,16 +210,17 @@ NER and UDPipe for CONLL-U files with lemmas & POS tags [^5].
 
 As the script processes, it aggregates line counts for each page into categories 🪧:
 
-* ✅ **Clear** - High-confidence, low-perplexity, common language.
-* ⚠️ **Noisy (Rough)** - Medium or Low-confidence, high-perplexity, or other OCR issues.
-* 🗑️ **Trash** - Hard to guess language, very high perplexity, or non-prose.
-* 🔣 **Non-text** - Failed heuristic checks (e.g., mostly digits/symbols).
+* ✅ **Clear** - Passes all structural checks; low perplexity on long lines.
+* ⚠️ **Noisy** - Degraded but potentially recoverable: a single strange-symbol token, one OCR digit-fusion, 
+mid-word uppercase artefacts, or elevated perplexity on longer lines.
+* 🗑️ **Trash** - Structurally corrupt: multiple corrupted tokens, combined corruption signals, or heavy symbol repetition.
+* 🔣 **Non-text** - Failed heuristic checks (e.g., mostly digits/symbols, no alphabetic content).
 * 🫙 **Empty** - Line contains only whitespace.
 
 > [!NOTE]
 > This script generates two primary output directories: 
 > `DOC_LINE_LANG_CLASS/` and `DOC_LINE_STATS/`, while the
-> raw text files (primary input) are stored in `../PAGE-TXT/`generated from `../PAGE_ALTO`.
+> raw text files (primary input) are stored in `../PAGE_TXT/` generated from `../PAGE_ALTO`.
 
 All of the input-output files and changeable parameters are available in [config_langID.txt](config_langID.txt) 📎 where
 variables are divided into two sections according to the processing stage of Step 4 (classification or aggregation).
@@ -243,13 +244,17 @@ and DistilGPT2 [^6] models on the **GPU**. It logs results immediately to a raw 
 * `page_num` - page number 📄
 * `line_num` - line number, starts from 1 for each line on the ALTO page 🔢
 * `text` - original text of the line from ALTO page 📝
-* `split_we` - hyphen end (split word ending - first word in line)
 * `split_ws` - hyphen start (split word beginning - last word in line)
+* `split_we` - hyphen end (split word ending - first word in line)
 * `lang` - predicted ISO language code of the line ([list of all possible language labels predicted by FastText model)](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200) 🌐
 * `lang_score` - confidence score of the predicted language code 🎯
 * `perplex` - perplexity score of the original line text 📉
 * `symbol` - count of tokens with strange symbols (see below)
 * `upper` - count of words with unexpected mid-word uppercase (see below)
+* `word_weird` - mean per-word weirdness score in [0, 1] (0 = fully clean; combines strange-symbol, 
+repeated-symbol, LDL-fusion, and mid-uppercase signals weighted per token)
+* `quality_score` - composite quality score in [0, 1] combining valid-word ratio, symbol ratio, 
+perplexity, and text length (higher = cleaner; used as tiebreaker in hybrid classification)
 * `categ` - assigned category of the line (**Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙)
 
 ##### Categorisation logic
@@ -258,17 +263,20 @@ and DistilGPT2 [^6] models on the **GPU**. It logs results immediately to a raw 
 unique-symbol count). The remaining three categories are assigned by `categorize_line()` in 
 `text_util_langID.py` after GPU perplexity scoring, using three structural detectors:
 
-| Detector                     | What it counts                                                                                                                                                                                               |
-|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `detect_strange_symbols`     | Tokens containing any character that is not alphanumeric and not in the allowed set `{ . - , + }`. Edge punctuation is stripped before inspection so trailing colons or parentheses don't inflate the count. |
-| `detect_letter_digit_letter` | Tokens with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g. `vyt1ačená`, `nalez2í`). Legitimate patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger.   |
-| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase-run at the start followed by lowercase (`XXWžkumu`). All-caps words and titles (`PhDr`, `MUDr`) are excluded.                 |
+| Detector                     | What it counts                                                                                                                                                                                                               |
+|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `detect_strange_symbols`     | Tokens containing any character that is not alphanumeric and not in the allowed set `{ . - , + ( ) " ' / _ — – }`. Edge punctuation is stripped before inspection so trailing colons or parentheses don't inflate the count. |
+| `detect_letter_digit_letter` | Tokens with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g. `vyt1ačená`, `nalez2í`). Legitimate patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger.                   |
+| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase-run at the start followed by lowercase (`XXWžkumu`). All-caps words and titles (`PhDr`, `MUDr`) are excluded.                                 |
 
-Decision tree (evaluated top to bottom, first match wins):
+Decision tree for `categorize_line()` (evaluated top to bottom, first match wins):
 
 ```
+sym == 2  AND  wc >= 8  AND  ppl < 1500  → Noisy   (RESCUE: minority corruption on long coherent line)
+
 sym >= 2                         → Trash
 sym == 1  AND  rep > 0           → Trash   (repeated strange symbol in token)
+sym >= 1  AND  upper >= 1        → Trash   (symbol corruption + mid-word uppercase co-occur)
 fuse >= 2                        → Trash   (multiple fused tokens in line)
 sym >= 1  AND  fuse >= 1         → Trash   (symbol + fusion combined)
 
@@ -279,6 +287,21 @@ ppl >= 1500  (only if wc >= 7)   → Noisy   (PPL gate disabled for short lines)
 
 otherwise                        → Clear
 ```
+
+##### Hybrid classification
+
+`categ` is not assigned by `categorize_line()` alone. The script runs two independent paths and uses a quality 
+score to break any disagreement:
+
+1. **Structural path** — `categorize_line()` (perplexity + symbol/fusion/uppercase detectors)
+2. **Ratio path** — `classify_pipeline()` (symbol ratio and valid-word ratio thresholds, no GPU)
+3. If both agree → that category is used directly.
+4. If they disagree → `compute_quality_score()` is computed from valid-word ratio, symbol ratio, perplexity, and text 
+length; `classify_by_score()` maps it to Clear / Noisy / Trash using thresholds (> 0.75 → Clear, ≥ 0.45 → Noisy, < 0.45 → Trash).
+
+The `word_weird` column holds the mean per-word weirdness that feeds into `compute_quality_score()` as `1 - valid_word_ratio`. 
+The `quality_score` column records the final composite score, which is written for every processed line regardless of 
+whether the tiebreak path was taken.
 
 > [!NOTE]
 > Perplexity is **not** used to determine Trash. `distilgpt2` is an English model and 
