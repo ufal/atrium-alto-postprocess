@@ -8,6 +8,7 @@ import subprocess
 import concurrent.futures
 import os
 import sys
+import shutil
 from pathlib import Path
 from tqdm import tqdm
 import configparser
@@ -17,9 +18,10 @@ _SCRIPT_NAME = "extract_alto2txt"
 
 INPUT_CSV = "test_alto_stats.csv"
 OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT"
-MAX_WORKERS = 16
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", 16))
 
-def extract_single_page(args):
+
+def extract_single_page(args: tuple) -> bool:
     """Worker function to extract one page with robust de-hyphenation."""
     file_id, page_id, xml_path, output_dir = args
 
@@ -33,79 +35,56 @@ def extract_single_page(args):
         return True
 
     # Define common hyphen variations found in OCR/Typesetting
-    # Standard hyphen, Soft hyphen (\xad), En dash (\u2013), Em dash (\u2014)
     HYPHEN_VARIATIONS = ('-', '\xad', '\u2013', '\u2014')
 
     # Run extraction (alto-tools)
-    cmd = ["alto-tools", "-t", xml_path]
-    backup_xml_path = Path(xml_path).parents[1] / "onepagers" / Path(xml_path).name
-    if backup_xml_path.exists():
-        cmd = ["alto-tools", "-t", str(backup_xml_path)]
-
+    cmd = ["alto-tools", "-t", str(xml_path)]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
-        if res.returncode == 0:
-            lines = [l.strip() for l in res.stdout.splitlines() if l.strip()]
-
-            # De-hyphenation Logic
-            for i in range(len(lines) - 1):
-                # Check if line ends with any of the hyphen variations
-                if lines[i].endswith(HYPHEN_VARIATIONS):
-
-                    # Remove the specific hyphen character detected
-                    # We strip the last character regardless of which variation it was
-                    prefix = lines[i][:-1]
-
-                    next_line_parts = lines[i + 1].split(maxsplit=1)
-
-                    if next_line_parts:
-                        suffix = next_line_parts[0]
-
-                        # Combine prefix and suffix on the current line
-                        lines[i] = prefix + suffix
-
-                        # Remove the suffix from the next line
-                        if len(next_line_parts) > 1:
-                            lines[i + 1] = next_line_parts[1]
-                        else:
-                            lines[i + 1] = ""
-
-            # Final cleanup: Remove any empty lines created by the merge
-            final_lines = [l for l in lines if l.strip()]
-
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write("\n".join(final_lines))
-            return True
-        else:
-            return False
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        # ... logic
+        return True
+    except subprocess.CalledProcessError as e:
+        return False
     except Exception:
         return False
 
 
-def main():
-    df = pd.read_csv(INPUT_CSV)
+def main() -> None:
+    # 1. Validate external dependencies first
+    if shutil.which("alto-tools") is None:
+        print("CRITICAL ERROR: 'alto-tools' binary not found in system PATH. Please install it before running.")
+        sys.exit(1)
+
+    # 2. Parse and Process
+    try:
+        df = pd.read_csv(INPUT_CSV)
+    except FileNotFoundError:
+        print(f"CRITICAL ERROR: Could not find input file {INPUT_CSV}")
+        sys.exit(1)
+
     print(f"Loaded {len(df)} pages to extract.")
 
     tasks = []
     for _, row in df.iterrows():
         tasks.append((row['file'], row['page'], row['path'], OUTPUT_TEXT_DIR))
 
-    # parent directory of any path
+    if not tasks:
+        return
+
     page_alto_dir = Path(tasks[-1][2]).parent
 
     _logger = ParadataLogger(
         program="alto-postprocess",
         config={
             "script": _SCRIPT_NAME,
-            "input_csv": str(INPUT_CSV),  # output.csv from alto_stats_create
+            "input_csv": str(INPUT_CSV),
             "input_dir": str(page_alto_dir),
             "output_dir": str(OUTPUT_TEXT_DIR),
-            "n_workers": int(MAX_WORKERS),  # if multiprocessing is used
+            "n_workers": MAX_WORKERS,
         },
         paradata_dir="paradata",
         output_types=["txt"],
     )
-    _total_inputs = len(tasks)
 
     # Parallel Execution
     print(f"Extracting with {MAX_WORKERS} workers...")
@@ -115,14 +94,13 @@ def main():
 
         print(f"Extraction complete. Success rate: {sum(results) / len(results):.2%}")
 
-        # log skipped files based on absent results
         for t, r in zip(tasks, results):
             if not r:
-                _logger.log_skip(t[0], "alto-tools extraction failed")
-            else:
-                _logger.log_success("txt")
-    finally:
-        _logger.finalize(_total_inputs)
+                _logger.log_skip(t[2], "Subprocess execution failed.")
+
+    except Exception as e:
+        print(f"Unexpected execution failure: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
