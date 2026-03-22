@@ -266,15 +266,20 @@ def extract_single_page(args):
         full_ordered_boxes = []
 
         # 3. Process in Chunks
-        # CHUNK_SIZE of 350 will easily process entire pages in one go now
-        # since we are passing lines, not words.
+        # CHUNK_SIZE starts at 350, which will easily process entire pages in
+        # one go since we are passing lines (not words).  On CUDA OOM the size
+        # is halved and the failing chunk is retried; this repeats until either
+        # the chunk succeeds or the size falls below the minimum safe threshold.
         CHUNK_SIZE = 350
+        MIN_CHUNK_SIZE = 50
 
-        for i in range(0, len(lines), CHUNK_SIZE):
+        i = 0
+        while i < len(lines):
             chunk_lines = lines[i: i + CHUNK_SIZE]
             chunk_boxes = norm_boxes[i: i + CHUNK_SIZE]
 
             if not chunk_lines:
+                i += CHUNK_SIZE
                 continue
 
             try:
@@ -291,17 +296,38 @@ def extract_single_page(args):
                 # Reordering
                 order_indices = parse_logits(logits, len(chunk_boxes))
 
-                chunk_ordered_lines = [chunk_lines[idx] for idx in order_indices]
-                chunk_ordered_boxes = [chunk_boxes[idx] for idx in order_indices]
+                full_ordered_lines.extend([chunk_lines[idx] for idx in order_indices])
+                full_ordered_boxes.extend([chunk_boxes[idx] for idx in order_indices])
 
-                full_ordered_lines.extend(chunk_ordered_lines)
-                full_ordered_boxes.extend(chunk_ordered_boxes)
+                # Advance the cursor only after a successful chunk.
+                i += CHUNK_SIZE
 
-            except RuntimeError as e:
-                if "memory" in str(e).lower():
-                    print(f"Skipping {file_id}-{page_id} due to Memory Error.")
+            except (torch.cuda.OutOfMemoryError, RuntimeError) as e:
+                # Treat both explicit OOM and RuntimeErrors whose message
+                # mentions "memory" as CUDA out-of-memory conditions.
+                is_oom = isinstance(e, torch.cuda.OutOfMemoryError) or (
+                    isinstance(e, RuntimeError) and "memory" in str(e).lower()
+                )
+                if not is_oom:
+                    raise
+
+                torch.cuda.empty_cache()
+                CHUNK_SIZE = CHUNK_SIZE // 2
+
+                if CHUNK_SIZE < MIN_CHUNK_SIZE:
+                    # Even the smallest viable chunk triggers OOM: give up on
+                    # this page rather than looping indefinitely.
+                    print(
+                        f"Skipping {file_id}-{page_id}: OOM even at "
+                        f"chunk size {CHUNK_SIZE * 2} (min={MIN_CHUNK_SIZE})."
+                    )
                     return False
-                raise e
+
+                print(
+                    f"OOM on {file_id}-{page_id}: retrying chunk at "
+                    f"i={i} with reduced CHUNK_SIZE={CHUNK_SIZE}."
+                )
+                # Do NOT advance i — retry the same position with smaller chunk.
 
         # 4. Generate text
         final_text = post_process_text(full_ordered_lines, full_ordered_boxes)
@@ -328,8 +354,6 @@ def main():
     for _, row in df.iterrows():
         # Ensure your CSV has these columns
         tasks.append((row['file'], row['page'], row['path'], OUTPUT_TEXT_DIR))
-
-
 
     use_cuda = torch.cuda.is_available()
     print(f"Device: {'CUDA' if use_cuda else 'CPU'}")

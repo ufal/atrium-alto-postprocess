@@ -36,79 +36,84 @@ def split_alto_xml(input_file_path, output_dir):
         output_dir (str): The directory where split files will be saved.
                           A subdirectory will be created inside here named
                           after the base name of the input file.
+
+    Returns:
+        int: The number of pages written (0 if no pages were found).
+
+    Raises:
+        ET.ParseError: If the XML cannot be parsed.
+        Exception:     On any other unexpected error.
     """
-    try:
-        # --- 1. Setup XML Namespace ---
-        # ALTO XML uses a specific namespace. We must register it to
-        # make sure ElementTree can find the elements (e.g., <Page>, <Styles>).
-        # We also register it as the *default* namespace ('') so that
-        # when we write the new XML files, it doesn't add "ns0:" prefixes.
-        namespace = {'alto': 'http://www.loc.gov/standards/alto/ns-v3#'}
-        ET.register_namespace('', 'http://www.loc.gov/standards/alto/ns-v3#')
+    # --- 1. Setup XML Namespace ---
+    # ALTO XML uses a specific namespace. We must register it to
+    # make sure ElementTree can find the elements (e.g., <Page>, <Styles>).
+    # We also register it as the *default* namespace ('') so that
+    # when we write the new XML files, it doesn't add "ns0:" prefixes.
+    namespace = {'alto': 'http://www.loc.gov/standards/alto/ns-v3#'}
+    ET.register_namespace('', 'http://www.loc.gov/standards/alto/ns-v3#')
 
-        # --- 2. Parse the Input XML ---
-        tree = ET.parse(input_file_path)
-        root = tree.getroot()
+    # --- 2. Parse the Input XML ---
+    tree = ET.parse(input_file_path)
+    root = tree.getroot()
 
-        # --- 3. Find Common Header Elements ---
-        # We need to copy the <Description> and <Styles> blocks into
-        # *every* new single-page file so they are all valid.
-        description = root.find('alto:Description', namespace)
-        styles = root.find('alto:Styles', namespace)
+    # --- 3. Find Common Header Elements ---
+    # We need to copy the <Description> and <Styles> blocks into
+    # *every* new single-page file so they are all valid.
+    description = root.find('alto:Description', namespace)
+    styles = root.find('alto:Styles', namespace)
 
-        # --- 4. Find All Page Elements ---
-        # Find all <Page> elements anywhere within the <Layout> section.
-        pages = root.findall('.//alto:Page', namespace)
+    # --- 4. Find All Page Elements ---
+    # Find all <Page> elements anywhere within the <Layout> section.
+    pages = root.findall('.//alto:Page', namespace)
 
-        if not pages:
-            print(f"  -> No <Page> elements found in {input_file_path}. Skipping.")
-            return
+    if not pages:
+        print(f"  -> No <Page> elements found in {input_file_path}. Skipping.")
+        # Return 0 so the caller can log an accurate page count.
+        return 0
 
-        # --- 5. Prepare Output Directory and Filename ---
-        # Get the base name of the input file (e.g., "document1.alto.xml" -> "document1")
-        base_name = os.path.splitext(os.path.basename(input_file_path))[0].replace(".alto", "")
+    # --- 5. Prepare Output Directory and Filename ---
+    # Get the base name of the input file (e.g., "document1.alto.xml" -> "document1")
+    base_name = os.path.splitext(os.path.basename(input_file_path))[0].replace(".alto", "")
 
-        # Create a dedicated subdirectory for this document's pages
-        # (e.g., output_dir/document1/)
-        page_output_dir = os.path.join(output_dir, base_name)
-        os.makedirs(page_output_dir, exist_ok=True)
+    # Create a dedicated subdirectory for this document's pages
+    # (e.g., output_dir/document1/)
+    page_output_dir = os.path.join(output_dir, base_name)
+    os.makedirs(page_output_dir, exist_ok=True)
 
-        # --- 6. Loop Through Pages and Create New Files ---
-        print(f"  -> Found {len(pages)} page(s). Splitting...")
-        for i, page in enumerate(pages, 1):
-            # Try to get the page number from the 'PHYSICAL_IMG_NR' attribute.
-            # If it's not there, just use a simple counter (1, 2, 3...).
-            page_number = page.get('PHYSICAL_IMG_NR', str(i))
+    # --- 6. Loop Through Pages and Create New Files ---
+    print(f"  -> Found {len(pages)} page(s). Splitting...")
+    for i, page in enumerate(pages, 1):
+        # Try to get the page number from the 'PHYSICAL_IMG_NR' attribute.
+        # If it's not there, just use a simple counter (1, 2, 3...).
+        page_number = page.get('PHYSICAL_IMG_NR', str(i))
 
-            # Create the new filename (e.g., "document1-1.alto.xml")
-            output_filename = f"{base_name}-{page_number}.alto.xml"
-            output_filepath = os.path.join(page_output_dir, output_filename)
+        # Create the new filename (e.g., "document1-1.alto.xml")
+        output_filename = f"{base_name}-{page_number}.alto.xml"
+        output_filepath = os.path.join(page_output_dir, output_filename)
 
-            # --- 7. Build the New XML Tree for This Page ---
-            # Create a new root <alto> element
-            new_root = ET.Element(root.tag, root.attrib)
+        # --- 7. Build the New XML Tree for This Page ---
+        # Create a new root <alto> element
+        new_root = ET.Element(root.tag, root.attrib)
 
-            # Append the (optional) header elements we found earlier
-            if description is not None:
-                new_root.append(description)
-            if styles is not None:
-                new_root.append(styles)
+        # Append the (optional) header elements we found earlier
+        if description is not None:
+            new_root.append(description)
+        if styles is not None:
+            new_root.append(styles)
 
-            # Create a new <Layout> element...
-            new_layout = ET.SubElement(new_root, 'Layout')
-            # ...and append *only* the current page to it.
-            new_layout.append(page)
+        # Create a new <Layout> element...
+        new_layout = ET.SubElement(new_root, 'Layout')
+        # ...and append *only* the current page to it.
+        new_layout.append(page)
 
-            # --- 8. Write the New XML to a File ---
-            new_tree = ET.ElementTree(new_root)
-            new_tree.write(output_filepath, encoding='UTF-8', xml_declaration=True)
+        # --- 8. Write the New XML to a File ---
+        new_tree = ET.ElementTree(new_root)
+        new_tree.write(output_filepath, encoding='UTF-8', xml_declaration=True)
 
-        print(f"  -> Successfully split into {len(pages)} file(s) in '{page_output_dir}'.")
+    print(f"  -> Successfully split into {len(pages)} file(s) in '{page_output_dir}'.")
 
-    except ET.ParseError as e:
-        print(f"  -> ERROR: Could not parse XML in {input_file_path}. {e}")
-    except Exception as e:
-        print(f"  -> ERROR: An unexpected error occurred: {e}")
+    # Return the count so the caller can pass it to _logger.log_success().
+    return len(pages)
 
 
 def main():
@@ -166,9 +171,11 @@ def main():
                 print(f"Processing '{filename}'...")
                 _total_inputs += 1
 
-                # Call the main splitting function for this file
+                # Call the main splitting function for this file.
+                # split_alto_xml() now returns the number of pages written,
+                # which is captured here and forwarded to the paradata logger.
                 try:
-                    split_alto_xml(input_file_path, args.output_dir)
+                    page_count = split_alto_xml(input_file_path, args.output_dir)
                     _logger.log_success("xml", count=page_count)
                 except Exception as e:
                     _logger.log_skip(str(filename), str(e))

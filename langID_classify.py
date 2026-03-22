@@ -66,13 +66,21 @@ def load_models():
 
 def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
     """
-    Append rows to the per-document CSV.
-    Writes the header automatically on first write.
-    """
-    out_path = output_dir / f"{file_id}.csv"
-    file_exists = out_path.exists()
+    Append rows to the per-document *temporary* CSV (``<file_id>.csv.tmp``).
 
-    with open(out_path, 'a', encoding='utf-8', newline='') as f:
+    Writing to a .tmp file means an interrupted run leaves no partial .csv
+    behind: the resume logic in main() checks for the final .csv only, so
+    a crashed run is never silently treated as complete.
+
+    The file is promoted to its final name by ``sort_document_csv()`` once
+    all lines for that document have been written.
+
+    Writes the CSV header automatically on the first write for this document.
+    """
+    tmp_path = output_dir / f"{file_id}.csv.tmp"
+    file_exists = tmp_path.exists()
+
+    with open(tmp_path, 'a', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(CSV_HEADER)
@@ -81,14 +89,25 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
 
 def sort_document_csv(output_dir: Path, file_id: str):
     """
-    Sort a finished document CSV by (page_num, line_num).
-    Called once per document after all its lines have been written.
+    Sort the finished temporary CSV by (page_num, line_num) and atomically
+    promote it to the final ``<file_id>.csv``.
+
+    Reading from .tmp and writing to .csv means:
+      - The final file is only ever created once a document is fully processed.
+      - A crash mid-document leaves a .tmp (ignored on resume) rather than a
+        partial .csv that would be silently reused.
+
+    The .tmp file is removed after the sorted .csv has been written
+    successfully.
     """
+    tmp_path = output_dir / f"{file_id}.csv.tmp"
     out_path = output_dir / f"{file_id}.csv"
-    if out_path.exists():
-        df = pd.read_csv(out_path)
+    if tmp_path.exists():
+        df = pd.read_csv(tmp_path)
         df = df.sort_values(by=["page_num", "line_num"], ascending=True)
         df.to_csv(out_path, index=False)
+        # Remove .tmp only after the sorted .csv has been written successfully.
+        tmp_path.unlink()
 
 
 # ---------------------------------------------------------------------------
@@ -258,12 +277,15 @@ def main():
                     batch_lines.clear()
                     batch_meta.clear()
 
-                # Sort and log the previous document's CSV
+                # Sort the previous document's .tmp → .csv and log success.
                 if current_file_id is not None and not skipping_current_file:
                     sort_document_csv(out_dir, current_file_id)
                     _logger.log_success("csv")
 
                 current_file_id = file_id
+                # Resume check: look for the *final* .csv (not the .tmp).
+                # A .tmp left by a previous crash is intentionally ignored here;
+                # it will be overwritten by the new run's writes.
                 out_path = out_dir / f"{file_id}.csv"
 
                 if out_path.exists() and file_id not in session_files:

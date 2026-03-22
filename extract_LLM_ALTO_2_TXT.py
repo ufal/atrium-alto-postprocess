@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-extract_LLM_ALTO_2_TXT_fixed.py
+extract_LLM_ALTO_2_TXT.py
 
 Extract text from Page Images using GLM-4v (Multimodal LLM).
 Refactored to fix ChatGLMConfig errors and input formatting.
@@ -10,7 +10,6 @@ import os
 import pandas as pd
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
-from transformers.modeling_utils import PreTrainedModel
 from PIL import Image, ImageFile, ImageOps
 from pathlib import Path
 from tqdm import tqdm
@@ -23,12 +22,12 @@ INPUT_CSV = "test_alto_stats.csv"
 OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT_LLM"
 MODEL_PATH = "THUDM/glm-4v-9b"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+MAX_WORKERS = 1  # Module-level constant; referenced by the paradata logger config
 
 # Image settings
 MAX_RESOLUTION = 1344
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 Image.MAX_IMAGE_PIXELS = None
-
 
 
 def trim_whitespace(image, padding=20):
@@ -137,7 +136,6 @@ def extract_single_page_glm(tokenizer, model, image_path):
                 **inputs,
                 max_new_tokens=4096,
                 do_sample=False,  # Deterministic (Greedy Search)
-                # temperature=0.1,      <-- REMOVED to stop warning
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id,
             )
@@ -158,14 +156,6 @@ def extract_single_page_glm(tokenizer, model, image_path):
             print(f"⚠️ Error processing {image_path}: {e}")
         return None
 
-    except Exception as e:
-        if "CUDA out of memory" in str(e):
-            print(f"⚠️ OOM Error on {image_path}. Skipping.")
-            torch.cuda.empty_cache()
-        else:
-            print(f"⚠️ Error processing {image_path}: {e}")
-        return None
-
 
 def main():
     if not os.path.exists(INPUT_CSV):
@@ -175,6 +165,9 @@ def main():
     df = pd.read_csv(INPUT_CSV)
     has_image_col = 'image_path' in df.columns
 
+    # Logger is initialised here, after df is loaded, so that page_alto_dir
+    # and len(df) are defined.  MAX_WORKERS is a module-level constant so it
+    # is always available regardless of initialisation order.
     page_alto_dir = Path(df.iloc[0]['path']).parent
 
     _logger = ParadataLogger(
@@ -184,12 +177,14 @@ def main():
             "input_csv": str(INPUT_CSV),  # output.csv from alto_stats_create
             "input_dir": str(page_alto_dir),
             "output_dir": str(OUTPUT_TEXT_DIR),
-            "n_workers": int(MAX_WORKERS),  # if multiprocessing is used
+            "n_workers": int(MAX_WORKERS),
         },
         paradata_dir="paradata",
         output_types=["txt"],
     )
-    _total_inputs = len(tasks)
+    # _total_inputs is the total number of pages in the CSV; pages that are
+    # already on disk are logged as skips rather than successes.
+    _total_inputs = len(df)
 
     tokenizer, model = load_model()
 
@@ -217,6 +212,7 @@ def main():
                 if backup_image_path.exists():
                     image_path = backup_image_path
                 else:
+                    _logger.log_skip(str(image_path), "image file not found")
                     continue
 
             # --- Output Check ---
@@ -228,7 +224,6 @@ def main():
                 continue
 
             # --- Inference ---
-            _total_inputs += 1
             text = extract_single_page_glm(tokenizer, model, image_path)
 
             if text:
@@ -241,7 +236,6 @@ def main():
         print("Done.")
     finally:
         _logger.finalize(_total_inputs)
-
 
 
 if __name__ == "__main__":

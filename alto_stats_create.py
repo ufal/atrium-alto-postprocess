@@ -32,8 +32,10 @@ import argparse
 import subprocess  # To run external commands (like alto-tools)
 import pandas as pd  # To easily create the final CSV
 import re  # For regular expressions, to parse the command output
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from atrium_paradata import ParadataLogger
 import sys
+
 
 def parse_alto_tools_stats_line(line):
     """
@@ -110,59 +112,78 @@ def run_alto_tools_stats(xml_path):
     return stats
 
 
-def process_alto_files_with_alto_tools(directory_path):
+def _process_single_xml(xml_path, fname):
+    """
+    Process one XML file: run alto-tools and build the result record.
+
+    Returns:
+        (dict, None)  on success — the record dict and no skip path.
+        (None, str)   on failure — no record and the xml_path that was skipped.
+    """
+    stats = run_alto_tools_stats(xml_path)
+    if stats is None:
+        return None, xml_path
+
+    # --- Derive file ID and page ID from the filename ---
+    # e.g., "doc123-001.alto.xml"
+    base = os.path.basename(fname).split(".")[0]  # "doc123-001"
+    parts = base.split("-")                        # ["doc123", "001"]
+    file_id = parts[0]                             # "doc123"
+    page = parts[1] if len(parts) > 1 else ""     # "001"
+
+    rec = {
+        "file": file_id,
+        "page": page,
+        "textlines": int(stats.get("textlines", 0)),
+        "illustrations": int(stats.get("illustrations", 0)),
+        "graphics": int(stats.get("graphics", 0)),
+        "strings": int(stats.get("strings", 0)),
+        # Add the full path, as this is needed by later scripts
+        "path": xml_path,
+    }
+    return rec, None
+
+
+def process_alto_files_with_alto_tools(directory_path, max_workers=8):
     """
     Processes all ALTO XML files found directly within a given directory.
 
+    Uses a ThreadPoolExecutor to parallelise the `alto-tools -s` subprocess
+    calls.  Threads (rather than processes) are appropriate here because
+    the work is I/O-bound (spawning a subprocess and waiting for its output).
+
     Args:
         directory_path (str): The folder to scan for .xml files.
+        max_workers (int):    Number of parallel threads (default: 8).
 
     Returns:
-        list[dict]: A list of dictionaries, where each dict holds the
-                    stats for one file.
+        tuple[list[dict], int, list[str]]:
+            - list of per-file result dicts
+            - total number of XML files found
+            - list of xml_paths that failed (skipped)
     """
+    xml_files = [
+        (os.path.join(directory_path, fname), fname)
+        for fname in os.listdir(directory_path)
+        if fname.lower().endswith(".xml")
+    ]
+
+    _total_inputs = len(xml_files)
     results = []
-    # Loop through every file in the directory
-    _total_inputs = 0
     _skips = []
-    for fname in os.listdir(directory_path):
-        # Skip files that don't end in .xml
-        if not fname.lower().endswith(".xml"):
-            continue
 
-        xml_path = os.path.join(directory_path, fname)
-        _total_inputs += 1
-
-
-        # Get the statistics for this file
-        stats = run_alto_tools_stats(xml_path)
-        if stats is None:
-            _skips.append(xml_path)
-            # An error occurred and was already printed, so just skip this file
-            continue
-
-        # --- Derive file ID and page ID from the filename ---
-        # e.g., "doc123-001.alto.xml"
-        base = os.path.basename(fname).split(".")[0]  # "doc123-001"
-        parts = base.split("-")  # ["doc123", "001"]
-        file_id = parts[0]  # "doc123"
-        page = parts[1] if len(parts) > 1 else ""  # "001"
-
-        # Build the result dictionary for this file
-        rec = {
-            "file": file_id,
-            "page": page,
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_path = {
+            executor.submit(_process_single_xml, xml_path, fname): xml_path
+            for xml_path, fname in xml_files
         }
+        for future in as_completed(future_to_path):
+            rec, skip_path = future.result()
+            if skip_path is not None:
+                _skips.append(skip_path)
+            else:
+                results.append(rec)
 
-        # Map the parsed keys to our final dictionary keys, defaulting to 0
-        rec["textlines"] = int(stats.get("textlines", 0))
-        rec["illustrations"] = int(stats.get("illustrations", 0))
-        rec["graphics"] = int(stats.get("graphics", 0))
-        rec["strings"] = int(stats.get("strings", 0))
-        # Add the full path, as this is needed by later scripts
-        rec["path"] = xml_path
-
-        results.append(rec)
     return results, _total_inputs, _skips
 
 

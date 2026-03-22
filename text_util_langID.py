@@ -663,10 +663,19 @@ def categorize_line(ppl: float, text_source: str, sym_count: int, upper_count: i
     # guard ensures the remaining content is linguistically plausible.
     # Example rescued: long lines ending in clear Czech prose where one or two
     # corrupted tokens appear in the middle.
+    #
+    # IMPORTANT: this rescue MUST appear before the "sym_count >= 2" Trash
+    # rule below.  The Trash rule unconditionally escalates any line with two
+    # or more strange-symbol tokens; the rescue carves out the narrow subset
+    # (sym == 2, long line, low PPL) where that escalation is unwarranted.
+    # Moving this block below the Trash rule would make it unreachable and
+    # silently break the rescue logic.
     if sym_count == 2 and wc >= 8 and ppl < PERPLEXITY_THRESHOLD_MIN:
         return "Noisy"
 
     # --- Trash ---
+    # Beyond this point sym_count == 2 means the rescue did not fire
+    # (line was too short or PPL was too high), so escalation to Trash is correct.
     if (sym_count >= 2
             or (sym_count == 1 and rep_count > 0)
             or (sym_count >= 1 and upper_count >= 1)

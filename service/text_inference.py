@@ -30,6 +30,36 @@ except ImportError:
     except ImportError:
         print("CRITICAL: 'v3' folder not found in project root.")
 
+# Import the pipeline's canonical categorize_line explicitly so that
+# _run_batch_metrics always calls the correct function regardless of what
+# utils.py exposes under the same name.
+#
+# SIGNATURE NOTE: the pipeline version is
+#     categorize_line(ppl, text_source, sym_count, upper_count)
+# whereas service/utils.py exposes a different four-argument variant
+#     categorize_line(lang_code, score, ppl, text)
+# Mixing the two silently produces wrong categories.  By importing the
+# pipeline version under an unambiguous alias we make the distinction explicit.
+try:
+    from text_util_langID import (
+        categorize_line as _categorize_line_struct,
+        detect_strange_symbols,
+        detect_mid_uppercase,
+    )
+except ImportError:
+    # If text_util_langID is not on the path, fall back to the service utils
+    # version.  A warning is printed so the discrepancy is visible at startup.
+    import warnings
+    warnings.warn(
+        "text_util_langID not found; falling back to service/utils.py "
+        "categorize_line.  Signature mismatch may produce incorrect categories.",
+        ImportWarning,
+        stacklevel=2,
+    )
+    _categorize_line_struct = None
+    detect_strange_symbols = None
+    detect_mid_uppercase = None
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -214,8 +244,20 @@ class TextModelManager:
             lang = labels[i][0].replace("__label__", "")
             score = scores[i][0]
             ppl = ppls[i]
+            text = meta['text']
 
-            category = categorize_line(lang, score, ppl, meta['text'])
+            # Use the pipeline's canonical categorize_line when available.
+            # Its signature is: categorize_line(ppl, text_source, sym_count, upper_count)
+            # which differs from the service/utils.py variant
+            # (lang_code, score, ppl, text).  Computing sym/upper here ensures
+            # the correct structural detectors are applied.
+            if _categorize_line_struct is not None:
+                sym_count   = detect_strange_symbols(text)
+                upper_count = detect_mid_uppercase(text)
+                category = _categorize_line_struct(ppl, text, sym_count, upper_count)
+            else:
+                # Fallback: service utils version (different arg order / logic).
+                category = categorize_line(lang, score, ppl, text)  # type: ignore[name-defined]
 
             meta.update({
                 "lang": lang,
