@@ -330,18 +330,28 @@ python3 langID_aggregate_STAT.py
 * **Output 1 📤:** `result_page_summary.csv` (The input CSV augmented with line counts: `clear_lines`, `noisy_lines`, etc. ➕)
 * **Output 2 📤:** `../DOC_LINE_STAT/` (Folder containing per-document CSVs 📁)
 
-`result_page_summary.csv`: Page-level summary of line counts per text category 📋
+`result_page_summary.csv`: Page-level summary of line counts and quality metrics per text category 📋
 
 
 - *Example*: [result_page_summary.csv](result_page_summary.csv) 📎
 - *Columns*:
   * `file` - document identifier 🆔
-  * `page` - page number 📄
+  * `page_num` - page number 📄
   * `Clear` - clear lines **count**, clean and ready to be processed ✅
   * `Non-text` - non-text lines **count**, contain mostly digits/symbols 🔣
   * `Trash` - trash lines **count**, unintelligible or very high perplexity (due to OCR errors) 🗑️
   * `Noisy` - noisy lines **count**, some errors but partially understandable ⚠️
   * `Empty` - empty lines **count**, contain only whitespace 🫙
+  * `avg_quality_score` - mean composite quality score **per page** in [0, 1], averaged over
+    lines classified as Clear, Noisy, or Trash (Empty and Non-text lines are excluded as they
+    bypass the quality-scoring pipeline). Higher values indicate cleaner OCR output. 📈
+  * `avg_word_weird` - mean per-word weirdness ratio **per page** in [0, 1], averaged over the
+    same scored lines. Combines strange-symbol, repeated-symbol, LDL-fusion, and mid-uppercase
+    signals; 0 = fully clean tokens, 1 = all tokens are weird. Lower is better. 📉
+
+> [!NOTE]
+> `avg_quality_score` and `avg_word_weird` will be `NaN` for pages whose only lines are
+> Empty or Non-text (i.e. pages with no scoreable text content).
    
 
 Example of per-document CSV file with per-page statistics of line type counts: [DOC_LINE_STAT](data_samples/DOC_LINE_STAT) 📁.

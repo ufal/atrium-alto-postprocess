@@ -1,2 +1,2 @@
-file,page_num,Clear,Trash,Noisy,Empty,Non-text
-CTX196006127,1,34,1,8,9,7
+file,page_num,Clear,Trash,Noisy,Empty,Non-text,avg_quality_score,avg_word_weird
+CTX196006127,1,32,1,10,9,7,0.865,0.0091

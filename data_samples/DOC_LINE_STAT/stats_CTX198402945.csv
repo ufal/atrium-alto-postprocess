@@ -1,3 +1,3 @@
-file,page_num,Clear,Trash,Noisy,Empty,Non-text
-CTX198402945,1,40,0,1,8,4
-CTX198402945,2,22,0,2,1,0
+file,page_num,Clear,Trash,Noisy,Empty,Non-text,avg_quality_score,avg_word_weird
+CTX198402945,1,38,0,3,8,4,0.8916,0.0033
+CTX198402945,2,22,0,2,1,0,0.9193,0.0004
