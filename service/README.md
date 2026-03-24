@@ -1,13 +1,13 @@
-
 # ATRIUM Text Processor API Service 🚀
 
 ### Goal: Serve historical text cleaning and quality estimation models via a lightweight REST API
 
-**Scope:** This service provides a **FastAPI** interface for the ATRIUM Text Processing pipeline. 
-It allows users to upload ALTO XML or raw text files to perform intelligent layout analysis, 
-split-word reconstruction, and line-level quality classification (e.g., `Clear`, `Noisy`, `Trash`) using 
-**LayoutLMv3**, **FastText**, and **DistilGPT2** [^9] [^2] [^6]. It includes a static HTML 
-frontend for immediate testing.
+**Scope:** This service provides a **FastAPI** interface for the ATRIUM Text Processing pipeline.
+It allows users to upload ALTO XML or raw text files to perform intelligent layout analysis,
+split-word reconstruction, and line-level quality classification (e.g., `Clear`, `Noisy`, `Trash`,
+`Non-text`, `Empty`) using **LayoutLMv3**, **FastText**, and **DistilGPT2** [^9] [^2] [^6].
+Two frontend variants are included: a **standalone** interface (`frontend/`) and a
+**LINDAT-integrated** interface (`frontend-lindat/`).
 
 ### Table of contents 📑
 
@@ -22,9 +22,9 @@ frontend for immediate testing.
   * [Model Weights](#3-model-weights)
 * [Quick API Test Launch 🚀](#quick-api-test-launch-)
 * [Launch Instructions](#launch-instructions)
-  * [Client Side Test 🎨](#client-side-test-)
   * [Running the Server 🚀](#running-the-server-)
-  * [Using the client-side test interface](#using-the-client-side-test-interface)
+  * [Standalone Frontend 🖥️](#standalone-frontend-)
+  * [LINDAT-integrated Frontend 🎨](#lindat-integrated-frontend-)
 * [Contacts 📧](#contacts-)
 * [Acknowledgements 🙏](#acknowledgements-)
 
@@ -32,16 +32,16 @@ frontend for immediate testing.
 
 ## Service Description 📇
 
-The API is built using **FastAPI** and is designed to turn raw OCR outputs into clean, analyzed text data. It acts as 
-a bridge between complex NLP models and downstream applications or web interfaces.
+The API is built using **FastAPI** and is designed to turn raw OCR output into clean, classified text data.
+It acts as a bridge between complex NLP models and downstream applications or web interfaces.
 
 Key features:
 
-* **Layout Analysis:** Uses **LayoutLMv3** to correctly reorder text from ALTO XML files based on 2D spatial layout (handling multi-column layouts) [^9].
-* **Text Cleaning:** Automatically detects and merges hyphenated words split across lines using regex-based reconstruction.
-* **Quality Filtering:** Classifies every line based on language confidence and perplexity to filter out OCR noise [^6].
-* **GPU Support:** Automatically detects and utilizes CUDA devices for inference if available [^3].
-* **Lightweight Frontend:** Includes a simple HTML/JS interface for manual file uploads and visualization.
+* **Layout Analysis:** Uses **LayoutLMv3** to correctly reorder tokens from ALTO XML files based on 2D spatial layout, handling multi-column pages [^9].
+* **Text Cleaning:** Automatically detects and merges hyphenated words split across lines using ALTO `SUBS_TYPE` / `SUBS_CONTENT` attributes and regex-based reconstruction.
+* **Quality Classification:** Classifies every line using structural regex detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions) and DistilGPT2 perplexity, implemented in `text_util_langID.py` [^6].
+* **GPU Support:** Automatically detects and utilises CUDA devices for inference if available [^3].
+* **Two Frontend Variants:** A self-contained standalone interface for direct use, and a LINDAT-integrated interface for deployment within the LINDAT Common framework.
 
 ## Directory Structure 📂
 
@@ -49,54 +49,67 @@ The service logic resides in the `service/` directory, while models are expected
 
 ```text
 atrium-alto-postprocess/
-├── v3/                      # 📦 LayoutReader files (helper scripts)
-├── models/                  # 📦 Model weights (downloaded externally)
-│   └── lid.176.bin          # FastText binary file
-├── service/                 # 🚀 API Source Code
-│   ├── text_api.py          # FastAPI application entry point
-│   ├── text_inference.py    # Model manager (LayoutLMv3, FastText, GPT2)
-│   ├── utils.py             # XML parsing, Math helpers, and cleaning logic
-│   ├── frontend/            # 🎨 Frontend assets
-│   │   ├── index.html       # Web interface
-│   │   └── script.js        # Logic for the web interface
-│   ├── requirements.txt     # Python dependencies
-│   └── README.md            # This file - API service documentation
-├── setup_api_server.sh      # Shell script to set up the Python environment and install dependencies
-├── README.md                # Project overview and documentation
-├── LICENSE                  # Open source license
-└── ...                      # other project files
-
+├── v3/                          # 📦 LayoutReader helper scripts
+├── models/                      # 📦 Model weights (downloaded externally)
+│   └── lid.176.bin              # FastText language identification binary
+├── service/                     # 🚀 API source code
+│   ├── text_api.py              # FastAPI application entry point
+│   ├── text_inference.py        # Model manager (LayoutLMv3, FastText, DistilGPT2)
+│   ├── utils.py                 # XML parsing, box normalisation, cleaning logic
+│   ├── frontend/                # 🖥️  Standalone frontend (no external dependencies)
+│   │   ├── index.html           # Self-contained web interface
+│   │   └── script.js            # Vanilla JS — no jQuery, no build step required
+│   ├── frontend-lindat/         # 🎨 LINDAT-integrated frontend
+│   │   ├── index.html           # Interface styled for lindat-common
+│   │   └── script.js            # JS adapted to the lindat-common webpack bundle
+│   ├── requirements.txt         # Python dependencies
+│   └── README.md                # API service documentation
+├── text_util_langID.py          # Structural quality detectors and categorisation logic
+├── setup_api_server.sh          # Sets up virtual environment and installs dependencies
+├── README.md                    # Project overview and documentation (this file)
+├── LICENSE
+└── ...                          # Other project files (scripts, data samples, paradata)
 ```
 
 ## Supported Models 🧠
 
-The pipeline utilizes a cascade of three distinct models to process text, balancing structural understanding with semantic quality checks.
+The pipeline applies three models in sequence, balancing structural layout understanding with semantic quality estimation.
 
-| Model          | Purpose                                                                                        | Source               |
-|----------------|------------------------------------------------------------------------------------------------|----------------------|
-| **LayoutLMv3** | **Reading Order:** Reorders words (text lines) in ALTO XML files based on 2D spatial layout.   | by `hantian` [^9]    |
-| **FastText**   | **Language ID:** Identifies the language of a text line to ensure it matches expectations.     | by `facebook` [^2]   |
-| **DistilGPT2** | **Perplexity:** Calculates how "surprising" the text is - high perplexity indicates OCR noise. | by `distilbert` [^6] |
+| Model          | Purpose                                                                                                 | Source               |
+|----------------|---------------------------------------------------------------------------------------------------------|----------------------|
+| **LayoutLMv3** | **Reading Order:** Reorders tokens in ALTO XML files based on 2D bounding-box layout.                   | by `hantian` [^9]    |
+| **FastText**   | **Language ID:** Identifies the language of each line as a pre-filter signal.                           | by `facebook` [^2]   |
+| **DistilGPT2** | **Perplexity:** Measures how linguistically "surprising" a line is — elevated scores suggest OCR noise. | by `distilbert` [^6] |
+
+> [!NOTE]
+> Classification is performed primarily by the structural detectors in `text_util_langID.py`.
+> DistilGPT2 perplexity is a **supporting signal** used only on longer lines (word count ≥ 7),
+> because it is unreliable on short or non-English text.
+> FastText language scores are **not** used as a primary Trash/Clear indicator in the current pipeline.
 
 ## Quality Categories 🪧
 
-The service classifies every text line into one of three structural categories based on Perplexity (PPL) and Language Confidence scores:
+The service classifies every text line into one of five categories. The first two (`Empty`, `Non-text`)
+are assigned by a fast CPU pre-filter before any model inference. The remaining three are assigned by
+the structural detectors and perplexity gate in `text_util_langID.categorize_line()`.
 
-| Label      | Description                                                                 | Criteria (Approximate)                      |
-|------------|-----------------------------------------------------------------------------|---------------------------------------------|
-| `Clear` 🟢 | **High Quality.** Fluent text in a known language. Mainly clean formatting. | High Lang Confidence + Low Perplexity.      |
-| `Noisy` 🟡 | **Usable but Rough.** Text with minor OCR errors or mixed fragments.        | Moderate Perplexity or Language Confidence. |
-| `Trash` 🔴 | **Unusable.** Strange language, or uncommon text formatting.                | Very High Perplexity or Unknown Language.   |
+| Label         | Description                                                           | Primary Signal                                                                             |
+|---------------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
+| `Clear` 🟢    | **High quality.** Passes all structural checks and perplexity gate.   | 0 strange-symbol tokens, 0 uppercase artefacts, PPL < threshold (on long lines).           |
+| `Noisy` 🟡    | **Usable but degraded.** Minor OCR artefacts, recoverable downstream. | 1 strange-symbol token, OR mid-word uppercase artefacts, OR elevated PPL on long lines.    |
+| `Trash` 🔴    | **Structurally corrupt.** Not worth downstream processing.            | ≥ 2 strange-symbol tokens, or co-occurring symbol + uppercase / fusion artefacts.          |
+| `Non-text` 🔵 | **No meaningful text.** Purely numeric / separator content.           | RE_NON_TEXT match (dates, page numbers, measurements) or digit ratio > 40 % on short line. |
+| `Empty` ⚪     | **Blank line.** Whitespace only.                                      | `len(stripped) == 0`                                                                       |
 
 ## API Usage 📡
 
 ### Endpoints 🔗
 
-| Method | Path       | Description                                                                     |
-|--------|------------|---------------------------------------------------------------------------------|
-| `GET`  | `/`        | Serves the static `index.html` interface for manual testing.                    |
-| `GET`  | `/info`    | Returns service status, active device (`cpu` or `cuda`), and supported formats. |
-| `POST` | `/process` | Uploads a file for cleaning, extraction, and classification.                    |
+| Method | Path       | Description                                                                       |
+|--------|------------|-----------------------------------------------------------------------------------|
+| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                  |
+| `GET`  | `/info`    | Returns service status, active device (`cpu` or `cuda`), and quality categories.  |
+| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.      |
 
 ### Request Example 💻
 
@@ -105,18 +118,19 @@ The service classifies every text line into one of three structural categories b
 **Parameters (Form Data):**
 
 * `file`: The document file (`.xml` ALTO or `.txt`).
-* `task_type`: `alto`, `text`, or `auto` (default).
-
-Request example using `curl`:
+* `task_type`: `alto`, `text`, or `auto` (default — detected from file extension).
 
 ```bash
 curl -X POST "http://localhost:8000/process" \
   -F "file=@/path/to/page_01.xml" \
   -F "task_type=auto"
-
 ```
 
-Example JSON response:
+### Response Schema
+
+Each item in `cleaned_lines` carries the fields used by `text_util_langID.categorize_line()`.
+`lang` and `lang_conf` are **not** returned — FastText language scores are not part of the
+structural classification decision.
 
 ```json
 {
@@ -126,172 +140,197 @@ Example JSON response:
     {
       "line_num": 1,
       "text": "The quick brown fox jumps over the lazy dog.",
-      "lang": "eng_Latn",
-      "lang_conf": 0.98,
       "perplexity": 12.5,
+      "sym_count": 0,
+      "upper_count": 0,
       "category": "Clear"
     },
     {
       "line_num": 2,
-      "text": "x8& s9d 1!!",
-      "lang": "unknown",
-      "lang_conf": 0.2,
-      "perplexity": 5200.0,
+      "text": "TYRSOVA5===aras T>r«l",
+      "perplexity": 4800.0,
+      "sym_count": 2,
+      "upper_count": 0,
       "category": "Trash"
+    },
+    {
+      "line_num": 3,
+      "text": "1956–1959",
+      "perplexity": 0,
+      "sym_count": 0,
+      "upper_count": 0,
+      "category": "Non-text"
     }
   ]
 }
-
 ```
+
+**Response fields:**
+
+| Field         | Type   | Description                                                                               |
+|---------------|--------|-------------------------------------------------------------------------------------------|
+| `line_num`    | int    | 1-based line position after layout reordering.                                            |
+| `text`        | string | Cleaned line text with split-word merges applied.                                         |
+| `perplexity`  | float  | DistilGPT2 perplexity. `0` means the line was pre-filtered and inference was skipped.     |
+| `sym_count`   | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`). |
+| `upper_count` | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).         |
+| `category`    | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                   |
 
 ## Installation & Setup 🛠
 
 ### 1. Prerequisites
 
 * **Python 3.10+** virtual environment [^5].
-* **NodeJS** (For client-side development - `export NODE_OPTIONS=--openssl-legacy-provider` common fix for Webpack 4 compatibility with NodeJS 17+`).
-* **Standard CPU** (Sufficient for **Client-side** development).
-* **CUDA-capable GPU** (Recommended for **Server-side** inference speed, though CPU is supported). [^3]
-
+* **Standard CPU** (sufficient for inference; GPU recommended for batch processing).
+* **CUDA-capable GPU** (optional — auto-detected at startup for faster inference) [^3].
+* **NodeJS** (only required for the **LINDAT-integrated** frontend — `export NODE_OPTIONS=--openssl-legacy-provider` is a common fix for Webpack 4 compatibility with NodeJS 17+).
 
 ### 2. Install Dependencies
 
-Navigate to the root `atrium-alto-postprocess` directory, then run a setup script to 
-create a virtual environment [^5], and install all of the required packages:
+Clone the repository and run the setup script from the project root. It creates a virtual
+environment, installs all Python dependencies, fetches the `v3/` LayoutReader scripts via
+sparse checkout, and downloads the FastText binary:
 
 ```bash
-# Create and activate virtual environment
 git clone https://github.com/ufal/atrium-alto-postprocess.git
 cd atrium-alto-postprocess
 chmod +x setup_api_server.sh
 ./setup_api_server.sh
 ```
 
-Key libraries include: fastapi, uvicorn, python-multipart, pillow, torch, timm, transformers. These
-libraries can be found in `service/requirements.txt` available for manual installation if needed.
+Key libraries: `fastapi`, `uvicorn`, `python-multipart`, `torch`, `transformers`, `fasttext`, `lxml`, `numpy`.
+Full list in `service/requirements.txt` for manual installation if needed.
 
-> [!NOTE] The virtual environment name is stated in the setup script and can be changed to the already existing
-> one if needed.
+> [!NOTE]
+> The virtual environment name is set in `setup_api_server.sh` and can be changed to match an existing environment.
 
 ### 3. Model Weights
 
-The service attempts to load models automatically. However, **FastText** requires a specific binary file.
-Create a `models` directory in the project root and download the binary [^2] :
+The setup script downloads the FastText binary automatically. If you prefer to download it manually:
 
 ```bash
-mkdir models
-wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" -O models/lid.176.bin
-
+mkdir -p models
+wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" \
+     -O models/lid.176.bin
 ```
 
 > [!NOTE]
-> LayoutLMv3 and DistilGPT2 will be downloaded by Hugging Face Transformers on the first run and cached locally [^9] [^6]).
+> LayoutLMv3 and DistilGPT2 are downloaded and cached automatically by Hugging Face Transformers on the first run [^9] [^6].
 
 ## Quick API Test Launch 🚀
 
-Use this guide to verify the processing service is running correctly. Open a terminal 
-window and run the following command from the project root:
+```bash
+source venv/bin/activate
+python service/text_api.py
+```
+
+The server starts at `http://0.0.0.0:8000`. The standalone frontend is served at `/`.
+Send a test request in a second terminal:
 
 ```bash
-# Activate environment if not already active
-source venv/bin/activate
-# Run the API service
-python service/text_api.py
-
+curl -X POST "http://localhost:8000/process" \
+  -F "file=@data_samples/ALTO/CTX195603828.alto.xml" \
+  -F "task_type=alto"
 ```
 
 ## Launch Instructions
 
-Open two terminal windows (or tabs) and run the following commands:
-
-```bash
-source venv/bin/activate
-cd atrium-alto-postprocess/service
-```
-
-Then, in each window, execute the respective commands:
-
-| **Server Console (Window 1)**                                                                                                                                                                              | **Client Console (Window 2)**                                                                       |
-|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| **1. Start the API:**<br><br>Run the FastAPI server from the service directory.<br><br>`python3 text_api.py`<br><br>You should see startup logs indicating the server is running on `http://0.0.0.0:8000`. | **2. Send a Request:**`curl -X POST "http://localhost:8000/process" -F "file=@/path/to/image.xml"`. |
-
-### Client Side Test 🎨
-
-This API service includes a lightweight vanilla JS frontend (`service/frontend/script.js`) for immediate testing. 
-However, the full LINDAT client integration is developed separately. [^5]
-
-For client-side development, open a **second console window** and follow these steps:
-
-1.  **Clone the repository** and place `atrium-alto-postprocess` project files to `lindat-common` directory
-    ```bash
-    git clone [https://github.com/ufal/lindat-common.git](https://github.com/ufal/lindat-common.git)
-    cd lindat-common
-    cp -r atrium-alto-postprocess .
-    # or
-    mv atrium-alto-postprocess .
-    ```
-
-2.  **Install NodeJS environment** (unless you already have one) and **Install dependencies for development:**
-    ```bash
-    curl -o- [https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh](https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh) | bash
-    nvm install stable
-    nvm use stable
-    export NODE_OPTIONS=--openssl-legacy-provider
-    npm install
-    ```
-
-3. **Run development server:**
-    ```bash
-    make run
-    ```
-
-For further details, please refer to the **LINDAT Common Development Guide**:
-[https://github.com/ufal/lindat-common/?tab=readme-ov-file#development](https://github.com/ufal/lindat-common/?tab=readme-ov-file#development).
-
 ### Running the Server 🚀
 
-To start the API server with hot-reloading enabled (useful for development), ensure your virtual 
-environment is activated in your **first console window**: [^3]
+Activate your virtual environment and start the API with hot-reloading (useful during development):
 
 ```bash
 cd atrium-alto-postprocess
-source venv-api/bin/activate
+source venv/bin/activate          # or: source venv-api/bin/activate
 uvicorn service.text_api:app --reload
 ```
 
-The server will start at http://0.0.0.0:8000 (access to use the built-in visual testing tool).
+The server will be available at `http://0.0.0.0:8000`.
 
-### Using the client-side test interface
+---
 
-Assuming your **second console** output ends like this:
+### Standalone Frontend 🖥️
 
-```commandline
+`service/frontend/` is a self-contained interface with no build step or external framework required.
+It is served directly by the FastAPI server at `http://localhost:8000` and works out of the box.
+
+**To use it**, simply start the server (see above) and open `http://localhost:8000` in your browser.
+
+Features:
+- Drag-and-drop or click-to-upload for `.xml` and `.txt` files.
+- Processing mode selector (`auto` / `alto` / `text`).
+- Results table with `Sym`, `Upper`, and `PPL` columns aligned to `text_util_langID.py`.
+- Category breakdown bar showing counts for all five labels.
+- Raw extracted text toggle.
+
+> [!NOTE]
+> If you are running the frontend from a local dev server (e.g. Live Server on port `5500`),
+> `script.js` automatically redirects API calls to `http://localhost:8000`.
+
+---
+
+### LINDAT-integrated Frontend 🎨
+
+`service/frontend-lindat/` is the frontend variant styled and bundled for deployment within the
+[LINDAT Common](https://github.com/ufal/lindat-common) framework. It requires NodeJS and the
+`lindat-common` webpack build.
+
+Open a **second terminal window** alongside your running server and follow these steps:
+
+**1. Place the project inside `lindat-common`:**
+
+```bash
+git clone https://github.com/ufal/lindat-common.git
+cd lindat-common
+cp -r /path/to/atrium-alto-postprocess .
+```
+
+**2. Install NodeJS and dependencies:**
+
+```bash
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh | bash
+nvm install stable
+nvm use stable
+export NODE_OPTIONS=--openssl-legacy-provider
+npm install
+```
+
+**3. Start the webpack dev server:**
+
+```bash
+make run
+```
+
+Expected output:
+
+```
 > lindat-common@3.5.0 start
 > webpack-dev-server -p --debug --quiet
 
-(node:2985155) Warning: `--localstorage-file` was provided without a valid path
-(Use `node --trace-warnings ...` to show where the warning was created)
 > Project is running at http://localhost:8080/
 > webpack output is served from /
-> Content not from webpack is served from /home.../lindat-common
+> Content not from webpack is served from /home/.../lindat-common
 ```
 
-Open the URL `http://localhost:8080` in your web browser to access the LINDAT client interface. 
+Open `http://localhost:8080` and navigate to the
+`atrium-alto-postprocess/service/frontend-lindat` directory in the file tree.
 
-Follow the file tree to the `atrium-alto-postprocess/service/frontend` directory. The frontend interface
-will open and allow you to upload images and test the API.
+For further details on the LINDAT development workflow see the
+[LINDAT Common Development Guide](https://github.com/ufal/lindat-common/?tab=readme-ov-file#development).
+
+---
 
 ## Contacts 📧
 
-**For support write to:** lutsai.k@gmail.com responsible for this GitHub repository [^8] 🔗
+**For support write to:** lutsai.k@gmail.com — responsible for this GitHub repository [^8] 🔗
 
 ## Acknowledgements 🙏
 
 * **Developed by** UFAL [^7] 👥
-* **Funded by** ATRIUM [^4]  💰
+* **Funded by** ATRIUM [^4] 💰
 * **Shared by** ATRIUM [^4] & UFAL [^7] 🔗
-* **Model type:** 
-  - **LayoutLMv3** for layout analysis [^9]
+* **Models used:**
+  - **LayoutLMv3** for reading-order layout analysis [^9]
   - **FastText** for language identification [^2]
   - **DistilGPT2** for perplexity estimation [^6]
 
@@ -305,7 +344,6 @@ will open and allow you to upload images and test the API.
 [^4]: https://atrium-research.eu/
 [^5]: https://docs.python.org/3/library/venv.html
 [^6]: https://huggingface.co/distilbert/distilgpt2
-[^8]: https://github.com/ufal/atrium-alto-postprocess
 [^7]: https://ufal.mff.cuni.cz/home-page
+[^8]: https://github.com/ufal/atrium-alto-postprocess
 [^9]: https://github.com/ppaanngggg/layoutreader
-[^10]: https://huggingface.co/THUDM/glm-4v-9b
