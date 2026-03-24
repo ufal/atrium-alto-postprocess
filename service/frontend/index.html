@@ -25,11 +25,16 @@
             --nontext-bg:  #ede9fe;  --nontext-fg: #4c1d95;
             --empty-bg:    #f1f5f9;  --empty-fg:   #475569;
 
-            --font-mono:   "JetBrains Mono", "Fira Mono", "Menlo", monospace;
-            --font-body:   "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+            /* Quality score hints */
+            --q-high: #0d5c30;
+            --q-mid:  #78350f;
+            --q-low:  #7f1d1d;
 
-            --radius:      4px;
-            --shadow:      0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+            --font-mono: "JetBrains Mono", "Fira Mono", "Menlo", monospace;
+            --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+
+            --radius: 4px;
+            --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
         }
 
         /* ------------------------------------------------------------------ */
@@ -74,7 +79,7 @@
         main {
             flex: 1;
             width: 100%;
-            max-width: 1080px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 2rem 1.5rem;
         }
@@ -104,8 +109,8 @@
         .tab-btn:hover  { color: var(--text); }
         .tab-btn.active { color: var(--text); border-bottom-color: var(--text); }
 
-        .tab-content          { display: none; }
-        .tab-content.active   { display: block; }
+        .tab-content        { display: none; }
+        .tab-content.active { display: block; }
 
         /* ------------------------------------------------------------------ */
         /* Upload box                                                          */
@@ -278,7 +283,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius);
             overflow: auto;
-            max-height: 520px;
+            max-height: 540px;
             background: var(--surface);
             box-shadow: var(--shadow);
         }
@@ -310,7 +315,6 @@
         table.data-table tr:last-child td { border-bottom: none; }
         table.data-table tr:hover td { background: #f9f8f5; }
 
-        /* Dim non-content rows */
         tr.rowempty td,
         tr.rownontext td { opacity: .55; }
 
@@ -318,7 +322,7 @@
             font-family: var(--font-mono);
             font-size: .8rem;
             word-break: break-word;
-            max-width: 500px;
+            max-width: 420px;
         }
         .num-cell {
             font-family: var(--font-mono);
@@ -326,6 +330,11 @@
             text-align: right;
             color: var(--text-muted);
         }
+
+        /* Quality score colour hints */
+        .q-high { color: var(--q-high); font-weight: 600; }
+        .q-mid  { color: var(--q-mid);  font-weight: 600; }
+        .q-low  { color: var(--q-low);  font-weight: 600; }
 
         /* ------------------------------------------------------------------ */
         /* Raw text                                                            */
@@ -361,7 +370,7 @@
         /* ------------------------------------------------------------------ */
         /* About / Docs tabs                                                   */
         /* ------------------------------------------------------------------ */
-        .doc-section { max-width: 680px; }
+        .doc-section { max-width: 720px; }
         .doc-section h2 { font-size: 1rem; font-weight: 700; margin: 1.5rem 0 .4rem; }
         .doc-section p, .doc-section li { font-size: .9rem; color: #333; line-height: 1.7; }
         .doc-section ul { padding-left: 1.25rem; margin: .4rem 0; }
@@ -456,7 +465,8 @@
         <div class="doc-section">
             <h2>Pipeline Overview</h2>
             <p>Three models are applied in sequence to convert raw OCR output into
-            classified, clean text lines.</p>
+            classified, clean text lines. The service uses the same hybrid classifier
+            as the batch pipeline (<code>langID_classify.py</code>).</p>
 
             <h2>1 · Layout Analysis (ALTO XML only)</h2>
             <p><strong>LayoutLMv3</strong> uses 2D bounding-box coordinates to reorder
@@ -468,18 +478,22 @@
             <code>SUBS_TYPE="HypPart1"</code> in ALTO) are merged automatically using
             the <code>SUBS_CONTENT</code> attribute or a trailing hyphen flag.</p>
 
-            <h2>3 · Quality Classification</h2>
-            <p>Every line passes through two stages implemented in
-            <code>text_util_langID.py</code>:</p>
+            <h2>3 · Quality Classification — Hybrid Pipeline</h2>
+            <p>Every line passes through two independent classification paths
+            implemented in <code>text_util_langID.py</code>, then a quality score
+            breaks any disagreement:</p>
             <ul>
-                <li><strong>Pre-filter</strong> — blanks and purely numeric/separator
-                content are caught without GPU inference.</li>
-                <li><strong>Structural detectors</strong> — four regex-based checks
-                count tokens with strange symbols, symbol repetition, letter–digit–letter
-                fusions, and mid-word uppercase artefacts.</li>
-                <li><strong>DistilGPT2 perplexity</strong> — a supporting signal for
-                longer lines; not used as a Trash indicator due to unreliability on
-                short or non-English text.</li>
+                <li><strong>Structural path</strong> (<code>categorize_line</code>) —
+                counts tokens with strange symbols, repeated-symbol contamination,
+                letter–digit–letter fusions, and mid-word uppercase artefacts.
+                DistilGPT2 perplexity is a supporting signal on lines with ≥ 7 words only.</li>
+                <li><strong>Ratio path</strong> (<code>classify_pipeline</code>) —
+                computes symbol ratio and valid-word ratio; no GPU required.</li>
+                <li><strong>Tiebreak</strong> — when the two paths disagree,
+                <code>compute_quality_score()</code> produces a composite
+                <em>quality score</em> that resolves the conflict via
+                <code>classify_by_score()</code> (> 0.75 → Clear, ≥ 0.45 → Noisy,
+                &lt; 0.45 → Trash).</li>
             </ul>
 
             <h2>Categories</h2>
@@ -494,12 +508,26 @@
             <h2>Table Columns</h2>
             <ul>
                 <li><strong>Sym</strong> — count of tokens containing characters
-                outside the allowed internal set (see <code>detect_strange_symbols</code>).</li>
+                outside the allowed internal set (<code>detect_strange_symbols</code>).</li>
                 <li><strong>Upper</strong> — count of tokens with mid-word uppercase
-                artefacts (see <code>detect_mid_uppercase</code>, Patterns 1–3).</li>
+                artefacts (<code>detect_mid_uppercase</code>, Patterns 1–3).</li>
                 <li><strong>PPL</strong> — DistilGPT2 perplexity; shown as "—" for
                 pre-filtered lines where inference was skipped.</li>
+                <li><strong>Weird</strong> — mean per-word weirdness score (%) from
+                <code>score_words_in_line()</code>; combines strange-symbol,
+                repeated-symbol, LDL-fusion and mid-uppercase signals per token.
+                0 % = fully clean; higher = more corrupted tokens.</li>
+                <li><strong>Quality</strong> — composite quality score [0–1] from
+                <code>compute_quality_score()</code>; aggregates valid-word ratio,
+                symbol ratio, perplexity and text length.
+                Coloured green (> 0.75), amber (≥ 0.45), or red (&lt; 0.45).</li>
             </ul>
+
+            <h2>Page-Level Averages</h2>
+            <p>The summary bar shows <em>Avg Quality</em> and <em>Avg Weirdness</em>
+            averaged over all lines that passed through GPU scoring (Clear, Noisy, Trash),
+            matching the <code>avg_quality_score</code> and <code>avg_word_weird</code>
+            columns in <code>result_page_summary.csv</code>.</p>
         </div>
     </div>
 
@@ -528,27 +556,65 @@
   "filename": "page_01.xml",
   "cleaned_lines": [
     {
-      "line_num":    1,
-      "text":        "The quick brown fox jumps over the lazy dog.",
-      "perplexity":  12.5,
-      "sym_count":   0,
-      "upper_count": 0,
-      "category":    "Clear"
+      "line_num":      1,
+      "text":          "The quick brown fox jumps over the lazy dog.",
+      "lang":          "eng_Latn",
+      "lang_score":    0.9891,
+      "perplexity":    12.5,
+      "sym_count":     0,
+      "upper_count":   0,
+      "word_weird":    0.0,
+      "quality_score": 0.872,
+      "category":      "Clear"
     },
     {
-      "line_num":    2,
-      "text":        "1956–1959",
-      "perplexity":  0,
-      "sym_count":   0,
-      "upper_count": 0,
-      "category":    "Non-text"
+      "line_num":      2,
+      "text":          "TYRSOVA5===aras T>r\u00abl",
+      "lang":          "und",
+      "lang_score":    0.3102,
+      "perplexity":    4800.0,
+      "sym_count":     2,
+      "upper_count":   0,
+      "word_weird":    0.375,
+      "quality_score": 0.121,
+      "category":      "Trash"
+    },
+    {
+      "line_num":      3,
+      "text":          "1956\u20131959",
+      "lang":          "N/A",
+      "lang_score":    0.0,
+      "perplexity":    0.0,
+      "sym_count":     0,
+      "upper_count":   0,
+      "word_weird":    0.0,
+      "quality_score": 0.0,
+      "category":      "Non-text"
     }
   ]
 }</pre>
 
+            <h2>Response Field Reference</h2>
+            <ul>
+                <li><code>line_num</code> — 1-based line position after layout reordering.</li>
+                <li><code>text</code> — cleaned line text with split-word merges applied.</li>
+                <li><code>lang</code> / <code>lang_score</code> — FastText ISO language code and confidence.</li>
+                <li><code>perplexity</code> — DistilGPT2 perplexity; <code>0</code> for pre-filtered lines.</li>
+                <li><code>sym_count</code> — tokens with characters outside the allowed internal set.</li>
+                <li><code>upper_count</code> — tokens with mid-word uppercase artefacts.</li>
+                <li><code>word_weird</code> — mean per-word weirdness [0–1];
+                combines strange-symbol, repeated-symbol, LDL-fusion and
+                mid-uppercase signals. 0 = fully clean.</li>
+                <li><code>quality_score</code> — composite quality score [0–1];
+                higher = cleaner OCR. Thresholds: &gt; 0.75 Clear, ≥ 0.45 Noisy,
+                &lt; 0.45 Trash.</li>
+                <li><code>category</code> — one of: <code>Clear</code>, <code>Noisy</code>,
+                <code>Trash</code>, <code>Non-text</code>, <code>Empty</code>.</li>
+            </ul>
+
             <h2>GET /info</h2>
             <p>Returns service status, active device (<code>cpu</code> / <code>cuda</code>),
-            and the list of quality categories.</p>
+            and the full list of response fields.</p>
         </div>
     </div>
 </main>

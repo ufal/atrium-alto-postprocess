@@ -17,7 +17,7 @@
             main {
                 flex: 1;
                 width: 100%;
-                max-width: 1100px; /* Wider for data tables */
+                max-width: 1200px;
                 margin: 2rem auto;
                 padding: 0 1rem;
                 background: white;
@@ -49,13 +49,12 @@
                 color: #007bff;
             }
 
-            /* Tab Content */
             .tab-content { display: none; }
             .tab-content.active { display: block; animation: fadeIn 0.3s; }
 
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(5px); }
-                to { opacity: 1; transform: translateY(0); }
+                to   { opacity: 1; transform: translateY(0); }
             }
 
             h1 { margin-bottom: 0.5rem; color: #111; }
@@ -113,7 +112,7 @@
             table.data-table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 0.9rem;
+                font-size: 0.88rem;
             }
             table.data-table th {
                 background-color: #f8f9fa;
@@ -141,9 +140,10 @@
                 text-transform: uppercase;
                 display: inline-block;
             }
-            .badge-clear { background-color: #d4edda; color: #155724; }
-            .badge-noisy { background-color: #fff3cd; color: #856404; }
-            .badge-trash { background-color: #f8d7da; color: #721c24; }
+            .badge-clear   { background-color: #d4edda; color: #155724; }
+            .badge-noisy   { background-color: #fff3cd; color: #856404; }
+            .badge-trash   { background-color: #f8d7da; color: #721c24; }
+            .badge-nontext { background-color: #ede9fe; color: #4c1d95; }
 
             /* Raw Text Area */
             .raw-text-box {
@@ -161,18 +161,17 @@
 
             .loading { display: none; text-align: center; margin: 2rem; color: #666; }
 
-            /* Utils */
             .summary-stats {
                 display: flex;
                 gap: 20px;
+                flex-wrap: wrap;
                 margin-bottom: 1rem;
                 background: #e9ecef;
                 padding: 1rem;
                 border-radius: 4px;
             }
-            .stat-item { font-weight: 500; }
+            .stat-item  { font-weight: 500; }
             .stat-value { font-weight: bold; color: #007bff; }
-
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     </head>
@@ -219,9 +218,6 @@
                 </form>
 
                 <div id="loading" class="loading">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
-                        <circle cx="12" cy="12" r="10"></circle>
-                    </svg><br>
                     Running AI Models (LayoutLMv3 / FastText / GPT2)...
                 </div>
 
@@ -230,25 +226,57 @@
 
             <div id="tab-about" class="tab-content">
                 <h2>How it Works</h2>
-                <p>This service processes historical document text to separate high-quality content from OCR noise.</p>
+                <p>This service processes historical document text to separate high-quality content
+                from OCR noise using the same hybrid classification pipeline as the batch tool
+                (<code>langID_classify.py</code>).</p>
 
                 <h3>1. Layout Analysis (ALTO Only)</h3>
-                <p>If you upload an XML file, we use <strong>LayoutLMv3</strong> to reorder words based on their 2D bounding boxes, ensuring multi-column text is read in the correct order.</p>
+                <p>If you upload an XML file, <strong>LayoutLMv3</strong> reorders words based on
+                their 2D bounding boxes, ensuring multi-column text is read in the correct order.</p>
 
                 <h3>2. Split Word Reconstruction</h3>
-                <p>We automatically merge hyphenated words at the end of lines (e.g., <code>divi-</code> + <code>ded</code> &rarr; <code>divided</code>) using extracted hyphenation flags.</p>
+                <p>Hyphenated words at the end of lines are merged automatically using
+                <code>SUBS_TYPE</code> / <code>SUBS_CONTENT</code> attributes and regex-based
+                reconstruction.</p>
 
-                <h3>3. Quality Classification</h3>
-                <p>Every line is analyzed using two models:</p>
+                <h3>3. Hybrid Quality Classification</h3>
+                <p>Every line is analysed by two independent paths; a quality score resolves
+                any disagreement:</p>
                 <ul>
-                    <li><strong>FastText:</strong> Identifies the language (e.g., English, German, Czech).</li>
-                    <li><strong>DistilGPT2:</strong> Calculates <em>Perplexity</em> (how "surprising" or garbled the text looks).</li>
+                    <li><strong>Structural path</strong> (<code>categorize_line</code>) —
+                    counts strange-symbol tokens, repeated-symbol contamination,
+                    letter–digit–letter fusions, and mid-word uppercase artefacts.
+                    DistilGPT2 perplexity is a supporting signal on lines with ≥ 7 words.</li>
+                    <li><strong>Ratio path</strong> (<code>classify_pipeline</code>) —
+                    computes symbol ratio and valid-word ratio; CPU-only.</li>
+                    <li><strong>Tiebreak</strong> — <code>compute_quality_score()</code> resolves
+                    disagreements: &gt; 0.75 → Clear, ≥ 0.45 → Noisy, &lt; 0.45 → Trash.</li>
                 </ul>
-                <p>Based on these metrics, lines are categorized as:</p>
+
+                <h3>Quality Categories</h3>
                 <ul>
-                    <li><span class="badge badge-clear">Clear</span> Fluent text in a target language.</li>
-                    <li><span class="badge badge-noisy">Noisy</span> Text with OCR errors or mixed fragments.</li>
-                    <li><span class="badge badge-trash">Trash</span> Headers, page numbers, or severe OCR garbage.</li>
+                    <li><span class="badge badge-clear">Clear</span> High quality — passes all checks.</li>
+                    <li><span class="badge badge-noisy">Noisy</span> Usable but degraded — minor OCR artefacts.</li>
+                    <li><span class="badge badge-trash">Trash</span> Structurally corrupt — not worth processing.</li>
+                    <li><span class="badge badge-nontext">Non-text</span> Purely numeric / separator content.</li>
+                    <li style="list-style:none;margin-top:.3rem;">
+                        <span style="background:#f1f5f9;color:#475569;padding:3px 9px;border-radius:12px;font-size:.75rem;font-weight:bold;">Empty</span>
+                        Blank line.</li>
+                </ul>
+
+                <h3>Table Columns</h3>
+                <ul>
+                    <li><strong>Sym</strong> — tokens containing characters outside the allowed set
+                    (<code>detect_strange_symbols</code>).</li>
+                    <li><strong>Upper</strong> — tokens with mid-word uppercase artefacts
+                    (<code>detect_mid_uppercase</code>).</li>
+                    <li><strong>PPL</strong> — DistilGPT2 perplexity; "—" for pre-filtered lines.</li>
+                    <li><strong>Weird</strong> — mean per-word weirdness (%) from
+                    <code>score_words_in_line()</code>; combines strange-symbol, repeated-symbol,
+                    LDL-fusion and mid-uppercase signals. 0 % = fully clean.</li>
+                    <li><strong>Quality</strong> — composite quality score [0–1] from
+                    <code>compute_quality_score()</code>; aggregates valid-word ratio, symbol ratio,
+                    perplexity and text length. Higher = cleaner OCR output.</li>
                 </ul>
             </div>
 
@@ -258,26 +286,52 @@
 
                 <h3>Parameters</h3>
                 <ul>
-                    <li><code>file</code>: The document file (@page.xml or @book.txt)</li>
-                    <li><code>task_type</code>: "alto", "text", or "auto"</li>
+                    <li><code>file</code>: The document file (<code>.xml</code> or <code>.txt</code>)</li>
+                    <li><code>task_type</code>: <code>"alto"</code>, <code>"text"</code>, or <code>"auto"</code></li>
                 </ul>
 
                 <h3>Example Response</h3>
-                <pre style="background:#f4f4f4; padding:1rem; border-radius:4px;">
+                <pre style="background:#f4f4f4; padding:1rem; border-radius:4px; overflow-x:auto;">
 {
   "type": "alto_xml",
   "filename": "page_01.xml",
   "cleaned_lines": [
     {
-      "line_num": 1,
-      "text": "The quick brown fox...",
-      "lang": "eng_Latn",
-      "lang_conf": "0.989",
-      "perplexity": 12.5,
-      "category": "Clear"
+      "line_num":      1,
+      "text":          "The quick brown fox jumps over the lazy dog.",
+      "lang":          "eng_Latn",
+      "lang_score":    0.9891,
+      "perplexity":    12.5,
+      "sym_count":     0,
+      "upper_count":   0,
+      "word_weird":    0.0,
+      "quality_score": 0.872,
+      "category":      "Clear"
+    },
+    {
+      "line_num":      2,
+      "text":          "TYRSOVA5===aras",
+      "lang":          "und",
+      "lang_score":    0.3102,
+      "perplexity":    4800.0,
+      "sym_count":     2,
+      "upper_count":   0,
+      "word_weird":    0.375,
+      "quality_score": 0.121,
+      "category":      "Trash"
     }
   ]
 }</pre>
+
+                <h3>Field Reference</h3>
+                <ul>
+                    <li><code>word_weird</code> — mean per-word weirdness [0–1];
+                    combines strange-symbol, repeated-symbol, LDL-fusion and mid-uppercase
+                    signals. 0 = fully clean.</li>
+                    <li><code>quality_score</code> — composite quality score [0–1]; aggregates
+                    valid-word ratio, symbol ratio, perplexity and text length.
+                    Thresholds: &gt; 0.75 → Clear, ≥ 0.45 → Noisy, &lt; 0.45 → Trash.</li>
+                </ul>
             </div>
         </main>
 

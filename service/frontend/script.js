@@ -14,24 +14,16 @@
 // Constants
 // ---------------------------------------------------------------------------
 
-/**
- * All five categories produced by the classify_pipeline / categorize_line
- * path in text_util_langID.py.  "Unknown" kept as a fallback for any
- * unexpected value the server might return in future.
- */
 const CATEGORY_STYLES = {
     Clear:      "badge-clear",
     Noisy:      "badge-noisy",
     Trash:      "badge-trash",
     "Non-text": "badge-nontext",
     Empty:      "badge-empty",
-    Unknown:    "badge-noisy",   // safe fallback
+    Unknown:    "badge-noisy",
 };
 
-/**
- * Categories considered "usable" for the quality-ratio numerator.
- * Clear lines are production-ready; Noisy lines are recoverable downstream.
- */
+/** Categories considered "usable" for the quality-ratio numerator. */
 const USABLE_CATEGORIES = new Set(["Clear", "Noisy"]);
 
 // ---------------------------------------------------------------------------
@@ -70,9 +62,8 @@ function initFileUpload() {
 
     box.addEventListener("click", () => input.click());
 
-    // Drag-and-drop
-    box.addEventListener("dragover", e => { e.preventDefault(); box.classList.add("drag-over"); });
-    box.addEventListener("dragleave",  () => box.classList.remove("drag-over"));
+    box.addEventListener("dragover",  e => { e.preventDefault(); box.classList.add("drag-over"); });
+    box.addEventListener("dragleave", ()  => box.classList.remove("drag-over"));
     box.addEventListener("drop", e => {
         e.preventDefault();
         box.classList.remove("drag-over");
@@ -100,16 +91,14 @@ function initFormHandler() {
         const input = document.getElementById("fileInput");
         if (!input.files.length) { alert("Please select a file."); return; }
 
-        // Derive API base URL: if the page is served from a dev server on
-        // port 8080 or 5500, point requests at the Python backend on 8000.
-        const port = window.location.port;
+        const port    = window.location.port;
         const apiBase = (port === "8080" || port === "5500")
             ? "http://localhost:8000"
             : window.location.origin;
 
-        document.getElementById("results").innerHTML  = "";
-        document.getElementById("loading").style.display = "block";
-        document.querySelector(".btn-primary").disabled   = true;
+        document.getElementById("results").innerHTML         = "";
+        document.getElementById("loading").style.display    = "block";
+        document.querySelector(".btn-primary").disabled      = true;
 
         const formData = new FormData(document.getElementById("processForm"));
 
@@ -144,7 +133,7 @@ function initFormHandler() {
 
 function renderResults(data) {
     const container = document.getElementById("results");
-    const lines = data.cleaned_lines ?? [];
+    const lines     = data.cleaned_lines ?? [];
 
     // --- Summary bar ---
     const total   = lines.length;
@@ -155,12 +144,46 @@ function renderResults(data) {
     const nontext = lines.filter(l => l.category === "Non-text").length;
     const empty   = lines.filter(l => l.category === "Empty").length;
 
+    // Page-level averages for word_weird and quality_score
+    // (only lines that went through GPU scoring contribute, matching
+    //  the avg_quality_score / avg_word_weird logic in langID_aggregate)
+    const scoredLines = lines.filter(l =>
+        l.category !== "Empty" && l.category !== "Non-text"
+    );
+    const avgWeird = scoredLines.length
+        ? (scoredLines.reduce((s, l) => s + (l.word_weird ?? 0), 0) / scoredLines.length)
+        : null;
+    const avgQuality = scoredLines.length
+        ? (scoredLines.reduce((s, l) => s + (l.quality_score ?? 0), 0) / scoredLines.length)
+        : null;
+
     let html = `
         <div class="summary-stats">
-            <div><span class="stat-label">File</span><span class="stat-value">${escapeHtml(data.filename ?? "")}</span></div>
-            <div><span class="stat-label">Type</span><span class="stat-value">${escapeHtml(data.type ?? "")}</span></div>
-            <div><span class="stat-label">Lines</span><span class="stat-value">${total}</span></div>
-            <div><span class="stat-label">Usable</span><span class="stat-value">${usable}/${total}</span></div>
+            <div>
+                <span class="stat-label">File</span>
+                <span class="stat-value">${escapeHtml(data.filename ?? "")}</span>
+            </div>
+            <div>
+                <span class="stat-label">Type</span>
+                <span class="stat-value">${escapeHtml(data.type ?? "")}</span>
+            </div>
+            <div>
+                <span class="stat-label">Lines</span>
+                <span class="stat-value">${total}</span>
+            </div>
+            <div>
+                <span class="stat-label">Usable</span>
+                <span class="stat-value">${usable}/${total}</span>
+            </div>
+            ${avgQuality !== null ? `
+            <div>
+                <span class="stat-label">Avg Quality</span>
+                <span class="stat-value">${avgQuality.toFixed(3)}</span>
+            </div>
+            <div>
+                <span class="stat-label">Avg Weirdness</span>
+                <span class="stat-value">${avgWeird.toFixed(3)}</span>
+            </div>` : ""}
         </div>
         <div class="category-breakdown">
             <span class="badge badge-clear">Clear ${cleared}</span>
@@ -180,21 +203,46 @@ function renderResults(data) {
                     <tr>
                         <th style="width:44px">#</th>
                         <th>Text</th>
-                        <th style="width:60px" title="Tokens with strange symbols (text_util_langID: detect_strange_symbols)">Sym</th>
-                        <th style="width:60px" title="Tokens with mid-word uppercase artefacts (text_util_langID: detect_mid_uppercase)">Upper</th>
-                        <th style="width:90px" title="DistilGPT2 perplexity; unreliable on short lines or non-English text">PPL</th>
+                        <th style="width:50px"
+                            title="Tokens containing characters outside the allowed set (detect_strange_symbols)">
+                            Sym</th>
+                        <th style="width:56px"
+                            title="Tokens with mid-word uppercase artefacts (detect_mid_uppercase)">
+                            Upper</th>
+                        <th style="width:80px"
+                            title="DistilGPT2 perplexity; unreliable on short lines or non-English text">
+                            PPL</th>
+                        <th style="width:76px"
+                            title="Mean per-word weirdness [0–1]: combines strange-symbol, repeated-symbol, LDL-fusion and mid-uppercase signals. 0 = fully clean.">
+                            Weird</th>
+                        <th style="width:76px"
+                            title="Composite quality score [0–1]: aggregates valid-word ratio, symbol ratio, perplexity and text length. Higher = cleaner.">
+                            Quality</th>
                         <th style="width:90px">Status</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
         lines.forEach(row => {
-            const badgeClass = CATEGORY_STYLES[row.category] ?? CATEGORY_STYLES.Unknown;
-            const pplDisplay = (row.perplexity != null && row.perplexity > 0)
-                ? row.perplexity.toFixed(1)
-                : "—";
-            const symDisplay   = row.sym_count   ?? "—";
-            const upperDisplay = row.upper_count ?? "—";
+            const badgeClass   = CATEGORY_STYLES[row.category] ?? CATEGORY_STYLES.Unknown;
+            const pplDisplay   = (row.perplexity != null && row.perplexity > 0)
+                ? row.perplexity.toFixed(1) : "—";
+            const symDisplay   = row.sym_count   != null ? row.sym_count   : "—";
+            const upperDisplay = row.upper_count != null ? row.upper_count : "—";
+
+            // word_weird displayed as percentage for readability
+            const weirdDisplay = row.word_weird != null
+                ? (row.word_weird * 100).toFixed(1) + "%" : "—";
+
+            // quality_score colour hint: green > 0.75, amber ≥ 0.45, red < 0.45
+            let qClass = "";
+            if (row.quality_score != null) {
+                qClass = row.quality_score > 0.75 ? "q-high"
+                       : row.quality_score >= 0.45 ? "q-mid"
+                       : "q-low";
+            }
+            const qualityDisplay = row.quality_score != null
+                ? row.quality_score.toFixed(3) : "—";
 
             html += `
                     <tr class="row-${(row.category ?? "").toLowerCase().replace("-", "")}">
@@ -203,6 +251,8 @@ function renderResults(data) {
                         <td class="num-cell">${symDisplay}</td>
                         <td class="num-cell">${upperDisplay}</td>
                         <td class="num-cell">${pplDisplay}</td>
+                        <td class="num-cell">${weirdDisplay}</td>
+                        <td class="num-cell ${qClass}">${qualityDisplay}</td>
                         <td><span class="badge ${badgeClass}">${escapeHtml(row.category)}</span></td>
                     </tr>`;
         });

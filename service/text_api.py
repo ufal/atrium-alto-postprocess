@@ -14,7 +14,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-# Local import
 from text_inference import text_manager
 
 
@@ -23,8 +22,8 @@ async def lifespan(app: FastAPI):
     """Lifecycle context manager — loads models synchronously before traffic."""
     try:
         text_manager.load_models()
-    except Exception as e:
-        raise RuntimeError(f"Failed to initialise models on startup: {e}")
+    except Exception as exc:
+        raise RuntimeError(f"Failed to initialise models on startup: {exc}") from exc
     yield
 
 
@@ -33,7 +32,9 @@ app = FastAPI(title="ATRIUM Text Processor", lifespan=lifespan)
 # ---------------------------------------------------------------------------
 # CORS — configurable via environment variable; defaults to localhost only
 # ---------------------------------------------------------------------------
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5500")
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5500"
+)
 allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
@@ -46,7 +47,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Static frontend
 # ---------------------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR     = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 if FRONTEND_DIR.exists():
@@ -64,28 +65,52 @@ async def root() -> Union[HTMLResponse, Dict[str, str]]:
 @app.get("/info")
 async def info() -> Dict[str, Any]:
     return {
-        "status": "active",
-        "device": text_manager.device,
+        "status":            "active",
+        "device":            text_manager.device,
         "supported_formats": ["ALTO XML (.xml)", "Plain Text (.txt)"],
         "quality_categories": ["Clear", "Noisy", "Trash", "Non-text", "Empty"],
+        "line_fields": [
+            "line_num", "text",
+            "lang", "lang_score",
+            "perplexity",
+            "sym_count", "upper_count",
+            "word_weird", "quality_score",
+            "category",
+        ],
     }
 
 
 @app.post("/process")
 async def process_document(
     file: UploadFile = File(...),
-    task_type: str = Form("auto"),
+    task_type: str   = Form("auto"),
 ) -> JSONResponse:
     """
     Upload an ALTO XML or plain-text file.
 
-    Returns a list of classified lines.  Each line carries:
-      - line_num    : 1-based position
-      - text        : cleaned text content
-      - perplexity  : DistilGPT2 cross-entropy perplexity (0 for pre-filtered lines)
-      - sym_count   : tokens with strange/unexpected symbols (see text_util_langID)
-      - upper_count : tokens with mid-word uppercase artefacts
-      - category    : one of Clear | Noisy | Trash | Non-text | Empty
+    Returns a list of classified lines.  Each entry carries:
+
+      line_num      (int)   – 1-based position after layout reordering
+      text          (str)   – cleaned text with split-word merges applied
+      lang          (str)   – ISO language code predicted by FastText
+      lang_score    (float) – FastText confidence [0, 1]
+      perplexity    (float) – DistilGPT2 perplexity; 0 for pre-filtered lines
+      sym_count     (int)   – tokens with strange/unexpected symbols
+                              (detect_strange_symbols)
+      upper_count   (int)   – tokens with mid-word uppercase artefacts
+                              (detect_mid_uppercase)
+      word_weird    (float) – mean per-word weirdness score [0, 1];
+                              combines strange-symbol, repeated-symbol,
+                              LDL-fusion and mid-uppercase signals;
+                              0 = fully clean, higher = more corrupt
+      quality_score (float) – composite quality score [0, 1];
+                              aggregates valid-word ratio, symbol ratio,
+                              perplexity and text length;
+                              higher = cleaner OCR output
+      category      (str)   – one of: Clear | Noisy | Trash | Non-text | Empty
+                              assigned by the same hybrid classifier used in
+                              the batch pipeline (categorize_line +
+                              classify_pipeline, tiebreak via quality_score)
     """
     filename = (file.filename or "").lower()
 
@@ -100,7 +125,9 @@ async def process_document(
                 detail="Cannot auto-detect file type. Set task_type='alto' or 'text'.",
             )
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix=f"_{file.filename}"
+    ) as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
 
@@ -116,7 +143,9 @@ async def process_document(
     except Exception as exc:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Processing failed: {exc}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Processing failed: {exc}"
+        ) from exc
 
     finally:
         if os.path.exists(tmp_path):
