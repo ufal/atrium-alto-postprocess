@@ -29,7 +29,6 @@ Two frontend variants are included: a **standalone** interface (`frontend/`) and
 * [Acknowledgements 🙏](#acknowledgements-)
 
 ---
-
 ## Service Description 📇
 
 The API is built using **FastAPI** and is designed to turn raw OCR output into clean, classified text data.
@@ -39,9 +38,10 @@ Key features:
 
 * **Layout Analysis:** Uses **LayoutLMv3** to correctly reorder tokens from ALTO XML files based on 2D spatial layout, handling multi-column pages [^9].
 * **Text Cleaning:** Automatically detects and merges hyphenated words split across lines using ALTO `SUBS_TYPE` / `SUBS_CONTENT` attributes and regex-based reconstruction.
-* **Quality Classification:** Classifies every line using structural regex detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions) and DistilGPT2 perplexity, implemented in `text_util_langID.py` [^6].
+* **Quality Classification:** Classifies every line using structural regex detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions) and DistilGPT2 perplexity, implemented in `text_util_langID.py` [^6]. Also computes a composite quality score.
 * **GPU Support:** Automatically detects and utilises CUDA devices for inference if available [^3].
 * **Two Frontend Variants:** A self-contained standalone interface for direct use, and a LINDAT-integrated interface for deployment within the LINDAT Common framework.
+* **CORS Support:** Cross-Origin Resource Sharing is configurable via the `ALLOWED_ORIGINS` environment variable (defaults to `http://localhost:8080,http://localhost:5500`).
 
 ## Directory Structure 📂
 
@@ -71,6 +71,7 @@ atrium-alto-postprocess/
 └── ...                          # Other project files (scripts, data samples, paradata)
 ```
 
+
 ## Supported Models 🧠
 
 The pipeline applies three models in sequence, balancing structural layout understanding with semantic quality estimation.
@@ -85,7 +86,6 @@ The pipeline applies three models in sequence, balancing structural layout under
 > Classification is performed primarily by the structural detectors in `text_util_langID.py`.
 > DistilGPT2 perplexity is a **supporting signal** used only on longer lines (word count ≥ 7),
 > because it is unreliable on short or non-English text.
-> FastText language scores are **not** used as a primary Trash/Clear indicator in the current pipeline.
 
 ## Quality Categories 🪧
 
@@ -101,15 +101,16 @@ the structural detectors and perplexity gate in `text_util_langID.categorize_lin
 | `Non-text` 🔵 | **No meaningful text.** Purely numeric / separator content.           | RE_NON_TEXT match (dates, page numbers, measurements) or digit ratio > 40 % on short line. |
 | `Empty` ⚪     | **Blank line.** Whitespace only.                                      | `len(stripped) == 0`                                                                       |
 
+
 ## API Usage 📡
 
 ### Endpoints 🔗
 
-| Method | Path       | Description                                                                       |
-|--------|------------|-----------------------------------------------------------------------------------|
-| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                  |
-| `GET`  | `/info`    | Returns service status, active device (`cpu` or `cuda`), and quality categories.  |
-| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.      |
+| Method | Path       | Description                                                                                   |
+|--------|------------|-----------------------------------------------------------------------------------------------|
+| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                              |
+| `GET`  | `/info`    | Returns service status, active device (`cpu` or `cuda`), line fields, and quality categories. |
+| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                  |
 
 ### Request Example 💻
 
@@ -128,9 +129,7 @@ curl -X POST "http://localhost:8000/process" \
 
 ### Response Schema
 
-Each item in `cleaned_lines` carries the fields used by `text_util_langID.categorize_line()`.
-`lang` and `lang_conf` are **not** returned — FastText language scores are not part of the
-structural classification decision.
+Each item in `cleaned_lines` carries the fields used by the classification pipeline.
 
 ```json
 {
@@ -140,25 +139,37 @@ structural classification decision.
     {
       "line_num": 1,
       "text": "The quick brown fox jumps over the lazy dog.",
+      "lang": "eng",
+      "lang_score": 0.9821,
       "perplexity": 12.5,
       "sym_count": 0,
       "upper_count": 0,
+      "word_weird": 0.0,
+      "quality_score": 0.9501,
       "category": "Clear"
     },
     {
       "line_num": 2,
       "text": "TYRSOVA5===aras T>r«l",
+      "lang": "ces",
+      "lang_score": 0.4201,
       "perplexity": 4800.0,
       "sym_count": 2,
       "upper_count": 0,
+      "word_weird": 0.85,
+      "quality_score": 0.1205,
       "category": "Trash"
     },
     {
       "line_num": 3,
       "text": "1956–1959",
-      "perplexity": 0,
+      "lang": "N/A",
+      "lang_score": 0.0,
+      "perplexity": 0.0,
       "sym_count": 0,
       "upper_count": 0,
+      "word_weird": 0.0,
+      "quality_score": 0.0,
       "category": "Non-text"
     }
   ]
@@ -167,14 +178,19 @@ structural classification decision.
 
 **Response fields:**
 
-| Field         | Type   | Description                                                                               |
-|---------------|--------|-------------------------------------------------------------------------------------------|
-| `line_num`    | int    | 1-based line position after layout reordering.                                            |
-| `text`        | string | Cleaned line text with split-word merges applied.                                         |
-| `perplexity`  | float  | DistilGPT2 perplexity. `0` means the line was pre-filtered and inference was skipped.     |
-| `sym_count`   | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`). |
-| `upper_count` | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).         |
-| `category`    | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                   |
+| Field           | Type   | Description                                                                                                                                |
+|-----------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `line_num`      | int    | 1-based line position after layout reordering.                                                                                             |
+| `text`          | string | Cleaned line text with split-word merges applied.                                                                                          |
+| `lang`          | string | ISO language code predicted by FastText (e.g., `eng`, `ces`).                                                                              |
+| `lang_score`    | float  | FastText confidence score `[0, 1]`.                                                                                                        |
+| `perplexity`    | float  | DistilGPT2 perplexity. `0` means the line was pre-filtered and inference was skipped.                                                      |
+| `sym_count`     | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`).                                                  |
+| `upper_count`   | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).                                                          |
+| `word_weird`    | float  | Mean per-word weirdness score `[0, 1]`; combines strange-symbol, repeated-symbol, LDL-fusion and mid-uppercase signals; `0` = fully clean. |
+| `quality_score` | float  | Composite quality score `[0, 1]`; aggregates valid-word ratio, symbol ratio, perplexity and text length; higher = cleaner OCR output.      |
+| `category`      | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                                                                    |
+
 
 ## Installation & Setup 🛠
 
@@ -192,7 +208,7 @@ environment, installs all Python dependencies, fetches the `v3/` LayoutReader sc
 sparse checkout, and downloads the FastText binary:
 
 ```bash
-git clone https://github.com/ufal/atrium-alto-postprocess.git
+git clone [https://github.com/ufal/atrium-alto-postprocess.git](https://github.com/ufal/atrium-alto-postprocess.git)
 cd atrium-alto-postprocess
 chmod +x setup_api_server.sh
 ./setup_api_server.sh
@@ -210,7 +226,7 @@ The setup script downloads the FastText binary automatically. If you prefer to d
 
 ```bash
 mkdir -p models
-wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" \
+wget "[https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin](https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin)" \
      -O models/lid.176.bin
 ```
 
@@ -280,7 +296,7 @@ Open a **second terminal window** alongside your running server and follow these
 **1. Place the project inside `lindat-common`:**
 
 ```bash
-git clone https://github.com/ufal/lindat-common.git
+git clone [https://github.com/ufal/lindat-common.git](https://github.com/ufal/lindat-common.git)
 cd lindat-common
 cp -r /path/to/atrium-alto-postprocess .
 ```
@@ -288,7 +304,7 @@ cp -r /path/to/atrium-alto-postprocess .
 **2. Install NodeJS and dependencies:**
 
 ```bash
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh | bash
+curl -o- [https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh](https://raw.githubusercontent.com/creationix/nvm/v0.25.4/install.sh) | bash
 nvm install stable
 nvm use stable
 export NODE_OPTIONS=--openssl-legacy-provider
