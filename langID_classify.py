@@ -4,14 +4,6 @@ langID_classify.py  (formerly 2_classify.py)
 
 Step 2: Read TXT files → Merge Split Words → Batch classify on GPU.
 Output: One CSV file per document in OUTPUT_LINES_LOG directory.
-
-CSV columns (per line):
-  file, page_num, line_num, text,
-  split_ws, split_we,
-  lang, lang_score, perplex,
-  symbol,   ← count of tokens with strange symbols (detect_strange_symbols)
-  upper,    ← count of words with mid-word uppercase (detect_mid_uppercase)
-  categ
 """
 
 import pandas as pd
@@ -30,23 +22,15 @@ import configparser as _cp
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# ---------------------------------------------------------------------------
-# CSV schema
-# ---------------------------------------------------------------------------
 CSV_HEADER = [
     "file", "page_num", "line_num", "text",
     "split_ws", "split_we",
     "lang", "lang_score", "perplex",
     "symbol", "upper",
-    "word_weird",    # mean per-word weirdness score [0, 1]
-    "quality_score", # composite quality score [0, 1] (higher = cleaner)
+    "word_weird",
+    "quality_score",
     "categ",
 ]
-
-
-# ---------------------------------------------------------------------------
-# Model loading
-# ---------------------------------------------------------------------------
 
 def load_models():
     print(f"Loading models on {DEVICE}...")
@@ -59,24 +43,7 @@ def load_models():
 
     return ft, model, tokenizer
 
-
-# ---------------------------------------------------------------------------
-# I/O helpers
-# ---------------------------------------------------------------------------
-
 def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
-    """
-    Append rows to the per-document *temporary* CSV (``<file_id>.csv.tmp``).
-
-    Writing to a .tmp file means an interrupted run leaves no partial .csv
-    behind: the resume logic in main() checks for the final .csv only, so
-    a crashed run is never silently treated as complete.
-
-    The file is promoted to its final name by ``sort_document_csv()`` once
-    all lines for that document have been written.
-
-    Writes the CSV header automatically on the first write for this document.
-    """
     tmp_path = output_dir / f"{file_id}.csv.tmp"
     file_exists = tmp_path.exists()
 
@@ -86,33 +53,14 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
             writer.writerow(CSV_HEADER)
         writer.writerows(rows)
 
-
 def sort_document_csv(output_dir: Path, file_id: str):
-    """
-    Sort the finished temporary CSV by (page_num, line_num) and atomically
-    promote it to the final ``<file_id>.csv``.
-
-    Reading from .tmp and writing to .csv means:
-      - The final file is only ever created once a document is fully processed.
-      - A crash mid-document leaves a .tmp (ignored on resume) rather than a
-        partial .csv that would be silently reused.
-
-    The .tmp file is removed after the sorted .csv has been written
-    successfully.
-    """
     tmp_path = output_dir / f"{file_id}.csv.tmp"
     out_path = output_dir / f"{file_id}.csv"
     if tmp_path.exists():
         df = pd.read_csv(tmp_path)
         df = df.sort_values(by=["page_num", "line_num"], ascending=True)
         df.to_csv(out_path, index=False)
-        # Remove .tmp only after the sorted .csv has been written successfully.
         tmp_path.unlink()
-
-
-# ---------------------------------------------------------------------------
-# Batch processor
-# ---------------------------------------------------------------------------
 
 def process_and_write_batch(
     lines: list[str],
@@ -122,32 +70,13 @@ def process_and_write_batch(
     ppl_model,
     tokenizer,
 ):
-    """
-    Run fastText + perplexity on a batch, compute quality flags, write rows.
-
-    meta rows: (file_id, page_id, line_num, text_content, split_ws, split_we)
-
-    Classification strategy (hybrid):
-      1. categorize_line()   — existing rule-based path (sym/upper/fuse/ppl)
-      2. classify_pipeline() — ratio-based path (symbol_ratio, valid_ratio)
-      3. If both agree → use that category (high confidence).
-         If they disagree → compute_quality_score() from word-level scoring
-         breaks the tie via classify_by_score().
-
-    New CSV columns written:
-      word_weird    – mean per-word weirdness [0, 1] from score_words_in_line()
-      quality_score – composite quality signal [0, 1] from compute_quality_score()
-    """
-    # --- Perplexity ---
     ppls = calculate_perplexity_batch(lines, ppl_model, tokenizer, DEVICE)
 
-    # --- Language ID ---
     lines_lower = [line.lower() for line in lines]
     labels, scores = ft.predict(lines_lower, k=1)
     langs  = [l[0].replace("__label__", "") for l in labels]
     scores = [s[0] for s in scores]
 
-    # --- Build rows ---
     results = []
     for i in range(len(lines)):
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
@@ -158,20 +87,19 @@ def process_and_write_batch(
         sym_count   = detect_strange_symbols(text_content)
         upper_count = detect_mid_uppercase(text_content)
 
-        # --- Per-word weirdness → composite quality score ---
         word_scores = score_words_in_line(text_content)
         weird_ratio = compute_word_weird_ratio(word_scores)
 
+        # FIXED: Pass explicitly computed valid ratio, not inverse weirdness
         q_score = compute_quality_score(
-            valid_word_ratio=1.0 - weird_ratio,
+            valid_word_ratio=compute_valid_ratio(text_content),
             symbol_ratio=compute_symbol_ratio(text_content),
             perplexity=ppl_val,
             text_length=len(text_content),
         )
 
-        # --- Hybrid classification ---
-        # Run both rule paths; use the score to break any disagreement.
-        struct_cat = categorize_line(ppl_val, text_content, sym_count, upper_count)
+        # FIXED: Pass language ID predictions into the rule-based categorizer
+        struct_cat = categorize_line(ppl_val, text_content, sym_count, upper_count, lang, score)
         pipe_cat   = classify_pipeline(text_content)
 
         if struct_cat == pipe_cat:
@@ -197,16 +125,10 @@ def process_and_write_batch(
         ]
         results.append(row)
 
-    # Sort within the batch to keep writes ordered
     results.sort(key=lambda x: x[0])
 
     for file_id, group in groupby(results, key=lambda x: x[0]):
         write_rows_to_doc(out_dir, file_id, list(group))
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def main():
     config = configparser.ConfigParser()
@@ -262,14 +184,10 @@ def main():
         page_id = 0
         for _, row in tqdm(df.iterrows(), total=len(df)):
             file_id = str(row["file"])
-
-            prev_pi = page_id  # noqa: F841  (kept for potential future use)
+            prev_pi = page_id
             page_id = str(row["page"])
 
-            # --- Document boundary ---
             if file_id != current_file_id:
-
-                # Flush batch for the previous document
                 if batch_lines:
                     process_and_write_batch(
                         batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
@@ -277,15 +195,11 @@ def main():
                     batch_lines.clear()
                     batch_meta.clear()
 
-                # Sort the previous document's .tmp → .csv and log success.
                 if current_file_id is not None and not skipping_current_file:
                     sort_document_csv(out_dir, current_file_id)
                     _logger.log_success("csv")
 
                 current_file_id = file_id
-                # Resume check: look for the *final* .csv (not the .tmp).
-                # A .tmp left by a previous crash is intentionally ignored here;
-                # it will be overwritten by the new run's writes.
                 out_path = out_dir / f"{file_id}.csv"
 
                 if out_path.exists() and file_id not in session_files:
@@ -329,9 +243,6 @@ def main():
                 cat, clean_merged = pre_filter_line(merged_text)
 
                 if cat != "Process":
-                    # Pre-filtered lines: write immediately (no GPU needed).
-                    # word_weird and quality_score are 0 / N/A for these rows
-                    # because no model inference was run.
                     write_rows_to_doc(
                         out_dir,
                         file_id,
@@ -340,7 +251,7 @@ def main():
                             current_split_ws, current_split_we,
                             "N/A", 0, 0,
                             0, 0,
-                            "0.0000", "0.0000",  # word_weird, quality_score
+                            "0.0000", "0.0000",
                             cat,
                         ]],
                     )
@@ -358,7 +269,6 @@ def main():
                     batch_lines.clear()
                     batch_meta.clear()
 
-        # Final flush
         if batch_lines:
             process_and_write_batch(
                 batch_lines, batch_meta, out_dir, ft_model, ppl_model, ppl_tok
