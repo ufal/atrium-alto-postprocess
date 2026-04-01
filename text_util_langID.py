@@ -39,7 +39,9 @@ LANG_SCORE_ROUGH = 0.45
 LANG_SCORE_CLEAR = 0.75
 
 # Characters allowed inside words without triggering the "strange symbol" penalty.
-ALLOWED_INTERNAL: frozenset = frozenset('.-,+()"\'/_—–')
+# ALLOWED_INTERNAL: frozenset = frozenset('.-,+()"\'/_—–')
+# Add colon ':' and percent '%' to the allowed internal characters
+ALLOWED_INTERNAL: frozenset = frozenset('.-,+()"\'/_—–:%')
 
 # Characters stripped from the edges of words before evaluation.
 _STRIP_CHARS: str = '.,;:!?()[]"\'/\\'
@@ -125,23 +127,28 @@ def detect_repeated_chars(text: str) -> int:
 
 
 def detect_gibberish_words(text: str) -> int:
-    """
-    Counts words (>= 7 chars) that are entirely uppercase or completely lack vowels.
-    This effectively catches garbled strings of consonants produced by OCR failure.
-
-    Args:
-        text (str): The text line.
-
-    Returns:
-        int: The number of gibberish words found.
-    """
     count = 0
     vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
     for word in text.split():
         core = word.strip(_STRIP_CHARS)
         if len(core) >= 7:
-            if core.isupper() or not any(c in vowels for c in core):
+            # Check 1: All uppercase
+            if core.isupper():
                 count += 1
+                continue
+
+            # Check 2: Lacks vowels entirely
+            vowel_count = sum(1 for c in core if c in vowels)
+            if vowel_count == 0:
+                count += 1
+                continue
+
+            # Check 3: Gibberish Consonant/Vowel ratio (e.g., FAXAPOOXAXXXX)
+            # If a long word is less than 15% vowels or more than 80% vowels, it's likely OCR noise
+            v_ratio = vowel_count / len(core)
+            if v_ratio < 0.15 or v_ratio > 0.80:
+                count += 1
+
     return count
 
 
@@ -372,50 +379,42 @@ def categorize_line(ppl: float, text_source: str, sym_count: int, upper_count: i
     """
     wc = len(text_source.split())
 
-    # 1. Density and Garbage Cluster Checks
     g_density = compute_garbage_density(text_source)
     has_clusters = bool(RE_GARBAGE_CLUSTERS.search(text_source))
 
-    # Immediate Trash for high symbol density (catches single-token math garbage like N=W=NM)
     if g_density > 0.35 or (wc <= 3 and g_density > 0.20):
         return "Trash"
 
-    # Immediate Trash for math/OCR clusters combined with unexpected languages
     if has_clusters and (lang not in COMMON_LANGS or lang_score < 0.6):
         return "Trash"
 
-    # 2. Extract standard structural counts
     rep_count = detect_repeated_chars(text_source)
     fuse_count = detect_letter_digit_letter(text_source)
-    gibberish_count = detect_gibberish_words(text_source)
+    gibberish_count = detect_gibberish_words(text_source)  # Now uses the stricter logic
 
     sym_ratio = sym_count / wc if wc > 0 else 0.0
     fuse_ratio = fuse_count / wc if wc > 0 else 0.0
 
-    # 3. Short Line Strict Language Check
-    if wc < 7:
-        if lang_score < LANG_SCORE_ROUGH or lang not in COMMON_LANGS:
+    # --- THE FIX FOR FAILURE A & C ---
+    # If the line is short (<= 8 words) AND it's guessing an exotic language like Swahili or Vietnamese...
+    if wc <= 8 and lang not in COMMON_LANGS:
+        # If confidence is low OR it has even a single symbol/gibberish marker, throw it away.
+        if lang_score < 0.60 or sym_count >= 1 or gibberish_count > 0 or upper_count > 0:
             return "Trash"
 
-    # 4. Long Line Rescue
-    # If a line is long, has 2 symbol flaws, but extremely low perplexity, downgrade penalty to Noisy
     if sym_count == 2 and wc >= 8 and ppl < PERPLEXITY_THRESHOLD_MIN:
         return "Noisy"
 
-    # 5. Standard Trash Thresholds
     if (sym_count >= 2 or sym_ratio >= 0.5 or (sym_count == 1 and rep_count > 0) or
             (sym_count >= 1 and upper_count >= 1) or fuse_count >= 2 or fuse_ratio >= 0.5 or
             (sym_count >= 1 and fuse_count >= 1) or gibberish_count > 0):
         return "Trash"
 
-    # Adjust perplexity tolerance for short lines
     coef = 1.0 if wc >= 7 else 99999
 
-    # 6. Standard Noisy Thresholds
     if sym_count == 1 or fuse_count >= 1 or upper_count > 0 or ppl >= PERPLEXITY_THRESHOLD_MIN * coef:
         return "Noisy"
 
-    # 7. Default
     return "Clear"
 
 

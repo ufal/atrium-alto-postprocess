@@ -29,7 +29,10 @@ CSV_HEADER = [
     "file", "page_num", "line_num", "text",
     "split_ws", "split_we",
     "lang", "lang_score", "perplex",
-    "symbol", "upper",
+    "word_count", "char_count",          # <-- NEW
+    "garbage_density",                   # <-- NEW
+    "symbol", "upper", "repeated",       # <-- NEW: repeated
+    "ldl_fuses", "gibberish",            # <-- NEW: ldl_fuses, gibberish
     "word_weird",
     "quality_score",
     "categ",
@@ -143,8 +146,16 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         lang = langs[i]
         score = scores[i]
 
+        # --- Extracted Metrics ---
+        wc = len(text_content.split())
+        cc = len(text_content)
+        g_density = compute_garbage_density(text_content)
+
         sym_count = detect_strange_symbols(text_content)
         upper_count = detect_mid_uppercase(text_content)
+        rep_count = detect_repeated_chars(text_content)
+        fuse_count = detect_letter_digit_letter(text_content)
+        gibb_count = detect_gibberish_words(text_content)
 
         word_scores = score_words_in_line(text_content)
         weird_ratio = compute_word_weird_ratio(word_scores)
@@ -153,7 +164,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             valid_word_ratio=compute_valid_ratio(text_content),
             symbol_ratio=compute_symbol_ratio(text_content),
             perplexity=ppl_val,
-            text_length=len(text_content),
+            text_length=cc,
         )
 
         struct_cat = categorize_line(ppl_val, text_content, sym_count, upper_count, lang, score)
@@ -163,7 +174,10 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         row = [
             file_id, page_id, line_num, text_content,
             split_ws, split_we, lang, f"{score:.4f}", f"{ppl_val:.2f}",
-            sym_count, upper_count, f"{weird_ratio:.4f}", f"{q_score:.4f}", categ,
+            wc, cc, f"{g_density:.4f}",  # <-- NEW
+            sym_count, upper_count, rep_count,  # <-- NEW
+            fuse_count, gibb_count,  # <-- NEW
+            f"{weird_ratio:.4f}", f"{q_score:.4f}", categ,
         ]
         results.append(row)
 
