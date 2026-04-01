@@ -25,6 +25,7 @@ import configparser
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
+from tqdm import tqdm
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -159,8 +160,7 @@ def process_csv_file(args):
         stats.to_csv(stats_out_path, index=False)
         return stats
     except Exception as exc:
-        print(f"Error processing file {csv_file.name}: {exc}")
-        return None
+        return exc
 
 
 # ---------------------------------------------------------------------------
@@ -197,13 +197,12 @@ def main() -> None:
         tasks = [(f, OUTPUT_DOC_DIR) for f in csv_files]
         futures = {executor.submit(process_csv_file, t): t for t in tasks}
 
-        for i, future in enumerate(as_completed(futures), 1):
+        for future in tqdm(as_completed(futures), total=len(csv_files), desc="Aggregating Page Stats"):
             result = future.result()
-            if result is not None:
+            if isinstance(result, Exception):
+                tqdm.write(f"Error processing file: {result}")
+            elif result is not None:
                 all_page_stats.append(result)
-
-            if i % 50 == 0:
-                print(f"Aggregated {i}/{len(csv_files)} documents...")
 
     if all_page_stats:
         print("Consolidating final page stats ...")

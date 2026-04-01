@@ -20,29 +20,45 @@ import re
 import torch
 from torch import nn
 import itertools
+import configparser
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Configuration & Regular Expressions
 # ---------------------------------------------------------------------------
 
+# Use RawConfigParser to prevent string interpolation errors on characters like '%'
+_config = configparser.RawConfigParser()
+_config_path = Path("config_langID.txt")
+if _config_path.exists():
+    _config.read(_config_path)
+
+def _get_float(section, key, default):
+    return _config.getfloat(section, key, fallback=default) if _config.has_section(section) else default
+
+def _get_str(section, key, default):
+    return _config.get(section, key, fallback=default) if _config.has_section(section) else default
+
 # Default languages deemed standard for this pipeline. Short lines outside this set
 # face stricter quality thresholds to prevent noise from being tagged as exotic languages.
 COMMON_LANGS = ["ces", "deu", "eng"]
+if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
+    COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
 
 # Perplexity thresholds (used with the distilgpt2 model)
 # Higher perplexity = the model finds the text more "surprising" (likely gibberish).
-PERPLEXITY_THRESHOLD_MAX = 5000
-PERPLEXITY_THRESHOLD_MIN = 1500
+PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 5000.0)
+PERPLEXITY_THRESHOLD_MIN = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MIN", 1500.0)
 
 # Minimum confidence scores required from the FastText language ID model.
-LANG_SCORE_ROUGH = 0.45
-LANG_SCORE_CLEAR = 0.75
+LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
+LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
 # Characters allowed inside words without triggering the "strange symbol" penalty.
-ALLOWED_INTERNAL: frozenset = frozenset('.-,+()"\'/_—–:%')
+ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/_—–:%'))
 
 # Characters stripped from the edges of words before evaluation.
-_STRIP_CHARS: str = '.,;:!?()[]"\'/\\'
+_STRIP_CHARS: str = _get_str("TEXT_UTILS", "STRIP_CHARS", '.,;:!?()[]"\'/\\')
 
 # Standard regex for isolating specific structural errors.
 RE_TRASH_MULTI_SYMBOL: re.Pattern = re.compile(r'[^\w\s]{2,}')

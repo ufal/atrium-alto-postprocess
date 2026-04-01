@@ -21,6 +21,7 @@ from itertools import groupby
 import configparser
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from tqdm import tqdm
 
 # Import from our refined utility script
 from text_util_langID import *
@@ -326,14 +327,13 @@ def main():
     with ProcessPoolExecutor(max_workers=max_cores, initializer=init_cpu_worker) as executor:
         futures = {executor.submit(process_document, task): task[0] for task in grouped_tasks}
 
-        for count, future in enumerate(as_completed(futures), 1):
+        for future in tqdm(as_completed(futures), total=len(grouped_tasks), desc="Classifying Documents"):
             file_id = futures[future]
             try:
                 lines_proc = future.result()
                 total_processed += lines_proc
-                print(f"[{count}/{len(grouped_tasks)}] Finished {file_id}")
             except Exception as e:
-                print(f"Error processing {file_id}: {e}")
+                tqdm.write(f"Error processing {file_id}: {e}")
 
     # 4. Graceful Shutdown
     print("All documents processed. Shutting down GPU Engine...")
