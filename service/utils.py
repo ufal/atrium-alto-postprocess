@@ -95,9 +95,13 @@ def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int
 
     return words, boxes, (page_w, page_h)
 
-def categorize_line(lang_code: str, score: float, ppl: float, text: str) -> str:
+def categorize_line(lang_code: str, score: float, ppl: float, text: str, weird_ratio: float = 0.0) -> str:
     """Classifies line as Clear, Noisy, or Trash."""
     is_common = any(lang_code.startswith(cl) for cl in COMMON_LANGS)
+
+    # Hard override matching the new logic
+    if ppl > 500.0 and weird_ratio > 0.4:
+        return "Trash"
 
     # Heuristic for short lines
     words_count = len(text.split())

@@ -61,7 +61,6 @@ async def root() -> Union[HTMLResponse, Dict[str, str]]:
         return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
     return {"message": "Service running. Frontend not found."}
 
-
 @app.get("/info")
 async def info() -> Dict[str, Any]:
     return {
@@ -72,8 +71,9 @@ async def info() -> Dict[str, Any]:
         "line_fields": [
             "line_num", "text",
             "lang", "lang_score",
-            "perplexity",
+            "perplexity", "garbage_density",
             "sym_count", "upper_count",
+            "repeated_count", "ldl_fuses", "gibberish",
             "word_weird", "quality_score",
             "category",
         ],
@@ -90,28 +90,24 @@ async def process_document(
 
     Returns a list of classified lines.  Each entry carries:
 
-      line_num      (int)   – 1-based position after layout reordering
-      text          (str)   – cleaned text with split-word merges applied
-      lang          (str)   – ISO language code predicted by FastText
-      lang_score    (float) – FastText confidence [0, 1]
-      perplexity    (float) – DistilGPT2 perplexity; 0 for pre-filtered lines
-      sym_count     (int)   – tokens with strange/unexpected symbols
-                              (detect_strange_symbols)
-      upper_count   (int)   – tokens with mid-word uppercase artefacts
-                              (detect_mid_uppercase)
-      word_weird    (float) – mean per-word weirdness score [0, 1];
-                              combines strange-symbol, repeated-symbol,
-                              LDL-fusion and mid-uppercase signals;
-                              0 = fully clean, higher = more corrupt
-      quality_score (float) – composite quality score [0, 1];
-                              aggregates valid-word ratio, symbol ratio,
-                              perplexity and text length;
-                              higher = cleaner OCR output
-      category      (str)   – one of: Clear | Noisy | Trash | Non-text | Empty
-                              assigned by the same hybrid classifier used in
-                              the batch pipeline (categorize_line +
-                              classify_pipeline, tiebreak via quality_score)
+      line_num        (int)   – 1-based position after layout reordering
+      text            (str)   – cleaned text with split-word merges applied
+      lang            (str)   – ISO language code predicted by FastText
+      lang_score      (float) – FastText confidence [0, 1]
+      perplexity      (float) – DistilGPT2 perplexity; 0 for pre-filtered lines
+      garbage_density (float) – ratio of non-alphanumeric noise characters
+      sym_count       (int)   – tokens with strange/unexpected symbols
+      upper_count     (int)   – tokens with mid-word uppercase artefacts
+      repeated_count  (int)   – tokens with non-standard char repetition (>=40%)
+      ldl_fuses       (int)   – tokens with letter-digit-letter fusions
+      gibberish       (int)   – tokens lacking vowels or highly irregular ratios
+      word_weird      (float) – mean per-word weirdness score [0, 1]
+      quality_score   (float) – composite continuous quality score [0, 1]
+      category        (str)   – Clear | Noisy | Trash | Non-text | Empty
+                                Assigned dynamically using the unified penalty system.
     """
+    # ... [Rest of the file remains exactly the same] ...
+
     filename = (file.filename or "").lower()
 
     if task_type == "auto":
