@@ -25,7 +25,7 @@ import itertools
 # Configuration & Regular Expressions
 # ---------------------------------------------------------------------------
 
-# Languages deemed standard for this pipeline. Short lines outside this set
+# Default languages deemed standard for this pipeline. Short lines outside this set
 # face stricter quality thresholds to prevent noise from being tagged as exotic languages.
 COMMON_LANGS = ["ces", "deu", "eng"]
 
@@ -438,7 +438,7 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 # Categorisation (REFINED PENALTY SYSTEM)
 # ---------------------------------------------------------------------------
 
-def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float) -> str:
+def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, expected_langs: list[str] = None) -> str:
     """
     The main decision tree determining the final category of a line based on a
     unified weighted penalty score. It dynamically evaluates structural noise alongside
@@ -449,10 +449,14 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float) 
         text_source (str): Raw text string to evaluate.
         lang (str): Predicted language code from FastText (e.g., "ces").
         lang_score (float): FastText language confidence score (0.0 to 1.0).
+        expected_langs (list[str]): The dataset's explicit allowlist of languages. Defaults to COMMON_LANGS.
 
     Returns:
         str: "Trash", "Noisy", "Clear", or "Empty".
     """
+    if expected_langs is None:
+        expected_langs = COMMON_LANGS
+
     words = text_source.split()
     wc = len(words)
 
@@ -470,8 +474,7 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float) 
     sym_count = detect_strange_symbols(text_source)
     struct_penalties += sym_count * 0.4
 
-    # Address Group 3 Regression: If multiple strange symbols exist, add a flat
-    # non-linear penalty so the word-count normalization doesn't wash it out.
+    # Add a flat non-linear penalty for multiple strange symbols so word-count normalization doesn't wash it out.
     if sym_count >= 2:
         struct_penalties += 0.5
 
@@ -483,9 +486,9 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float) 
     penalties = struct_penalties
 
     # 3. Dynamic Perplexity Thresholding (WITH SHORT-PHRASE GATE)
-    # DistilGPT2 is English-centric. Valid short Czech/German phrases often yield PPL > 5000.
-    # If the text is structurally clean, short, and in a known language, we trust the structure over PPL.
-    is_forgiven_short_phrase = (wc < 5) and (lang in COMMON_LANGS) and (struct_penalties == 0.0)
+    # DistilGPT2 is English-centric. Valid short phrases often yield PPL > 5000.
+    # If the text is structurally clean, short, and in a known ALLOWLISTED language, we trust the structure over PPL.
+    is_forgiven_short_phrase = (wc < 5) and (lang in expected_langs) and (struct_penalties == 0.0)
 
     if not is_forgiven_short_phrase:
         adjusted_ppl_threshold = PERPLEXITY_THRESHOLD_MIN * (1.5 if wc < 5 else 1.0)
@@ -495,8 +498,8 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float) 
             penalties += 1.0
 
     # 4. Language Confidence Penalties
-    if lang not in COMMON_LANGS:
-        # Heavily penalize 'exotic' language guesses if confidence is rough
+    if lang not in expected_langs:
+        # Heavily penalize 'exotic' language guesses (not in the configurable allowlist)
         if lang_score < 0.60:
             penalties += 0.8
     elif lang_score < 0.30:
