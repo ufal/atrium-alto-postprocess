@@ -7,13 +7,14 @@ Step 4.2: Aggregate raw lines into page statistics.
 Reads a directory of per-document CSVs produced by the classification step
 and compiles final page-level stats, including:
   - Counts of each line category (Clear / Noisy / Trash / Non-text / Empty)
-  - 'avg_quality_score' – Mean composite quality score for relevant lines
-  - 'avg_word_weird'    – Mean per-word weirdness ratio for relevant lines
-  - 'avg_lang_score'    – Mean FastText confidence score
-  - 'avg_perplex'       – Mean DistilGPT2 perplexity score
-  - 'avg_symbol'        – Mean structural strange symbol count
-  - 'avg_upper'         – Mean structural mid-word uppercase error count
-  - 'main_lang'         – The statistical mode (most frequent) language per page.
+  - 'total_word_count'  - Sum of words in valid text lines
+  - 'total_char_count'  - Sum of characters in valid text lines
+  - 'avg_quality_score' - Mean composite quality score for relevant lines
+  - 'avg_word_weird'    - Mean per-word weirdness ratio for relevant lines
+  - 'avg_lang_score'    - Mean FastText confidence score
+  - 'avg_perplex'       - Mean DistilGPT2 perplexity score
+  - 'avg_symbol'        - Mean structural strange symbol count
+  - 'main_lang'         - The statistical mode (most frequent) language per page.
 
 This process is parallelized using concurrent.futures to handle massive directories quickly.
 """
@@ -33,7 +34,7 @@ import multiprocessing
 STANDARD_COLS = ["Clear", "Trash", "Noisy", "Empty", "Non-text"]
 
 # Only these categories represent "actual attempts at text".
-# Empty and Non-text are ignored when computing average quality scores.
+# Empty and Non-text are ignored when computing averages and usable sums.
 SCORED_CATEGS = {"Clear", "Noisy", "Trash"}
 
 # The numeric metric columns outputted by the classify step that we want to average
@@ -44,6 +45,7 @@ METRIC_COLS = [
     "word_weird", "quality_score"
 ]
 
+
 # ---------------------------------------------------------------------------
 # Aggregation Helpers
 # ---------------------------------------------------------------------------
@@ -51,11 +53,6 @@ METRIC_COLS = [
 def _category_counts(df: pd.DataFrame) -> pd.DataFrame:
     """
     Pivot the DataFrame to count how many lines fall into each Category per Page.
-
-    Args:
-        df: The raw lines dataframe.
-    Returns:
-        pd.DataFrame: A frame indexed by (file, page_num) with STANDARD_COLS as columns.
     """
     counts = (df.groupby(["file", "page_num"])["categ"].value_counts().unstack(fill_value=0))
 
@@ -65,10 +62,27 @@ def _category_counts(df: pd.DataFrame) -> pd.DataFrame:
     return counts[STANDARD_COLS]
 
 
+def _sum_metrics(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Computes the TOTAL usable words and characters per page.
+    This gives a true "volume of text" metric, ignoring non-text lines.
+    """
+    scored = df[df["categ"].isin(SCORED_CATEGS)].copy()
+    cols_to_sum = [col for col in ["word_count", "char_count"] if col in scored.columns]
+
+    if not cols_to_sum:
+        idx = df.set_index(["file", "page_num"]).index.unique()
+        return pd.DataFrame(index=idx)
+
+    sums = scored.groupby(["file", "page_num"])[cols_to_sum].sum()
+    rename = {col: f"total_{col}" for col in cols_to_sum}
+    return sums.rename(columns=rename)
+
+
 def _mean_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute the average structural and ML metrics per Page.
-    Restricts calculation strictly to valid text lines (SCORED_CATEGS).
+    Restricts calculation strictly to valid text lines.
     """
     scored = df[df["categ"].isin(SCORED_CATEGS)].copy()
 
@@ -108,18 +122,25 @@ def _prevailing_lang(df: pd.DataFrame) -> pd.DataFrame:
 
 def _build_page_stats(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Combines Category Counts, Averages, and Main Language into a single flat DataFrame.
+    Combines Category Counts, Sums, Averages, and Main Language into a single flat DataFrame.
     """
     counts = _category_counts(df)
+    sums = _sum_metrics(df)
     means = _mean_metrics(df)
     langs = _prevailing_lang(df)
 
-    stats = counts.join(means, how="left").join(langs, how="left")
+    # Join all dataframes together on the multi-index (file, page_num)
+    stats = counts.join(sums, how="left").join(means, how="left").join(langs, how="left")
 
     # Round all calculated average columns to 4 decimal places
     for col in stats.columns:
         if col.startswith("avg_"):
             stats[col] = stats[col].round(4)
+
+    # Ensure totals are integers
+    for col in stats.columns:
+        if col.startswith("total_"):
+            stats[col] = stats[col].fillna(0).astype(int)
 
     stats.reset_index(inplace=True)
     return stats
@@ -169,7 +190,7 @@ def main() -> None:
     print(f"Aggregating {len(csv_files)} documents using Multiprocessing...")
     all_page_stats = []
 
-    # Aggregation is CPU light, max out thread count.
+    # Aggregation is CPU light, max out thread count safely.
     max_cores = min(multiprocessing.cpu_count(), 12)
 
     with ProcessPoolExecutor(max_workers=max_cores) as executor:
@@ -190,7 +211,7 @@ def main() -> None:
         final_df.sort_values(by=["file", "page_num"], inplace=True)
 
         final_df.to_csv(OUTPUT_STATS, index=False)
-        print(f"Done. Global stats saved to {OUTPUT_STATS} (Includes averaged metrics and 'main_lang' column)")
+        print(f"Done. Global stats saved to {OUTPUT_STATS}")
     else:
         print("No statistics were generated.")
 
