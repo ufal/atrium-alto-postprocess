@@ -454,7 +454,7 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 # Categorisation (REFINED PENALTY SYSTEM)
 # ---------------------------------------------------------------------------
 
-def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, expected_langs: list[str] = None) -> str:
+def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, weird_ratio: float, expected_langs: list[str] = None) -> str:
     """
     The main decision tree determining the final category of a line based on a
     unified weighted penalty score. It dynamically evaluates structural noise alongside
@@ -465,6 +465,7 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, 
         text_source (str): Raw text string to evaluate.
         lang (str): Predicted language code from FastText (e.g., "ces").
         lang_score (float): FastText language confidence score (0.0 to 1.0).
+        weird_ratio (float): Structural weirdness ratio of the words in the line.
         expected_langs (list[str]): The dataset's explicit allowlist of languages. Defaults to COMMON_LANGS.
 
     Returns:
@@ -484,13 +485,16 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, 
     if g_density > 0.35 or (wc <= 3 and g_density > 0.20):
         return "Trash"
 
+    # HARD OVERRIDE: Extreme features immediately flag as Trash, bypassing subtle logic
+    if ppl > 500.0 and weird_ratio > 0.4:
+        return "Trash"
+
     # 2. Cumulative Structural Penalty Calculation
     struct_penalties = 0.0
 
     sym_count = detect_strange_symbols(text_source)
     struct_penalties += sym_count * 0.4
 
-    # Add a flat non-linear penalty for multiple strange symbols so word-count normalization doesn't wash it out.
     if sym_count >= 2:
         struct_penalties += 0.5
 
@@ -502,8 +506,6 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, 
     penalties = struct_penalties
 
     # 3. Dynamic Perplexity Thresholding (WITH SHORT-PHRASE GATE)
-    # DistilGPT2 is English-centric. Valid short phrases often yield PPL > 5000.
-    # If the text is structurally clean, short, and in a known ALLOWLISTED language, we trust the structure over PPL.
     is_forgiven_short_phrase = (wc < 5) and (lang in expected_langs) and (struct_penalties == 0.0)
 
     if not is_forgiven_short_phrase:
@@ -515,15 +517,12 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, 
 
     # 4. Language Confidence Penalties
     if lang not in expected_langs:
-        # Heavily penalize 'exotic' language guesses (not in the configurable allowlist)
         if lang_score < 0.60:
             penalties += 0.8
     elif lang_score < 0.30:
-        # Standard languages get leeway, but severe unconfidence is penalized
         penalties += 0.5
 
     # 5. Final Categorization based on Cumulative Penalty
-    # Normalize the penalty by word count to prevent long lines from being trashed by minor sum errors
     normalized_penalty = penalties / max(1.0, wc / 5.0)
 
     if normalized_penalty >= 1.2:

@@ -176,7 +176,8 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         )
 
         # Apply the refined, unified penalty-based categorization passing down the dynamic language allowlist
-        categ = categorize_line(ppl_val, text_content, lang, score, expected_langs)
+        # PASSING weird_ratio TO FIX FLIP-FLOPPING ON GARBAGE
+        categ = categorize_line(ppl_val, text_content, lang, score, weird_ratio, expected_langs)
 
         # Construct final output row matching CSV_HEADER
         row = [
@@ -260,16 +261,35 @@ def process_document(args) -> int:
                 batch_meta.clear()
                 batch_counter += 1
 
+
     # Flush remaining trailing lines
     if batch_lines:
         b_id = f"{file_id}_{batch_counter}"
         process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
                                     expected_langs)
 
-    # Sort
+    # Sort and Apply Post-Processing Smoothing
     if out_path.exists():
         df = pd.read_csv(out_path)
         df = df.sort_values(by=["page_num", "line_num"], ascending=True)
+
+        if not df.empty:
+            # A. Header/Footer Deduplication
+            # If the exact same text string appears multiple times, force them all to share the most frequent category.
+            text_modes = df.groupby("text")["categ"].transform(
+                lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
+            df["categ"] = text_modes
+
+            # B. Context Smoothing (Rolling Window)
+            # If a "Noisy" line is sandwiched between two "Trash" lines, convert it to "Trash".
+            if len(df) >= 3:
+                prev_cat = df["categ"].shift(1)
+                next_cat = df["categ"].shift(-1)
+
+                surrounded_by_trash = (prev_cat == "Trash") & (next_cat == "Trash") & (df["categ"] == "Noisy")
+                df.loc[surrounded_by_trash, "categ"] = "Trash"
+
+        # Overwrite file with smoothed and sorted data
         df.to_csv(out_path, index=False)
 
     return processed_count
