@@ -464,23 +464,35 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float) 
     if g_density > 0.35 or (wc <= 3 and g_density > 0.20):
         return "Trash"
 
-    # 2. Cumulative Penalty Calculation
-    penalties = 0.0
+    # 2. Cumulative Structural Penalty Calculation
+    struct_penalties = 0.0
 
-    # Structural penalties
-    penalties += detect_strange_symbols(text_source) * 0.4
-    penalties += detect_letter_digit_letter(text_source) * 0.3
-    penalties += detect_mid_uppercase(text_source) * 0.2
-    penalties += detect_repeated_chars(text_source) * 0.4
-    penalties += detect_gibberish_words(text_source) * 0.5
+    sym_count = detect_strange_symbols(text_source)
+    struct_penalties += sym_count * 0.4
 
-    # 3. Dynamic Perplexity Thresholding
-    # Very short sequences inherently yield higher perplexity. We scale the allowance for short lines.
-    adjusted_ppl_threshold = PERPLEXITY_THRESHOLD_MIN * (1.5 if wc < 5 else 1.0)
-    if ppl > adjusted_ppl_threshold:
-        penalties += 0.5
-    if ppl > PERPLEXITY_THRESHOLD_MAX:
-        penalties += 1.0
+    # Address Group 3 Regression: If multiple strange symbols exist, add a flat
+    # non-linear penalty so the word-count normalization doesn't wash it out.
+    if sym_count >= 2:
+        struct_penalties += 0.5
+
+    struct_penalties += detect_letter_digit_letter(text_source) * 0.3
+    struct_penalties += detect_mid_uppercase(text_source) * 0.2
+    struct_penalties += detect_repeated_chars(text_source) * 0.4
+    struct_penalties += detect_gibberish_words(text_source) * 0.5
+
+    penalties = struct_penalties
+
+    # 3. Dynamic Perplexity Thresholding (WITH SHORT-PHRASE GATE)
+    # DistilGPT2 is English-centric. Valid short Czech/German phrases often yield PPL > 5000.
+    # If the text is structurally clean, short, and in a known language, we trust the structure over PPL.
+    is_forgiven_short_phrase = (wc < 5) and (lang in COMMON_LANGS) and (struct_penalties == 0.0)
+
+    if not is_forgiven_short_phrase:
+        adjusted_ppl_threshold = PERPLEXITY_THRESHOLD_MIN * (1.5 if wc < 5 else 1.0)
+        if ppl > adjusted_ppl_threshold:
+            penalties += 0.5
+        if ppl > PERPLEXITY_THRESHOLD_MAX:
+            penalties += 1.0
 
     # 4. Language Confidence Penalties
     if lang not in COMMON_LANGS:
@@ -492,7 +504,7 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float) 
         penalties += 0.5
 
     # 5. Final Categorization based on Cumulative Penalty
-    # Normalize the penalty by word count to prevent long, mostly good lines from being trashed by minor sum errors
+    # Normalize the penalty by word count to prevent long lines from being trashed by minor sum errors
     normalized_penalty = penalties / max(1.0, wc / 5.0)
 
     if normalized_penalty >= 1.2:
