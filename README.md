@@ -301,7 +301,7 @@ Lines that pass the pre-filter are analysed by four structural detectors defined
 **Immediate Trash overrides** (checked first, before penalty accumulation):
 
 * Garbage density > 0.35, or garbage density > 0.20 on lines of ≤ 3 words → **Trash**
-* Perplexity > 500 **and** `word_weird` > 0.4 simultaneously → **Trash**
+* Perplexity > 500 **and** a structural weirdness ratio (`word_weird`) > 0.4 simultaneously → **Trash** *(hard override to catch severe, high-confidence garbage)*
 
 **Penalty accumulation** (for lines that pass the overrides):
 
@@ -343,10 +343,10 @@ otherwise                 →  Clear
 
 ##### Post-Processing Smoothing
 
-After all lines in a document are classified and written to CSV, a smoothing pass is applied before the file is finalized:
+After all lines in a document are classified and written to CSV, a final data-smoothing pass is applied before the file is finalized to prevent unnatural categorization anomalies:
 
-1. **Header/Footer Deduplication** — If the exact same text string appears multiple times across pages, all occurrences are forced to share the most frequent category assigned to that string.
-2. **Context Smoothing (Rolling Window)** — If a **Noisy** line is sandwiched between two consecutive **Trash** lines, it is reclassified as **Trash**.
+1. **Header/Footer Deduplication** — Resolves edge-case flip-flopping. If the exact same text string appears multiple times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
+2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between two consecutive **Trash** lines, it is automatically downgraded to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
 
 Example of per-document CSV files: [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁.
 ```
