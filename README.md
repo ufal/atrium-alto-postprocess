@@ -368,7 +368,7 @@ python3 langID_aggregate_STAT.py
 ```
 
 * **Input 📥:** `DOC_LINE_LANG_CLASS/` (directory with CSV files from the previous step)
-* **Output 1 📤:** `result_page_summary.csv` — global page-level summary across all documents
+* **Output 1 📤:** `ARUP_short_page_stats.csv` — global page-level summary across all documents
 * **Output 2 📤:** `../DOC_LINE_STAT/` — per-document CSVs with the same schema
 
 For each page, the aggregation computes:
@@ -405,7 +405,7 @@ For each page, the aggregation computes:
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
 
-- *Example*: [result_page_summary.csv](result_page_summary.csv) 📎
+- *Example*: [ARUP_short_page_stats.csv](ARUP_short_page_stats.csv) 📎
 
 Example of per-document aggregate CSV files: [DOC_LINE_STAT](data_samples/DOC_LINE_STAT) 📁.
 ```
@@ -415,7 +415,7 @@ DOC_LINE_STAT/
 └── ...
 ```
 
-This is the end of the text quality classification and filtering step. You can now use `result_page_summary.csv` to
+This is the end of the text quality classification and filtering step. You can now use `ARUP_short_page_stats.csv` to
 identify files that need another round of OCR or manual correction based on the line type counts. Pages with the
 majority of clear lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of trash lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.

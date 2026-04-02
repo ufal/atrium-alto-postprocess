@@ -1,55 +1,55 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,symbol,upper,word_weird,quality_score,categ
-CTX197402444,1,1,o P ATOVICEn.Le,,,ron_Latn,0.3607,6780.82,0,1,0.0333,0.6817,Noisy
-CTX197402444,1,2,Kat. obec:,,,ces_Latn,0.5404,3295.2,0,0,0.0,0.7182,Noisy
-CTX197402444,1,3,Osada:,,,pol_Latn,0.9951,1675.95,0,0,0.0,0.789,Clear
-CTX197402444,1,4,Trať: Pardubice,,,ron_Latn,0.4071,722.07,0,0,0.0,0.8661,Clear
-CTX197402444,1,5,Okres:,,,slk_Latn,0.7247,1153.12,0,0,0.0,0.8099,Clear
-CTX197402444,1,6,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,7,Druh a kultura:,,,ces_Latn,0.9973,497.97,0,0,0.0,0.8751,Clear
-CTX197402444,1,8,Lužické sídliště,,,ces_Latn,1.0,168.17,0,0,0.0,0.9093,Clear
-CTX197402444,1,9,Zpráva,,,ces_Latn,1.0,4575.0,0,0,0.0,0.723,Clear
-CTX197402444,1,10,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,11,XXWžkumu,,,lvs_Latn,0.8246,673.4,0,1,0.1,0.8411,Clear
-CTX197402444,1,12,XAterenta,,,vie_Latn,0.5591,7430.26,0,1,0.1,0.669,Noisy
-CTX197402444,1,13,kmixxxx,,,mlt_Latn,0.9954,7427.37,0,0,0.0,0.707,Clear
-CTX197402444,1,14,ved. oddělení,,,ces_Latn,1.0,2379.48,0,0,0.0,0.7947,Clear
-CTX197402444,1,15,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,16,za období:,,,slv_Latn,0.9609,3282.92,0,0,0.0,0.7487,Noisy
-CTX197402444,1,17,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,18,19.111.1974,,,,0.0,0.0,0,0,0.0,0.0,Non-text
-CTX197402444,1,19,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,20,Dne 19.III.1974 jsije navštívili pískovnu JZD,,,ces_Latn,0.9896,1041.71,0,0,0.0,0.89,Clear
-CTX197402444,1,21,"v Opatovicích n.L., známou z velkého záchraného výzkumu AŮ ČSAV",,,ces_Latn,0.9999,451.69,0,0,0.0,0.9306,Clear
-CTX197402444,1,22,v Praze v letech 1956-1959. Tehdy práce v pískovně byla zastavena,,,ces_Latn,1.0,662.33,0,0,0.0,0.9293,Clear
-CTX197402444,1,23,a proto výzkum byl přerušen.,,,ces_Latn,1.0,438.9,0,0,0.0,0.8997,Clear
-CTX197402444,1,24,"Zjistili jsme, že práce v pískovně byly obnoveny,",,,ces_Latn,1.0,408.69,0,0,0.0,0.9204,Clear
-CTX197402444,1,25,rozsah pískovny se zvětšil i za hranice záchranného výzkumu. Na,,,ces_Latn,1.0,219.02,0,0,0.0,0.9495,Clear
-CTX197402444,1,26,"bagrem skryté ploše jsou znatelné 3—4 hlubší objekty, skrývka",,,ces_Latn,0.9999,449.33,0,0,0.0,0.9332,Clear
-CTX197402444,1,27,"však šla velmi hluboko, takže mad± mělčí objekty byly zcela",,,ces_Latn,1.0,418.25,1,0,0.04,0.9161,Clear
-CTX197402444,1,28,zničeny,,,ces_Latn,0.9685,12667.07,0,0,0.0,0.707,Clear
-CTX197402444,1,29,Podle teréního pozorování,,,ces_Latn,1.0,1231.27,0,0,0.0,0.8757,Clear
-CTX197402444,1,30,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,31,je ještě část sídliště,,,ces_Latn,1.0,78.43,0,0,0.0,0.9189,Clear
-CTX197402444,1,32,"zachována na parc.č. 1503, kde jsme sběrem",,,ces_Latn,1.0,471.94,0,0,0.0,0.9017,Clear
-CTX197402444,1,33,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,34,získali lžickou kera-,,,ces_Latn,0.9651,953.31,0,0,0.0,0.8686,Clear
-CTX197402444,1,35,"miku. Další střepy jsme našli na parc.č. 1510, scvernt od pískovny",,,ces_Latn,0.9997,660.44,0,0,0.0,0.9214,Clear
-CTX197402444,1,36,Ty však mohou pocházet z rozrušených žárových hrobů.,,,ces_Latn,0.9965,253.64,0,0,0.0,0.9361,Clear
-CTX197402444,1,37,"Domnáváme se, že AÚ ČSAV v Praze by měl dokončit",,,ces_Latn,1.0,371.62,0,0,0.0,0.9269,Clear
-CTX197402444,1,38,"Výzkum tohoto důležitého lužického sídliště, aby tak byl ukázán",,,ces_Latn,1.0,190.18,0,0,0.0,0.9506,Clear
-CTX197402444,1,39,poprvé celý půdorys pravěké vesnice i s pohřebištěm,,,ces_Latn,1.0,190.73,0,0,0.0,0.9434,Clear
-CTX197402444,1,40,"V Hradci Králové, 27.111.1974",,,ces_Latn,0.9143,1101.0,0,0,0.0,0.8539,Clear
-CTX197402444,1,41,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,42,.předejte prosím Dr.J.Ratajo,,,ces_Latn,0.9993,871.61,0,0,0.0,0.861,Clear
-CTX197402444,1,43,"| ver,výzkumu v Opatovicích.",,,ces_Latn,0.9907,1114.27,1,0,0.0,0.8513,Noisy
-CTX197402444,1,44,"Domnívám se, že druhý vedoucfvýzkumu v Opatovicích na sídlišti,Dr",,,ces_Latn,0.997,229.41,0,0,0.0,0.9466,Clear
-CTX197402444,1,45,V.Vokolek by mohl-vzhledem k blízkosti svého pracoviště zahájit jednání,,,ces_Latn,1.0,574.54,0,0,0.0,0.9396,Clear
-CTX197402444,1,46,"s ústavem o další výzkum na sídlišti . Doporučuji, aby tento výzkum",,,ces_Latn,0.9999,141.54,0,0,0.0,0.9524,Clear
-CTX197402444,1,47,mu byl svěřen.,,,ces_Latn,1.0,708.63,0,0,0.0,0.8642,Clear
-CTX197402444,1,48,ov Praze dne 7.5.1974. R_,,,bos_Latn,0.777,638.38,0,0,0.0,0.8515,Clear
-CTX197402444,1,49,Poznámka: Pište pokud možno strojem. Na konci uveďte datum odeslání a čitelný podpis. Zprávy koreferenta komisí,,,ces_Latn,0.9837,277.62,0,0,0.0,0.9808,Clear
-CTX197402444,1,50,7) vyhotovte dvojmo. ;,,,slk_Latn,0.9717,1684.32,0,0,0.0,0.8137,Clear
-CTX197402444,1,51,v^UlíLa uq (AAuu Aud. AnMlut,,,lmo_Latn,0.7617,3967.41,1,2,0.12,0.6892,Noisy
-CTX197402444,1,52,V r Wrr (ia 7 TcedLir). 2 {,,,eng_Latn,0.4174,4034.93,1,1,0.0125,0.7162,Trash
-CTX197402444,1,53,,,,,0.0,0.0,0,0,0.0,0.0,Empty
-CTX197402444,1,54,y.,,,,0.0,0.0,0,0,0.0,0.0,Non-text
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,quality_score,categ
+CTX197402444,1,1,o P ATOVICEn.Le,,,ron_Latn,0.3607,6780.82,3,15,0.0,0,1,0,0,0,0.0,0.4283,Trash
+CTX197402444,1,2,Kat. obec:,,,ces_Latn,0.5404,3295.2,2,10,0.1,0,0,0,0,0,0.0,0.7182,Trash
+CTX197402444,1,3,Osada:,,,pol_Latn,0.9951,1675.95,1,6,0.1667,0,0,0,0,0,0.0,0.789,Clear
+CTX197402444,1,4,Trať: Pardubice,,,ron_Latn,0.4071,722.07,2,15,0.0667,0,0,0,0,0,0.0,0.8661,Noisy
+CTX197402444,1,5,Okres:,,,slk_Latn,0.7247,1153.12,1,6,0.1667,0,0,0,0,0,0.0,0.8099,Clear
+CTX197402444,1,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,7,Druh a kultura:,,,ces_Latn,0.9973,497.97,3,15,0.0667,0,0,0,0,0,0.0,0.7417,Clear
+CTX197402444,1,8,Lužické sídliště,,,ces_Latn,1.0,168.17,2,16,0.0,0,0,0,0,0,0.0,0.9093,Clear
+CTX197402444,1,9,Zpráva,,,ces_Latn,1.0,4575.0,1,6,0.0,0,0,0,0,0,0.0,0.723,Noisy
+CTX197402444,1,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,11,XXWžkumu,,,lvs_Latn,0.8246,673.4,1,8,0.0,0,1,0,0,0,0.0,0.8811,Clear
+CTX197402444,1,12,XAterenta,,,vie_Latn,0.5591,7430.26,1,9,0.0,0,1,0,0,0,0.0,0.709,Trash
+CTX197402444,1,13,kmixxxx,,,mlt_Latn,0.9954,7427.37,1,7,0.0,0,0,0,0,1,0.0,0.707,Trash
+CTX197402444,1,14,ved. oddělení,,,ces_Latn,1.0,2379.48,2,13,0.0,0,0,0,0,0,0.0,0.7947,Noisy
+CTX197402444,1,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,16,za období:,,,slv_Latn,0.9609,3282.92,2,10,0.1,0,0,0,0,0,0.0,0.5487,Noisy
+CTX197402444,1,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,18,19.111.1974,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Non-text
+CTX197402444,1,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,20,Dne 19.III.1974 jsije navštívili pískovnu JZD,,,ces_Latn,0.9896,1041.71,6,45,0.0,0,0,0,0,1,0.0,0.8233,Noisy
+CTX197402444,1,21,"v Opatovicích n.L., známou z velkého záchraného výzkumu AŮ ČSAV",,,ces_Latn,0.9999,451.69,10,63,0.0,0,0,0,0,0,0.0,0.7706,Clear
+CTX197402444,1,22,v Praze v letech 1956-1959. Tehdy práce v pískovně byla zastavena,,,ces_Latn,1.0,662.33,11,65,0.0154,0,0,0,0,1,0.0,0.7838,Clear
+CTX197402444,1,23,a proto výzkum byl přerušen.,,,ces_Latn,1.0,438.9,5,28,0.0,0,0,0,0,0,0.0,0.8197,Clear
+CTX197402444,1,24,"Zjistili jsme, že práce v pískovně byly obnoveny,",,,ces_Latn,1.0,408.69,8,49,0.0,0,0,0,0,0,0.0,0.8204,Clear
+CTX197402444,1,25,rozsah pískovny se zvětšil i za hranice záchranného výzkumu. Na,,,ces_Latn,1.0,219.02,10,63,0.0,0,0,0,0,0,0.0,0.7895,Clear
+CTX197402444,1,26,"bagrem skryté ploše jsou znatelné 3—4 hlubší objekty, skrývka",,,ces_Latn,0.9999,449.33,9,61,0.0164,0,0,0,0,0,0.0,0.8887,Clear
+CTX197402444,1,27,"však šla velmi hluboko, takže mad± mělčí objekty byly zcela",,,ces_Latn,1.0,418.25,10,59,0.0169,1,0,0,0,0,0.04,0.8921,Clear
+CTX197402444,1,28,zničeny,,,ces_Latn,0.9685,12667.07,1,7,0.0,0,0,0,0,0,0.0,0.707,Trash
+CTX197402444,1,29,Podle teréního pozorování,,,ces_Latn,1.0,1231.27,3,25,0.0,0,0,0,0,0,0.0,0.8757,Clear
+CTX197402444,1,30,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,31,je ještě část sídliště,,,ces_Latn,1.0,78.43,4,22,0.0,0,0,0,0,0,0.0,0.8189,Clear
+CTX197402444,1,32,"zachována na parc.č. 1503, kde jsme sběrem",,,ces_Latn,1.0,471.94,7,42,0.0,0,0,0,0,0,0.0,0.7874,Clear
+CTX197402444,1,33,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,34,získali lžickou kera-,,,ces_Latn,0.9651,953.31,3,21,0.0476,0,0,0,0,0,0.0,0.8686,Clear
+CTX197402444,1,35,"miku. Další střepy jsme našli na parc.č. 1510, scvernt od pískovny",,,ces_Latn,0.9997,660.44,11,66,0.0,0,0,0,0,1,0.0,0.8123,Clear
+CTX197402444,1,36,Ty však mohou pocházet z rozrušených žárových hrobů.,,,ces_Latn,0.9965,253.64,8,52,0.0,0,0,0,0,0,0.0,0.8361,Clear
+CTX197402444,1,37,"Domnáváme se, že AÚ ČSAV v Praze by měl dokončit",,,ces_Latn,1.0,371.62,10,48,0.0,0,0,0,0,0,0.0,0.7269,Clear
+CTX197402444,1,38,"Výzkum tohoto důležitého lužického sídliště, aby tak byl ukázán",,,ces_Latn,1.0,190.18,9,63,0.0,0,0,0,0,0,0.0,0.9506,Clear
+CTX197402444,1,39,poprvé celý půdorys pravěké vesnice i s pohřebištěm,,,ces_Latn,1.0,190.73,8,51,0.0,0,0,0,0,0,0.0,0.8434,Clear
+CTX197402444,1,40,"V Hradci Králové, 27.111.1974",,,ces_Latn,0.9143,1101.0,4,29,0.0,0,0,0,0,1,0.0,0.6539,Noisy
+CTX197402444,1,41,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,42,.předejte prosím Dr.J.Ratajo,,,ces_Latn,0.9993,871.61,3,28,0.0,0,0,0,0,0,0.0,0.861,Clear
+CTX197402444,1,43,"| ver,výzkumu v Opatovicích.",,,ces_Latn,0.9907,1114.27,4,28,0.0357,1,0,0,0,0,0.0,0.6513,Noisy
+CTX197402444,1,44,"Domnívám se, že druhý vedoucfvýzkumu v Opatovicích na sídlišti,Dr",,,ces_Latn,0.997,229.41,9,65,0.0,0,0,0,0,0,0.0,0.7688,Clear
+CTX197402444,1,45,V.Vokolek by mohl-vzhledem k blízkosti svého pracoviště zahájit jednání,,,ces_Latn,1.0,574.54,9,71,0.0141,0,0,0,0,0,0.0,0.8507,Clear
+CTX197402444,1,46,"s ústavem o další výzkum na sídlišti . Doporučuji, aby tento výzkum",,,ces_Latn,0.9999,141.54,12,67,0.0,0,0,0,0,0,0.0,0.819,Clear
+CTX197402444,1,47,mu byl svěřen.,,,ces_Latn,1.0,708.63,3,14,0.0,0,0,0,0,0,0.0,0.7309,Clear
+CTX197402444,1,48,ov Praze dne 7.5.1974. R_,,,bos_Latn,0.777,638.38,5,25,0.04,0,0,0,0,1,0.0,0.6115,Noisy
+CTX197402444,1,49,Poznámka: Pište pokud možno strojem. Na konci uveďte datum odeslání a čitelný podpis. Zprávy koreferenta komisí,,,ces_Latn,0.9837,277.62,16,111,0.009,0,0,0,0,0,0.0,0.9308,Clear
+CTX197402444,1,50,7) vyhotovte dvojmo. ;,,,slk_Latn,0.9717,1684.32,4,22,0.0455,0,0,0,0,0,0.0,0.6137,Clear
+CTX197402444,1,51,v^UlíLa uq (AAuu Aud. AnMlut,,,lmo_Latn,0.7617,3967.41,5,28,0.0357,1,1,0,0,0,0.1,0.5772,Noisy
+CTX197402444,1,52,V r Wrr (ia 7 TcedLir). 2 {,,,eng_Latn,0.4174,4034.93,8,27,0.037,1,1,0,0,0,0.0125,0.4212,Noisy
+CTX197402444,1,53,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Empty
+CTX197402444,1,54,y.,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Non-text
