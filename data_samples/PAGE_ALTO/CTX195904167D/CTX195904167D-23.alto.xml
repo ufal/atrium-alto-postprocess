@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd"><Description>
+<MeasurementUnit>pixel</MeasurementUnit>
+<sourceImageInformation><fileName>CTX195904167D.pdf</fileName></sourceImageInformation>
+<OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-07-08</processingDateTime><processingSoftware><softwareCreator>ABBYY</softwareCreator><softwareName>ABBYY FineReader Server</softwareName><softwareVersion>14.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
+</Description>
+<Styles>
+<ParagraphStyle ID="StyleId-25031368-0C91-44FF-9E2B-3ADF7088BD54-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="16.100000381469727" />
+<ParagraphStyle ID="StyleId-CAE190CD-A8FB-4E63-8AC8-F131B1DA80F4-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="16.100000381469727" />
+<ParagraphStyle ID="StyleId-FBB115D7-C4E5-4962-B3EA-197E3CA9F0E9-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="16.100000381469727" />
+<ParagraphStyle ID="StyleId-ADC16A9F-13C9-4FA3-93D2-C6E00ABCD235-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="16.100000381469727" />
+<ParagraphStyle ID="StyleId-B0EBEDC4-D458-433B-916C-DF6EC942FEB9-" ALIGN="Right" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="13.439999580383301" />
+<ParagraphStyle ID="StyleId-BEA43C57-32B3-4E1E-9260-9D02C1AD2545-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="34.5" />
+<ParagraphStyle ID="StyleId-D6B77507-9979-4B9E-B332-E6D0455E3657-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="22.149999618530273" />
+<ParagraphStyle ID="StyleId-61A0C4BF-0111-4F59-842D-FC20D57487B9-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="35.599998474121094" />
+<ParagraphStyle ID="StyleId-FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-1A83F992-1784-4188-BFAA-508D48F1F025-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-D3923E5E-908D-4A6E-B9B3-529446F03E5A-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-C0895904-BC9E-474C-B76E-3255EAD1F7ED-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-42FFABB6-FF84-46CD-A445-B8E422355945-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-6BAA0654-22C0-497F-B73E-679CFE87199E-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-06B28ECE-E8FC-4755-8489-83B6593BA059-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+<ParagraphStyle ID="StyleId-940061D5-7772-4B62-BDBA-04F17FBA7D52-" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." />
+</Styles>
+<Layout><Page ID="Page23" PHYSICAL_IMG_NR="23" HEIGHT="3579" WIDTH="2510">
+<TopMargin HEIGHT="77" WIDTH="2510" VPOS="0" HPOS="0">
+</TopMargin>
+<LeftMargin HEIGHT="2255" WIDTH="196" VPOS="77" HPOS="0">
+</LeftMargin>
+<RightMargin HEIGHT="2255" WIDTH="145" VPOS="77" HPOS="2365">
+</RightMargin>
+<BottomMargin HEIGHT="1247" WIDTH="2510" VPOS="2332" HPOS="0">
+</BottomMargin>
+<PrintSpace HEIGHT="2255" WIDTH="2169" VPOS="77" HPOS="196">
+<TextBlock ID="Page23_Block1" HEIGHT="53" WIDTH="541" VPOS="88" HPOS="196" LANG="cs" STYLEREFS="StyleId-25031368-0C91-44FF-9E2B-3ADF7088BD54-">
+<TextLine HEIGHT="41" WIDTH="520" VPOS="94" HPOS="211"><String CONTENT="Plesná" HEIGHT="39" WIDTH="166" VPOS="96" HPOS="211" /><SP HEIGHT="37" WIDTH="27" VPOS="97" HPOS="378" /><String CONTENT="-" HEIGHT="7" WIDTH="25" VPOS="117" HPOS="406" /><SP HEIGHT="35" WIDTH="41" VPOS="98" HPOS="432" /><String CONTENT="okt." HEIGHT="35" WIDTH="97" VPOS="98" HPOS="474" /><SP HEIGHT="39" WIDTH="43" VPOS="94" HPOS="572" /><String CONTENT="Cheb" HEIGHT="39" WIDTH="115" VPOS="94" HPOS="616" /></TextLine>
+</TextBlock>
+<TextBlock ID="Page23_Block2" HEIGHT="136" WIDTH="627" VPOS="214" HPOS="198" LANG="cs" STYLEREFS="StyleId-25031368-0C91-44FF-9E2B-3ADF7088BD54-">
+<TextLine HEIGHT="39" WIDTH="254" VPOS="220" HPOS="204"><String CONTENT="Tvrziště." HEIGHT="39" WIDTH="254" VPOS="220" HPOS="204" /></TextLine>
+<TextLine HEIGHT="48" WIDTH="615" VPOS="296" HPOS="204"><String CONTENT="Příkop" HEIGHT="47" WIDTH="175" VPOS="297" HPOS="204" /><SP HEIGHT="36" WIDTH="27" VPOS="308" HPOS="380" /><String CONTENT="-" HEIGHT="7" WIDTH="24" VPOS="317" HPOS="408" /><SP HEIGHT="28" WIDTH="35" VPOS="307" HPOS="433" /><String CONTENT="neg.č." HEIGHT="47" WIDTH="164" VPOS="296" HPOS="469" /><SP HEIGHT="39" WIDTH="40" VPOS="296" HPOS="634" /><String CONTENT="15709" HEIGHT="42" WIDTH="144" VPOS="296" HPOS="675" /></TextLine>
+</TextBlock><Illustration ID="Page23_Block3" HEIGHT="253" WIDTH="442" VPOS="77" HPOS="1923" /><Illustration ID="Page23_Block4" HEIGHT="1366" WIDTH="993" VPOS="966" HPOS="698" /><GraphicalElement ID="Page23_Block5" HEIGHT="498" WIDTH="5" VPOS="1608" HPOS="698" /><GraphicalElement ID="Page23_Block6" HEIGHT="230" WIDTH="20" VPOS="2080" HPOS="953" /><GraphicalElement ID="Page23_Block7" HEIGHT="147" WIDTH="5" VPOS="1415" HPOS="1426" /><GraphicalElement ID="Page23_Block8" HEIGHT="322" WIDTH="4" VPOS="1446" HPOS="1687" />
+</PrintSpace>
+</Page>
+</Layout></alto>
