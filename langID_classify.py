@@ -23,11 +23,9 @@ import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
-# Import from our refined utility script
 from text_util_langID import *
 from atrium_paradata import ParadataLogger
 
-# Standardized output headers for the final CSV files
 CSV_HEADER = [
     "file", "page_num", "line_num", "text",
     "split_ws", "split_we",
@@ -38,26 +36,17 @@ CSV_HEADER = [
     "ldl_fuses", "gibberish",
     "word_weird",
     "quality_score",
-    "categ",
+    "categ", "is_caps_header"
 ]
 
 
-# ---------------------------------------------------------------------------
-# GPU Worker (Consumer)
-# ---------------------------------------------------------------------------
 def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
-    """
-    Runs entirely on the GPU/primary device. Holds the ONLY copy of distilgpt2 in memory.
-    Consumes batches of text from CPU workers via a Queue, computes Perplexity,
-    and returns results via a shared dictionary.
-    """
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[GPU Engine] Initializing DistilGPT2 on {device.upper()}...")
 
     try:
-        # Load the DistilGPT2 tokenizer and model
         tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
         tokenizer.pad_token = tokenizer.eos_token
         model = AutoModelForCausalLM.from_pretrained("distilgpt2").to(device)
@@ -69,48 +58,32 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
 
     while True:
         try:
-            # Pull a batch from the queue. Timeout allows graceful shutdown checks.
             msg = task_queue.get(timeout=1.0)
             if msg == "STOP":
                 print("[GPU Engine] Received STOP signal. Shutting down.")
                 break
 
             batch_id, texts = msg
-
-            # Compute perplexity scores for the text batch
             ppls = calculate_perplexity_batch(texts, model, tokenizer, device)
-
-            # Post results back to the shared memory dictionary using the batch_id as the key
             result_dict[batch_id] = ppls
 
         except queue.Empty:
             continue
         except Exception as e:
             print(f"[GPU Engine Error] Processing batch: {e}")
-            # Ensure CPU workers don't hang infinitely if a batch fails by returning zeros
             if 'msg' in locals() and msg != "STOP":
                 result_dict[msg[0]] = [0.0] * len(msg[1])
 
 
-# ---------------------------------------------------------------------------
-# CPU Worker Pool (Producers)
-# ---------------------------------------------------------------------------
 worker_models = {}
 
 
 def init_cpu_worker():
-    """
-    Initializes lightweight CPU models (FastText) once per CPU core/worker.
-    Since FastText is purely CPU-bound, loading it per-worker scales linearly and safely.
-    """
     import fasttext
     worker_models['ft'] = fasttext.load_model("lid.176.bin")
 
 
 def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
-    """
-    Appends classified rows to the respective document's CSV log.
-    """
     out_path = output_dir / f"{file_id}.csv"
     file_exists = out_path.exists()
 
@@ -123,29 +96,20 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
 
 def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tuple], out_dir: Path,
                                 task_queue: mp.Queue, result_dict: dict, expected_langs: list[str] = None):
-    """
-    Core CPU task logic. Submits heavy text sequences to the GPU, processes
-    Regex/FastText concurrently while waiting, extracts structure data, and finalizes categorization.
-    """
     ft = worker_models['ft']
 
-    # 1. Dispatch heavy text sequences to the GPU Engine immediately
     task_queue.put((batch_id, lines))
 
-    # 2. Concurrently run Language ID (FastText) on the CPU while waiting for the GPU
     lines_lower = [line.lower() for line in lines]
     labels, scores = ft.predict(lines_lower, k=1)
     langs = [l[0].replace("__label__", "") for l in labels]
     scores = [s[0] for s in scores]
 
-    # 3. Poll the shared dictionary until the GPU engine finishes this specific batch
     while batch_id not in result_dict:
         time.sleep(0.01)
 
-    # Extract and clean up the result to free shared memory
     ppls = result_dict.pop(batch_id)
 
-    # 4. Finalize Structural Extraction & Apply Refined Categorization Logic
     results = []
     for i in range(len(lines)):
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
@@ -154,7 +118,6 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         lang = langs[i]
         score = scores[i]
 
-        # --- Extracted Metrics (For CSV Logging) ---
         wc = len(text_content.split())
         cc = len(text_content)
         g_density = compute_garbage_density(text_content)
@@ -175,35 +138,32 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             text_length=cc,
         )
 
-        # Apply the refined, unified penalty-based categorization passing down the dynamic language allowlist
-        # PASSING weird_ratio TO FIX FLIP-FLOPPING ON GARBAGE
         categ = categorize_line(ppl_val, text_content, lang, score, weird_ratio, expected_langs)
 
-        # Construct final output row matching CSV_HEADER
+        # Calculate structural header state
+        is_caps_header = (
+                                 sum(1 for w in text_content.split() if w.strip().isupper()) / max(1,
+                                                                                                   len(text_content.split()))
+                         ) >= 0.6
+
         row = [
             file_id, page_id, line_num, text_content,
             split_ws, split_we, lang, f"{score:.4f}", f"{ppl_val:.2f}",
             wc, cc, f"{g_density:.4f}",
             sym_count, upper_count, rep_count,
             fuse_count, gibb_count,
-            f"{weird_ratio:.4f}", f"{q_score:.4f}", categ,
+            f"{weird_ratio:.4f}", f"{q_score:.4f}", categ, is_caps_header
         ]
         results.append(row)
 
-    # Sort results by document ID to group them safely before writing
     results.sort(key=lambda x: x[0])
     for doc_id, group in groupby(results, key=lambda x: x[0]):
         write_rows_to_doc(out_dir, doc_id, list(group))
 
 
 def process_document(args) -> int:
-    """
-    Task mapped to the ProcessPool. Reads a specific document's pages,
-    repairs split words, and batches the lines for ML processing.
-    """
     file_id, file_rows, text_dir, out_dir, batch_size, task_queue, result_dict, expected_langs = args
 
-    # Check if this document has already been processed to allow crash-recovery
     out_path = Path(out_dir) / f"{file_id}.csv"
     if out_path.exists():
         return 0
@@ -213,7 +173,6 @@ def process_document(args) -> int:
     processed_count = 0
     batch_counter = 0
 
-    # Iterate over pages associated with this document ID
     for _, row in file_rows.iterrows():
         page_id = str(row["page"])
         txt_path = Path(text_dir) / file_id / f"{file_id}-{page_id}.txt"
@@ -231,7 +190,6 @@ def process_document(args) -> int:
             current_split_ws = outgoing_prefix
             current_split_we = ""
 
-            # Re-attach fragments split across page/line breaks
             if expected_incoming_suffix:
                 stripped = merged_text.lstrip()
                 if stripped.startswith(expected_incoming_suffix):
@@ -241,11 +199,10 @@ def process_document(args) -> int:
             expected_incoming_suffix = outgoing_suffix
             cat, clean_merged = pre_filter_line(merged_text)
 
-            # Bypassing ML ops if entirely non-text
             if cat != "Process":
                 write_rows_to_doc(Path(out_dir), file_id, [[
                     file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
-                    "N/A", 0, 0, 0, 0, "0.0000", 0, 0, 0, 0, 0, "0.0000", "0.0000", cat
+                    "N/A", 0, 0, 0, 0, "0.0000", 0, 0, 0, 0, 0, "0.0000", "0.0000", cat, False
                 ]])
                 continue
 
@@ -261,27 +218,20 @@ def process_document(args) -> int:
                 batch_meta.clear()
                 batch_counter += 1
 
-
-    # Flush remaining trailing lines
     if batch_lines:
         b_id = f"{file_id}_{batch_counter}"
         process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
                                     expected_langs)
 
-    # Sort and Apply Post-Processing Smoothing
     if out_path.exists():
         df = pd.read_csv(out_path)
         df = df.sort_values(by=["page_num", "line_num"], ascending=True)
 
         if not df.empty:
-            # A. Header/Footer Deduplication
-            # If the exact same text string appears multiple times, force them all to share the most frequent category.
             text_modes = df.groupby("text")["categ"].transform(
                 lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
             df["categ"] = text_modes
 
-            # B. Context Smoothing (Rolling Window)
-            # If a "Noisy" line is sandwiched between two "Trash" lines, convert it to "Trash".
             if len(df) >= 3:
                 prev_cat = df["categ"].shift(1)
                 next_cat = df["categ"].shift(-1)
@@ -289,20 +239,12 @@ def process_document(args) -> int:
                 surrounded_by_trash = (prev_cat == "Trash") & (next_cat == "Trash") & (df["categ"] == "Noisy")
                 df.loc[surrounded_by_trash, "categ"] = "Trash"
 
-        # Overwrite file with smoothed and sorted data
         df.to_csv(out_path, index=False)
 
     return processed_count
 
 
-# ---------------------------------------------------------------------------
-# Main Orchestrator
-# ---------------------------------------------------------------------------
 def main():
-    """
-    Entry point. Reads the config, sets up multiprocessing queues, starts the GPU engine,
-    and maps the documents to the CPU Worker Pool.
-    """
     config = configparser.ConfigParser()
     config.read("config_langID.txt")
 
@@ -312,7 +254,6 @@ def main():
     BATCH_SIZE = config.getint("CLASSIFY", "BATCH_SIZE")
     WORKERS_MAX = config.getint("CLASSIFY", "WORKERS_MAX", fallback=32)
 
-    # Pull expected languages configuration, falling back to 'ces,deu,eng'
     EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng")
     EXPECTED_LANGS = [lang.strip() for lang in EXPECTED_LANGS_STR.split(",") if lang.strip()]
 
@@ -323,23 +264,18 @@ def main():
     sort_cols = (["file", "page", "line_order"] if "line_order" in df.columns else ["file", "page"])
     df = df.sort_values(by=sort_cols)
 
-    # 1. Set up Inter-Process Shared Memory
     manager = mp.Manager()
     task_queue = manager.Queue()
     result_dict = manager.dict()
 
-    # 2. Spin up the dedicated GPU Engine
     gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict))
     gpu_process.start()
 
-    # 3. Create tasks mapped with the Proxies AND the custom language config
     grouped_tasks = []
     for file_id, group in df.groupby("file"):
         grouped_tasks.append(
             (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS))
 
-    # CPU Cores handle standard multiprocessing. Because DistilGPT2 is out of the picture,
-    # we can safely max out the CPU cores to WORKERS_MAX without triggering an OOM.
     max_cores = min(mp.cpu_count(), WORKERS_MAX)
     print(f"Starting {max_cores} CPU Document Processors...")
 
@@ -355,7 +291,6 @@ def main():
             except Exception as e:
                 tqdm.write(f"Error processing {file_id}: {e}")
 
-    # 4. Graceful Shutdown
     print("All documents processed. Shutting down GPU Engine...")
     task_queue.put("STOP")
     gpu_process.join()
