@@ -286,13 +286,13 @@ Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side c
 
 Lines that pass the pre-filter are analysed by four structural detectors defined in `text_util_langID.py`:
 
-| Detector | What it counts |
-|---|---|
-| `detect_strange_symbols` | Words containing any character that is not alphanumeric and not in the allowed set `{ . - , + ( ) " ' / _ — – : % }`. Edge punctuation is stripped before inspection. |
+| Detector                     | What it counts                                                                                                                                                                                             |
+|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the allowed set `{ . - , + ( ) " ' / _ — – : % }`. Edge punctuation is stripped before inspection.                                      |
 | `detect_letter_digit_letter` | Words with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g., `vyt1ačená`, `nalez2í`). Legitimate patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger. |
-| `detect_mid_uppercase` | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase run at the start followed by lowercase (`XXWžkumu`). All-caps words and titles (`PhDr`, `MUDr`) are excluded. |
-| `detect_repeated_chars` | Words where a single non-standard character makes up ≥ 40% of the word (e.g., OCR stutter like `bxxxoxx`). |
-| `detect_gibberish_words` | Words of length ≥ 7 that are all-uppercase, contain no vowels, or have a vowel ratio below 15% or above 80%. |
+| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase run at the start followed by lowercase (`XXWžkumu`). All-caps words and titles (`PhDr`, `MUDr`) are excluded.               |
+| `detect_repeated_chars`      | Words where a single non-standard character makes up ≥ 40% of the word (e.g., OCR stutter like `bxxxoxx`).                                                                                                 |
+| `detect_gibberish_words`     | Words of length ≥ 7 that are all-uppercase, contain no vowels, or have a vowel ratio below 15% or above 80%.                                                                                               |
 
 ##### Categorisation Logic (Cumulative Penalty System)
 
@@ -305,14 +305,14 @@ Lines that pass the pre-filter are analysed by four structural detectors defined
 
 **Penalty accumulation** (for lines that pass the overrides):
 
-| Signal | Penalty added |
-|---|---|
+| Signal                                        | Penalty added     |
+|-----------------------------------------------|-------------------|
 | Each word with a strange symbol (`sym_count`) | `sym_count × 0.4` |
-| Two or more strange-symbol words | additional `+0.5` |
-| Each LDL-fused token | `× 0.3` |
-| Each mid-word uppercase word | `× 0.2` |
-| Each word with repeated non-standard char | `× 0.4` |
-| Each gibberish word | `× 0.5` |
+| Two or more strange-symbol words              | additional `+0.5` |
+| Each LDL-fused token                          | `× 0.3`           |
+| Each mid-word uppercase word                  | `× 0.2`           |
+| Each word with repeated non-standard char     | `× 0.4`           |
+| Each gibberish word                           | `× 0.5`           |
 
 **Perplexity penalty** (skipped for short phrases that are structurally clean):
 
@@ -368,7 +368,7 @@ python3 langID_aggregate_STAT.py
 ```
 
 * **Input 📥:** `DOC_LINE_LANG_CLASS/` (directory with CSV files from the previous step)
-* **Output 1 📤:** `ARUP_short_page_stats.csv` — global page-level summary across all documents
+* **Output 1 📤:** `arup_page_stats_SHORT.csv` — global page-level summary across all documents
 * **Output 2 📤:** `../DOC_LINE_STAT/` — per-document CSVs with the same schema
 
 For each page, the aggregation computes:
@@ -405,7 +405,7 @@ For each page, the aggregation computes:
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
 
-- *Example*: [ARUP_short_page_stats.csv](ARUP_short_page_stats.csv) 📎
+- *Examples*: [arub_page_stats_SHORT.csv](arub_page_stats_SHORT.csv) [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎
 
 Example of per-document aggregate CSV files: [DOC_LINE_STAT](data_samples/DOC_LINE_STAT) 📁.
 ```
