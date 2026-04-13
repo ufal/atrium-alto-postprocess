@@ -1,3 +1,15 @@
+<p align="center">
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" title="Python Version"></a>
+  <a href="https://huggingface.co/facebook/fasttext-language-identification"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-fasttext--langID-yellow.svg" title="FastText Language Identification"></a>
+  <a href="https://huggingface.co/distilbert/distilgpt2"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-distilgpt2-yellow.svg" title="DistilGPT2 Perplexity"></a>
+  <a href="https://github.com/cneud/alto-tools"><img src="https://img.shields.io/badge/dep-alto--tools-lightgrey.svg" title="alto-tools"></a>
+  <a href="https://opensource.org/license/mit/"><img src="https://img.shields.io/github/license/ufal/atrium-alto-postprocess" title="MIT License"></a>
+  <a href="https://atrium-research.eu/"><img src="https://img.shields.io/badge/funded%20by-ATRIUM-8A2BE2.svg" title="ATRIUM Project"></a>
+</p>
+
+---
+
+
 # 📦 ALTO XML Files Postprocessing Pipeline
 
 This project provides a complete workflow for processing ALTO XML files. It takes raw ALTO

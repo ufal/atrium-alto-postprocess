@@ -145,8 +145,6 @@ def detect_gibberish_words(text: str) -> int:
     if not words:
         return 0
 
-    # If >=60% of words are fully uppercased, this is a formatted header line.
-    # Suppress the isupper gibberish check to avoid penalizing legitimate caps headers.
     caps_ratio = sum(1 for w in words if w.strip(_STRIP_CHARS).isupper()) / len(words)
     is_caps_header = caps_ratio >= 0.6
 
@@ -154,19 +152,27 @@ def detect_gibberish_words(text: str) -> int:
     vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
     for word in words:
         core = word.strip(_STRIP_CHARS)
-        if len(core) >= 7:
-            if core.isupper() and not is_caps_header:
-                count += 1
+        if len(core) < 7:
+            continue
+
+        # NEW: skip numeric/date ranges — digits, hyphens, periods, slashes
+        if len(core) > 0:
+            numeric_chars = sum(1 for c in core if c.isdigit() or c in '-./,')
+            if numeric_chars / len(core) >= 0.6:
                 continue
 
-            vowel_count = sum(1 for c in core if c in vowels)
-            if vowel_count == 0:
-                count += 1
-                continue
+        if core.isupper() and not is_caps_header:
+            count += 1
+            continue
 
-            v_ratio = vowel_count / len(core)
-            if v_ratio < 0.15 or v_ratio > 0.80:
-                count += 1
+        vowel_count = sum(1 for c in core if c in vowels)
+        if vowel_count == 0:
+            count += 1
+            continue
+
+        v_ratio = vowel_count / len(core)
+        if v_ratio < 0.15 or v_ratio > 0.80:
+            count += 1
 
     return count
 
