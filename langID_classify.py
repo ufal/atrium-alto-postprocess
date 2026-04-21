@@ -138,7 +138,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             text_length=cc,
         )
 
-        categ = categorize_line(ppl_val, text_content, lang, score, weird_ratio, expected_langs)
+        categ = categorize_line(ppl_val, text_content, lang, score, weird_ratio, expected_langs, q_score)
 
         # Calculate structural header state
         is_caps_header = (

@@ -48,6 +48,16 @@ COMMON_LANGS = ["ces", "deu", "eng"]
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
     COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
 
+# Languages that FastText reliably identifies in Czech archival documents.
+# All other detected languages are remapped to Czech (ces) since FastText
+# frequently misidentifies short/noisy Czech text as exotic languages.
+# Slovak (slk) is intentionally excluded — it is treated as Czech in this corpus.
+_TRUSTED_FOREIGN_LANG_BASES: frozenset = frozenset(
+    lang.strip()
+    for lang in _get_str("CLASSIFY", "TRUSTED_FOREIGN_LANGS", "deu,eng,fra,pol,ita").split(",")
+    if lang.strip()
+)
+
 
 def _lang_base(lang_code: str) -> str:
     """Strip FastText script suffix: 'ces_Latn' → 'ces', 'eng_Latn' → 'eng'."""
@@ -369,20 +379,56 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 # Categorisation (REFINED PENALTY SYSTEM)
 # ---------------------------------------------------------------------------
 
-def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, weird_ratio: float,
-                    expected_langs: list[str] = None) -> str:
+def categorize_line(
+    ppl: float,
+    text_source: str,
+    lang: str,
+    lang_score: float,
+    weird_ratio: float,
+    expected_langs: list[str] | None = None,
+    quality_score: float | None = None,
+) -> str:
+    """
+    Assign a quality category to a classified text line.
+
+    Language handling (revised):
+      FastText regularly misidentifies short Czech text as non-European languages.
+      Only languages listed in TRUSTED_FOREIGN_LANGS are taken at face value.
+      All others are remapped to 'ces' (Czech) before applying any language-based
+      penalty, so structurally clean text is not unfairly penalised.
+
+    Quality score (optional modifier):
+      If provided, quality_score acts as a weak secondary signal:
+        - Very low (< 0.35) with existing penalties → push toward Trash
+        - Very high (> 0.88) with zero structural issues → protect from Noisy
+    """
     if expected_langs is None:
         expected_langs = COMMON_LANGS
 
     expected_bases = frozenset(_lang_base(l) for l in expected_langs)
     lang_base = _lang_base(lang)
-    in_expected = lang_base in expected_bases
 
-    # Diacritic fallback for misclassified target language words
+    # ------------------------------------------------------------------
+    # Language resolution: remap non-trusted languages to Czech
+    # ------------------------------------------------------------------
+    # FastText often labels short/noisy Czech text as Turkish, Lithuanian,
+    # Maltese, Afrikaans, etc.  If the detected language is not in our
+    # trusted-foreign set, assume the identification is wrong and treat
+    # the line as Czech for all penalty purposes.
+    if lang_base not in _TRUSTED_FOREIGN_LANG_BASES:
+        effective_lang_base = "ces"
+    else:
+        effective_lang_base = lang_base
+
+    in_expected = effective_lang_base in expected_bases
+
+    # Also run the diacritic fallback for the *original* lang_base when confidence
+    # is low — this catches cases where FastText picked the right script family
+    # but the wrong specific language.
     if not in_expected and lang_score < 0.55:
         inferred = infer_lang_from_diacritics(text_source, expected_bases)
         if inferred is not None:
-            lang_base = inferred
+            effective_lang_base = inferred
             in_expected = True
 
     words = text_source.split()
@@ -391,6 +437,9 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, 
     if wc == 0:
         return "Empty"
 
+    # ------------------------------------------------------------------
+    # Immediate Trash overrides (structural — language-independent)
+    # ------------------------------------------------------------------
     g_density = compute_garbage_density(text_source)
     if g_density > 0.35 or (wc <= 3 and g_density > 0.20):
         return "Trash"
@@ -398,49 +447,75 @@ def categorize_line(ppl: float, text_source: str, lang: str, lang_score: float, 
     if ppl > 500.0 and weird_ratio > 0.4:
         return "Trash"
 
+    # ------------------------------------------------------------------
+    # Structural penalty accumulation
+    # ------------------------------------------------------------------
     struct_penalties = 0.0
 
     sym_count = detect_strange_symbols(text_source)
     struct_penalties += sym_count * 0.4
-
     if sym_count >= 2:
         struct_penalties += 0.5
 
-    # Scale weight depending on token counts for mid_uppercase
     upper_count = detect_mid_uppercase(text_source)
     upper_weight = 0.35 if (wc <= 2 and upper_count >= 1) else 0.2
-
     struct_penalties += upper_count * upper_weight
+
     struct_penalties += detect_letter_digit_letter(text_source) * 0.3
     struct_penalties += detect_repeated_chars(text_source) * 0.4
     struct_penalties += detect_gibberish_words(text_source) * 0.5
 
     penalties = struct_penalties
 
+    # ------------------------------------------------------------------
+    # Perplexity penalty
+    # Skipped for clean short phrases in expected/remapped-to-expected language.
+    # NOTE: effective_lang_base is used here, so remapped-Czech lines benefit
+    # from the same forgiveness as lines FastText correctly identified as Czech.
+    # ------------------------------------------------------------------
     is_forgiven_short_phrase = (wc < 5) and in_expected and (struct_penalties == 0.0)
 
     if not is_forgiven_short_phrase:
-        adjusted_ppl_threshold = PERPLEXITY_THRESHOLD_MIN * (1.5 if wc < 5 else 1.0)
-        if ppl > adjusted_ppl_threshold:
+        adjusted_min = PERPLEXITY_THRESHOLD_MIN * (1.5 if wc < 5 else 1.0)
+        if ppl > adjusted_min:
             penalties += 0.5
         if ppl > PERPLEXITY_THRESHOLD_MAX:
             penalties += 1.0
 
+    # ------------------------------------------------------------------
+    # Language confidence penalty (now only for genuinely trusted-foreign langs
+    # that are NOT in the expected set, or for expected langs with very low confidence)
+    # ------------------------------------------------------------------
     if not in_expected:
+        # Only reached when effective_lang_base is a trusted-foreign lang
+        # that's not in expected_langs (e.g. French in a Czech-only config).
         if lang_score < 0.60:
             penalties += 0.8
-    elif lang_score < 0.30:
-        penalties += 0.5
+    else:
+        # In expected (or remapped to Czech): mild penalty for very low confidence
+        if lang_score < 0.30:
+            penalties += 0.5
 
+    # ------------------------------------------------------------------
+    # Final classification via normalized penalty
+    # ------------------------------------------------------------------
     normalized_penalty = penalties / max(1.0, wc / 5.0)
+
+    # Quality score as a weak secondary modifier
+    # This does not replace the penalty system; it nudges genuinely ambiguous cases.
+    if quality_score is not None:
+        # Very poor quality AND already penalised → confirm Trash
+        if quality_score < 0.35 and normalized_penalty >= 0.15:
+            return "Trash"
+        # Excellent quality AND structurally clean → protect from Noisy
+        if quality_score >= 0.88 and struct_penalties == 0.0 and normalized_penalty < 0.5:
+            return "Clear"
 
     if normalized_penalty >= 1.2:
         return "Trash"
     if normalized_penalty >= 0.3:
         return "Noisy"
     return "Clear"
-
-
 # ---------------------------------------------------------------------------
 # Simple Ratio & General Helpers
 # ---------------------------------------------------------------------------
