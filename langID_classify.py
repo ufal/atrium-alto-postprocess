@@ -95,7 +95,7 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
 
 
 def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tuple], out_dir: Path,
-                                task_queue: mp.Queue, result_dict: dict, expected_langs: list[str] = None):
+                                task_queue: mp.Queue, result_dict: dict, expected_langs: list[str] = None, trusted_langs: list[str] = None):
     ft = worker_models['ft']
 
     task_queue.put((batch_id, lines))
@@ -115,7 +115,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
 
         # Force language remapping and fix the score
-        if langs[i] not in _TRUSTED_FOREIGN_LANG_BASES + expected_langs:
+        if langs[i] not in trusted_langs + expected_langs:
             langs[i] = expected_langs[0]  # ces
             scores[i] = max(scores[i], LANG_SCORE_CLEAR)
 
@@ -164,7 +164,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
 
 
 def process_document(args) -> int:
-    file_id, file_rows, text_dir, out_dir, batch_size, task_queue, result_dict, expected_langs = args
+    file_id, file_rows, text_dir, out_dir, batch_size, task_queue, result_dict, expected_langs, trusted_langs = args
 
     out_path = Path(out_dir) / f"{file_id}.csv"
     if out_path.exists():
@@ -215,7 +215,7 @@ def process_document(args) -> int:
             if len(batch_lines) >= batch_size:
                 b_id = f"{file_id}_{batch_counter}"
                 process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
-                                            expected_langs)
+                                            expected_langs, trusted_langs)
                 batch_lines.clear()
                 batch_meta.clear()
                 batch_counter += 1
@@ -223,10 +223,16 @@ def process_document(args) -> int:
     if batch_lines:
         b_id = f"{file_id}_{batch_counter}"
         process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
-                                    expected_langs)
+                                    expected_langs, trusted_langs)
 
     if out_path.exists():
-        df = pd.read_csv(out_path)
+        df = pd.read_csv(out_path, dtype={
+            "text": str,
+            "split_ws": str,
+            "split_we": str,
+            "lang":     str,
+            "categ":    str,
+        })
         df = df.sort_values(by=["page_num", "line_num"], ascending=True)
 
         if not df.empty:
@@ -260,6 +266,9 @@ def main():
     EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng")
     EXPECTED_LANGS = [lang.strip() for lang in EXPECTED_LANGS_STR.split(",") if lang.strip()]
 
+    TRUSTED_FOREIGN_LANG_BASES = config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback="deu,eng,fra,pol,ita")
+    _TRUSTED_FOREIGN_LANG_BASES = [lang.strip() for lang in TRUSTED_FOREIGN_LANG_BASES.split(",") if lang.strip()]
+
     out_dir = Path(OUTPUT_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -277,7 +286,7 @@ def main():
     grouped_tasks = []
     for file_id, group in df.groupby("file"):
         grouped_tasks.append(
-            (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS))
+            (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS, _TRUSTED_FOREIGN_LANG_BASES))
 
     max_cores = min(mp.cpu_count(), WORKERS_MAX)
     print(f"Starting {max_cores} CPU Document Processors...")

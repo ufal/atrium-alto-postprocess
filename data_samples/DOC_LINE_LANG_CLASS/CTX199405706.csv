@@ -1,7 +1,4 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
-CTX199405706,1,1,"1,4442,70/",,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX199405706,1,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199405706,1,3,"504 ONDREJOV, okr. Praha-východ",,,ces,0.5,623.52,4,31,0.0,0,0,0,0,0,0.0,0.3636,0.8117,Clear,False
-CTX199405706,1,4,504/1 DAT: 1820. KULT: 7. LOK: Bubníkova usedlost. NALEZ: kostr. hrob.,,,ces,0.5,510.41,11,70,0.0571,0,0,0,0,0,0.0,0.3415,0.8392,Clear,False
-CTX199405706,1,5,"OKOL: kopání základu hrnčíř, pece. ULOŽ: 7. LIT: Kalina b. d. A,",,,ces,0.5,360.18,12,64,0.0469,0,0,0,0,0,0.0,0.4186,0.8215,Clear,False
-CTX199405706,1,6,107b.,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
+CTX199405706,1,1,"1,4442,70/",,,N/A,0,0,0,0,0.0000,0,0,0,0,0,0.0000,0.0000,0.0000,Non-text,False
+CTX199405706,1,2,,,,N/A,0,0,0,0,0.0000,0,0,0,0,0,0.0000,0.0000,0.0000,Empty,False
+CTX199405706,1,6,107b.,,,N/A,0,0,0,0,0.0000,0,0,0,0,0,0.0000,0.0000,0.0000,Non-text,False
