@@ -15,177 +15,186 @@ and compiles final page-level stats, including:
   - 'avg_perplex'       - Mean DistilGPT2 perplexity score
   - 'avg_symbol'        - Mean structural strange symbol count
   - 'main_lang'         - The statistical mode (most frequent) language per page.
+  - 'avg_vowel_ratio'   - Mean vowel ratio
+  - 'ch_ratio'          - The ratio of caps_header lines to valid lines
 
 This process is parallelized using concurrent.futures to handle massive directories quickly.
 """
 
-import pandas as pd
-from pathlib import Path
+import argparse
 import configparser
+import multiprocessing
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import multiprocessing
+from pathlib import Path
+
+import pandas as pd
 from tqdm import tqdm
+
+from atrium_paradata import ParadataLogger
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-# The expected outcome columns in the final stats pivot table
-STANDARD_COLS = ["Clear", "Trash", "Noisy", "Empty", "Non-text"]
-
-# Only these categories represent "actual attempts at text".
-# Empty and Non-text are ignored when computing averages and usable sums.
-SCORED_CATEGS = {"Clear", "Noisy", "Trash"}
-
-# The numeric metric columns outputted by the classify step that we want to average
-METRIC_COLS = [
-    "word_count", "char_count", "garbage_density",
-    "lang_score", "perplex",
-    "symbol", "upper", "repeated", "ldl_fuses", "gibberish",
-    "word_weird", "quality_score"
-]
+STANDARD_COLS = ["Clear", "Noisy", "Trash", "Non-text", "Empty"]
+DEFAULT_CONFIG = "config_langID.txt"
 
 
-# ---------------------------------------------------------------------------
-# Aggregation Helpers
-# ---------------------------------------------------------------------------
+def load_config(config_path):
+    config = configparser.ConfigParser()
+    if not Path(config_path).exists():
+        print(f"Warning: Configuration file {config_path} not found. Using defaults.")
+        return {"input_dir": "data_samples/DOC_LINE_LANG_CLASS", "output_dir": "data_samples/DOC_PAGE_STAT"}
+    config.read(config_path)
+    return {
+        "input_dir": config.get("Paths", "INPUT_DIR", fallback="data_samples/DOC_LINE_LANG_CLASS"),
+        "output_dir": config.get("Paths", "OUTPUT_DIR", fallback="data_samples/DOC_PAGE_STAT"),
+    }
 
-def _category_counts(df: pd.DataFrame) -> pd.DataFrame:
+
+def _sum_metrics(df):
     """
-    Pivot the DataFrame to count how many lines fall into each Category per Page.
+    Groups line data by page and aggregates the statistics.
     """
-    counts = (df.groupby(["file", "page_num"])["categ"].value_counts().unstack(fill_value=0))
+    if df.empty:
+        return pd.DataFrame()
 
+    # Isolate relevant lines for metrics (Clear and Noisy)
+    valid_lines = df[df['category'].isin(["Clear", "Noisy"])].copy()
+
+    # Count categories per page
+    cat_counts = df.groupby(['file', 'page_num', 'category']).size().unstack(fill_value=0).reset_index()
     for col in STANDARD_COLS:
-        if col not in counts.columns:
-            counts[col] = 0
-    return counts[STANDARD_COLS]
+        if col not in cat_counts.columns:
+            cat_counts[col] = 0
 
+    if valid_lines.empty:
+        # If no valid lines, return zeros/NaNs for stats
+        stats = df[['file', 'page_num']].drop_duplicates().copy()
+        for col in ['total_word_count', 'total_char_count']:
+            stats[col] = 0
+        for col in ['avg_quality_score', 'avg_word_weird', 'avg_lang_score',
+                    'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'ch_ratio']:
+            stats[col] = pd.NA
+        stats['main_lang'] = "None"
 
-def _sum_metrics(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Computes the TOTAL usable words and characters per page.
-    This gives a true "volume of text" metric, ignoring non-text lines.
-    """
-    scored = df[df["categ"].isin(SCORED_CATEGS)].copy()
-    cols_to_sum = [col for col in ["word_count", "char_count"] if col in scored.columns]
+        final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
+        return final_page_df
 
-    if not cols_to_sum:
-        idx = df.set_index(["file", "page_num"]).index.unique()
-        return pd.DataFrame(index=idx)
+    # --- MAIN FIX 1: NaN cascades on boolean columns ---
+    if 'caps_header' in valid_lines.columns:
+        # csv.writer formats bools as 'True' / 'False'. Coerce back to float for .mean()
+        valid_lines['caps_header'] = valid_lines['caps_header'].replace(
+            {'True': 1.0, 'False': 0.0, True: 1.0, False: 0.0}
+        ).astype(float)
 
-    sums = scored.groupby(["file", "page_num"])[cols_to_sum].sum()
-    rename = {col: f"total_{col}" for col in cols_to_sum}
-    return sums.rename(columns=rename)
+    # Calculate main stats for valid lines
+    stats = valid_lines.groupby(['file', 'page_num']).agg(
+        total_word_count=('word_count', 'sum'),
+        total_char_count=('char_count', 'sum'),
+        avg_quality_score=('quality_score', 'mean'),
+        avg_word_weird=('word_weirdness', 'mean'),
+        avg_lang_score=('lang_score', 'mean'),
+        avg_perplex=('perplex', 'mean'),
+        avg_symbol=('symbol_count', 'mean'),
+        avg_vowel_ratio=('vowel_ratio', 'mean')
+    ).reset_index()
 
+    # Calculate caps header ratio
+    if 'caps_header' in valid_lines.columns:
+        ch_stats = valid_lines.groupby(['file', 'page_num'])['caps_header'].mean().reset_index(name='ch_ratio')
+        stats = pd.merge(stats, ch_stats, on=['file', 'page_num'], how='left')
+    else:
+        stats['ch_ratio'] = 0.0
 
-def _mean_metrics(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute the average structural and ML metrics per Page.
-    Restricts calculation strictly to valid text lines.
-    """
-    scored = df[df["categ"].isin(SCORED_CATEGS)].copy()
+    # Calculate statistical mode for language
+    if 'lang' in valid_lines.columns:
+        def mode_lang(x):
+            return x.mode().iloc[0] if not x.empty else "None"
 
-    # Identify which of our target metrics actually exist in this CSV
-    agg = {col: "mean" for col in METRIC_COLS if col in scored.columns}
+        lang_stats = valid_lines.groupby(['file', 'page_num'])['lang'].apply(mode_lang).reset_index(name='main_lang')
+        stats = pd.merge(stats, lang_stats, on=['file', 'page_num'], how='left')
+    else:
+        stats['main_lang'] = "None"
 
-    if not agg:
-        # Return an empty placeholder preserving the index
-        idx = df.set_index(["file", "page_num"]).index.unique()
-        return pd.DataFrame(index=idx)
+    # Merge category counts with the stats
+    final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
 
-    # Compute means based on the dictionary
-    means = scored.groupby(["file", "page_num"])[list(agg.keys())].mean()
+    # --- MAIN FIX 3 & 4: int casting NaN errors on count columns ---
+    for count_col in ['total_word_count', 'total_char_count', 'word_count', 'char_count']:
+        if count_col in final_page_df.columns:
+            final_page_df[count_col] = final_page_df[count_col].fillna(0).astype(int)
 
-    # Rename for final output (e.g. 'perplex' -> 'avg_perplex')
-    rename = {col: f"avg_{col}" for col in agg.keys()}
-    return means.rename(columns=rename)
-
-
-def _prevailing_lang(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calculate the single most prevailing language per page.
-    Filters out lines categorized as "N/A" or "unknown" to prevent OCR noise
-    from skewing the document's true language profile.
-    """
-    valid_langs = df[~df['lang'].isin(['N/A', 'unknown'])].copy()
-
-    if valid_langs.empty:
-        idx = df.set_index(["file", "page_num"]).index.unique()
-        return pd.DataFrame({'main_lang': 'unknown'}, index=idx)
-
-    main_langs = valid_langs.groupby(["file", "page_num"])['lang'].agg(
-        lambda x: x.mode().iloc[0] if not x.mode().empty else 'unknown'
-    )
-    return main_langs.to_frame(name='main_lang')
-
-
-def _build_page_stats(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Combines Category Counts, Sums, Averages, and Main Language into a single flat DataFrame.
-    """
-    counts = _category_counts(df)
-    sums = _sum_metrics(df)
-    means = _mean_metrics(df)
-    langs = _prevailing_lang(df)
-
-    # Join all dataframes together on the multi-index (file, page_num)
-    stats = counts.join(sums, how="left").join(means, how="left").join(langs, how="left")
-
-    # Round all calculated average columns to 4 decimal places
-    for col in stats.columns:
-        if col.startswith("avg_"):
-            stats[col] = stats[col].round(4)
-
-    # Ensure totals are integers
-    for col in stats.columns:
-        if col.startswith("total_"):
-            stats[col] = stats[col].fillna(0).astype(int)
-
-    stats.reset_index(inplace=True)
-    return stats
+    return final_page_df
 
 
 def process_csv_file(args):
-    """Worker function for parallel mapping."""
-    csv_file, output_doc_dir = args
+    """
+    Reads a single CSV file, defines proper data types to prevent edge-case
+    inferences, and returns aggregated page metrics.
+    """
+    file_path, _ = args
     try:
-        df = pd.read_csv(csv_file)
-        if df.empty or "categ" not in df.columns:
+        # --- MAIN FIX 2: Explicit dtypes to stop format string parsing as 'object' ---
+        dtype_map = {
+            'word_count': 'float64',
+            'char_count': 'float64',
+            'quality_score': 'float64',
+            'word_weirdness': 'float64',
+            'lang_score': 'float64',
+            'perplex': 'float64',
+            'garbage_density': 'float64',
+            'symbol_count': 'float64',
+            'vowel_ratio': 'float64'
+            # Caps header handled specifically later due to bool string mix
+        }
+
+        # Handle empty/missing rows gracefully
+        df = pd.read_csv(file_path, dtype=dtype_map, on_bad_lines='skip')
+
+        if df.empty:
             return None
 
-        stats = _build_page_stats(df)
-        stats_out_path = Path(output_doc_dir) / f"stats_{csv_file.name}"
-        stats.to_csv(stats_out_path, index=False)
-        return stats
+        # Strip any whitespace from column names just in case
+        df.columns = df.columns.str.strip()
+
+        return _sum_metrics(df)
+
+    except pd.errors.EmptyDataError:
+        return None
     except Exception as exc:
+        # Return the exception to the main thread so we can handle it safely without a loop crash
         return exc
 
 
-# ---------------------------------------------------------------------------
-# Main Execution
-# ---------------------------------------------------------------------------
+def main():
+    parser = argparse.ArgumentParser(description="Aggregate post-classification line metrics into page stats.")
+    parser.add_argument("--config", type=str, default=DEFAULT_CONFIG, help="Path to config file.")
+    args = parser.parse_args()
 
-def main() -> None:
-    config = configparser.ConfigParser()
-    config.read("config_langID.txt")
+    config = load_config(args.config)
+    input_dir = Path(config["input_dir"])
+    output_dir = Path(config["output_dir"])
 
-    INPUT_DIR_PATH = config.get("AGGREGATE", "RAW_LINES_CSV")
-    OUTPUT_STATS = config.get("AGGREGATE", "OUTPUT_STATS")
-    OUTPUT_DOC_DIR = config.get("AGGREGATE", "OUTPUT_DOC_DIR")
-
-    input_dir = Path(INPUT_DIR_PATH)
     if not input_dir.exists():
         print(f"Error: Input directory {input_dir} does not exist.")
         sys.exit(1)
 
-    Path(OUTPUT_DOC_DIR).mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     csv_files = list(input_dir.glob("*.csv"))
     if not csv_files:
         print("No CSV files found.")
         sys.exit(0)
+
+    # Initialize Paradata Logger
+    logger = ParadataLogger(
+        program="langID-aggregate",
+        config=vars(args),
+        paradata_dir="paradata",
+        output_types=["csv"],
+    )
 
     print(f"Aggregating {len(csv_files)} documents using Multiprocessing...")
     all_page_stats = []
@@ -193,26 +202,47 @@ def main() -> None:
     # Aggregation is CPU light, max out thread count safely.
     max_cores = min(multiprocessing.cpu_count(), 12)
 
-    with ProcessPoolExecutor(max_workers=max_cores) as executor:
-        tasks = [(f, OUTPUT_DOC_DIR) for f in csv_files]
-        futures = {executor.submit(process_csv_file, t): t for t in tasks}
+    try:
+        with ProcessPoolExecutor(max_workers=max_cores) as executor:
+            tasks = [(f, output_dir) for f in csv_files]
 
-        for future in tqdm(as_completed(futures), total=len(csv_files), desc="Aggregating Page Stats"):
-            result = future.result()
-            if isinstance(result, Exception):
-                tqdm.write(f"Error processing file: {result}")
-            elif result is not None:
-                all_page_stats.append(result)
+            # Keep track of which future maps to which file for accurate error reporting
+            futures = {executor.submit(process_csv_file, t): t[0] for t in tasks}
 
-    if all_page_stats:
-        print("Consolidating final page stats ...")
-        final_df = pd.concat(all_page_stats, ignore_index=True)
-        final_df.sort_values(by=["file", "page_num"], inplace=True)
+            for future in tqdm(as_completed(futures), total=len(csv_files), desc="Aggregating Page Stats"):
+                original_file = futures[future]
 
-        final_df.to_csv(OUTPUT_STATS, index=False)
-        print(f"Done. Global stats saved to {OUTPUT_STATS}")
-    else:
-        print("No statistics were generated.")
+                # --- MAIN FIX 2: Guard future.result() and surface failing filename ---
+                try:
+                    result = future.result()
+                    if isinstance(result, Exception):
+                        tqdm.write(f"Error processing file {original_file.name}: {result}")
+                        logger.log_skip(original_file.name, f"Processing Error: {result}")
+                    elif result is not None and not result.empty:
+                        all_page_stats.append(result)
+                        logger.log_success("csv")
+                    else:
+                        logger.log_skip(original_file.name, "Empty or invalid CSV structure")
+                except Exception as exc:
+                    tqdm.write(f"Hard crash while processing {original_file.name}: {exc}")
+                    logger.log_skip(original_file.name, f"Hard Crash: {exc}")
+
+        if all_page_stats:
+            print("Consolidating final page stats ...")
+            final_df = pd.concat(all_page_stats, ignore_index=True)
+
+            if 'file' in final_df.columns and 'page_num' in final_df.columns:
+                final_df.sort_values(by=["file", "page_num"], inplace=True)
+
+            output_file = output_dir / "AGGREGATED_PAGE_STATS.csv"
+            final_df.to_csv(output_file, index=False)
+            print(f"Done. Final stats saved to {output_file}")
+        else:
+            print("No valid page stats could be aggregated.")
+
+    finally:
+        # Finalize paradata logging regardless of crashes
+        logger.finalize(input_total=len(csv_files))
 
 
 if __name__ == "__main__":

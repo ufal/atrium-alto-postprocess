@@ -288,7 +288,18 @@ def parse_line_splits(line_text: str) -> tuple[str, str, str]:
 
 def score_word(word: str) -> float:
     core = word.strip(_STRIP_CHARS)
-    if len(core) < 2: return 0.0
+
+    # Penalise isolated characters that are not common single-letter words.
+    # Common grammatical single letters across EN / CS / DE are whitelisted (0 weirdness).
+    # Everything else (e.g. stray 'C', 's', 'W') receives a high weirdness score so
+    # fragmented lines can no longer hide behind a low average.
+    if len(core) == 1:
+        if core in "aAiIoOuUvVzZkKsS":
+            return 0.0
+        return 0.50  # High weirdness for random isolated letters
+
+    if len(core) < 2:
+        return 0.0
 
     has_strange = any(not ch.isalnum() and ch not in ALLOWED_INTERNAL for ch in core)
 
@@ -383,6 +394,13 @@ def categorize_line(
 
     g_density = compute_garbage_density(text_source)
     if g_density > CATEG_GARBAGE_DENSITY_HIGH or (wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
+        return "Trash"
+
+    # Severe fragmentation: many tokens but nearly all are single/double characters.
+    # This catches lines like "C A s 8." or "wl tW r Ij S" that survive the density
+    # check because their individual characters look innocuous.
+    avg_word_len = sum(len(w.strip(_STRIP_CHARS)) for w in text_source.split()) / wc
+    if wc >= 4 and avg_word_len < 2.5:
         return "Trash"
 
     if quality_score < CATEG_TRASH_SCORE_MAX:

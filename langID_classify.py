@@ -163,94 +163,118 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         write_rows_to_doc(out_dir, doc_id, list(group))
 
 
-def process_document(args) -> int:
-    file_id, file_rows, text_dir, out_dir, batch_size, task_queue, result_dict, expected_langs, trusted_langs = args
+def process_document(task):
+    """
+    Worker function executed by CPU pool.
+    Processes a single document's groups, handles split words, queues to GPU, and saves CSV.
+    """
+    file_id, group, text_dir, output_dir, batch_size, task_queue, result_dict, expected_langs, trusted_bases = task
 
-    out_path = Path(out_dir) / f"{file_id}.csv"
-    if out_path.exists():
-        return 0
+    try:
+        out_path = Path(out_dir) / f"{file_id}.csv"
+        if out_path.exists():
+            return 0
 
-    batch_lines = []
-    batch_meta = []
-    processed_count = 0
-    batch_counter = 0
+        batch_lines = []
+        batch_meta = []
+        processed_count = 0
+        batch_counter = 0
 
-    for _, row in file_rows.iterrows():
-        page_id = str(row["page"])
-        txt_path = Path(text_dir) / file_id / f"{file_id}-{page_id}.txt"
+        for _, row in file_rows.iterrows():
+            page_id = str(row["page"])
+            txt_path = Path(text_dir) / file_id / f"{file_id}-{page_id}.txt"
 
-        if not txt_path.exists():
-            continue
-
-        with open(txt_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        expected_incoming_suffix = ""
-
-        for i, line in enumerate(lines, 1):
-            merged_text, outgoing_prefix, outgoing_suffix = parse_line_splits(line)
-            current_split_ws = outgoing_prefix
-            current_split_we = ""
-
-            if expected_incoming_suffix:
-                stripped = merged_text.lstrip()
-                if stripped.startswith(expected_incoming_suffix):
-                    merged_text = merged_text.replace(expected_incoming_suffix, "", 1).strip()
-                    current_split_we = expected_incoming_suffix
-
-            expected_incoming_suffix = outgoing_suffix
-            cat, clean_merged = pre_filter_line(merged_text)
-
-            if cat != "Process":
-                write_rows_to_doc(Path(out_dir), file_id, [[
-                    file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
-                    "N/A", 0, 0, 0, 0, "0.0000", 0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", cat, False
-                ]])
+            if not txt_path.exists():
                 continue
 
-            batch_lines.append(clean_merged)
-            batch_meta.append((file_id, page_id, i, clean_merged, current_split_ws, current_split_we))
-            processed_count += 1
+            with open(txt_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
 
-            if len(batch_lines) >= batch_size:
-                b_id = f"{file_id}_{batch_counter}"
-                process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
-                                            expected_langs, trusted_langs)
-                batch_lines.clear()
-                batch_meta.clear()
-                batch_counter += 1
+            expected_incoming_suffix = ""
 
-    if batch_lines:
-        b_id = f"{file_id}_{batch_counter}"
-        process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
-                                    expected_langs, trusted_langs)
+            for i, line in enumerate(lines, 1):
+                merged_text, outgoing_prefix, outgoing_suffix = parse_line_splits(line)
+                current_split_ws = outgoing_prefix
+                current_split_we = ""
 
-    if out_path.exists():
-        df = pd.read_csv(out_path, dtype={
-            "text": str,
-            "split_ws": str,
-            "split_we": str,
-            "lang":     str,
-            "categ":    str,
-        })
-        df = df.sort_values(by=["page_num", "line_num"], ascending=True)
+                if expected_incoming_suffix:
+                    stripped = merged_text.lstrip()
+                    if stripped.startswith(expected_incoming_suffix):
+                        merged_text = merged_text.replace(expected_incoming_suffix, "", 1).strip()
+                        current_split_we = expected_incoming_suffix
 
-        if not df.empty:
-            # Force Pandas to include empty lines in the groupby by specifying dropna=False
-            text_modes = df.groupby("text", dropna=False)["categ"].transform(
-                lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
-            df["categ"] = text_modes
+                expected_incoming_suffix = outgoing_suffix
+                cat, clean_merged = pre_filter_line(merged_text)
 
-            if len(df) >= 3:
-                prev_cat = df["categ"].shift(1)
-                next_cat = df["categ"].shift(-1)
+                if cat != "Process":
+                    # Preserve the line number (i) strictly so the output CSV matches
+                    # input ALTO lines 1-to-1.  String-formatted placeholders prevent
+                    # pandas dtype drift when the CSV is later read back.
+                    write_rows_to_doc(Path(out_dir), file_id, [[
+                        file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
+                        "N/A", "0.0000", "0.00", 0, len(clean_merged), "0.0000",
+                        0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", cat, False
+                    ]])
+                    continue
 
-                surrounded_by_trash = (prev_cat == "Trash") & (next_cat == "Trash") & (df["categ"] == "Noisy")
-                df.loc[surrounded_by_trash, "categ"] = "Trash"
+                batch_lines.append(clean_merged)
+                batch_meta.append((file_id, page_id, i, clean_merged, current_split_ws, current_split_we))
+                processed_count += 1
 
-        df.to_csv(out_path, index=False)
+                if len(batch_lines) >= batch_size:
+                    b_id = f"{file_id}_{batch_counter}"
+                    process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
+                                                expected_langs, trusted_langs)
+                    batch_lines.clear()
+                    batch_meta.clear()
+                    batch_counter += 1
 
-    return processed_count
+        if batch_lines:
+            b_id = f"{file_id}_{batch_counter}"
+            process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
+                                        expected_langs, trusted_langs)
+
+        if out_path.exists():
+            df = pd.read_csv(out_path, dtype={
+                "text": str,
+                "split_ws": str,
+                "split_we": str,
+                "lang": str,
+                "categ": str,
+            })
+            df = df.sort_values(by=["page_num", "line_num"], ascending=True)
+
+            if not df.empty:
+                # Force Pandas to include empty lines in the groupby by specifying dropna=False
+                text_modes = df.groupby("text", dropna=False)["categ"].transform(
+                    lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
+                df["categ"] = text_modes
+
+                if len(df) >= 3:
+                    prev_cat = df["categ"].shift(1)
+                    next_cat = df["categ"].shift(-1)
+
+                    surrounded_by_trash = (prev_cat == "Trash") & (next_cat == "Trash") & (df["categ"] == "Noisy")
+                    df.loc[surrounded_by_trash, "categ"] = "Trash"
+
+            df.to_csv(out_path, index=False)
+
+        # Output successful processing metrics to the main process
+        return {
+            "status": "success",
+            "file_id": file_id,
+            "lines": processed_count
+        }
+
+    except Exception as e:
+        # Catch errors so the future doesn't just crash,
+        # but safely returns the failure reason back to the main thread.
+        return {
+            "status": "error",
+            "file_id": file_id,
+            "reason": str(e)
+        }
+
 
 
 def main():
@@ -288,25 +312,58 @@ def main():
         grouped_tasks.append(
             (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS, _TRUSTED_FOREIGN_LANG_BASES))
 
+    # 1. Initialize ParadataLogger in the MAIN process
+    logger = ParadataLogger(
+        program="langID-classify",
+        config={
+            "batch_size": BATCH_SIZE,
+            "max_workers": WORKERS_MAX,
+            "text_dir": TEXT_DIR,
+            "output_dir": OUTPUT_DIR
+        },
+        paradata_dir="paradata",
+        output_types=["csv"]
+    )
+
     max_cores = min(mp.cpu_count(), WORKERS_MAX)
     print(f"Starting {max_cores} CPU Document Processors...")
 
     total_processed = 0
-    with ProcessPoolExecutor(max_workers=max_cores, initializer=init_cpu_worker) as executor:
-        futures = {executor.submit(process_document, task): task[0] for task in grouped_tasks}
+    total_tasks = len(grouped_tasks)
 
-        for future in tqdm(as_completed(futures), total=len(grouped_tasks), desc="Classifying Documents"):
-            file_id = futures[future]
-            try:
-                lines_proc = future.result()
-                total_processed += lines_proc
-            except Exception as e:
-                tqdm.write(f"Error processing {file_id}: {e}")
+    # 2. Wrap the execution in try...finally to guarantee paradata serialization
+    try:
+        with ProcessPoolExecutor(max_workers=max_cores, initializer=init_cpu_worker) as executor:
+            futures = {executor.submit(process_document, task): task[0] for task in grouped_tasks}
 
-    print("All documents processed. Shutting down GPU Engine...")
-    task_queue.put("STOP")
-    gpu_process.join()
-    print("Pipeline Complete.")
+            for future in tqdm(as_completed(futures), total=total_tasks, desc="Classifying Documents"):
+                file_id = futures[future]
+
+                try:
+                    # Retrieve the dictionary returned by process_document
+                    result = future.result()
+
+                    if result["status"] == "success":
+                        total_processed += result["lines"]
+                        # Log 1 successful CSV output
+                        logger.log_success("csv")
+                    else:
+                        # Log the document as skipped due to internal exception
+                        logger.log_skip(result["file_id"], result["reason"])
+                        tqdm.write(f"Skipped {result['file_id']}: {result['reason']}")
+
+                except Exception as e:
+                    # Handle catastrophic worker crashes (e.g. MemoryError, Segfault)
+                    logger.log_skip(file_id, f"Worker crashed unexpectedly: {e}")
+                    tqdm.write(f"Error processing {file_id}: {e}")
+
+    finally:
+        # 3. Finalize the paradata log
+        # This will write out the JSON file regardless of whether the script
+        # finishes successfully or the user hits Ctrl+C.
+        logger.finalize(input_total=total_tasks)
+
+    print(f"All done! Processed {total_processed} total lines.")
 
 
 if __name__ == "__main__":
