@@ -34,9 +34,9 @@ CSV_HEADER = [
     "garbage_density",
     "symbol", "upper", "repeated",
     "ldl_fuses", "gibberish",
-    "word_weird",
+    "word_weird", "vowel_ratio",
     "quality_score",
-    "categ", "is_caps_header"
+    "categ", "caps_header"
 ]
 
 
@@ -114,9 +114,12 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     for i in range(len(lines)):
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
 
+        # Force language remapping and fix the score
+        if langs[i] not in expected_langs:
+            langs[i] = "ces"
+            scores[i] = 0.5000
+
         ppl_val = ppls[i]
-        lang = langs[i]
-        score = scores[i]
 
         wc = len(text_content.split())
         cc = len(text_content)
@@ -128,6 +131,9 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         fuse_count = detect_letter_digit_letter(text_content)
         gibb_count = detect_gibberish_words(text_content)
 
+        vowel_ratio = compute_vowel_ratio(text_content)
+        caps_header = is_all_caps_line(text_content)
+
         word_scores = score_words_in_line(text_content)
         weird_ratio = compute_word_weird_ratio(word_scores)
 
@@ -136,23 +142,19 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             symbol_ratio=compute_symbol_ratio(text_content),
             perplexity=ppl_val,
             text_length=cc,
+            weird_ratio=weird_ratio
         )
 
-        categ = categorize_line(ppl_val, text_content, lang, score, weird_ratio, expected_langs, q_score)
-
-        # Calculate structural header state
-        is_caps_header = (
-                                 sum(1 for w in text_content.split() if w.strip().isupper()) / max(1,
-                                                                                                   len(text_content.split()))
-                         ) >= 0.6
+        categ = categorize_line(q_score, text_content, wc)
 
         row = [
             file_id, page_id, line_num, text_content,
-            split_ws, split_we, lang, f"{score:.4f}", f"{ppl_val:.2f}",
+            split_ws, split_we, langs[i], f"{scores[i]:.4f}", f"{ppl_val:.2f}",
             wc, cc, f"{g_density:.4f}",
             sym_count, upper_count, rep_count,
             fuse_count, gibb_count,
-            f"{weird_ratio:.4f}", f"{q_score:.4f}", categ, is_caps_header
+            f"{weird_ratio:.4f}", f"{vowel_ratio:.4f}",
+            f"{q_score:.4f}", categ, caps_header
         ]
         results.append(row)
 
@@ -202,7 +204,7 @@ def process_document(args) -> int:
             if cat != "Process":
                 write_rows_to_doc(Path(out_dir), file_id, [[
                     file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
-                    "N/A", 0, 0, 0, 0, "0.0000", 0, 0, 0, 0, 0, "0.0000", "0.0000", cat, False
+                    "N/A", 0, 0, 0, 0, "0.0000", 0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", cat, False
                 ]])
                 continue
 
@@ -228,7 +230,8 @@ def process_document(args) -> int:
         df = df.sort_values(by=["page_num", "line_num"], ascending=True)
 
         if not df.empty:
-            text_modes = df.groupby("text")["categ"].transform(
+            # Force Pandas to include empty lines in the groupby by specifying dropna=False
+            text_modes = df.groupby("text", dropna=False)["categ"].transform(
                 lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
             df["categ"] = text_modes
 

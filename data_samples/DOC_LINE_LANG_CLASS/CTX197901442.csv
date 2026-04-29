@@ -1,33 +1,33 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,quality_score,categ,is_caps_header
-CTX197901442,1,1,OBEC,,,ces_Latn,0.9997,3113.68,1,4,0.0,0,0,0,0,0,0.0,0.7795,Clear,True
-CTX197901442,1,2,OKRES,,,ces_Latn,0.5998,19207.79,1,5,0.0,0,0,0,0,0,0.0,0.705,Clear,True
-CTX197901442,1,3,‘ *4242& -,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Non-text,False
-CTX197901442,1,4,Vysoký jez .,,,ces_Latn,0.9993,1711.89,3,12,0.0,0,0,0,0,0,0.0,0.6852,Clear,False
-CTX197901442,1,5,Mad DrAMou,,,por_Latn,0.5009,23372.02,2,10,0.0,0,0,0,0,0,0.0,0.71,Clear,False
-CTX197901442,1,6,ČÍSLO PARCELY,,,slk_Latn,0.8507,1596.19,2,13,0.0,0,0,0,0,0,0.0,0.8492,Clear,True
-CTX197901442,1,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,,False
-CTX197901442,1,8,Rychnov n.Kn.,,,ces_Latn,0.894,1091.43,2,13,0.0,0,0,0,0,0,0.0,0.8232,Clear,False
-CTX197901442,1,9,Přílohy,,,ces_Latn,1.0,327.77,1,7,0.0,0,0,0,0,0,0.0,0.8939,Clear,False
-CTX197901442,1,10,NÁZEV TRATI,,,ces_Latn,1.0,423.98,2,11,0.0,0,0,0,0,0,0.0,0.894,Clear,True
-CTX197901442,1,11,Homole - kopec SZ od Vysokí-,,,ces_Latn,0.5807,2351.8,6,28,0.0714,0,0,0,0,0,0.0,0.6125,Noisy,False
-CTX197901442,1,12,Újezda pokryt lesem.,,,ces_Latn,0.7876,1065.82,3,20,0.0,0,0,0,0,0,0.0,0.8624,Clear,False
-CTX197901442,1,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,,False
-CTX197901442,1,14,ho,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Non-text,False
-CTX197901442,1,15,Kultura Z.,,,pol_Latn,0.7928,573.15,2,10,0.0,0,0,0,0,0,0.0,0.6571,Clear,False
-CTX197901442,1,16,ČÍSLO MAPY,,,ces_Latn,0.6173,1466.4,2,10,0.0,0,0,0,0,0,0.0,0.8513,Clear,True
-CTX197901442,1,17,Druh nálezu,,,ces_Latn,0.6805,1711.05,2,11,0.0,0,0,0,0,0,0.0,0.8426,Clear,False
-CTX197901442,1,18,keramcké střepy,,,ces_Latn,1.0,892.59,2,15,0.0,0,0,0,0,0,0.0,0.8793,Clear,False
-CTX197901442,1,19,LITERATURA,,,cat_Latn,0.5953,358.05,1,10,0.0,0,0,0,0,0,0.0,0.8957,Clear,True
-CTX197901442,1,20,Uložení,,,ces_Latn,0.9716,376.66,1,7,0.0,0,0,0,0,0,0.0,0.8919,Clear,False
-CTX197901442,1,21,"Rukopisné poznámky str. 56 , autora .",,,slk_Latn,0.8578,1163.34,7,37,0.0,0,0,0,0,0,0.0,0.6947,Clear,False
-CTX197901442,1,22,Čis. inv.,,,slk_Latn,0.9216,1486.13,2,9,0.0,0,0,0,0,0,0.0,0.7829,Clear,False
-CTX197901442,1,23,", ■",,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Non-text,False
-CTX197901442,1,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,,False
-CTX197901442,1,25,Ľne 22. 11.1974 . 7,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Non-text,False
-CTX197901442,1,26,"P.Jirušek starousedlík v obci Vysoký Újezd podal informaci , že před",,,ces_Latn,1.0,696.28,11,68,0.0,0,0,0,0,0,0.0,0.8222,Clear,False
-CTX197901442,1,27,mnoha lety si rolníci v místě Homole kopali krechty na uskladnení,,,ces_Latn,0.9992,1015.78,11,65,0.0,0,0,0,0,0,0.0,0.8153,Clear,False
-CTX197901442,1,28,"brambor a řepy . Při kopání, nalezeno mnoho různých keramických střepu .",,,ces_Latn,1.0,285.24,12,72,0.0,0,0,0,0,0,0.0,0.8481,Clear,False
-CTX197901442,1,29,Keramický materiál nebyl zachován .,,,ces_Latn,1.0,1105.25,5,35,0.0,0,0,0,0,0,0.0,0.8022,Clear,False
-CTX197901442,1,30,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,,False
-CTX197901442,1,31,Nčv* rodte map) 4:2Fee,,,slk_Latn,0.3232,3999.28,4,22,0.0909,1,0,0,0,0,0.1,0.5211,Noisy,False
-CTX197901442,1,32,<• 55 1501 M,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,Non-text,False
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
+CTX197901442,1,1,OBEC,,,ces,0.5,3113.7,1,4,0.0,0,0,0,0,0,0.0,0.5,0.7795,Clear,True
+CTX197901442,1,2,OKRES,,,ces,0.5,19207.87,1,5,0.0,0,0,0,0,0,0.0,0.4,0.705,Clear,True
+CTX197901442,1,3,‘ *4242& -,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
+CTX197901442,1,4,Vysoký jez .,,,ces,0.5,1711.88,3,12,0.0,0,0,0,0,0,0.0,0.4444,0.7269,Clear,False
+CTX197901442,1,5,Mad DrAMou,,,ces,0.5,23371.97,2,10,0.0,0,1,0,0,0,0.05,0.4444,0.7,Clear,False
+CTX197901442,1,6,ČÍSLO PARCELY,,,ces,0.5,1596.19,2,13,0.0,0,0,0,0,0,0.0,0.4167,0.8492,Clear,True
+CTX197901442,1,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX197901442,1,8,Rychnov n.Kn.,,,ces,0.5,1091.43,2,13,0.0,0,1,0,0,1,0.05,0.2,0.8286,Clear,False
+CTX197901442,1,9,Přílohy,,,ces,0.5,327.77,1,7,0.0,0,0,0,0,0,0.0,0.4286,0.8939,Clear,False
+CTX197901442,1,10,NÁZEV TRATI,,,ces,0.5,423.97,2,11,0.0,0,0,0,0,0,0.0,0.4,0.894,Clear,True
+CTX197901442,1,11,Homole - kopec SZ od Vysokí-,,,ces,0.5,2351.8,6,28,0.0,0,0,0,0,0,0.0,0.4286,0.6696,Noisy,False
+CTX197901442,1,12,Újezda pokryt lesem.,,,ces,0.5,1065.82,3,20,0.0,0,0,0,0,0,0.0,0.4118,0.8674,Clear,False
+CTX197901442,1,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX197901442,1,14,ho,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
+CTX197901442,1,15,Kultura Z.,,,ces,0.5,573.15,2,10,0.0,0,0,0,0,0,0.0,0.375,0.7171,Clear,False
+CTX197901442,1,16,ČÍSLO MAPY,,,ces,0.5,1466.4,2,10,0.0,0,0,0,0,0,0.0,0.4444,0.8513,Clear,True
+CTX197901442,1,17,Druh nálezu,,,ces,0.5,1711.04,2,11,0.0,0,0,0,0,0,0.0,0.4,0.8426,Clear,False
+CTX197901442,1,18,keramcké střepy,,,ces,0.5,892.59,2,15,0.0,0,0,0,0,0,0.0,0.3571,0.8793,Clear,False
+CTX197901442,1,19,LITERATURA,,,ces,0.5,358.05,1,10,0.0,0,0,0,0,0,0.0,0.5,0.8957,Clear,True
+CTX197901442,1,20,Uložení,,,ces,0.5,376.66,1,7,0.0,0,0,0,0,0,0.0,0.5714,0.8919,Clear,False
+CTX197901442,1,21,"Rukopisné poznámky str. 56 , autora .",,,ces,0.5,1163.34,7,37,0.0,0,0,0,0,0,0.0,0.4231,0.7457,Clear,False
+CTX197901442,1,22,Čis. inv.,,,ces,0.5,1486.13,2,9,0.0,0,0,0,0,0,0.0,0.3333,0.8051,Clear,False
+CTX197901442,1,23,", ■",,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
+CTX197901442,1,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX197901442,1,25,Ľne 22. 11.1974 . 7,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
+CTX197901442,1,26,"P.Jirušek starousedlík v obci Vysoký Újezd podal informaci , že před",,,ces,0.5,696.28,11,68,0.0,0,0,0,0,0,0.0,0.4107,0.8524,Clear,False
+CTX197901442,1,27,mnoha lety si rolníci v místě Homole kopali krechty na uskladnení,,,ces,0.5,1015.79,11,65,0.0,0,0,0,0,0,0.0,0.4182,0.8426,Clear,False
+CTX197901442,1,28,"brambor a řepy . Při kopání, nalezeno mnoho různých keramických střepu .",,,ces,0.5,285.24,12,72,0.0,0,0,0,0,0,0.0,0.3966,0.8773,Clear,False
+CTX197901442,1,29,Keramický materiál nebyl zachován .,,,ces,0.5,1105.24,5,35,0.0,0,0,0,0,0,0.0,0.4333,0.8251,Clear,False
+CTX197901442,1,30,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX197901442,1,31,Nčv* rodte map) 4:2Fee,,,ces,0.5,3999.28,4,22,0.0909,1,0,0,0,1,0.1,0.3571,0.5648,Noisy,False
+CTX197901442,1,32,<• 55 1501 M,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
