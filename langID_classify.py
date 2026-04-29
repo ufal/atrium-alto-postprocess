@@ -115,9 +115,9 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
 
         # Force language remapping and fix the score
-        if langs[i] not in expected_langs:
-            langs[i] = "ces"
-            scores[i] = 0.5000
+        if langs[i] not in _TRUSTED_FOREIGN_LANG_BASES + expected_langs:
+            langs[i] = expected_langs[0]  # ces
+            scores[i] = max(scores[i], LANG_SCORE_CLEAR)
 
         ppl_val = ppls[i]
 

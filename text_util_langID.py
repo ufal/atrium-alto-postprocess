@@ -67,6 +67,20 @@ PERPLEXITY_THRESHOLD_MIN = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MIN", 
 LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
+# add these six lines after the existing _get_float calls for the thresholds
+QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.3)
+QS_WEIGHT_SYMBOL     = _get_float("TEXT_UTILS", "QS_WEIGHT_SYMBOL",     0.2)
+QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.2)
+QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.2)
+QS_WEIGHT_LENGTH     = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH",     0.1)
+QS_LENGTH_MAX        = _get_float("TEXT_UTILS", "QS_LENGTH_MAX",        100.0)
+
+CATEG_GARBAGE_DENSITY_HIGH  = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH",  0.35)
+CATEG_GARBAGE_DENSITY_SHORT = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_SHORT", 0.20)
+CATEG_GARBAGE_SHORT_WC      = _config.getint("TEXT_UTILS", "CATEG_GARBAGE_SHORT_WC", fallback=3)
+CATEG_TRASH_SCORE_MAX       = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX",       0.40)
+CATEG_NOISY_SCORE_MAX       = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX",       0.70)
+
 # Characters allowed inside words without triggering the "strange symbol" penalty.
 ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/_—–:%;?!/'))
 
@@ -364,21 +378,16 @@ def categorize_line(
         text_source: str,
         wc: int
 ) -> str:
-    """
-    Assign a quality category to a classified text line based directly on
-    the computed quality score and high-confidence garbage fallbacks.
-    """
     if wc == 0 or not text_source.strip():
         return "Empty"
 
-    # Immediate Trash overrides (structural)
     g_density = compute_garbage_density(text_source)
-    if g_density > 0.35 or (wc <= 3 and g_density > 0.20):
+    if g_density > CATEG_GARBAGE_DENSITY_HIGH or (wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
         return "Trash"
 
-    if quality_score < 0.40:
+    if quality_score < CATEG_TRASH_SCORE_MAX:
         return "Trash"
-    if quality_score < 0.70:
+    if quality_score < CATEG_NOISY_SCORE_MAX:
         return "Noisy"
 
     return "Clear"
@@ -425,11 +434,16 @@ def is_non_text(text: str) -> bool:
 
 def compute_quality_score(valid_word_ratio: float, symbol_ratio: float, perplexity: float, text_length: int,
                           weird_ratio: float, ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
-                          length_max: int = 100) -> float:
+                          length_max: float = QS_LENGTH_MAX) -> float:
     norm_symbol = min(symbol_ratio, 1.0)
-    norm_ppl = 1.0 - min(perplexity / ppl_max, 1.0)
-    norm_len = min(text_length / length_max, 1.0)
-    norm_weird = 1.0 - min(weird_ratio, 1.0)
+    norm_ppl    = 1.0 - min(perplexity / ppl_max, 1.0)
+    norm_len    = min(text_length / length_max, 1.0)
+    norm_weird  = 1.0 - min(weird_ratio, 1.0)
 
-    # Weight distribution summing to 1.0
-    return 0.3 * valid_word_ratio + 0.2 * (1.0 - norm_symbol) + 0.2 * norm_weird + 0.2 * norm_ppl + 0.1 * norm_len
+    return (
+        QS_WEIGHT_VALID_WORD * valid_word_ratio
+        + QS_WEIGHT_SYMBOL   * (1.0 - norm_symbol)
+        + QS_WEIGHT_WEIRD    * norm_weird
+        + QS_WEIGHT_PERPLEXITY * norm_ppl
+        + QS_WEIGHT_LENGTH   * norm_len
+    )
