@@ -16,8 +16,9 @@ This project provides a complete workflow for processing ALTO XML files. It take
 XMLs and transforms them into structured statistics tables, performs text classification,
 and filters low-quality OCR results.
 
-The core of the quality filtering relies on language identification and perplexity measures
-to identify and categorize noisy or unreliable OCR output.
+The core of the quality filtering relies on language identification and a composite quality
+score — combining structural detectors, perplexity, and character-level metrics — to identify
+and categorize noisy or unreliable OCR output.
 
 ---
 
@@ -228,9 +229,9 @@ of the ATRIUM project, which covers NLP enrichment using Nametag for NER and UDP
 
 As the script processes, it assigns each line one of five categories 🪧:
 
-* ✅ **Clear** — Passes all structural checks; low cumulative penalty score.
-* ⚠️ **Noisy** — Partially degraded: moderate cumulative penalty from isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity on longer lines.
-* 🗑️ **Trash** — Severely corrupted: high garbage density, extreme perplexity combined with weirdness, or a cumulative penalty score above the Trash threshold.
+* ✅ **Clear** — Passes all structural checks; high composite quality score.
+* ⚠️ **Noisy** — Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.
+* 🗑️ **Trash** — Severely corrupted: high garbage density or a composite quality score below the Trash threshold.
 * 🔣 **Non-text** — Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation.
 * 🫙 **Empty** — Line contains only whitespace.
 
@@ -281,8 +282,10 @@ and DistilGPT2 [^6] models. It uses a **CPU/GPU split architecture**:
 * `ldl_fuses` — count of words with a letter–digit–letter sandwich (e.g., `w0rd`)
 * `gibberish` — count of words flagged as gibberish (all-caps, no vowels, or extreme vowel ratio)
 * `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol, repeated-symbol, LDL-fusion, and mid-uppercase signals weighted per token (0 = fully clean)
-* `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, and text length; higher = cleaner
+* `vowel_ratio` — ratio of vowel characters to total alphabetic characters in the line
+* `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, text length, and word weirdness; higher = cleaner 📈
 * `categ` — assigned category: **Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙
+* `caps_header` — boolean flag indicating whether all alphabetic words in the line are uppercase (typical of section headers)
 
 ##### CPU Pre-filter
 
@@ -294,71 +297,78 @@ Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side c
 * Matches the all-digits/symbols regex pattern → **Non-text**
 * Otherwise → forwarded for ML classification as **Process**
 
+##### Language Handling
+
+FastText is run on the lowercased line text. If the predicted language is not in either `EXPECTED_LANGS` or `TRUSTED_FOREIGN_LANGS`, the language is force-remapped to the first entry of `EXPECTED_LANGS` (default `ces`) with a minimum confidence of `LANG_SCORE_CLEAR` (default 0.75). This prevents foreign-language false positives from polluting the quality assessment for predominantly Czech collections.
+
 ##### Structural Detectors
 
-Lines that pass the pre-filter are analysed by four structural detectors defined in `text_util_langID.py`:
+Lines that pass the pre-filter are analysed by five structural detectors defined in `text_util_langID.py`:
 
 | Detector                     | What it counts                                                                                                                                                                                             |
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the allowed set `{ . - , + ( ) " ' / _ — – : % }`. Edge punctuation is stripped before inspection.                                      |
 | `detect_letter_digit_letter` | Words with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g., `vyt1ačená`, `nalez2í`). Legitimate patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger. |
 | `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase run at the start followed by lowercase (`XXWžkumu`). All-caps words and titles (`PhDr`, `MUDr`) are excluded.               |
-| `detect_repeated_chars`      | Words where a single non-standard character makes up ≥ 40% of the word (e.g., OCR stutter like `bxxxoxx`).                                                                                                 |
-| `detect_gibberish_words`     | Words of length ≥ 7 that are all-uppercase, contain no vowels, or have a vowel ratio below 15% or above 80%.                                                                                               |
+| `detect_repeated_chars`      | Words where a single non-standard character makes up ≥ 40% of the word and appears at least 3 times (e.g., OCR stutter like `bxxxoxx`).                                                                    |
+| `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 15% or above 80%. Words that are predominantly numeric (≥ 60% digits and separators) are excluded.                                 |
 
-##### Categorisation Logic (Cumulative Penalty System)
+##### Composite Quality Score
 
-`categorize_line()` in `text_util_langID.py` uses a cumulative floating-point penalty score rather than a fixed decision tree. The full logic is evaluated as follows:
+After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by `compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of five normalised signals:
 
-**Immediate Trash overrides** (checked first, before penalty accumulation):
+```
+quality_score =
+    QS_WEIGHT_VALID_WORD  × valid_word_ratio          # share of structurally clean words
+  + QS_WEIGHT_SYMBOL      × (1 − symbol_ratio)        # inverted non-alphanumeric density
+  + QS_WEIGHT_WEIRD       × (1 − word_weird_ratio)    # inverted mean per-word weirdness
+  + QS_WEIGHT_PERPLEXITY  × (1 − perplexity / PPL_MAX) # inverted normalised perplexity
+  + QS_WEIGHT_LENGTH      × (char_count / LENGTH_MAX)  # reward for longer lines
+```
 
-* Garbage density > 0.35, or garbage density > 0.20 on lines of ≤ 3 words → **Trash**
-* Perplexity > 500 **and** a structural weirdness ratio (`word_weird`) > 0.4 simultaneously → **Trash** *(hard override to catch severe, high-confidence garbage)*
+Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
-**Penalty accumulation** (for lines that pass the overrides):
-
-| Signal                                        | Penalty added     |
-|-----------------------------------------------|-------------------|
-| Each word with a strange symbol (`sym_count`) | `sym_count × 0.4` |
-| Two or more strange-symbol words              | additional `+0.5` |
-| Each LDL-fused token                          | `× 0.3`           |
-| Each mid-word uppercase word                  | `× 0.2`           |
-| Each word with repeated non-standard char     | `× 0.4`           |
-| Each gibberish word                           | `× 0.5`           |
-
-**Perplexity penalty** (skipped for short phrases that are structurally clean):
-
-A line with fewer than 5 words, whose language is in the `EXPECTED_LANGS` allowlist and whose structural penalty is zero, is treated as a "forgiven short phrase" and perplexity thresholds are not applied. For all other lines:
-
-* Perplexity > `PERPLEXITY_THRESHOLD_MIN` (default 1500, scaled to `× 1.5` for lines < 5 words) → `+0.5`
-* Perplexity > `PERPLEXITY_THRESHOLD_MAX` (default 5000) → additional `+1.0`
+| Parameter                  | Default |
+|----------------------------|---------|
+| `QS_WEIGHT_VALID_WORD`     | 0.3     |
+| `QS_WEIGHT_SYMBOL`         | 0.2     |
+| `QS_WEIGHT_WEIRD`          | 0.2     |
+| `QS_WEIGHT_PERPLEXITY`     | 0.2     |
+| `QS_WEIGHT_LENGTH`         | 0.1     |
+| `PERPLEXITY_THRESHOLD_MAX` | 5000.0  |
+| `QS_LENGTH_MAX`            | 100     |
 
 > [!NOTE]
-> Perplexity is intentionally **not used** as a Trash signal in isolation. `distilgpt2` is an English model and
-> assigns very high perplexity to legitimate short Czech strings (place names, postal codes, form-field labels),
-> making it unreliable as a Trash indicator. It is applied only as an additive penalty with structural context.
+> Perplexity contributes only one weighted component of the quality score. `distilgpt2` is an English
+> model and assigns high perplexity to legitimate short Czech strings (place names, postal codes,
+> form-field labels), so it is intentionally diluted by the four other signals rather than used as
+> a standalone threshold.
 
-**Language confidence penalty:**
+##### Categorisation Logic
 
-* Predicted language is **not** in `EXPECTED_LANGS` and confidence < 0.60 → `+0.8`
-* Predicted language **is** in `EXPECTED_LANGS` but confidence < 0.30 → `+0.5`
+`categorize_line()` in `text_util_langID.py` classifies each line in two stages:
 
-**Final classification** via normalized penalty:
+**Immediate Trash overrides** (checked first, before the quality score):
+
+* Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
+* Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
+
+**Quality score thresholds** (applied to lines that pass the overrides):
 
 ```
-normalized_penalty = total_penalties / max(1.0, word_count / 5.0)
-
-normalized_penalty ≥ 1.2  →  Trash
-normalized_penalty ≥ 0.3  →  Noisy
-otherwise                 →  Clear
+quality_score < CATEG_TRASH_SCORE_MAX  (default 0.40)  →  Trash
+quality_score < CATEG_NOISY_SCORE_MAX  (default 0.70)  →  Noisy
+otherwise                                               →  Clear
 ```
+
+All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
 
 ##### Post-Processing Smoothing
 
 After all lines in a document are classified and written to CSV, a final data-smoothing pass is applied before the file is finalized to prevent unnatural categorization anomalies:
 
 1. **Header/Footer Deduplication** — Resolves edge-case flip-flopping. If the exact same text string appears multiple times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
-2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between two consecutive **Trash** lines, it is automatically downgraded to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
+2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between two consecutive **Trash** lines (one immediately before, one immediately after), it is automatically downgraded to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
 
 Example of per-document CSV files: [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁.
 ```
