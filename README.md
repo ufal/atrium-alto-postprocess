@@ -364,24 +364,14 @@ After structural detection, each line receives a single floating-point `quality_
 
 ```
 quality_score =
-    QS_WEIGHT_VALID_WORD  × valid_word_ratio                    # share of structurally clean words
-  + QS_WEIGHT_SYMBOL      × (1 − min(symbol_ratio, 1.0))       # inverted non-alphanumeric density
-  + QS_WEIGHT_WEIRD       × (1 − min(word_weird_ratio, 1.0))   # inverted mean per-word weirdness
-  + QS_WEIGHT_PERPLEXITY  × (1 − min(perplexity / PPL_MAX, 1.0)) # inverted normalised perplexity
-  + QS_WEIGHT_LENGTH      × min(char_count / LENGTH_MAX, 1.0)  # reward for longer lines
+    QS_WEIGHT_VALID_WORD (def: 0.3)  × valid_word_ratio                    # share of structurally clean words
+  + QS_WEIGHT_SYMBOL (def: 0.2)      × (1 − min(symbol_ratio, 1.0))       # inverted non-alphanumeric density
+  + QS_WEIGHT_WEIRD (def: 0.2)       × (1 − min(word_weird_ratio, 1.0))   # inverted mean per-word weirdness
+  + QS_WEIGHT_PERPLEXITY: (def 0.2)  × (1 − min(perplexity / PPL_MAX, 1.0)) # inverted normalised perplexity
+  + QS_WEIGHT_LENGTH (def: 0.1)      × min(char_count / LENGTH_MAX, 1.0)  # reward for longer lines
 ```
 
 Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
-
-| Parameter                  | Default |
-|----------------------------|---------|
-| `QS_WEIGHT_VALID_WORD`     | 0.3     |
-| `QS_WEIGHT_SYMBOL`         | 0.2     |
-| `QS_WEIGHT_WEIRD`          | 0.2     |
-| `QS_WEIGHT_PERPLEXITY`     | 0.2     |
-| `QS_WEIGHT_LENGTH`         | 0.1     |
-| `PERPLEXITY_THRESHOLD_MAX` | 3000.0  |
-| `QS_LENGTH_MAX`            | 100     |
 
 > [!NOTE]
 > Perplexity contributes only one weighted component of the quality score. `distilgpt2` is an English
@@ -402,14 +392,12 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 **Quality score thresholds** (applied to lines that pass all overrides):
 
 ```
-quality_score < CATEG_TRASH_SCORE_MAX  (default 0.40)  →  Trash
-quality_score < CATEG_NOISY_SCORE_MAX  (default 0.70)  →  Noisy
-otherwise                                               →  Clear
+quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash
+quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.70)  →  Noisy
+otherwise                                              →  Clear
 ```
 
 All threshold values are configurable in the `[TEXT_UTILS]` section of [config_langID.txt](config_langID.txt) 📎
-
-
 
 ##### Post-Processing Smoothing
 
