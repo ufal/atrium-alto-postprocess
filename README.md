@@ -243,6 +243,43 @@ As the script processes, it assigns each line one of five categories 🪧:
 All input/output paths and tunable parameters are configured in [config_langID.txt](config_langID.txt) 📎.
 Parameters are organized into **three sections**: `[CLASSIFY]`, `[AGGREGATE]`, and `[TEXT_UTILS]`.
 
+<details>
+
+<summary>Default config parameters briefly commented 👀</summary>
+
+ 
+```ini
+[CLASSIFY]
+BATCH_SIZE = 128        # Batch size for processing lines
+WORKERS_MAX = 32        # Max CPU workers for parallel tasks
+EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
+TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
+
+[TEXT_UTILS]
+
+PERPLEXITY_THRESHOLD_MAX = 3000.0       # Max perplexity threshold
+PERPLEXITY_THRESHOLD_MIN = 1500.0       # Min perplexity threshold
+LANG_SCORE_ROUGH = 0.45     # Threshold for rough language confidence
+LANG_SCORE_CLEAR = 0.75     # Threshold for clear language confidence
+ALLOWED_INTERNAL = .-,+()"'_—–:%;?!/        # Allowed punctuation inside words
+STRIP_CHARS = .,;:!?()[]"'\/\       # Characters to strip from word edges
+
+QS_WEIGHT_VALID_WORD  = 0.3     # Weight for valid word ratio in QS
+QS_WEIGHT_SYMBOL      = 0.2     # Weight for symbol ratio in QS
+QS_WEIGHT_WEIRD       = 0.2     # Weight for weirdness ratio in QS
+QS_WEIGHT_PERPLEXITY  = 0.2     # Weight for perplexity in QS
+QS_WEIGHT_LENGTH      = 0.1     # Weight for length in QS
+QS_LENGTH_MAX         = 100     # Max length for normalization
+
+CATEG_GARBAGE_DENSITY_HIGH  = 0.35      # High garbage density for Trash
+CATEG_GARBAGE_DENSITY_SHORT = 0.20      # Garbage density for short lines
+CATEG_GARBAGE_SHORT_WC      = 3     # Word count for short line checks
+CATEG_TRASH_SCORE_MAX       = 0.40      # Max QS for Trash category
+CATEG_NOISY_SCORE_MAX       = 0.70      # Max QS for Noisy category
+```
+
+</details>
+
 ---
 
 #### 4.1 Classify Lines (GPU Bound) 🚀
@@ -252,6 +289,11 @@ and DistilGPT2 [^6] models. It uses a **CPU/GPU split architecture**:
 
 - A single dedicated **GPU worker** holds the only DistilGPT2 instance and processes perplexity batches to prevent VRAM OOM errors.
 - Multiple **CPU workers** (up to `WORKERS_MAX`, default 32) read files, run FastText and structural detectors, and submit text batches to the GPU worker via a shared queue. CPU workers poll the result dictionary while the GPU processes, running language identification concurrently.
+
+> [!WARNING]
+> The first of `EXPECTED_LANGS` list of languages should be the most expected language in the processed 
+> collection to work as a default replacement of ambiguous language recognition predictions.
+
 
     python3 langID_classify.py
 
@@ -270,6 +312,9 @@ and DistilGPT2 [^6] models. It uses a **CPU/GPU split architecture**:
 * `text` — original text of the line 📝
 * `split_ws` — hyphenated word prefix at the end of the line (split word start)
 * `split_we` — hyphenated word suffix at the start of the line (split word end)
+
+Predicted or computed features for each line:
+
 * `lang` — predicted ISO language code from the FastText model ([full list](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200)) 🌐
 * `lang_score` — FastText confidence score for the predicted language 🎯
 * `perplex` — DistilGPT2 perplexity score of the line 📉
@@ -303,19 +348,19 @@ FastText is run on the lowercased line text. If the predicted language is not in
 
 ##### Structural Detectors
 
-Lines that pass the pre-filter are analysed by five structural detectors defined in `text_util_langID.py`:
+Lines that pass the pre-filter are analysed by five structural detectors defined in [text_util_langID.py](text_util_langID.py) 📎:
 
-| Detector                     | What it counts                                                                                                                                                                                             |
-|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the allowed set `{ . - , + ( ) " ' / _ — – : % }`. Edge punctuation is stripped before inspection.                                      |
-| `detect_letter_digit_letter` | Words with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g., `vyt1ačená`, `nalez2í`). Legitimate patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger. |
-| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase run at the start followed by lowercase (`XXWžkumu`). All-caps words and titles (`PhDr`, `MUDr`) are excluded.               |
-| `detect_repeated_chars`      | Words where a single non-standard character makes up ≥ 40% of the word and appears at least 3 times (e.g., OCR stutter like `bxxxoxx`).                                                                    |
-| `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 15% or above 80%. Words that are predominantly numeric (≥ 60% digits and separators) are excluded.                                 |
+| Detector                     | What it counts                                                                                                                                                                                                 |
+|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the **allowed** set `{ . - , + ( ) " ' / _ — – : % }`. Edge punctuation is stripped before inspection.                                      |
+| `detect_letter_digit_letter` | Words with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g., `vyt1ačená`, `nalez2í`). **Legitimate** patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger. |
+| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase run at the start followed by lowercase (`XXWžkumu`). All-caps words and **titles** (`PhDr`, `MUDr`) are **excluded**.           |
+| `detect_repeated_chars`      | Words where a single non-standard character makes up ≥ 40% of the word and appears at least **3 times** (e.g., OCR stutter like `bxxxoxx`).                                                                    |
+| `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 15% or above 80%. Words that are **predominantly numeric** (≥ 60% digits and separators) are **excluded**.                             |
 
 ##### Composite Quality Score
 
-After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by `compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of five normalised signals:
+After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by `compute_quality_score()` in [text_util_langID.py](text_util_langID.py) 📎. The score is a weighted sum of five normalised signals:
 
 ```
 quality_score =
@@ -346,7 +391,7 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 ##### Categorisation Logic
 
-`categorize_line()` in `text_util_langID.py` classifies each line in two stages:
+`categorize_line()` in [text_util_langID.py](text_util_langID.py) 📎 classifies each line in two stages:
 
 **Immediate Trash overrides** (checked first, before the quality score):
 
@@ -362,7 +407,9 @@ quality_score < CATEG_NOISY_SCORE_MAX  (default 0.70)  →  Noisy
 otherwise                                               →  Clear
 ```
 
-All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
+All threshold values are configurable in the `[TEXT_UTILS]` section of [config_langID.txt](config_langID.txt) 📎
+
+
 
 ##### Post-Processing Smoothing
 
