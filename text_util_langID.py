@@ -240,12 +240,26 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     clean_text = line.strip()
     if not clean_text: return "Empty", ""
 
+    # Expanded metadata markers
+    metadata_markers = [
+        "Tb.", "č.neg", "neg.", "obr.", "obr ", "neg ", "Tb ", "č. neg",
+        "č neg", "č.neg.", "neg.", "neg ", "Tb.", "Tb ", "č.neg.",
+        "č. neg.", "č neg.", "č.", "str.", "Datum"
+    ]
+    if any(marker.lower() in clean_text.lower() for marker in metadata_markers):
+        return "Process", clean_text
+
     if clean_text.startswith('"') and not clean_text.endswith('"'):
         clean_text += '"'
     elif clean_text.endswith('"') and not clean_text.startswith('"'):
         clean_text = '"' + clean_text
 
     n_chars = len(clean_text)
+
+    # NEW: Allow highly numeric lines (dates, measurements) to survive
+    if sum(c.isdigit() for c in clean_text) / n_chars > 0.4:
+        return "Process", clean_text
+
     unique_symbols = set(c for c in clean_text if not c.isspace())
 
     if n_chars < 4 or len(unique_symbols) < 3:
@@ -387,20 +401,40 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 def categorize_line(
         quality_score: float,
         text_source: str,
-        wc: int
+        wc: int,
+        weird_ratio: float,
+        vowel_ratio: float,
+        perplexity: float
 ) -> str:
     if wc == 0 or not text_source.strip():
         return "Empty"
 
     g_density = compute_garbage_density(text_source)
-    if g_density > CATEG_GARBAGE_DENSITY_HIGH or (wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
+    if g_density > CATEG_GARBAGE_DENSITY_HIGH or (
+            wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
         return "Trash"
 
-    # Severe fragmentation: many tokens but nearly all are single/double characters.
-    # This catches lines like "C A s 8." or "wl tW r Ij S" that survive the density
-    # check because their individual characters look innocuous.
-    avg_word_len = sum(len(w.strip(_STRIP_CHARS)) for w in text_source.split()) / wc
-    if wc >= 4 and avg_word_len < 2.5:
+    # FIXED: Relax the fragmentation check to prevent valid measurement lines (like "145 mm, pr...")
+    # from being marked as Trash. Add a weird_ratio requirement.
+    avg_word_len = sum(len(w.strip(_STRIP_CHARS)) for w in text_source.split()) / wc if wc > 0 else 0
+    if wc >= 5 and avg_word_len < 2.0 and weird_ratio > 0.1:
+        return "Trash"
+
+    # ADD THIS BLOCK: Absolute overrides for OCR gibberish
+    # Catch 1: High perplexity on short lines (e.g., "z.6Z. 1369/o")
+    if perplexity > 2000.0 and wc < 5:
+        return "Noisy" if g_density < 0.1 else "Trash"
+
+    # Catch 2: Extremely skewed vowel ratios indicating random consonants/vowels (e.g., "FAXAPOOXAXXXX")
+    if len(text_source) > 5 and (vowel_ratio < 0.1 or vowel_ratio > 0.9):
+        return "Trash"
+
+    # Catch 3: High overall word weirdness (e.g., "0YM2aAS2AMOSA2CXs")
+    if weird_ratio > 0.25:
+        return "Trash"
+
+    # Catch 4: Moderately high weirdness combined with high perplexity
+    if weird_ratio > 0.15 and perplexity > 1000.0:
         return "Trash"
 
     if quality_score < CATEG_TRASH_SCORE_MAX:
@@ -409,7 +443,6 @@ def categorize_line(
         return "Noisy"
 
     return "Clear"
-
 
 # ---------------------------------------------------------------------------
 # Simple Ratio & General Helpers

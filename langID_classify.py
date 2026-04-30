@@ -153,7 +153,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             weird_ratio=weird_ratio
         )
 
-        categ = categorize_line(q_score, text_content, wc)
+        categ = categorize_line(q_score, text_content, wc, weird_ratio, vowel_ratio, ppl_val)
 
         row = [
             file_id, page_id, line_num, text_content,
