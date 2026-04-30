@@ -24,8 +24,8 @@ and categorize noisy or unreliable OCR output.
 
 ## 📖 Table of Contents
 
-- [⚙️ Setup](#️-setup)
-- [🛤️ Workflow Stages](#️-workflow-stages)
+- [⚙️ Setup](#-setup)
+- [🛤️ Workflow Stages](#-workflow-stages)
   - [Step 1: Split Document-Specific ALTOs into Pages ✂️](#-step-1-split-document-specific-altos-into-pages-)
   - [Step 2: Create Page Statistics Table 📈](#-step-2-create-page-statistics-table-)
   - [Step 3: Extract text from ALTO XML ⛏️](#-step-3-extract-text-from-alto-xml-)
@@ -319,11 +319,11 @@ After structural detection, each line receives a single floating-point `quality_
 
 ```
 quality_score =
-    QS_WEIGHT_VALID_WORD  × valid_word_ratio          # share of structurally clean words
-  + QS_WEIGHT_SYMBOL      × (1 − symbol_ratio)        # inverted non-alphanumeric density
-  + QS_WEIGHT_WEIRD       × (1 − word_weird_ratio)    # inverted mean per-word weirdness
-  + QS_WEIGHT_PERPLEXITY  × (1 − perplexity / PPL_MAX) # inverted normalised perplexity
-  + QS_WEIGHT_LENGTH      × (char_count / LENGTH_MAX)  # reward for longer lines
+    QS_WEIGHT_VALID_WORD  × valid_word_ratio                    # share of structurally clean words
+  + QS_WEIGHT_SYMBOL      × (1 − min(symbol_ratio, 1.0))       # inverted non-alphanumeric density
+  + QS_WEIGHT_WEIRD       × (1 − min(word_weird_ratio, 1.0))   # inverted mean per-word weirdness
+  + QS_WEIGHT_PERPLEXITY  × (1 − min(perplexity / PPL_MAX, 1.0)) # inverted normalised perplexity
+  + QS_WEIGHT_LENGTH      × min(char_count / LENGTH_MAX, 1.0)  # reward for longer lines
 ```
 
 Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
@@ -335,7 +335,7 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 | `QS_WEIGHT_WEIRD`          | 0.2     |
 | `QS_WEIGHT_PERPLEXITY`     | 0.2     |
 | `QS_WEIGHT_LENGTH`         | 0.1     |
-| `PERPLEXITY_THRESHOLD_MAX` | 5000.0  |
+| `PERPLEXITY_THRESHOLD_MAX` | 3000.0  |
 | `QS_LENGTH_MAX`            | 100     |
 
 > [!NOTE]
@@ -352,8 +352,9 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 * Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
 * Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
+* Line has ≥ 4 words **and** average stripped-word length < 2.5 characters → **Trash** *(severe fragmentation: catches lines like `"C A s 8."` or `"wl tW r Ij S"` whose individual tokens look innocuous but together signal OCR scatter)*
 
-**Quality score thresholds** (applied to lines that pass the overrides):
+**Quality score thresholds** (applied to lines that pass all overrides):
 
 ```
 quality_score < CATEG_TRASH_SCORE_MAX  (default 0.40)  →  Trash
@@ -391,7 +392,7 @@ python3 langID_aggregate_STAT.py
 
 * **Input 📥:** `DOC_LINE_LANG_CLASS/` (directory with CSV files from the previous step)
 * **Output 1 📤:** `arup_page_stats_SHORT.csv` — global page-level summary across all documents
-* **Output 2 📤:** `../DOC_LINE_STAT/` — per-document CSVs with the same schema
+* **Output 2 📤:** `DOC_LINE_STAT/` — per-document CSVs with the same schema
 
 For each page, the aggregation computes:
 
@@ -399,30 +400,27 @@ For each page, the aggregation computes:
 
 * `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty` — integer count of lines in each category
 
-**Totals** (summed over lines classified as Clear, Noisy, or Trash only — Empty and Non-text excluded):
+**Totals** (summed over lines classified as **Clear** or **Noisy** only — Trash, Empty, and Non-text excluded):
 
 * `total_word_count` — total number of words across scoreable lines
 * `total_char_count` — total number of characters across scoreable lines
 
-**Averages** (mean over the same Clear/Noisy/Trash lines):
+**Averages** (mean over the same **Clear** and **Noisy** lines):
 
-* `avg_garbage_density` — mean garbage density ratio
+* `avg_quality_score` — mean composite quality score in [0, 1]; higher = cleaner OCR output 📈
+* `avg_word_weird` — mean per-word weirdness ratio in [0, 1]; 0 = fully clean, lower is better 📉
 * `avg_lang_score` — mean FastText confidence score
 * `avg_perplex` — mean DistilGPT2 perplexity score
-* `avg_symbol` — mean strange-symbol word count
-* `avg_upper` — mean mid-uppercase word count
-* `avg_repeated` — mean repeated-char word count
-* `avg_ldl_fuses` — mean LDL-fusion word count
-* `avg_gibberish` — mean gibberish word count
-* `avg_word_weird` — mean per-word weirdness ratio in [0, 1]; 0 = fully clean, lower is better 📉
-* `avg_quality_score` — mean composite quality score in [0, 1]; higher = cleaner OCR output 📈
+* `avg_symbol` — mean strange-symbol word count per line
+* `avg_vowel_ratio` — mean vowel-to-alphabetic-character ratio per line
+* `ch_ratio` — mean fraction of lines flagged as all-caps headers (`caps_header = True`)
 
 **Language profile:**
 
-* `main_lang` — the statistical mode (most frequent) language predicted for the page, excluding lines where FastText returned `N/A` or `unknown`
+* `main_lang` — the statistical mode (most frequent) language predicted for the page
 
 > [!NOTE]
-> `avg_*` columns and `main_lang` will be `NaN` / `unknown` for pages whose only lines are
+> `avg_*` columns and `main_lang` will be `NaN` / `None` for pages whose only lines are
 > Empty or Non-text (i.e., pages with no scoreable text content).
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
