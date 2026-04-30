@@ -48,8 +48,8 @@ def load_config(config_path):
         return {"input_dir": "data_samples/DOC_LINE_LANG_CLASS", "output_dir": "data_samples/DOC_PAGE_STAT"}
     config.read(config_path)
     return {
-        "input_dir": config.get("Paths", "INPUT_DIR", fallback="data_samples/DOC_LINE_LANG_CLASS"),
-        "output_dir": config.get("Paths", "OUTPUT_DIR", fallback="data_samples/DOC_PAGE_STAT"),
+        "input_dir": config.get("AGGREGATE", "RAW_LINES_CSV", fallback="data_samples/DOC_LINE_LANG_CLASS"),
+        "output_dir": config.get("AGGREGATE", "OUTPUT_DOC_DIR", fallback="data_samples/DOC_PAGE_STAT"),
     }
 
 
@@ -61,10 +61,10 @@ def _sum_metrics(df):
         return pd.DataFrame()
 
     # Isolate relevant lines for metrics (Clear and Noisy)
-    valid_lines = df[df['category'].isin(["Clear", "Noisy"])].copy()
+    valid_lines = df[df['categ'].isin(["Clear", "Noisy"])].copy()
 
     # Count categories per page
-    cat_counts = df.groupby(['file', 'page_num', 'category']).size().unstack(fill_value=0).reset_index()
+    cat_counts = df.groupby(['file', 'page_num', 'categ']).size().unstack(fill_value=0).reset_index()
     for col in STANDARD_COLS:
         if col not in cat_counts.columns:
             cat_counts[col] = 0
@@ -94,10 +94,10 @@ def _sum_metrics(df):
         total_word_count=('word_count', 'sum'),
         total_char_count=('char_count', 'sum'),
         avg_quality_score=('quality_score', 'mean'),
-        avg_word_weird=('word_weirdness', 'mean'),
+        avg_word_weird=('word_weird', 'mean'),
         avg_lang_score=('lang_score', 'mean'),
         avg_perplex=('perplex', 'mean'),
-        avg_symbol=('symbol_count', 'mean'),
+        avg_symbol=('symbol', 'mean'),
         avg_vowel_ratio=('vowel_ratio', 'mean')
     ).reset_index()
 
@@ -141,11 +141,11 @@ def process_csv_file(args):
             'word_count': 'float64',
             'char_count': 'float64',
             'quality_score': 'float64',
-            'word_weirdness': 'float64',
+            'word_weird': 'float64',
             'lang_score': 'float64',
             'perplex': 'float64',
             'garbage_density': 'float64',
-            'symbol_count': 'float64',
+            'symbol': 'float64',
             'vowel_ratio': 'float64'
             # Caps header handled specifically later due to bool string mix
         }

@@ -65,7 +65,15 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
 
             batch_id, texts = msg
             ppls = calculate_perplexity_batch(texts, model, tokenizer, device)
-            result_dict[batch_id] = ppls
+            try:
+                result_dict[batch_id] = ppls
+            except (BrokenPipeError, OSError) as e:
+                # The CPU worker that queued this batch has already died (e.g. due to
+                # a NameError or other crash).  Its Manager proxy socket is gone, so
+                # writing back is impossible.  Log and discard – the batch result will
+                # simply never be consumed, which is correct behaviour.
+                print(f"[GPU Engine] Dropped result for batch {batch_id}: {e}")
+                continue
 
         except queue.Empty:
             continue
@@ -171,7 +179,7 @@ def process_document(task):
     file_id, group, text_dir, output_dir, batch_size, task_queue, result_dict, expected_langs, trusted_bases = task
 
     try:
-        out_path = Path(out_dir) / f"{file_id}.csv"
+        out_path = Path(output_dir) / f"{file_id}.csv"
         if out_path.exists():
             return 0
 
@@ -180,7 +188,7 @@ def process_document(task):
         processed_count = 0
         batch_counter = 0
 
-        for _, row in file_rows.iterrows():
+        for _, row in group.iterrows():
             page_id = str(row["page"])
             txt_path = Path(text_dir) / file_id / f"{file_id}-{page_id}.txt"
 
@@ -210,7 +218,7 @@ def process_document(task):
                     # Preserve the line number (i) strictly so the output CSV matches
                     # input ALTO lines 1-to-1.  String-formatted placeholders prevent
                     # pandas dtype drift when the CSV is later read back.
-                    write_rows_to_doc(Path(out_dir), file_id, [[
+                    write_rows_to_doc(Path(output_dir), file_id, [[
                         file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
                         "N/A", "0.0000", "0.00", 0, len(clean_merged), "0.0000",
                         0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", cat, False
@@ -223,16 +231,16 @@ def process_document(task):
 
                 if len(batch_lines) >= batch_size:
                     b_id = f"{file_id}_{batch_counter}"
-                    process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
-                                                expected_langs, trusted_langs)
+                    process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue, result_dict,
+                                                expected_langs, trusted_bases)
                     batch_lines.clear()
                     batch_meta.clear()
                     batch_counter += 1
 
         if batch_lines:
             b_id = f"{file_id}_{batch_counter}"
-            process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(out_dir), task_queue, result_dict,
-                                        expected_langs, trusted_langs)
+            process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue, result_dict,
+                                        expected_langs, trusted_bases)
 
         if out_path.exists():
             df = pd.read_csv(out_path, dtype={
@@ -358,6 +366,15 @@ def main():
                     tqdm.write(f"Error processing {file_id}: {e}")
 
     finally:
+        # Signal the GPU worker to exit cleanly before the Manager is torn down.
+        # Without this the worker blocks forever on task_queue.get(), the Manager
+        # socket is then garbage-collected while the worker is still alive, and
+        # any pending result_dict write raises SIGPIPE / BrokenPipeError.
+        task_queue.put("STOP")
+        gpu_process.join(timeout=30)
+        if gpu_process.is_alive():
+            gpu_process.terminate()
+
         # 3. Finalize the paradata log
         # This will write out the JSON file regardless of whether the script
         # finishes successfully or the user hits Ctrl+C.
