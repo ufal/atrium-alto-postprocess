@@ -1,2 +1,2 @@
-file,page_num,Clear,Trash,Noisy,Empty,Non-text,total_word_count,total_char_count,avg_word_count,avg_char_count,avg_garbage_density,avg_lang_score,avg_perplex,avg_symbol,avg_upper,avg_repeated,avg_ldl_fuses,avg_gibberish,avg_word_weird,avg_quality_score,main_lang
-CTX201405311,1,25,0,6,2,2,257,1745,8.2903,56.2903,0.0079,0.949,641.2077,0.0645,0.0,0.0,0.0,0.2258,0.003,0.814,ces_Latn
+file,page_num,Clear,Empty,Noisy,Non-text,Trash,total_word_count,total_char_count,avg_quality_score,avg_word_weird,avg_lang_score,avg_perplex,avg_symbol,avg_vowel_ratio,ch_ratio,main_lang
+CTX201405311,1,27,2,4,2,0,257,1745,0.8404741935483871,0.019674193548387096,0.9764677419354839,641.2090322580646,0.06451612903225806,0.3912193548387097,0.0,eng
