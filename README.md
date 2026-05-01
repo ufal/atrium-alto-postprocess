@@ -328,15 +328,19 @@ Predicted or computed features for each line:
 * `repeated` — count of words where a non-standard character makes up ≥ 40% of the word
 * `ldl_fuses` — count of words with a letter–digit–letter sandwich (e.g., `w0rd`)
 * `gibberish` — count of words flagged as gibberish (all-caps, no vowels, or extreme vowel ratio)
-* `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol, repeated-symbol, LDL-fusion, and mid-uppercase signals weighted per token (0 = fully clean)
+* `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol, repeated-symbol, LDL-fusion, 
+and mid-uppercase signals weighted per token (0 = fully clean). *Note: Random isolated letters receive a severe weirdness 
+penalty (0.85) to catch spaced-out OCR noise, while isolated numbers/measurements receive a lower, tolerable penalty (0.25).*
 * `vowel_ratio` — ratio of vowel characters to total alphabetic characters in the line
-* `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, text length, and word weirdness; higher = cleaner 📈
+* `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, 
+text length, and word weirdness; higher = cleaner 📈
 * `categ` — assigned category: **Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙
 * `caps_header` — boolean flag indicating whether all alphabetic words in the line are uppercase (typical of section headers)
 
 ##### CPU Pre-filter
 
-Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side check and assigns `Empty` or `Non-text` directly, bypassing the ML pipeline entirely:
+Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side check and assigns `Empty` or `Non-text` 
+directly, bypassing the ML pipeline entirely:
 
 * Line is blank → **Empty**
 * Fewer than 4 characters, or fewer than 3 unique non-whitespace symbols → **Non-text**
@@ -346,11 +350,15 @@ Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side c
 
 ##### Language Handling
 
-FastText is run on the lowercased line text. If the predicted language is not in either `EXPECTED_LANGS` or `TRUSTED_FOREIGN_LANGS`, the language is force-remapped to the first entry of `EXPECTED_LANGS` (default `ces`) with a minimum confidence of `LANG_SCORE_CLEAR` (default 0.75). This prevents foreign-language false positives from polluting the quality assessment for predominantly Czech collections.
+FastText is run on the lowercased line text. If the predicted language is not in either `EXPECTED_LANGS` or 
+`TRUSTED_FOREIGN_LANGS`, the language is force-remapped to the first entry of `EXPECTED_LANGS` (default `ces`), 
+**preserving the FastText script suffix (e.g., `_Latn`)**, with a minimum confidence of `LANG_SCORE_CLEAR` (default 0.75). 
+This prevents foreign-language false positives from polluting the quality assessment for predominantly Czech collections, 
+while keeping the output format stable for downstream consumers.
 
 ##### Structural Detectors
 
-Lines that pass the pre-filter are analysed by five structural detectors defined in [text_util_langID.py](text_util_langID.py) 📎:
+Lines that pass the pre-filter are analysed by five structural detectors defined in `text_util_langID.py`:
 
 | Detector                     | What it counts                                                                                                                                                                                                 |
 |------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -362,9 +370,9 @@ Lines that pass the pre-filter are analysed by five structural detectors defined
 
 ##### Composite Quality Score
 
-After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by `compute_quality_score()` in [text_util_langID.py](text_util_langID.py) 📎. The score is a weighted sum of five normalised signals:
-
-```
+After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by 
+`compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of five normalised signals:
+```text
 quality_score =
     QS_WEIGHT_VALID_WORD (def: 0.3)  × valid_word_ratio                    # share of structurally clean words
   + QS_WEIGHT_SYMBOL (def: 0.2)      × (1 − min(symbol_ratio, 1.0))       # inverted non-alphanumeric density
@@ -383,30 +391,45 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 ##### Categorisation Logic
 
-`categorize_line()` in [text_util_langID.py](text_util_langID.py) 📎 classifies each line in two stages:
+`categorize_line()` in `text_util_langID.py` classifies each line in two stages:
 
 **Immediate Trash overrides** (checked first, before the quality score):
 
 * Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
 * Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
-* Line has ≥ 4 words **and** average stripped-word length < 2.5 characters → **Trash** *(severe fragmentation: catches lines like `"C A s 8."` or `"wl tW r Ij S"` whose individual tokens look innocuous but together signal OCR scatter)*
+* **Severe fragmentation**: Line has ≥ 5 words, average stripped-word length < 2.0 characters, **and** 
+`weird_ratio` > 0.1 → **Trash** *(prevents valid measurement lines from being trashed)*.
+* **Single-character fragmentation**: Line has ≥ 3 words, ≥ 50% of words are isolated characters, **and** 
+`weird_ratio` > 0.15 → **Trash** *(catches spaced-out gibberish like `"C A s 8."`)*.
+* **High perplexity on short lines**: Perplexity > 2000.0 and < 5 words → **Trash** *(unless garbage density < 0.1
+**and** `weird_ratio` < 0.20, which falls back to **Noisy**)*.
+* **Extreme vowel ratio**: Line > 5 characters with vowel ratio < 10% or > 90% → **Trash** *(catches random consonants/vowels like `"FAXAPOOXAXXXX"`)*.
+* **High overall weirdness**: `weird_ratio` > 0.25 → **Trash**.
+* **Moderate weirdness + high perplexity**: `weird_ratio` > 0.15 and perplexity > 1000.0 → **Trash**.
+* **Short string edge cases**: Line has ≤ `CATEG_GARBAGE_SHORT_WC` words **and** `quality_score` < `CATEG_NOISY_SCORE_MAX`
+→ **Trash** *(demotes marginal archive labels or short OCR garbage directly)*.
+* **Upside-down / garbled lines**: `weird_ratio` > 0.10 **and** `quality_score` < 0.60 → **Trash** *(punishes 
+fragmented/weird lines that have mediocre quality scores)*.
 
 **Quality score thresholds** (applied to lines that pass all overrides):
-
-```
+```text
 quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash
 quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.70)  →  Noisy
 otherwise                                              →  Clear
 ```
 
-All threshold values are configurable in the `[TEXT_UTILS]` section of [config_langID.txt](config_langID.txt) 📎
+All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
 
 ##### Post-Processing Smoothing
 
-After all lines in a document are classified and written to CSV, a final data-smoothing pass is applied before the file is finalized to prevent unnatural categorization anomalies:
+After all lines in a document are classified and written to CSV, a final data-smoothing pass is applied before the file
+is finalized to prevent unnatural categorization anomalies:
 
-1. **Header/Footer Deduplication** — Resolves edge-case flip-flopping. If the exact same text string appears multiple times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
-2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between two consecutive **Trash** lines (one immediately before, one immediately after), it is automatically downgraded to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
+1. **Header/Footer Deduplication** — Resolves edge-case flip-flopping. If the exact same text string appears multiple 
+times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
+2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between 
+two consecutive **Trash** lines (one immediately before, one immediately after), it is automatically downgraded 
+to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
 
 Example of per-document CSV files: [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁.
 ```
