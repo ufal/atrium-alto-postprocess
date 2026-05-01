@@ -229,11 +229,13 @@ of the ATRIUM project, which covers NLP enrichment using Nametag for NER and UDP
 
 As the script processes, it assigns each line one of five categories 🪧:
 
-* ✅ **Clear** — Passes all structural checks; high composite quality score.
-* ⚠️ **Noisy** — Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.
-* 🗑️ **Trash** — Severely corrupted: high garbage density or a composite quality score below the Trash threshold.
-* 🔣 **Non-text** — Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation.
-* 🫙 **Empty** — Line contains only whitespace.
+|    Category     |                       Action                       | Description                                                                                                                                                                 |
+|:---------------:|:--------------------------------------------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|   ✅ **Clear**   |        Ready to be processed by further NLP        | Passes all structural checks; high composite quality score.                                                                                                                 |
+|  ⚠️ **Noisy**   | Corrections of generally readable words are needed | Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.                                     |
+|  🗑️ **Trash**  |     Should be re-processed by another OCR tool     | Severely corrupted: high garbage density or a composite quality score below the Trash threshold.                                                                            |
+| 🔣 **Non-text** |   May be checked for identifiers of finds/sites    | Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation. |
+|  🫙 **Empty**   |                   Can be ignored                   | Line contains only whitespace (paragraphs separator)                                                                                                                        |
 
 > [!NOTE]
 > This script generates two primary output directories:
