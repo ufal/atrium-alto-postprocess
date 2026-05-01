@@ -310,7 +310,9 @@ def score_word(word: str) -> float:
     if len(core) == 1:
         if core in "aAiIoOuUvVzZkKsS":
             return 0.0
-        return 0.50  # High weirdness for random isolated letters
+        if core.isdigit():
+            return 0.25  # Tolerable penalty for isolated numbers/measurements
+        return 0.85  # Severe weirdness for random isolated letters
 
     if len(core) < 2:
         return 0.0
@@ -424,6 +426,12 @@ def categorize_line(
     # Catch 1: High perplexity on short lines (e.g., "z.6Z. 1369/o")
     if perplexity > 2000.0 and wc < 5:
         return "Noisy" if g_density < 0.1 else "Trash"
+
+    # Catch 7: Single-character fragmentation (spaced out text)
+    # e.g., "C A s 8." - Punishes lines where 50%+ of words are isolated characters
+    single_char_ratio = sum(1 for w in text_source.split() if len(w.strip(_STRIP_CHARS)) <= 1) / wc if wc > 0 else 0
+    if wc >= 3 and single_char_ratio >= 0.50 and weird_ratio > 0.15:
+            return "Trash"
 
     # Catch 2: Extremely skewed vowel ratios indicating random consonants/vowels (e.g., "FAXAPOOXAXXXX")
     if len(text_source) > 5 and (vowel_ratio < 0.1 or vowel_ratio > 0.9):
