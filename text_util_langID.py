@@ -61,8 +61,14 @@ def _lang_base(lang_code: str) -> str:
 
 _EXPECTED_LANGS_BASES: frozenset = frozenset(_lang_base(l) for l in COMMON_LANGS)
 
-PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 5000.0)
-PERPLEXITY_THRESHOLD_MIN = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MIN", 1500.0)
+PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
+PERPLEXITY_THRESHOLD_MIN = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MIN", 300.0)
+
+# Perplexity cut-offs used inside categorize_line.
+# Qwen2.5-0.5B scores clean text far lower than distilgpt2 did, so these are
+# calibrated to its range.  Override in config_langID.txt if needed.
+CATEG_PPL_SHORT_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_SHORT_MAX", 700.0)   # was hardcoded 2000.0
+CATEG_PPL_WEIRD_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_WEIRD_MAX", 400.0)   # was hardcoded 1000.0
 
 LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
@@ -169,7 +175,7 @@ def detect_gibberish_words(text: str) -> int:
             continue
 
         if len(core) > 0:
-            numeric_chars = sum(1 for c in core if c.isdigit() or c in '-./,')
+            numeric_chars = sum(1 for c in core if c.isdigit() or c in '-./,;:')
             if numeric_chars / len(core) >= 0.6:
                 continue
 
@@ -307,11 +313,15 @@ def score_word(word: str) -> float:
     # Common grammatical single letters across EN / CS / DE are whitelisted (0 weirdness).
     # Everything else (e.g. stray 'C', 's', 'W') receives a high weirdness score so
     # fragmented lines can no longer hide behind a low average.
+    # Penalise isolated characters that are not common single-letter words.
     if len(core) == 1:
-        if core in "aAiIoOuUvVzZkKsS":
+        # Expanded whitelist: includes prepositions + common archival initials (p. = pan, d. = doktor/den, etc.)
+        if core in "aAiIoOuUvVzZkKsSpPbBjJdDrRnNmMtT" or '.' in word:
             return 0.0
         if core.isdigit():
             return 0.25  # Tolerable penalty for isolated numbers/measurements
+        if not core.isalpha():
+            return 0.0  # Forgive surviving punctuation separators like '-'
         return 0.85  # Severe weirdness for random isolated letters
 
     if len(core) < 2:
@@ -422,10 +432,13 @@ def categorize_line(
     if wc >= 5 and avg_word_len < 2.0 and weird_ratio > 0.1:
         return "Trash"
 
-    # ADD THIS BLOCK: Absolute overrides for OCR gibberish
     # Catch 1: High perplexity on short lines (e.g., "z.6Z. 1369/o")
-    if perplexity > 2000.0 and wc < 5:
-        return "Noisy" if g_density < 0.1 else "Trash"
+    if perplexity > CATEG_PPL_SHORT_MAX and wc < 5:
+        # Bypass perplexity trap for lines that are purely Roman numerals or basic punctuation
+        if not all(c in "IVXLCDMivxlcdm.-, " for c in text_source):
+            if g_density < 0.1 and weird_ratio < 0.20:
+                return "Noisy"
+            return "Trash"
 
     # Catch 7: Single-character fragmentation (spaced out text)
     # e.g., "C A s 8." - Punishes lines where 50%+ of words are isolated characters
@@ -438,11 +451,11 @@ def categorize_line(
         return "Trash"
 
     # Catch 3: High overall word weirdness (e.g., "0YM2aAS2AMOSA2CXs")
-    if weird_ratio > 0.25:
+    if weird_ratio >= 0.25:
         return "Trash"
 
     # Catch 4: Moderately high weirdness combined with high perplexity
-    if weird_ratio > 0.15 and perplexity > 1000.0:
+    if weird_ratio > 0.15 and perplexity > CATEG_PPL_WEIRD_MAX:
         return "Trash"
 
     if quality_score < CATEG_TRASH_SCORE_MAX:

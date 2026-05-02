@@ -5,7 +5,7 @@ langID_classify.py
 Step 2: Read TXT files → Merge Split Words → Batch classify.
 
 Architecture (Solution B - CPU/GPU Split Queue):
-1. ONE dedicated GPU Worker loops continuously, holding the only distilgpt2 instance to prevent VRAM OOM errors.
+1. ONE dedicated GPU Worker loops continuously, holding the only Qwen2.5-0.5B instance to prevent VRAM OOM errors.
 2. MULTIPLE CPU Workers read files, run Regex/FastText, and place texts into a multiprocessing Task Queue.
 3. CPU Workers poll a Result Dictionary until the GPU returns their Perplexity scores.
 """
@@ -44,14 +44,17 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[GPU Engine] Initializing DistilGPT2 on {device.upper()}...")
+    print(f"[GPU Engine] Initializing Qwen2.5-0.5B on {device.upper()}...")
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B")
         tokenizer.pad_token = tokenizer.eos_token
-        model = AutoModelForCausalLM.from_pretrained("distilgpt2").to(device)
+        model = AutoModelForCausalLM.from_pretrained(
+            "Qwen/Qwen2.5-0.5B",
+            torch_dtype="auto",
+        ).to(device)
         model.eval()
-        print(f"[GPU Engine] Ready. Waiting for text batches...")
+        print(f"[GPU Engine] Qwen2.5-0.5B ready. Waiting for text batches...")
     except Exception as e:
         print(f"[GPU Engine] Failed to load model: {e}")
         return
