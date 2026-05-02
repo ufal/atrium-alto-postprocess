@@ -1,465 +1,465 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
-CTX193001369,1,1,NĚ KATOVICE,,,ces,1.0,1365.89,2,11,0.0,0,0,0,0,0,0.0,0.5,0.7064,Clear,True
-CTX193001369,1,2,okr. Brandýs n/L.,,,ces,0.75,687.22,3,17,0.0,0,1,0,0,0,0.0333,0.25,0.7476,Clear,False
+CTX193001369,1,1,NĚ KATOVICE,,,ces,1.0,1365.89,2,11,0.0,0,0,0,0,0,0.0,0.5,0.6517,Noisy,True
+CTX193001369,1,2,okr. Brandýs n/L.,,,ces,0.75,687.22,3,17,0.0,0,1,0,0,0,0.0333,0.25,0.7201,Clear,False
 CTX193001369,1,3,GEC,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,1,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,1,5,"ČSL sTAT""I ARCaACONCCN t., .",,,ces,0.75,2372.11,5,28,0.0357,0,2,0,0,0,0.21,0.3,0.6425,Trash,False
-CTX193001369,1,6,ŕ : UW Dos & 837mm. i b.,,,ces,0.75,3723.71,8,24,0.0833,1,0,0,0,0,0.3187,0.3,0.4155,Trash,False
-CTX193001369,1,7,UJ - Počet pilo’a,,,ces,0.75,784.59,4,17,0.0588,1,0,0,0,0,0.3125,0.5,0.5746,Trash,False
+CTX193001369,1,5,"ČSL sTAT""I ARCaACONCCN t., .",,,ces,0.75,2372.11,5,28,0.0357,0,2,0,0,0,0.04,0.3,0.5817,Noisy,False
+CTX193001369,1,6,ŕ : UW Dos & 837mm. i b.,,,ces,0.75,3723.71,8,24,0.0833,1,0,0,0,0,0.1062,0.3,0.4069,Trash,False
+CTX193001369,1,7,UJ - Počet pilo’a,,,ces,0.75,784.59,4,17,0.0588,1,0,0,0,0,0.1,0.5,0.5857,Noisy,False
 CTX193001369,1,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,1,9,Hroby se zvôncovymi poháry.,,,ces,0.9685,1007.3,4,27,0.0,0,0,0,0,0,0.0,0.3913,0.8043,Clear,False
+CTX193001369,1,9,Hroby se zvôncovymi poháry.,,,ces,0.9685,1007.3,4,27,0.0,0,0,0,0,0,0.0,0.3913,0.764,Clear,False
 CTX193001369,1,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
 CTX193001369,1,11,F,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,2,1,A.,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,2,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,2,3,NERATOVICE.,,,ces,0.75,673.15,1,11,0.0,0,0,0,0,0,0.0,0.5,0.8659,Clear,True
-CTX193001369,2,4,okr. Brandýs n/L. GEC,,,ces,0.75,754.6,4,21,0.0,0,1,0,0,0,0.025,0.2667,0.7822,Clear,False
+CTX193001369,2,3,NERATOVICE.,,,ces,0.75,673.15,1,11,0.0,0,0,0,0,0,0.0,0.5,0.839,Clear,True
+CTX193001369,2,4,okr. Brandýs n/L. GEC,,,ces,0.75,754.6,4,21,0.0,0,1,0,0,0,0.025,0.2667,0.7521,Clear,False
 CTX193001369,2,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,2,6,Hrobyse zvoncovými poháry,,,ces,0.8634,862.21,3,25,0.0,0,0,0,0,0,0.0,0.4348,0.8905,Clear,False
+CTX193001369,2,6,Hrobyse zvoncovými poháry,,,ces,0.8634,862.21,3,25,0.0,0,0,0,0,0,0.0,0.4348,0.856,Clear,False
 CTX193001369,2,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,2,8,"Na levém břehu Labe v Neratovicích, v pískovně továrny GEC roz-",,,ces,1.0,515.14,11,63,0.0,0,0,0,0,0,0.0,0.3922,0.8542,Clear,False
-CTX193001369,2,9,"kládalose větší pohřebiště se zvoncovými poháry, jež bylo v r.1928",,,ces,1.0,261.51,10,66,0.0,0,0,0,0,0,0.0,0.4118,0.8595,Clear,False
-CTX193001369,2,10,prozkoumáno St.A.0. *ot> 8y A*- * “7 -,,,ces,0.9767,623.89,8,38,0.1316,4,1,0,0,0,0.375,0.5,0.5229,Trash,False
+CTX193001369,2,8,"Na levém břehu Labe v Neratovicích, v pískovně továrny GEC roz-",,,ces,1.0,515.14,11,63,0.0,0,0,0,0,0,0.0,0.3922,0.8336,Clear,False
+CTX193001369,2,9,"kládalose větší pohřebiště se zvoncovými poháry, jež bylo v r.1928",,,ces,1.0,261.51,10,66,0.0,0,0,0,0,0,0.0,0.4118,0.849,Clear,False
+CTX193001369,2,10,prozkoumáno St.A.0. *ot> 8y A*- * “7 -,,,ces,0.9767,623.89,8,38,0.1316,4,1,0,0,0,0.1625,0.5,0.5405,Noisy,False
 CTX193001369,2,11,' w.,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,2,12,"Hrob 1. / 20•A. 1928. / Poloha milodarů nemohla býti zjištěna,",zji,,ces,0.9999,507.9,11,62,0.0161,1,0,0,0,0,0.0591,0.4474,0.7709,Clear,False
-CTX193001369,2,13,"nebot obsah hrobu / 4 nádoby, nátepní destička a bronzová dýč-",,"štěna,",ces,0.98,497.32,11,62,0.0,0,0,0,0,0,0.0227,0.4167,0.8461,Clear,False
-CTX193001369,2,14,"ka / byl vybrán teprve způdy, zřícené následkem trvalých dešťů.",,,ces,1.0,415.32,10,63,0.0,0,0,0,0,0,0.0,0.3529,0.8769,Clear,False
-CTX193001369,2,15,"Nádoba 1. Zvoncový pohár s plochým dnem, tmavě Červený, na nezdobených",,,ces,0.9001,201.36,11,70,0.0,0,0,0,0,0,0.0227,0.375,0.867,Clear,False
-CTX193001369,2,16,"částechvně jší strany jemně leštěný. VtlaČovaná výzdoba, nesoucí dosud",,,ces,1.0,235.85,9,70,0.0,0,1,0,0,0,0.0111,0.4,0.9526,Clear,False
-CTX193001369,2,17,"stopy bé inkrustace, pokrývá v sedmi vodorovných pruzích celý povrch",,,ces,0.8813,446.04,10,68,0.0,0,0,0,0,0,0.0,0.3621,0.8872,Clear,False
-CTX193001369,2,18,", poháru. Rozměry : v - 185""mm, pr. okraje - 20 mm, pr. dna - 80 mm.",,,ces,0.9788,296.16,17,68,0.0294,0,0,0,0,1,0.15,0.303,0.6614,Noisy,False
-CTX193001369,2,19,"Tb.I.,1. ; V., 4. č.neg420.",,,ces,0.75,681.81,5,27,0.037,0,1,0,0,2,0.07,0.25,0.5117,Noisy,False
-CTX193001369,2,20,"Nádoba 2* Zvoncový pohár se zakulaceným, uprostřed promáčknutým dnem,",,,ces,0.9927,355.26,9,69,0.0145,1,0,0,0,0,0.0444,0.386,0.8705,Clear,False
-CTX193001369,2,21,"tmavě červený, na nezdobených částech vnější strany hlazený. Výzdoba",,,ces,1.0,117.34,9,68,0.0,0,0,0,0,0,0.0,0.3793,0.9241,Clear,False
-CTX193001369,2,22,"v některých místech silně bíle inkrustovaná, tvoří 5 vodorovných pruhů,",,,ces,1.0,202.44,10,71,0.0,0,0,0,0,0,0.025,0.3729,0.8923,Clear,False
-CTX193001369,2,23,pokrývajících ce_lý povrch nádoby až k proláklině ve dnu. Rozměry: v -,,,ces,1.0,293.37,12,70,0.0286,0,0,0,0,0,0.0708,0.3818,0.8077,Clear,False
-CTX193001369,2,24,"145 mm, pr. okraje - 167 mm, pr. dna - 57 mm. - •",,,ces,0.75,213.55,14,49,0.0204,1,0,0,0,0,0.2429,0.2105,0.598,Noisy,False
-CTX193001369,2,25,"Tb.I. ,2. ; V.,2. č. neg. 421.",,,ces,0.75,402.91,7,30,0.0333,0,1,0,0,0,0.1714,0.25,0.592,Noisy,False
-CTX193001369,2,26,"Nádoba 3. Vysoký, mékce profilovaný pohár, hrubě hnětený ze žlutoše-",,,ces,1.0,223.21,10,68,0.0,0,0,0,0,0,0.025,0.4444,0.8823,Clear,False
-CTX193001369,2,27,"dé hlíny. Rozměry ; v- 144 mm, pr. okraje - 125 mm, pr. dna 65mm:",,,ces,0.9978,357.78,15,65,0.0308,0,0,0,0,1,0.0567,0.2941,0.6917,Noisy,False
-CTX193001369,2,28,"■Tb.I., 3. -C.neg.-421. '",,,ces,0.75,686.31,4,25,0.08,1,1,0,0,0,0.1875,0.2857,0.472,Trash,False
-CTX193001369,2,29,"Nádoba 4. Široká mísa s, rovně seříznutým okrajem, přiněmž těsn"" umístS-",,,ces,1.0,172.67,11,72,0.0139,0,1,0,0,0,0.0318,0.3929,0.8903,Clear,False
-CTX193001369,2,30,no tunelovité ouško. Mísa spočívá na čtyřech nízkých nožkách. Roz/,,,ces,0.9995,225.27,10,66,0.0,0,0,0,0,0,0.0,0.4074,0.8879,Clear,False
-CTX193001369,2,31,"měry : V - 78mm, pr. okraje - 282mm, v. nožek - 12mm. *",,,ces,0.9968,182.39,14,55,0.0364,1,0,0,0,2,0.2429,0.28,0.6271,Trash,False
-CTX193001369,2,32,"Tb. I., č. 4. ; 3, neg: 422,",,,ces,0.75,404.83,8,28,0.0714,0,0,0,0,0,0.1688,0.2857,0.5513,Trash,False
-CTX193001369,2,33,"5 / Bronzová, dýčka trojúhelníkovitá, s řapem, jehož okraje jsou",,,ces,1.0,349.62,10,64,0.0,0,0,0,0,0,0.025,0.42,0.8425,Clear,False
-CTX193001369,2,34,"mírně zvýšeny zvláště na jedné straně, jež je hladká, kdežto na druhé,",,,ces,1.0,124.18,12,70,0.0,0,0,0,0,0,0.0,0.375,0.8815,Clear,False
-CTX193001369,2,35,drsnější straně zvýšení není tak patrno. Hrot čepele chybí. Zachovaná,,,ces,1.0,207.7,10,69,0.0,0,0,1,0,0,0.035,0.3793,0.9479,Clear,False
-CTX193001369,3,1,"délka - 64mm, nejv. šířka - 35 mm’. • .",,,ces,0.9998,281.28,10,39,0.0513,2,0,0,0,1,0.295,0.2778,0.6177,Trash,False
-CTX193001369,3,2,"Tb. I. ,5. č,neg.423. . . ' •",,,ces,0.75,535.48,8,29,0.069,1,0,0,0,1,0.1375,0.2857,0.5042,Trash,False
-CTX193001369,3,3,"6/ Nátepní desička vybroušená ze šedočernéno vrstevnatého kamene,",,,ces,0.9965,471.48,8,65,0.0,0,0,0,0,0,0.0312,0.4364,0.8587,Clear,False
-CTX193001369,3,4,"mírně prohnutá podél delší osy, se čtyřmi otvory v rozích. Na vnější",,,ces,1.0,303.25,12,68,0.0,0,0,0,0,0,0.0,0.4,0.875,Clear,False
-CTX193001369,3,5,straně destičkyi j sou zřetelně patrny * 2 9. .,,,ces,1.0,403.71,10,47,0.0213,1,0,0,0,0,0.22,0.3939,0.7241,Trash,False
-CTX193001369,3,6,", , pričné ryhy, způsobené zpětným",,,ces,1.0,335.03,6,34,0.0,0,0,0,0,0,0.0,0.3846,0.803,Clear,False
-CTX193001369,3,7,"odrazem tětivy luku. Rozměry : d - 114mm/ při okrajích 111 mm/ , š -",,,ces,1.0,432.18,15,68,0.0147,0,0,0,0,0,0.2267,0.3659,0.7048,Clear,False
+CTX193001369,2,12,"Hrob 1. / 20•A. 1928. / Poloha milodarů nemohla býti zjištěna,",zji,,ces,0.9999,507.9,11,62,0.0161,1,0,0,0,0,0.0364,0.4474,0.7552,Clear,False
+CTX193001369,2,13,"nebot obsah hrobu / 4 nádoby, nátepní destička a bronzová dýč-",,"štěna,",ces,0.98,497.32,11,62,0.0,0,0,0,0,0,0.0227,0.4167,0.8262,Clear,False
+CTX193001369,2,14,"ka / byl vybrán teprve způdy, zřícené následkem trvalých dešťů.",,,ces,1.0,415.32,10,63,0.0,0,0,0,0,0,0.0,0.3529,0.8603,Clear,False
+CTX193001369,2,15,"Nádoba 1. Zvoncový pohár s plochým dnem, tmavě Červený, na nezdobených",,,ces,0.9001,201.36,11,70,0.0,0,0,0,0,0,0.0,0.375,0.8635,Clear,False
+CTX193001369,2,16,"částechvně jší strany jemně leštěný. VtlaČovaná výzdoba, nesoucí dosud",,,ces,1.0,235.85,9,70,0.0,0,1,0,0,0,0.0111,0.4,0.9432,Clear,False
+CTX193001369,2,17,"stopy bé inkrustace, pokrývá v sedmi vodorovných pruzích celý povrch",,,ces,0.8813,446.04,10,68,0.0,0,0,0,0,0,0.0,0.3621,0.8694,Clear,False
+CTX193001369,2,18,", poháru. Rozměry : v - 185""mm, pr. okraje - 20 mm, pr. dna - 80 mm.",,,ces,0.9788,296.16,17,68,0.0294,0,0,0,0,1,0.0,0.303,0.6796,Noisy,False
+CTX193001369,2,19,"Tb.I.,1. ; V., 4. č.neg420.",,,ces,0.75,681.81,5,27,0.037,0,1,0,0,2,0.02,0.25,0.4944,Noisy,False
+CTX193001369,2,20,"Nádoba 2* Zvoncový pohár se zakulaceným, uprostřed promáčknutým dnem,",,,ces,0.9927,355.26,9,69,0.0145,1,0,0,0,0,0.0444,0.386,0.8563,Clear,False
+CTX193001369,2,21,"tmavě červený, na nezdobených částech vnější strany hlazený. Výzdoba",,,ces,1.0,117.34,9,68,0.0,0,0,0,0,0,0.0,0.3793,0.9194,Clear,False
+CTX193001369,2,22,"v některých místech silně bíle inkrustovaná, tvoří 5 vodorovných pruhů,",,,ces,1.0,202.44,10,71,0.0,0,0,0,0,0,0.025,0.3729,0.8842,Clear,False
+CTX193001369,2,23,pokrývajících ce_lý povrch nádoby až k proláklině ve dnu. Rozměry: v -,,,ces,1.0,293.37,12,70,0.0286,0,0,0,0,0,0.0,0.3818,0.8101,Clear,False
+CTX193001369,2,24,"145 mm, pr. okraje - 167 mm, pr. dna - 57 mm. - •",,,ces,0.75,213.55,14,49,0.0204,1,0,0,0,0,0.0,0.2105,0.638,Noisy,False
+CTX193001369,2,25,"Tb.I. ,2. ; V.,2. č. neg. 421.",,,ces,0.75,402.91,7,30,0.0333,0,1,0,0,0,0.0143,0.25,0.6073,Noisy,False
+CTX193001369,2,26,"Nádoba 3. Vysoký, mékce profilovaný pohár, hrubě hnětený ze žlutoše-",,,ces,1.0,223.21,10,68,0.0,0,0,0,0,0,0.0,0.4444,0.8784,Clear,False
+CTX193001369,2,27,"dé hlíny. Rozměry ; v- 144 mm, pr. okraje - 125 mm, pr. dna 65mm:",,,ces,0.9978,357.78,15,65,0.0308,0,0,0,0,1,0.0,0.2941,0.6887,Noisy,False
+CTX193001369,2,28,"■Tb.I., 3. -C.neg.-421. '",,,ces,0.75,686.31,4,25,0.08,1,1,0,0,0,0.125,0.2857,0.4571,Noisy,False
+CTX193001369,2,29,"Nádoba 4. Široká mísa s, rovně seříznutým okrajem, přiněmž těsn"" umístS-",,,ces,1.0,172.67,11,72,0.0139,0,1,0,0,0,0.0091,0.3929,0.8879,Clear,False
+CTX193001369,2,30,no tunelovité ouško. Mísa spočívá na čtyřech nízkých nožkách. Roz/,,,ces,0.9995,225.27,10,66,0.0,0,0,0,0,0,0.0,0.4074,0.8789,Clear,False
+CTX193001369,2,31,"měry : V - 78mm, pr. okraje - 282mm, v. nožek - 12mm. *",,,ces,0.9968,182.39,14,55,0.0364,1,0,0,0,2,0.0,0.28,0.6683,Noisy,False
+CTX193001369,2,32,"Tb. I., č. 4. ; 3, neg: 422,",,,ces,0.75,404.83,8,28,0.0714,0,0,0,0,0,0.0312,0.2857,0.5626,Noisy,False
+CTX193001369,2,33,"5 / Bronzová, dýčka trojúhelníkovitá, s řapem, jehož okraje jsou",,,ces,1.0,349.62,10,64,0.0,0,0,0,0,0,0.025,0.42,0.8285,Clear,False
+CTX193001369,2,34,"mírně zvýšeny zvláště na jedné straně, jež je hladká, kdežto na druhé,",,,ces,1.0,124.18,12,70,0.0,0,0,0,0,0,0.0,0.375,0.8765,Clear,False
+CTX193001369,2,35,drsnější straně zvýšení není tak patrno. Hrot čepele chybí. Zachovaná,,,ces,1.0,207.7,10,69,0.0,0,0,1,0,0,0.035,0.3793,0.9396,Clear,False
+CTX193001369,3,1,"délka - 64mm, nejv. šířka - 35 mm’. • .",,,ces,0.9998,281.28,10,39,0.0513,2,0,0,0,1,0.04,0.2778,0.6575,Noisy,False
+CTX193001369,3,2,"Tb. I. ,5. č,neg.423. . . ' •",,,ces,0.75,535.48,8,29,0.069,1,0,0,0,1,0.0,0.2857,0.5103,Noisy,False
+CTX193001369,3,3,"6/ Nátepní desička vybroušená ze šedočernéno vrstevnatého kamene,",,,ces,0.9965,471.48,8,65,0.0,0,0,0,0,0,0.0312,0.4364,0.8399,Clear,False
+CTX193001369,3,4,"mírně prohnutá podél delší osy, se čtyřmi otvory v rozích. Na vnější",,,ces,1.0,303.25,12,68,0.0,0,0,0,0,0,0.0,0.4,0.8629,Clear,False
+CTX193001369,3,5,straně destičkyi j sou zřetelně patrny * 2 9. .,,,ces,1.0,403.71,10,47,0.0213,1,0,0,0,0,0.025,0.3939,0.7469,Clear,False
+CTX193001369,3,6,", , pričné ryhy, způsobené zpětným",,,ces,1.0,335.03,6,34,0.0,0,0,0,0,0,0.0,0.3846,0.7896,Clear,False
+CTX193001369,3,7,"odrazem tětivy luku. Rozměry : d - 114mm/ při okrajích 111 mm/ , š -",,,ces,1.0,432.18,15,68,0.0147,0,0,0,0,0,0.0567,0.3659,0.7215,Clear,False
 CTX193001369,3,8,33 mm. - . ' .,,,,0.0,0.0,0,14,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,3,9,"Tb.1.,6. č.neg423. j 1 "" ■ •",,,ces,0.75,1632.51,7,28,0.1071,2,0,0,0,1,0.4,0.1429,0.4184,Trash,False
-CTX193001369,3,10,Hrob 1. získal p. Ševčík - viz č.j. 559/29. Aacu. .,,,ces,0.9882,320.98,11,51,0.0,0,0,0,0,0,0.1773,0.3462,0.7038,Clear,False
-CTX193001369,3,11,Aie 27 “73 -C,,,ces,0.75,1724.44,4,13,0.0769,1,0,0,0,0,0.1,0.75,0.5683,Noisy,False
-CTX193001369,3,12,"Hrob 2. / 26.1X.1928 ./ Kostra, jejíž lebka byla promáčknuta,",,,ces,0.9994,659.57,10,61,0.0,0,0,0,0,0,0.025,0.3611,0.7834,Clear,False
-CTX193001369,3,13,"spočívala na pravém boku, ve skrčený poloze.. Spodní čelist ležela pod",,,ces,0.9965,276.47,11,70,0.0,0,0,0,0,0,0.0,0.4035,0.8958,Clear,False
-CTX193001369,3,14,"lebkou. Milodary nenaleženy žádné.’ č.neg. 451,452. Tb. XIV.",,,ces,0.9661,365.35,8,60,0.0167,1,0,0,0,0,0.05,0.4211,0.7929,Clear,False
-CTX193001369,3,15,Kopal p. Ševčík - viz č.j. 560 /29. . - - -,,,ces,0.9815,448.27,12,43,0.0,0,0,0,0,0,0.3542,0.2941,0.5827,Trash,False
+CTX193001369,3,9,"Tb.1.,6. č.neg423. j 1 "" ■ •",,,ces,0.75,1632.51,7,28,0.1071,2,0,0,0,1,0.0357,0.1429,0.426,Noisy,False
+CTX193001369,3,10,Hrob 1. získal p. Ševčík - viz č.j. 559/29. Aacu. .,,,ces,0.9882,320.98,11,51,0.0,0,0,0,0,0,0.0,0.3462,0.7264,Clear,False
+CTX193001369,3,11,Aie 27 “73 -C,,,ces,0.75,1724.44,4,13,0.0769,1,0,0,0,0,0.1,0.75,0.4993,Noisy,False
+CTX193001369,3,12,"Hrob 2. / 26.1X.1928 ./ Kostra, jejíž lebka byla promáčknuta,",,,ces,0.9994,659.57,10,61,0.0,0,0,0,0,0,0.0,0.3611,0.762,Clear,False
+CTX193001369,3,13,"spočívala na pravém boku, ve skrčený poloze.. Spodní čelist ležela pod",,,ces,0.9965,276.47,11,70,0.0,0,0,0,0,0,0.0,0.4035,0.8848,Clear,False
+CTX193001369,3,14,"lebkou. Milodary nenaleženy žádné.’ č.neg. 451,452. Tb. XIV.",,,ces,0.9661,365.35,8,60,0.0167,1,0,0,0,0,0.05,0.4211,0.7783,Clear,False
+CTX193001369,3,15,Kopal p. Ševčík - viz č.j. 560 /29. . - - -,,,ces,0.9815,448.27,12,43,0.0,0,0,0,0,0,0.0,0.2941,0.6356,Noisy,False
 CTX193001369,3,16,. 2 . .,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,3,17,■ ■ • .. ' . ..,,,,0.0,0.0,0,15,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,3,18,|H r o b 3. / 1.x.1928. / . Poloha kostry a milodarů nemohla býti,,,ces,0.9949,624.21,15,65,0.0154,1,0,0,0,0,0.1567,0.4324,0.6841,Trash,False
-CTX193001369,3,19,"zjištěna, poněvadž, hrob byl nalezen ve zřícené půdě. . ‘",,,ces,1.0,132.13,10,57,0.0175,1,0,0,0,0,0.085,0.3953,0.8272,Clear,False
-CTX193001369,3,20,"Nádoba 1. Nízký, široký džbánek se slabě sevřeným, nezřetelně odsazeným",odsaze,,ces,1.0,99.4,10,71,0.0,0,0,0,0,0,0.025,0.4138,0.8936,Clear,False
-CTX193001369,3,21,"hrdlem, jež jest překlenuto páskovým uchem. V největším objemu",,ným,ces,1.0,231.15,9,62,0.0,0,0,0,0,0,0.0,0.3462,0.913,Clear,False
-CTX193001369,3,22,břicha jest zaoblený lom. Vyroben jest z jemné tmavěšedé hlíny.,,,ces,0.9991,259.88,10,63,0.0,0,0,0,0,0,0.0,0.3846,0.9163,Clear,False
-CTX193001369,3,23,"Rozměry ; v - 88mm, pr. okraje - 76mm, v.hrdla - 33mm,pr .dna45mm.",,,ces,0.977,275.54,13,66,0.0152,0,0,0,0,5,0.1962,0.2286,0.6747,Noisy,False
-CTX193001369,3,24,"Tb.II.,1. Č.neg. 424.",,,ces,0.75,721.23,3,21,0.0,0,1,0,0,0,0.0333,0.375,0.6188,Noisy,False
-CTX193001369,3,25,"Kepel P.r šedstzei, b 565/29 . _",,,ces,0.75,713.5,7,32,0.0312,0,0,0,0,0,0.2429,0.3125,0.6094,Noisy,False
-CTX193001369,3,26,"Nádoba 2. polokulovitá mísa s rovně.šeřížnutým , nepatrně rozšířeným",,,ces,1.0,210.62,9,68,0.0,0,0,0,0,0,0.0278,0.4286,0.8452,Clear,False
-CTX193001369,3,27,"okrajem. Povrch žlutošedý, místy slabě lesklý. Rozměry : pr. - 230mm,",,,ces,0.9999,390.49,11,69,0.0145,0,0,0,0,0,0.0773,0.3469,0.8085,Clear,False
-CTX193001369,3,28,"v.- 98mm, š.okraje - 13 mm.",,,ces,0.863,706.25,6,27,0.0,0,0,0,0,1,0.1417,0.25,0.576,Noisy,False
-CTX193001369,3,29,"Tb.II. ,8. č.neg.424.",,,ces,0.75,668.24,3,21,0.0,0,1,0,0,1,0.1167,0.375,0.6043,Noisy,False
-CTX193001369,3,30,Hrob 2. získal p. Ševčík - viz č.j,,,ces,0.9963,490.93,8,34,0.0,0,0,0,0,0,0.2438,0.2727,0.6921,Noisy,False
-CTX193001369,3,31,560/29.,,,ces,0.75,148.25,1,7,0.0,0,0,0,0,0,0.0,0.0,0.5439,Trash,False
+CTX193001369,3,18,|H r o b 3. / 1.x.1928. / . Poloha kostry a milodarů nemohla býti,,,ces,0.9949,624.21,15,65,0.0154,1,0,0,0,0,0.0267,0.4324,0.6851,Noisy,False
+CTX193001369,3,19,"zjištěna, poněvadž, hrob byl nalezen ve zřícené půdě. . ‘",,,ces,1.0,132.13,10,57,0.0175,1,0,0,0,0,0.0,0.3953,0.8389,Clear,False
+CTX193001369,3,20,"Nádoba 1. Nízký, široký džbánek se slabě sevřeným, nezřetelně odsazeným",odsaze,,ces,1.0,99.4,10,71,0.0,0,0,0,0,0,0.0,0.4138,0.8946,Clear,False
+CTX193001369,3,21,"hrdlem, jež jest překlenuto páskovým uchem. V největším objemu",,ným,ces,1.0,231.15,9,62,0.0,0,0,0,0,0,0.0,0.3462,0.9037,Clear,False
+CTX193001369,3,22,břicha jest zaoblený lom. Vyroben jest z jemné tmavěšedé hlíny.,,,ces,0.9991,259.88,10,63,0.0,0,0,0,0,0,0.0,0.3846,0.9059,Clear,False
+CTX193001369,3,23,"Rozměry ; v - 88mm, pr. okraje - 76mm, v.hrdla - 33mm,pr .dna45mm.",,,ces,0.977,275.54,13,66,0.0152,0,0,0,0,5,0.0,0.2286,0.7029,Clear,False
+CTX193001369,3,24,"Tb.II.,1. Č.neg. 424.",,,ces,0.75,721.23,3,21,0.0,0,1,0,0,0,0.0333,0.375,0.59,Noisy,False
+CTX193001369,3,25,"Kepel P.r šedstzei, b 565/29 . _",,,ces,0.75,713.5,7,32,0.0312,0,0,0,0,0,0.0,0.3125,0.6294,Noisy,False
+CTX193001369,3,26,"Nádoba 2. polokulovitá mísa s rovně.šeřížnutým , nepatrně rozšířeným",,,ces,1.0,210.62,9,68,0.0,0,0,0,0,0,0.0,0.4286,0.8423,Clear,False
+CTX193001369,3,27,"okrajem. Povrch žlutošedý, místy slabě lesklý. Rozměry : pr. - 230mm,",,,ces,0.9999,390.49,11,69,0.0145,0,0,0,0,0,0.0,0.3469,0.8084,Clear,False
+CTX193001369,3,28,"v.- 98mm, š.okraje - 13 mm.",,,ces,0.863,706.25,6,27,0.0,0,0,0,0,1,0.0,0.25,0.5761,Noisy,False
+CTX193001369,3,29,"Tb.II. ,8. č.neg.424.",,,ces,0.75,668.24,3,21,0.0,0,1,0,0,1,0.0333,0.375,0.5942,Noisy,False
+CTX193001369,3,30,Hrob 2. získal p. Ševčík - viz č.j,,,ces,0.9963,490.93,8,34,0.0,0,0,0,0,0,0.0,0.2727,0.7212,Clear,False
+CTX193001369,3,31,560/29.,,,ces,0.75,148.25,1,7,0.0,0,0,0,0,0,0.0,0.0,0.538,Trash,False
 CTX193001369,3,32,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,3,33,"Hrob 4. Kostra, spočívající ve skrčené poloze na levém boku, obličejem",obli,,ces,0.9999,320.6,11,70,0.0,0,0,0,0,0,0.0227,0.4107,0.8622,Clear,False
-CTX193001369,3,34,"k východu, byla velmi setlelá, pouze lebka byla poněkud lépe uchována.",u,čejem,ces,1.0,278.21,11,70,0.0,0,0,0,0,0,0.0,0.4561,0.923,Clear,False
-CTX193001369,3,35,"U nohou kostry ležely dva zdobené zvoncové poháry, z nichž",,chována.,ces,0.9257,412.06,10,58,0.0,0,0,0,0,0,0.0,0.4167,0.8781,Clear,False
-CTX193001369,3,36,větší spolu s malým džbánkem byly přikryty mísou. Po levé straně pánve,,,ces,1.0,321.56,12,70,0.0,0,0,0,0,0,0.0,0.3966,0.9043,Clear,False
-CTX193001369,3,37,"směrem k míse, byly dva pazourky. 8.neg.453-156. Tb.XV. .",,,ces,0.9999,603.65,9,57,0.0,0,1,0,0,1,0.0111,0.3636,0.7991,Clear,False
-CTX193001369,4,1,"Nádoba 1. Zvoncový'pohár s plochým dnem, tmavěčervený, místy světlejší .",,,ces,0.9983,213.91,10,72,0.0139,0,0,0,0,0,0.025,0.3684,0.8546,Clear,False
+CTX193001369,3,33,"Hrob 4. Kostra, spočívající ve skrčené poloze na levém boku, obličejem",obli,,ces,0.9999,320.6,11,70,0.0,0,0,0,0,0,0.0,0.4107,0.854,Clear,False
+CTX193001369,3,34,"k východu, byla velmi setlelá, pouze lebka byla poněkud lépe uchována.",u,čejem,ces,1.0,278.21,11,70,0.0,0,0,0,0,0,0.0,0.4561,0.9119,Clear,False
+CTX193001369,3,35,"U nohou kostry ležely dva zdobené zvoncové poháry, z nichž",,chována.,ces,0.9257,412.06,10,58,0.0,0,0,0,0,0,0.0,0.4167,0.8616,Clear,False
+CTX193001369,3,36,větší spolu s malým džbánkem byly přikryty mísou. Po levé straně pánve,,,ces,1.0,321.56,12,70,0.0,0,0,0,0,0,0.0,0.3966,0.8914,Clear,False
+CTX193001369,3,37,"směrem k míse, byly dva pazourky. 8.neg.453-156. Tb.XV. .",,,ces,0.9999,603.65,9,57,0.0,0,1,0,0,1,0.0111,0.3636,0.7749,Clear,False
+CTX193001369,4,1,"Nádoba 1. Zvoncový'pohár s plochým dnem, tmavěčervený, místy světlejší .",,,ces,0.9983,213.91,10,72,0.0139,0,0,0,0,0,0.0,0.3684,0.851,Clear,False
 CTX193001369,4,2,"t , •",,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,4,3,"na vnější straně jemně leštěný-,- pokrytý čtyřmi pruhy v tlač ovane výzdoby",,,ces,1.0,188.66,12,75,0.0,0,0,0,0,0,0.0,0.3934,0.9095,Clear,False
-CTX193001369,4,4,"se zcela nepatrnými stopami bílé inkrustace. Rozměry : v- 112mm, pr. okr",,,ces,0.9997,1641.95,12,72,0.0139,0,0,0,0,0,0.0,0.3774,0.7674,Clear,False
-CTX193001369,4,5,"je - 125mm, pr.dna - 53mm.. - ■ .",,,ces,0.75,557.58,9,33,0.0303,1,0,0,0,1,0.3778,0.1818,0.5139,Trash,False
-CTX193001369,4,6,"Tb.III.,1.; V,3. . :_neg.425,426. . ■' /",,,ces,0.75,482.68,7,40,0.125,1,1,0,0,0,0.1357,0.4444,0.5086,Noisy,False
-CTX193001369,4,7,"Nádoba 2. Menší zvoncový pohár se zakulaceným, uprostřed promáčknutým .",,,ces,0.9967,319.28,10,71,0.0,0,0,0,0,0,0.025,0.3966,0.8548,Clear,False
-CTX193001369,4,8,"dnem, zdobený pěti pruhy jednoduchévtlačované výzdoby. Barva' šedožlutá, mj",,,ces,0.9132,304.97,9,75,0.0133,0,0,0,0,0,0.0,0.3968,0.9188,Clear,False
-CTX193001369,4,9,"místy načervonalá, povrch lesklý,avšak z,větší části odřený. Rozměry;",,,ces,1.0,225.25,8,69,0.0145,0,0,0,0,0,0.0,0.386,0.9455,Clear,False
-CTX193001369,4,10,"v - 95mm, pr.okraje - 111mm, . *. - 5 . ■",,,ces,0.75,804.48,12,41,0.0488,2,0,1,0,1,0.4042,0.2308,0.4993,Trash,False
-CTX193001369,4,11,"Tb. 1II.;2./ v.,4. ' ..425,126, 1.. •",,,ces,0.75,981.94,7,37,0.0811,1,0,0,0,0,0.1571,0.4,0.4798,Noisy,False
-CTX193001369,4,12,"Nádoba 4.ovitá mísa š vyznačeným dnem a značně rozšířeným, se-",,,ces,0.9999,170.9,10,62,0.0,0,0,0,0,0,0.085,0.4286,0.8385,Clear,False
-CTX193001369,4,13,"šikmeným okrajem, při němž sedí tunelovité ucho.-Rozměry : pr.okraje - 33",,,ces,1.0,395.94,11,73,0.0137,0,1,0,0,0,0.0864,0.4182,0.8416,Clear,False
-CTX193001369,4,14,"337mm, pr. dna - 105mm,y -167mm: ■ Mísa jest na vnitřní ""straně červená,",,,ces,0.9999,431.38,13,72,0.0417,1,0,0,0,1,0.1308,0.3095,0.7421,Clear,False
-CTX193001369,4,15,na vnější straně .oranžová se šedožlutými skvrnami. ‘,,,ces,1.0,261.13,8,53,0.0189,1,0,0,0,0,0.1062,0.3953,0.7975,Clear,False
-CTX193001369,4,16,"Tb.III.,4. č. neg, 427. . . "" /",,,ces,0.75,520.23,8,31,0.0323,0,1,0,0,0,0.1187,0.4444,0.553,Noisy,False
-CTX193001369,4,17,"Pazourkový úlomek ""se stopami sekundární .retuše při zakulaceném konci.",,,ces,1.0,392.35,9,71,0.0141,0,0,0,0,0,0.0,0.45,0.9135,Clear,False
-CTX193001369,4,18,"D - 40mm; Tb . IV.,5. 3. neg. 423.",,,ces,0.75,808.18,9,34,0.0294,0,0,0,0,1,0.2167,0.2,0.5387,Noisy,False
-CTX193001369,4,19,"Pazourkový úlomek plochý,",,,ces,0.9124,366.05,3,25,0.0,0,0,0,0,0,0.0,0.4545,0.9024,Clear,False
+CTX193001369,4,3,"na vnější straně jemně leštěný-,- pokrytý čtyřmi pruhy v tlač ovane výzdoby",,,ces,1.0,188.66,12,75,0.0,0,0,0,0,0,0.0,0.3934,0.9019,Clear,False
+CTX193001369,4,4,"se zcela nepatrnými stopami bílé inkrustace. Rozměry : v- 112mm, pr. okr",,,ces,0.9997,1641.95,12,72,0.0139,0,0,0,0,0,0.0,0.3774,0.7018,Clear,False
+CTX193001369,4,5,"je - 125mm, pr.dna - 53mm.. - ■ .",,,ces,0.75,557.58,9,33,0.0303,1,0,0,0,1,0.0,0.1818,0.5672,Noisy,False
+CTX193001369,4,6,"Tb.III.,1.; V,3. . :_neg.425,426. . ■' /",,,ces,0.75,482.68,7,40,0.125,1,1,0,0,0,0.0143,0.4444,0.5135,Noisy,False
+CTX193001369,4,7,"Nádoba 2. Menší zvoncový pohár se zakulaceným, uprostřed promáčknutým .",,,ces,0.9967,319.28,10,71,0.0,0,0,0,0,0,0.0,0.3966,0.847,Clear,False
+CTX193001369,4,8,"dnem, zdobený pěti pruhy jednoduchévtlačované výzdoby. Barva' šedožlutá, mj",,,ces,0.9132,304.97,9,75,0.0133,0,0,0,0,0,0.0,0.3968,0.9066,Clear,False
+CTX193001369,4,9,"místy načervonalá, povrch lesklý,avšak z,větší části odřený. Rozměry;",,,ces,1.0,225.25,8,69,0.0145,0,0,0,0,0,0.0,0.386,0.9365,Clear,False
+CTX193001369,4,10,"v - 95mm, pr.okraje - 111mm, . *. - 5 . ■",,,ces,0.75,804.48,12,41,0.0488,2,0,1,0,1,0.05,0.2308,0.538,Noisy,False
+CTX193001369,4,11,"Tb. 1II.;2./ v.,4. ' ..425,126, 1.. •",,,ces,0.75,981.94,7,37,0.0811,1,0,0,0,0,0.0,0.4,0.472,Noisy,False
+CTX193001369,4,12,"Nádoba 4.ovitá mísa š vyznačeným dnem a značně rozšířeným, se-",,,ces,0.9999,170.9,10,62,0.0,0,0,0,0,0,0.085,0.4286,0.8317,Clear,False
+CTX193001369,4,13,"šikmeným okrajem, při němž sedí tunelovité ucho.-Rozměry : pr.okraje - 33",,,ces,1.0,395.94,11,73,0.0137,0,1,0,0,0,0.0091,0.4182,0.8413,Clear,False
+CTX193001369,4,14,"337mm, pr. dna - 105mm,y -167mm: ■ Mísa jest na vnitřní ""straně červená,",,,ces,0.9999,431.38,13,72,0.0417,1,0,0,0,1,0.0,0.3095,0.751,Clear,False
+CTX193001369,4,15,na vnější straně .oranžová se šedožlutými skvrnami. ‘,,,ces,1.0,261.13,8,53,0.0189,1,0,0,0,0,0.0,0.3953,0.8083,Clear,False
+CTX193001369,4,16,"Tb.III.,4. č. neg, 427. . . "" /",,,ces,0.75,520.23,8,31,0.0323,0,1,0,0,0,0.0125,0.4444,0.5534,Noisy,False
+CTX193001369,4,17,"Pazourkový úlomek ""se stopami sekundární .retuše při zakulaceném konci.",,,ces,1.0,392.35,9,71,0.0141,0,0,0,0,0,0.0,0.45,0.8978,Clear,False
+CTX193001369,4,18,"D - 40mm; Tb . IV.,5. 3. neg. 423.",,,ces,0.75,808.18,9,34,0.0294,0,0,0,0,1,0.0,0.2,0.5497,Noisy,False
+CTX193001369,4,19,"Pazourkový úlomek plochý,",,,ces,0.9124,366.05,3,25,0.0,0,0,0,0,0,0.0,0.4545,0.8877,Clear,False
 CTX193001369,4,20,dl.,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,4,21,"34mm.. Tb.III.,6; Č. neg.423.",,,ces,0.75,1128.68,4,29,0.0345,0,1,0,0,2,0.2375,0.3636,0.4743,Trash,False
-CTX193001369,4,22,Vykopal p. Ševčík.- viz č,,,ces,0.9805,1215.19,5,25,0.0,0,0,0,0,0,0.34,0.3333,0.6644,Trash,False
+CTX193001369,4,21,"34mm.. Tb.III.,6; Č. neg.423.",,,ces,0.75,1128.68,4,29,0.0345,0,1,0,0,2,0.025,0.3636,0.4716,Noisy,False
+CTX193001369,4,22,Vykopal p. Ševčík.- viz č,,,ces,0.9805,1215.19,5,25,0.0,0,0,0,0,0,0.17,0.3333,0.6498,Trash,False
 CTX193001369,4,23,j •,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,4,24,""" < •""",,,,0.0,0.0,0,6,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,4,25,"Hrob 5. Hrob nalezen ve spadlé hlíně, takže poloha kostry a milodaru",milo,,ces,0.9995,1026.41,12,68,0.0,0,0,0,0,0,0.0208,0.4074,0.8419,Clear,False
-CTX193001369,4,26,jest neznáma. Zachována byla paze třetina,,daru,ces,1.0,1097.41,6,41,0.0,0,0,0,0,0,0.0,0.4286,0.8922,Clear,False
-CTX193001369,4,27,"zvoncového poháru s trojúhelníčkovou vtlacovanou výzdobou, uspořádanou",,,ces,0.9818,526.08,7,70,0.0,0,0,0,0,0,0.0,0.4603,0.9032,Clear,False
-CTX193001369,4,28,"ve vodorovných pruzích. Povrch jest šedočerný, mírně lesklý. Rozměry;",,,ces,1.0,200.75,9,69,0.0145,0,0,0,0,0,0.0,0.3509,0.916,Clear,False
-CTX193001369,4,29,"v- 115mm,pr. ' okraje - ?4 pr. dna - ?",,,ces,0.75,865.52,10,38,0.0263,0,0,0,0,1,0.195,0.25,0.577,Trash,False
-CTX193001369,4,30,"Tb. V ; VI.,5. .neg,428. •",,,ces,0.75,1479.49,6,26,0.0769,1,0,0,0,1,0.1417,0.25,0.4693,Noisy,False
-CTX193001369,4,31,"Získal p. Ševčík, viz 3,3, 560/ 29. OAlda w.Juout 27- 7*",,,ces,0.9681,1016.97,11,56,0.0179,1,1,0,0,0,0.1227,0.4074,0.695,Noisy,False
-CTX193001369,4,32,": . 1 ©,2.437/30",,,ces,0.75,1448.42,4,16,0.125,1,0,0,0,0,0.1625,0.0,0.4506,Trash,False
-CTX193001369,4,33,J . lAct as PzoleXle) -,,,ces,0.75,2293.19,6,23,0.0,0,2,0,0,0,0.3167,0.3333,0.5419,Trash,False
-CTX193001369,4,34,"H r o b TI. Kostra spočívala vo skrčené ploze na levém bozu, hlavou k",,,ces,0.7525,659.19,15,69,0.0,0,0,0,0,0,0.17,0.3962,0.7428,Clear,False
-CTX193001369,4,35,"východu, nohami k západu. U nohou kostry ležel hrnek se- čtyřmi- oušky a",,,ces,0.9969,388.01,13,72,0.0,0,0,0,0,0,0.0,0.4464,0.8531,Clear,False
-CTX193001369,4,36,tři pazourkové šipky. Hrob byl i s milodary v původní poloze vyzvednut a,,,ces,1.0,730.35,13,72,0.0,0,0,0,0,0,0.0,0.4237,0.8477,Clear,False
-CTX193001369,4,37,odvezen do Národního musea. 3.neg. 457-460. Tb.XVI .,,,ces,0.9906,656.18,8,52,0.0,0,1,0,0,0,0.0125,0.4194,0.7463,Clear,False
-CTX193001369,5,1,"/Nádobka se čtyřmi uchy,z nichž dvě jsou umístěna na nejužším místě",,,ces,1.0,171.39,11,67,0.0,0,0,0,0,0,0.0,0.4,0.8996,Clear,False
-CTX193001369,5,2,"nezřetelně vyznačeného hrdla,",,,ces,1.0,489.73,3,29,0.0,0,0,0,0,0,0.0,0.3846,0.9025,Clear,False
-CTX193001369,5,3,"Srubá 2 ouška,položená na",,,ces,0.9181,430.78,4,25,0.0,0,0,0,0,0,0.0625,0.5,0.7373,Clear,False
-CTX193001369,5,4,ose kolmé,,,ces,0.9213,1283.89,2,9,0.0,0,0,0,0,0,0.0,0.5,0.8576,Clear,False
+CTX193001369,4,25,"Hrob 5. Hrob nalezen ve spadlé hlíně, takže poloha kostry a milodaru",milo,,ces,0.9995,1026.41,12,68,0.0,0,0,0,0,0,0.0,0.4074,0.805,Clear,False
+CTX193001369,4,26,jest neznáma. Zachována byla paze třetina,,daru,ces,1.0,1097.41,6,41,0.0,0,0,0,0,0,0.0,0.4286,0.8483,Clear,False
+CTX193001369,4,27,"zvoncového poháru s trojúhelníčkovou vtlacovanou výzdobou, uspořádanou",,,ces,0.9818,526.08,7,70,0.0,0,0,0,0,0,0.0,0.4603,0.8822,Clear,False
+CTX193001369,4,28,"ve vodorovných pruzích. Povrch jest šedočerný, mírně lesklý. Rozměry;",,,ces,1.0,200.75,9,69,0.0145,0,0,0,0,0,0.0,0.3509,0.908,Clear,False
+CTX193001369,4,29,"v- 115mm,pr. ' okraje - ?4 pr. dna - ?",,,ces,0.75,865.52,10,38,0.0263,0,0,0,0,1,0.025,0.25,0.5764,Noisy,False
+CTX193001369,4,30,"Tb. V ; VI.,5. .neg,428. •",,,ces,0.75,1479.49,6,26,0.0769,1,0,0,0,1,0.0,0.25,0.4384,Noisy,False
+CTX193001369,4,31,"Získal p. Ševčík, viz 3,3, 560/ 29. OAlda w.Juout 27- 7*",,,ces,0.9681,1016.97,11,56,0.0179,1,1,0,0,0,0.0455,0.4074,0.6698,Noisy,False
+CTX193001369,4,32,": . 1 ©,2.437/30",,,ces,0.75,1448.42,4,16,0.125,1,0,0,0,0,0.1625,0.0,0.3926,Trash,False
+CTX193001369,4,33,J . lAct as PzoleXle) -,,,ces,0.75,2293.19,6,23,0.0,0,2,0,0,0,0.0333,0.3333,0.5068,Noisy,False
+CTX193001369,4,34,"H r o b TI. Kostra spočívala vo skrčené ploze na levém bozu, hlavou k",,,ces,0.7525,659.19,15,69,0.0,0,0,0,0,0,0.0567,0.3962,0.7391,Clear,False
+CTX193001369,4,35,"východu, nohami k západu. U nohou kostry ležel hrnek se- čtyřmi- oušky a",,,ces,0.9969,388.01,13,72,0.0,0,0,0,0,0,0.0,0.4464,0.8375,Clear,False
+CTX193001369,4,36,tři pazourkové šipky. Hrob byl i s milodary v původní poloze vyzvednut a,,,ces,1.0,730.35,13,72,0.0,0,0,0,0,0,0.0,0.4237,0.8185,Clear,False
+CTX193001369,4,37,odvezen do Národního musea. 3.neg. 457-460. Tb.XVI .,,,ces,0.9906,656.18,8,52,0.0,0,1,0,0,0,0.0125,0.4194,0.7201,Clear,False
+CTX193001369,5,1,"/Nádobka se čtyřmi uchy,z nichž dvě jsou umístěna na nejužším místě",,,ces,1.0,171.39,11,67,0.0,0,0,0,0,0,0.0,0.4,0.8928,Clear,False
+CTX193001369,5,2,"nezřetelně vyznačeného hrdla,",,,ces,1.0,489.73,3,29,0.0,0,0,0,0,0,0.0,0.3846,0.8829,Clear,False
+CTX193001369,5,3,"Srubá 2 ouška,položená na",,,ces,0.9181,430.78,4,25,0.0,0,0,0,0,0,0.0625,0.5,0.72,Clear,False
+CTX193001369,5,4,ose kolmé,,,ces,0.9213,1283.89,2,9,0.0,0,0,0,0,0,0.0,0.5,0.8063,Clear,False
 CTX193001369,5,5,w) ■,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,5,6,"k ose, procházej ící předešlými",,,ces,1.0,279.97,5,31,0.0,0,0,0,0,0,0.0,0.4231,0.8533,Clear,False
-CTX193001369,5,7,jsou na největším objemu,,,ces,1.0,403.42,4,24,0.0,0,0,0,0,0,0.0,0.4286,0.8329,Clear,False
-CTX193001369,5,8,hrubo dvoj-,,,ces,0.9616,1063.27,2,11,0.0,0,0,0,0,0,0.0,0.3333,0.8503,Clear,False
-CTX193001369,5,9,"konického spodku nádoby. Povrch drsný, šedavé žlutý. Rozměry: v -",,,ces,0.8986,350.48,10,65,0.0154,0,0,0,0,0,0.085,0.3725,0.8586,Clear,False
-CTX193001369,5,10,pr.brala - mmä pr.dna - mm.,,,ces,0.75,799.89,6,27,0.0,0,0,0,0,0,0.2833,0.2353,0.6513,Trash,False
-CTX193001369,5,11,"Tb.V1.,1. č.neg.57. ‘ '",,,ces,0.75,468.4,4,23,0.087,1,1,0,0,1,0.2375,0.1429,0.4785,Trash,False
+CTX193001369,5,6,"k ose, procházej ící předešlými",,,ces,1.0,279.97,5,31,0.0,0,0,0,0,0,0.0,0.4231,0.8422,Clear,False
+CTX193001369,5,7,jsou na největším objemu,,,ces,1.0,403.42,4,24,0.0,0,0,0,0,0,0.0,0.4286,0.8167,Clear,False
+CTX193001369,5,8,hrubo dvoj-,,,ces,0.9616,1063.27,2,11,0.0,0,0,0,0,0,0.0,0.3333,0.8078,Clear,False
+CTX193001369,5,9,"konického spodku nádoby. Povrch drsný, šedavé žlutý. Rozměry: v -",,,ces,0.8986,350.48,10,65,0.0154,0,0,0,0,0,0.0,0.3725,0.8616,Clear,False
+CTX193001369,5,10,pr.brala - mmä pr.dna - mm.,,,ces,0.75,799.89,6,27,0.0,0,0,0,0,0,0.0,0.2353,0.676,Noisy,False
+CTX193001369,5,11,"Tb.V1.,1. č.neg.57. ‘ '",,,ces,0.75,468.4,4,23,0.087,1,1,0,0,1,0.025,0.1429,0.5023,Noisy,False
 CTX193001369,5,12,A,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,5,13,"2,4 Pazourková šipka, jemně vyretušovama y , . % .",,,ces,0.9938,765.87,10,50,0.02,0,0,0,0,0,0.17,0.4848,0.6814,Trash,False
-CTX193001369,5,14,"— = "" , s bočními stranami kogexně",,,ces,1.0,839.06,8,34,0.0882,1,0,0,0,0,0.2125,0.3913,0.6469,Trash,False
-CTX193001369,5,15,prohnutými a s výrazně naznačenými křidálky. D. - mm.,,,ces,1.0,190.34,9,53,0.0,0,0,0,0,0,0.1889,0.3902,0.7258,Clear,False
-CTX193001369,5,16,"Tb.VI.,2. č.neg.580.",,,ces,0.75,682.05,2,20,0.0,0,1,0,0,2,0.05,0.25,0.5127,Noisy,False
-CTX193001369,5,17,3/ Pazourkovášipka s jemně vypracovaným hrotem a rovně se sbíhají-,,,ces,1.0,366.38,10,66,0.0,0,0,0,0,0,0.025,0.4259,0.8203,Clear,False
-CTX193001369,5,18,"čími bočními stranami. D. - mm, š.- mm.",,,ces,0.8923,333.95,8,39,0.0,0,0,0,0,0,0.2125,0.32,0.6597,Noisy,False
-CTX193001369,5,19,"Tb.Vl. ,3. č.neg.586.",,,ces,0.75,513.89,3,21,0.0,0,1,0,0,2,0.1167,0.125,0.6104,Noisy,False
-CTX193001369,5,20,"4/ Pazourková široká šipka. D- mm,š.- mm. ' -",,,ces,0.75,621.38,9,45,0.0222,0,0,0,0,1,0.1222,0.3704,0.6557,Noisy,False
-CTX193001369,5,21,"Tb .VI. ,4. č.neg.480.",,,ces,0.75,1282.52,4,22,0.0,0,0,0,0,1,0.0625,0.25,0.4946,Noisy,False
-CTX193001369,5,22,Zprávu o výkopu viz v č.j . 560/39. .,,,ces,0.9971,493.51,9,37,0.0,0,0,0,0,0,0.0,0.3684,0.6902,Noisy,False
+CTX193001369,5,13,"2,4 Pazourková šipka, jemně vyretušovama y , . % .",,,ces,0.9938,765.87,10,50,0.02,0,0,0,0,0,0.085,0.4848,0.6677,Noisy,False
+CTX193001369,5,14,"— = "" , s bočními stranami kogexně",,,ces,1.0,839.06,8,34,0.0882,1,0,0,0,0,0.0,0.3913,0.6558,Noisy,False
+CTX193001369,5,15,prohnutými a s výrazně naznačenými křidálky. D. - mm.,,,ces,1.0,190.34,9,53,0.0,0,0,0,0,0,0.0,0.3902,0.756,Clear,False
+CTX193001369,5,16,"Tb.VI.,2. č.neg.580.",,,ces,0.75,682.05,2,20,0.0,0,1,0,0,2,0.05,0.25,0.4854,Noisy,False
+CTX193001369,5,17,3/ Pazourkovášipka s jemně vypracovaným hrotem a rovně se sbíhají-,,,ces,1.0,366.38,10,66,0.0,0,0,0,0,0,0.025,0.4259,0.8056,Clear,False
+CTX193001369,5,18,"čími bočními stranami. D. - mm, š.- mm.",,,ces,0.8923,333.95,8,39,0.0,0,0,0,0,0,0.0,0.32,0.6889,Noisy,False
+CTX193001369,5,19,"Tb.Vl. ,3. č.neg.586.",,,ces,0.75,513.89,3,21,0.0,0,1,0,0,2,0.0333,0.125,0.6066,Noisy,False
+CTX193001369,5,20,"4/ Pazourková široká šipka. D- mm,š.- mm. ' -",,,ces,0.75,621.38,9,45,0.0222,0,0,0,0,1,0.0278,0.3704,0.6497,Noisy,False
+CTX193001369,5,21,"Tb .VI. ,4. č.neg.480.",,,ces,0.75,1282.52,4,22,0.0,0,0,0,0,1,0.0,0.25,0.4558,Noisy,False
+CTX193001369,5,22,Zprávu o výkopu viz v č.j . 560/39. .,,,ces,0.9971,493.51,9,37,0.0,0,0,0,0,0,0.0,0.3684,0.6705,Noisy,False
 CTX193001369,5,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,5,24,"Hrob VII./ 15.10.1928./ Tento hrob obsahoval žárový pohřeb,vlo-",,,ces,0.9937,1307.71,8,63,0.0,0,0,0,0,0,0.0,0.4,0.8478,Clear,False
-CTX193001369,5,25,• ženy volně vGemi . K pohřbu - podle -velikosti a -množství kostiček -,,,ces,1.0,460.42,14,71,0.0141,1,1,0,0,0,0.1893,0.3846,0.7693,Clear,False
-CTX193001369,5,26,"patrně'dětskému, byly přiloženy 3 nádoby a 6 pazourkových' úlomků.",,,ces,1.0,295.24,9,66,0.0303,0,0,0,0,0,0.0556,0.4423,0.831,Clear,False
-CTX193001369,5,27,TÚ. XVII. č.neg.461-464. Hrob vyříznut a přenesen do N.M.,,,ces,0.9994,422.53,9,57,0.0,0,0,0,0,0,0.0,0.3714,0.7454,Clear,False
-CTX193001369,5,28,Nádoba 1. Měkce profilovaný zvoncový pohárek s pěti pruhy pečlivě,,,ces,1.0,306.06,10,65,0.0,0,0,0,0,0,0.025,0.4259,0.8847,Clear,False
-CTX193001369,5,29,"provedené vtlačované výzdoby. Okraj široce rozevřen, dno zaobleno.",,,ces,0.9868,356.08,8,66,0.0,0,0,0,0,0,0.0,0.4286,0.9427,Clear,False
-CTX193001369,5,30,"Rozměry: v - mm, pr.okraje - mm.",,,ces,0.9996,421.26,7,32,0.0312,0,0,0,0,0,0.2429,0.3,0.6148,Noisy,False
-CTX193001369,5,31,"Tb.VII.,1,2. č.neg.78. ■ .",,,ces,0.75,385.31,4,26,0.0385,1,1,0,0,1,0.2375,0.3333,0.4862,Trash,False
-CTX193001369,5,32,Nádoba II. Vysoký pohár se slabě rozevřeným hrdlem a s nezřetelným,,,ces,1.0,243.56,11,66,0.0,0,0,0,0,0,0.0,0.4182,0.8441,Clear,False
-CTX193001369,5,33,"lomem v nojetším objemu, hrubě pracovaný ze šedožluté hlíny. Rozměry",Roz,,ces,1.0,345.36,10,68,0.0,0,0,0,0,0,0.0,0.4211,0.8883,Clear,False
-CTX193001369,5,34,": v - mm,pr.hrdla - mm,pr.dna- mm.",,měry,ces,0.75,197.58,7,34,0.0294,0,0,0,0,2,0.2429,0.1053,0.6103,Trash,False
-CTX193001369,5,35,"Tb.VII.,3. č.neg.579. '",,,ces,0.75,802.13,3,23,0.0435,0,1,0,0,1,0.0333,0.3333,0.5147,Noisy,False
-CTX193001369,5,36,Nádoba 3. Štíhlá amforka měkkého profilu/ se dvěma hrubými oušky na,,,ces,0.9999,368.61,11,67,0.0,0,0,0,0,0,0.0227,0.4444,0.8599,Clear,False
-CTX193001369,5,37,"největším objemu břicha. Rozměry : v - mm, pr.Hrdla - mm, pr.dna",,,ces,1.0,215.96,12,64,0.0156,0,1,0,0,1,0.15,0.2889,0.7504,Clear,False
+CTX193001369,5,24,"Hrob VII./ 15.10.1928./ Tento hrob obsahoval žárový pohřeb,vlo-",,,ces,0.9937,1307.71,8,63,0.0,0,0,0,0,0,0.0,0.4,0.7955,Clear,False
+CTX193001369,5,25,• ženy volně vGemi . K pohřbu - podle -velikosti a -množství kostiček -,,,ces,1.0,460.42,14,71,0.0141,1,1,0,0,0,0.0071,0.3846,0.7873,Clear,False
+CTX193001369,5,26,"patrně'dětskému, byly přiloženy 3 nádoby a 6 pazourkových' úlomků.",,,ces,1.0,295.24,9,66,0.0303,0,0,0,0,0,0.0556,0.4423,0.8191,Clear,False
+CTX193001369,5,27,TÚ. XVII. č.neg.461-464. Hrob vyříznut a přenesen do N.M.,,,ces,0.9994,422.53,9,57,0.0,0,0,0,0,0,0.0,0.3714,0.7285,Clear,False
+CTX193001369,5,28,Nádoba 1. Měkce profilovaný zvoncový pohárek s pěti pruhy pečlivě,,,ces,1.0,306.06,10,65,0.0,0,0,0,0,0,0.0,0.4259,0.8774,Clear,False
+CTX193001369,5,29,"provedené vtlačované výzdoby. Okraj široce rozevřen, dno zaobleno.",,,ces,0.9868,356.08,8,66,0.0,0,0,0,0,0,0.0,0.4286,0.9284,Clear,False
+CTX193001369,5,30,"Rozměry: v - mm, pr.okraje - mm.",,,ces,0.9996,421.26,7,32,0.0312,0,0,0,0,0,0.0,0.3,0.6465,Noisy,False
+CTX193001369,5,31,"Tb.VII.,1,2. č.neg.78. ■ .",,,ces,0.75,385.31,4,26,0.0385,1,1,0,0,1,0.025,0.3333,0.5133,Noisy,False
+CTX193001369,5,32,Nádoba II. Vysoký pohár se slabě rozevřeným hrdlem a s nezřetelným,,,ces,1.0,243.56,11,66,0.0,0,0,0,0,0,0.0,0.4182,0.8344,Clear,False
+CTX193001369,5,33,"lomem v nojetším objemu, hrubě pracovaný ze šedožluté hlíny. Rozměry",Roz,,ces,1.0,345.36,10,68,0.0,0,0,0,0,0,0.0,0.4211,0.8745,Clear,False
+CTX193001369,5,34,": v - mm,pr.hrdla - mm,pr.dna- mm.",,měry,ces,0.75,197.58,7,34,0.0294,0,0,0,0,2,0.0,0.1053,0.651,Noisy,False
+CTX193001369,5,35,"Tb.VII.,3. č.neg.579. '",,,ces,0.75,802.13,3,23,0.0435,0,1,0,0,1,0.0333,0.3333,0.4826,Noisy,False
+CTX193001369,5,36,Nádoba 3. Štíhlá amforka měkkého profilu/ se dvěma hrubými oušky na,,,ces,0.9999,368.61,11,67,0.0,0,0,0,0,0,0.0,0.4444,0.8497,Clear,False
+CTX193001369,5,37,"největším objemu břicha. Rozměry : v - mm, pr.Hrdla - mm, pr.dna",,,ces,1.0,215.96,12,64,0.0156,0,1,0,0,1,0.0083,0.2889,0.7701,Clear,False
 CTX193001369,5,38,- mm. .,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,5,39,"Tb.VlI.,4. č.neg.578. .",,,ces,0.75,616.39,3,23,0.0,0,1,0,0,2,0.0333,0.2222,0.5221,Noisy,False
-CTX193001369,5,40,"4 - 9. / 6 pazourkových plochých odštěpků bez veškerých stop retuše,",,,ces,0.994,247.27,12,68,0.0,0,0,0,0,0,0.1333,0.36,0.7947,Clear,False
-CTX193001369,5,41,nepravidelných tvarů. • •,,,ces,0.9203,736.11,4,25,0.08,2,0,0,0,0,0.425,0.3684,0.6366,Trash,False
-CTX193001369,5,42,"\ Tp .VII. ,5-10. č.neg.580.",,,ces,0.75,749.19,5,28,0.0357,0,0,0,0,1,0.0,0.3333,0.5937,Noisy,False
+CTX193001369,5,39,"Tb.VlI.,4. č.neg.578. .",,,ces,0.75,616.39,3,23,0.0,0,1,0,0,2,0.0333,0.2222,0.4975,Noisy,False
+CTX193001369,5,40,"4 - 9. / 6 pazourkových plochých odštěpků bez veškerých stop retuše,",,,ces,0.994,247.27,12,68,0.0,0,0,0,0,0,0.0417,0.36,0.8031,Clear,False
+CTX193001369,5,41,nepravidelných tvarů. • •,,,ces,0.9203,736.11,4,25,0.08,2,0,0,0,0,0.0,0.3684,0.6921,Noisy,False
+CTX193001369,5,42,"\ Tp .VII. ,5-10. č.neg.580.",,,ces,0.75,749.19,5,28,0.0357,0,0,0,0,1,0.0,0.3333,0.5638,Noisy,False
 CTX193001369,5,43,i | z 7,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,5,44,'' I Správu o výkopu viz v č.j. 560/29. • *,,,ces,0.9379,665.87,11,43,0.093,2,0,0,0,0,0.1545,0.4,0.6301,Trash,False
-CTX193001369,6,1,"Hrob VIII. / 17.X. 1688. / Tento hrob byl značně rozrušen, takže vzbuzoval",,,ces,1.0,405.27,13,74,0.0,0,0,1,0,0,0.0269,0.3673,0.8412,Clear,False
-CTX193001369,6,2,"dojem, že již ve starých dobách byl odkryt a znovu zaházen, Z kostry se zachovalo",zachova,,ces,1.0,385.25,15,81,0.0,0,0,0,0,0,0.0,0.3846,0.8607,Clear,False
-CTX193001369,6,3,"pouze několik kostí, z milodarů 2 nádoby. Jeden hrnek byl přes noc ukraden,",,lo,ces,1.0,287.17,13,75,0.0,0,0,0,0,0,0.0192,0.4068,0.9055,Clear,False
-CTX193001369,6,4,Č* neg. 465-468. Tb. XVIII • . ■,,,ces,0.75,642.73,8,32,0.0938,3,0,1,0,0,0.3063,0.3636,0.57,Trash,False
-CTX193001369,6,5,"Mísa polokulovitá s vyznačeným dnem a vodorovně seříznutým, dovnitř silně rozšířeným",roz,,ces,1.0,126.04,11,84,0.0,0,0,0,0,0,0.0,0.411,0.922,Clear,False
-CTX193001369,6,6,"krika okrajem. Přímo, u okraje jest na jedné straně lištový výčnělek es",,šířeným,ces,1.0,149.54,12,71,0.0,0,0,0,0,0,0.0,0.4138,0.8844,Clear,False
-CTX193001369,6,7,šesti mělkými příčnými zářezy. Na protilehlé straně jest podobný širší výčnělek,,,ces,1.0,78.57,11,79,0.0,0,0,0,0,0,0.0,0.3971,0.9461,Clear,False
-CTX193001369,6,8,se dvěma vertikálními otvory o průměru 5mm.. Barva mísy je žlutošedá s Černými a,,,ces,1.0,400.8,14,80,0.0,0,0,0,0,0,0.0,0.4375,0.8304,Clear,False
-CTX193001369,6,9,"oranžovými skvrnami. Rozměry: pr. oRaje - 350mm, pr. dna - 127mm, v - lOOmm.",,,ces,0.9756,325.32,14,76,0.0132,0,2,0,0,0,0.1964,0.3404,0.726,Clear,False
-CTX193001369,6,10,Tb.. VIII. č.neg.429.,,,ces,0.75,1403.48,3,21,0.0,0,0,1,0,1,0.1167,0.4,0.5844,Noisy,False
-CTX193001369,6,11,"Hrob VIII. kopal p, Bevsfk - via 6. j.. 560/29, Osuuxowo w.. du",,,ces,0.75,2280.11,13,63,0.0,0,0,1,0,0,0.3077,0.4286,0.617,Trash,False
-CTX193001369,6,12,. 26-434/30.,,,ces,0.75,986.89,2,12,0.0,0,0,0,0,0,0.0,0.0,0.5059,Trash,False
-CTX193001369,6,13,"H r p b IX. Ärob nalezen ve spadlé zemi, takže poloha milodarů, a kostry nemohla",nemoh,,ces,0.9939,940.72,16,80,0.0,0,0,0,0,0,0.2125,0.4194,0.7611,Clear,False
-CTX193001369,6,14,být i zjištěna.,,la,ces,1.0,123.57,3,15,0.0,0,0,0,0,0,0.0,0.4167,0.7967,Clear,False
-CTX193001369,6,15,Nádoba ±.. Nezdobený zvoncový pohár se zaobleným lomem na spoaní části. Dno,,,ces,0.9895,308.03,12,75,0.0133,1,0,0,0,0,0.0708,0.4333,0.8628,Clear,False
-CTX193001369,6,16,"vyznačeno a mírně dovnitř promáčknuto, povrch na nepoškozených místech oranžově",oranžo,,ces,1.0,236.01,10,79,0.0,0,0,0,0,0,0.0,0.3768,0.907,Clear,False
-CTX193001369,6,17,"červený, hlazený. Většina povrchu jest však korrodována, barvy šedožluté.",,vě,ces,1.0,168.98,9,73,0.0,0,0,0,0,0,0.0,0.3934,0.9553,Clear,False
-CTX193001369,6,18,"Rozměry : v - 112mm,pr.okraje - 145) pr. dna - 70mm. . .",,,ces,0.99,444.23,13,56,0.0179,0,0,0,0,1,0.1962,0.28,0.6059,Trash,False
-CTX193001369,6,19,"T.IX. ,1. č.neg.430.. ' ..",,,ces,0.75,1298.18,5,26,0.0385,0,0,0,0,1,0.05,0.2857,0.5395,Noisy,False
-CTX193001369,6,20,Nádoba 2. Měkce profilovaný vysoký džbánek s hrdlem nahoře rozevřeným. Spod- .,,,ces,1.0,238.56,12,78,0.0,0,0,0,0,0,0.0208,0.3871,0.879,Clear,False
-CTX193001369,6,21,ní 2/3 hrdla jsou překlenuty širokým páskovým uchem. Žlutošedý povrch s tmavšími,tmav,,ces,1.0,279.02,12,80,0.0,0,0,0,0,0,0.0,0.3692,0.8888,Clear,False
-CTX193001369,6,22,"skvrnami jest místy slabě vyhlazen. Rozměry : v- 146mm,pr. okraje - 127mm,",,šími,ces,1.0,689.65,12,74,0.0135,0,0,0,0,1,0.0708,0.32,0.7883,Clear,False
-CTX193001369,6,23,"pr, dda - .57mm. • .",,,ces,0.9263,619.61,6,20,0.05,1,0,0,0,1,0.2833,0.1429,0.5285,Trash,False
-CTX193001369,6,24,"Tb. IX. ,2. č.neg.430. -",,,ces,0.75,666.09,5,24,0.0,0,0,0,0,1,0.22,0.25,0.4867,Noisy,False
+CTX193001369,5,44,'' I Správu o výkopu viz v č.j. 560/29. • *,,,ces,0.9379,665.87,11,43,0.093,2,0,0,0,0,0.0,0.4,0.6343,Noisy,False
+CTX193001369,6,1,"Hrob VIII. / 17.X. 1688. / Tento hrob byl značně rozrušen, takže vzbuzoval",,,ces,1.0,405.27,13,74,0.0,0,0,1,0,0,0.0269,0.3673,0.825,Clear,False
+CTX193001369,6,2,"dojem, že již ve starých dobách byl odkryt a znovu zaházen, Z kostry se zachovalo",zachova,,ces,1.0,385.25,15,81,0.0,0,0,0,0,0,0.0,0.3846,0.8452,Clear,False
+CTX193001369,6,3,"pouze několik kostí, z milodarů 2 nádoby. Jeden hrnek byl přes noc ukraden,",,lo,ces,1.0,287.17,13,75,0.0,0,0,0,0,0,0.0192,0.4068,0.894,Clear,False
+CTX193001369,6,4,Č* neg. 465-468. Tb. XVIII • . ■,,,ces,0.75,642.73,8,32,0.0938,3,0,1,0,0,0.0938,0.3636,0.5868,Noisy,False
+CTX193001369,6,5,"Mísa polokulovitá s vyznačeným dnem a vodorovně seříznutým, dovnitř silně rozšířeným",roz,,ces,1.0,126.04,11,84,0.0,0,0,0,0,0,0.0,0.411,0.917,Clear,False
+CTX193001369,6,6,"krika okrajem. Přímo, u okraje jest na jedné straně lištový výčnělek es",,šířeným,ces,1.0,149.54,12,71,0.0,0,0,0,0,0,0.0,0.4138,0.8784,Clear,False
+CTX193001369,6,7,šesti mělkými příčnými zářezy. Na protilehlé straně jest podobný širší výčnělek,,,ces,1.0,78.57,11,79,0.0,0,0,0,0,0,0.0,0.3971,0.9429,Clear,False
+CTX193001369,6,8,se dvěma vertikálními otvory o průměru 5mm.. Barva mísy je žlutošedá s Černými a,,,ces,1.0,400.8,14,80,0.0,0,0,0,0,0,0.0,0.4375,0.8144,Clear,False
+CTX193001369,6,9,"oranžovými skvrnami. Rozměry: pr. oRaje - 350mm, pr. dna - 127mm, v - lOOmm.",,,ces,0.9756,325.32,14,76,0.0132,0,2,0,0,0,0.0143,0.3404,0.7494,Clear,False
+CTX193001369,6,10,Tb.. VIII. č.neg.429.,,,ces,0.75,1403.48,3,21,0.0,0,0,1,0,1,0.1167,0.4,0.5282,Noisy,False
+CTX193001369,6,11,"Hrob VIII. kopal p, Bevsfk - via 6. j.. 560/29, Osuuxowo w.. du",,,ces,0.75,2280.11,13,63,0.0,0,0,1,0,0,0.0269,0.4286,0.5819,Noisy,False
+CTX193001369,6,12,. 26-434/30.,,,ces,0.75,986.89,2,12,0.0,0,0,0,0,0,0.0,0.0,0.4664,Trash,False
+CTX193001369,6,13,"H r p b IX. Ärob nalezen ve spadlé zemi, takže poloha milodarů, a kostry nemohla",nemoh,,ces,0.9939,940.72,16,80,0.0,0,0,0,0,0,0.0531,0.4194,0.7554,Clear,False
+CTX193001369,6,14,být i zjištěna.,,la,ces,1.0,123.57,3,15,0.0,0,0,0,0,0,0.0,0.4167,0.7918,Clear,False
+CTX193001369,6,15,Nádoba ±.. Nezdobený zvoncový pohár se zaobleným lomem na spoaní části. Dno,,,ces,0.9895,308.03,12,75,0.0133,1,0,0,0,0,0.0,0.4333,0.8647,Clear,False
+CTX193001369,6,16,"vyznačeno a mírně dovnitř promáčknuto, povrch na nepoškozených místech oranžově",oranžo,,ces,1.0,236.01,10,79,0.0,0,0,0,0,0,0.0,0.3768,0.8976,Clear,False
+CTX193001369,6,17,"červený, hlazený. Většina povrchu jest však korrodována, barvy šedožluté.",,vě,ces,1.0,168.98,9,73,0.0,0,0,0,0,0,0.0,0.3934,0.9485,Clear,False
+CTX193001369,6,18,"Rozměry : v - 112mm,pr.okraje - 145) pr. dna - 70mm. . .",,,ces,0.99,444.23,13,56,0.0179,0,0,0,0,1,0.0,0.28,0.6273,Noisy,False
+CTX193001369,6,19,"T.IX. ,1. č.neg.430.. ' ..",,,ces,0.75,1298.18,5,26,0.0385,0,0,0,0,1,0.0,0.2857,0.4975,Noisy,False
+CTX193001369,6,20,Nádoba 2. Měkce profilovaný vysoký džbánek s hrdlem nahoře rozevřeným. Spod- .,,,ces,1.0,238.56,12,78,0.0,0,0,0,0,0,0.0,0.3871,0.8737,Clear,False
+CTX193001369,6,21,ní 2/3 hrdla jsou překlenuty širokým páskovým uchem. Žlutošedý povrch s tmavšími,tmav,,ces,1.0,279.02,12,80,0.0,0,0,0,0,0,0.0,0.3692,0.8777,Clear,False
+CTX193001369,6,22,"skvrnami jest místy slabě vyhlazen. Rozměry : v- 146mm,pr. okraje - 127mm,",,šími,ces,1.0,689.65,12,74,0.0135,0,0,0,0,1,0.0,0.32,0.7749,Clear,False
+CTX193001369,6,23,"pr, dda - .57mm. • .",,,ces,0.9263,619.61,6,20,0.05,1,0,0,0,1,0.0,0.1429,0.5604,Noisy,False
+CTX193001369,6,24,"Tb. IX. ,2. č.neg.430. -",,,ces,0.75,666.09,5,24,0.0,0,0,0,0,1,0.0,0.25,0.504,Noisy,False
 CTX193001369,6,25,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,6,26,"Nádoba 3. Hrubě pracovaný džbánek s páskovým uchem, měkce profilivaný. Dno",,,ces,0.9998,209.17,11,74,0.0,0,0,0,0,0,0.0227,0.4,0.8984,Clear,False
-CTX193001369,6,27,jest uprostřed dovnitř promáčknuto.Povrch šedožlutý s černými skvrnami.Rozměry,skvrnami.Rozmě,,ces,0.9999,388.22,8,78,0.0,0,2,0,0,0,0.025,0.3333,0.9148,Clear,False
-CTX193001369,6,28,": v- 87mm, pr. okraje - 57 mm,",,ry,ces,0.8399,859.03,8,30,0.0333,0,0,0,0,1,0.1062,0.2308,0.5719,Noisy,False
-CTX193001369,6,29,"Tb, IX. ,3, č.neg. 431. -",,,ces,0.75,526.03,6,25,0.0,0,0,0,0,0,0.1833,0.25,0.5533,Noisy,False
-CTX193001369,6,30,Nádoba 4. Džbánek hbě pracovaný s páskovým uchem přes hrdlo nezřetelně vy-,,,ces,1.0,204.76,12,74,0.0,0,0,0,0,0,0.0208,0.3667,0.8812,Clear,False
-CTX193001369,6,31,•ps — — esemtribe -,,,ces,0.75,1820.86,5,19,0.1579,1,0,0,0,0,0.59,0.3636,0.4461,Trash,False
-CTX193001369,6,32,značené. Dno jest dovnitř promáčknuto. Barva šedožlutá. Rozměry : pr. okraje,,,ces,0.9994,425.17,11,76,0.0132,0,0,0,0,0,0.0,0.377,0.8913,Clear,False
+CTX193001369,6,26,"Nádoba 3. Hrubě pracovaný džbánek s páskovým uchem, měkce profilivaný. Dno",,,ces,0.9998,209.17,11,74,0.0,0,0,0,0,0,0.0,0.4,0.8946,Clear,False
+CTX193001369,6,27,jest uprostřed dovnitř promáčknuto.Povrch šedožlutý s černými skvrnami.Rozměry,skvrnami.Rozmě,,ces,0.9999,388.22,8,78,0.0,0,2,0,0,0,0.025,0.3333,0.8993,Clear,False
+CTX193001369,6,28,": v- 87mm, pr. okraje - 57 mm,",,ry,ces,0.8399,859.03,8,30,0.0333,0,0,0,0,1,0.0,0.2308,0.5588,Noisy,False
+CTX193001369,6,29,"Tb, IX. ,3, č.neg. 431. -",,,ces,0.75,526.03,6,25,0.0,0,0,0,0,0,0.0417,0.25,0.5606,Noisy,False
+CTX193001369,6,30,Nádoba 4. Džbánek hbě pracovaný s páskovým uchem přes hrdlo nezřetelně vy-,,,ces,1.0,204.76,12,74,0.0,0,0,0,0,0,0.0,0.3667,0.8772,Clear,False
+CTX193001369,6,31,•ps — — esemtribe -,,,ces,0.75,1820.86,5,19,0.1579,1,0,0,0,0,0.08,0.3636,0.4752,Noisy,False
+CTX193001369,6,32,značené. Dno jest dovnitř promáčknuto. Barva šedožlutá. Rozměry : pr. okraje,,,ces,0.9994,425.17,11,76,0.0132,0,0,0,0,0,0.0,0.377,0.8743,Clear,False
 CTX193001369,6,33,"-70 a 80 mm, v - 70 mm,",,,,0.0,0.0,0,23,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,6,34,"Tb. IX. , 4. Č.neg.431. •",,,ces,0.75,759.54,6,25,0.04,1,0,0,0,1,0.1833,0.25,0.494,Trash,False
-CTX193001369,6,35,"Nádoba 5. Žlutošedá mistička s rovnými stěnami, drsného povrchu.Rozměry :",,,ces,0.9963,332.07,10,73,0.0137,0,1,0,0,0,0.035,0.3898,0.8518,Clear,False
-CTX193001369,6,36,"pr. okraje - 113mm, pr. dna 52mmr v - 43mm. • •",,,ces,0.75,424.23,12,47,0.0426,2,0,0,0,2,0.2833,0.1905,0.5893,Trash,False
-CTX193001369,6,37,"Tb. IX. ,5. č.neg. 431. • ■",,,ces,0.75,592.89,7,27,0.0741,2,0,0,0,0,0.2786,0.25,0.5238,Trash,False
-CTX193001369,7,1,"Hrob X. . / 30, X. 1928. / V tomto hrobě nalezeno bylo pouze spáleniště",,,ces,1.0,594.28,15,71,0.0,0,0,0,0,0,0.1133,0.4091,0.7448,Clear,False
-CTX193001369,7,2,a na něm v malé jamce spálené lidské kosti. Hrob byl uložen mělko - pouze v,,,ces,1.0,333.67,16,75,0.0,0,0,0,0,0,0.0531,0.4138,0.8519,Clear,False
-CTX193001369,7,3,hloubce 38 cm. Xoe p. ftvÍL- A 5É0/&S.,,,ces,0.9783,2583.31,8,38,0.0263,1,1,0,0,0,0.1688,0.381,0.5818,Trash,False
+CTX193001369,6,34,"Tb. IX. , 4. Č.neg.431. •",,,ces,0.75,759.54,6,25,0.04,1,0,0,0,1,0.0,0.25,0.5002,Noisy,False
+CTX193001369,6,35,"Nádoba 5. Žlutošedá mistička s rovnými stěnami, drsného povrchu.Rozměry :",,,ces,0.9963,332.07,10,73,0.0137,0,1,0,0,0,0.01,0.3898,0.8435,Clear,False
+CTX193001369,6,36,"pr. okraje - 113mm, pr. dna 52mmr v - 43mm. • •",,,ces,0.75,424.23,12,47,0.0426,2,0,0,0,2,0.0,0.1905,0.629,Noisy,False
+CTX193001369,6,37,"Tb. IX. ,5. č.neg. 431. • ■",,,ces,0.75,592.89,7,27,0.0741,2,0,0,0,0,0.0,0.25,0.5558,Noisy,False
+CTX193001369,7,1,"Hrob X. . / 30, X. 1928. / V tomto hrobě nalezeno bylo pouze spáleniště",,,ces,1.0,594.28,15,71,0.0,0,0,0,0,0,0.0,0.4091,0.7437,Clear,False
+CTX193001369,7,2,a na něm v malé jamce spálené lidské kosti. Hrob byl uložen mělko - pouze v,,,ces,1.0,333.67,16,75,0.0,0,0,0,0,0,0.0,0.4138,0.8492,Clear,False
+CTX193001369,7,3,hloubce 38 cm. Xoe p. ftvÍL- A 5É0/&S.,,,ces,0.9783,2583.31,8,38,0.0263,1,1,0,0,0,0.0625,0.381,0.5064,Noisy,False
 CTX193001369,7,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,7,5,"Hrob XI. POloha kostry a milodarů nemohla být i zjištěna, poněvadž dělníci",dělní,,ces,1.0,311.74,12,74,0.0,0,0,0,0,0,0.0,0.4262,0.8811,Clear,False
-CTX193001369,7,6,sami hrob ze země vybrali.,,ci,ces,1.0,1109.27,5,26,0.0,0,0,0,0,0,0.0,0.4286,0.8139,Clear,False
-CTX193001369,7,7,"Nádoba I , Zvoncový pohár s páskovým uchem, vybíhajícím z okraje, se dnem zak",,,ces,0.9997,227.53,14,77,0.0,0,0,0,0,0,0.0,0.4098,0.853,Clear,False
-CTX193001369,7,8,"kulacemým a uprostřed dovnitř promáčknutým. Povrch jest leštěný, oranžově až",,,ces,1.0,164.88,10,76,0.0,0,0,0,0,0,0.0,0.3692,0.9041,Clear,False
-CTX193001369,7,9,"tmavě červený, v někerých místech odřený, špinavě žlutý. Rozměry : v - 115mm, p",,,ces,1.0,109.63,14,79,0.0127,0,0,0,0,0,0.1214,0.3684,0.8066,Clear,False
-CTX193001369,7,10,"pr. hrdla - 128mm, . . •",,,ces,0.75,717.24,7,24,0.0417,1,0,0,0,0,0.2429,0.1111,0.5396,Trash,False
-CTX193001369,7,11,"Tb. X. ,1. Č. neg. 432. .",,,ces,0.75,447.13,7,25,0.0,0,0,0,0,0,0.2786,0.1429,0.5303,Trash,False
-CTX193001369,7,12,"Mdoba 2. Džbánek se široce rozevřeným odsazeným hrdlem a páskovým uchem,Dno",,,ces,1.0,234.66,11,75,0.0,0,1,0,0,0,0.0318,0.3871,0.8721,Clear,False
-CTX193001369,7,13,"jest vyznačeno a dovnitř promáčknuto. Povrch drsný ,šedožlutý s tmavšími skvr •",,,ces,0.9816,603.27,12,79,0.0127,1,0,0,0,1,0.0708,0.3231,0.8581,Clear,False
-CTX193001369,7,14,"nami. Rozměry : . v - 87mm, pr. hrdla - ? ,",,,ces,0.8978,734.71,12,43,0.0233,0,0,0,0,1,0.1417,0.2857,0.6184,Noisy,False
-CTX193001369,7,15,"Tb. X. ,2 • Č, neg. 432,",,,ces,0.75,824.2,7,24,0.0417,1,0,0,0,0,0.4,0.1429,0.4956,Trash,False
+CTX193001369,7,5,"Hrob XI. POloha kostry a milodarů nemohla být i zjištěna, poněvadž dělníci",dělní,,ces,1.0,311.74,12,74,0.0,0,0,0,0,0,0.0,0.4262,0.8687,Clear,False
+CTX193001369,7,6,sami hrob ze země vybrali.,,ci,ces,1.0,1109.27,5,26,0.0,0,0,0,0,0,0.0,0.4286,0.7696,Clear,False
+CTX193001369,7,7,"Nádoba I , Zvoncový pohár s páskovým uchem, vybíhajícím z okraje, se dnem zak",,,ces,0.9997,227.53,14,77,0.0,0,0,0,0,0,0.0,0.4098,0.8439,Clear,False
+CTX193001369,7,8,"kulacemým a uprostřed dovnitř promáčknutým. Povrch jest leštěný, oranžově až",,,ces,1.0,164.88,10,76,0.0,0,0,0,0,0,0.0,0.3692,0.8975,Clear,False
+CTX193001369,7,9,"tmavě červený, v někerých místech odřený, špinavě žlutý. Rozměry : v - 115mm, p",,,ces,1.0,109.63,14,79,0.0127,0,0,0,0,0,0.0,0.3684,0.8265,Clear,False
+CTX193001369,7,10,"pr. hrdla - 128mm, . . •",,,ces,0.75,717.24,7,24,0.0417,1,0,0,0,0,0.0,0.1111,0.5595,Noisy,False
+CTX193001369,7,11,"Tb. X. ,1. Č. neg. 432. .",,,ces,0.75,447.13,7,25,0.0,0,0,0,0,0,0.0,0.1429,0.5681,Noisy,False
+CTX193001369,7,12,"Mdoba 2. Džbánek se široce rozevřeným odsazeným hrdlem a páskovým uchem,Dno",,,ces,1.0,234.66,11,75,0.0,0,1,0,0,0,0.0091,0.3871,0.8673,Clear,False
+CTX193001369,7,13,"jest vyznačeno a dovnitř promáčknuto. Povrch drsný ,šedožlutý s tmavšími skvr •",,,ces,0.9816,603.27,12,79,0.0127,1,0,0,0,1,0.0,0.3231,0.8481,Clear,False
+CTX193001369,7,14,"nami. Rozměry : . v - 87mm, pr. hrdla - ? ,",,,ces,0.8978,734.71,12,43,0.0233,0,0,0,0,1,0.0,0.2857,0.6174,Noisy,False
+CTX193001369,7,15,"Tb. X. ,2 • Č, neg. 432,",,,ces,0.75,824.2,7,24,0.0417,1,0,0,0,0,0.1571,0.1429,0.5112,Trash,False
 CTX193001369,7,16,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
 CTX193001369,7,17,* ■ C •,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,7,18,", — a &.n *",,,,0.0,0.0,0,11,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,7,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,7,20,"Hrob XII, Poloha kostry a milodarů jest neznáma.",,,ces,0.998,1190.78,8,48,0.0,0,0,0,0,0,0.0,0.4359,0.8545,Clear,False
-CTX193001369,7,21,"Nádoba 1. Zvoncový pohár s páskovým uchema a vyznačeným dnem. Povrch drsný ,",,,ces,0.8278,242.69,13,76,0.0,0,0,0,0,0,0.0192,0.3667,0.8622,Clear,False
-CTX193001369,7,22,"žlutavý až šedočerný. Rozměry ; v - 120mm, pr. hrdla 130mm, pr. dna - 60- 64nm.",,,ces,0.9298,259.17,16,79,0.0127,0,0,0,0,1,0.1062,0.2955,0.7158,Clear,False
-CTX193001369,7,23,"Tb. XII. ,1. Č. neg. 433. •",,,ces,0.75,636.91,7,27,0.037,1,0,0,0,0,0.2786,0.3333,0.5723,Trash,False
-CTX193001369,7,24,Nádoba 2. Nýzký hrneček se Širokým dnem a s páskovým uchem. Barva žlutavá až še,,,ces,0.9996,138.04,15,79,0.0,0,0,0,0,0,0.0167,0.4032,0.8451,Clear,False
-CTX193001369,7,25,"dočerná, povrch místy hlazený. Rozměry ; v - 80mm, pr. hrdla 92mm, Pr. dna 60mm",,,ces,0.9797,232.78,15,79,0.0127,0,0,0,0,3,0.0567,0.2745,0.7781,Clear,False
-CTX193001369,7,26,"Tb. XI. ,2. . Č.neg,433.",,,ces,0.75,647.16,5,24,0.0,0,0,0,0,1,0.05,0.25,0.5214,Noisy,False
-CTX193001369,7,27,"Nádoba 3, Široký hrnek se zaobleným lomem ve spodní části, s malým dnem a s",,,ces,1.0,196.01,15,75,0.0,0,0,0,0,0,0.0167,0.3966,0.8385,Clear,False
-CTX193001369,7,28,"pásovým uchem těsně pod okrajem. Povrch disný, barva žlutošedá s Černými skvr-",,,ces,1.0,317.11,12,78,0.0,0,0,0,0,1,0.0,0.3594,0.9326,Clear,False
-CTX193001369,7,29,"nemi. Rozbry -» v - 113mm,pr. okraje - 130mm pr. dna. 50mm. ,",,,ces,0.8384,834.31,13,61,0.0164,1,0,0,0,2,0.1615,0.2667,0.6516,Noisy,False
-CTX193001369,7,30,"Tb. XI. ,3. č. neg. 434.",,,ces,0.75,381.44,6,24,0.0,0,0,0,0,0,0.1833,0.25,0.5637,Noisy,False
-CTX193001369,7,31,"Nádoba 4. Baňatý hrneček s páskovým uchem, vedeným přímo od rozevřeného okra-",,,ces,0.9989,239.93,12,77,0.0,0,0,0,0,0,0.0208,0.4194,0.8804,Clear,False
-CTX193001369,7,32,"tpdsgistim IR . s | ,",,,ces,0.9223,2598.97,6,21,0.0476,1,0,0,0,0,0.1417,0.2308,0.5101,Noisy,False
-CTX193001369,7,33,"je. Dno, které jest velmi slabě vyznačeno, nese kříž z hlubokých prost ych linií",,,ces,1.0,628.22,14,80,0.0,0,0,0,0,0,0.0,0.375,0.9045,Clear,False
-CTX193001369,7,34,"Barva při okraji otanžově šedá, při spodku nádoby temnější* Rozměry : v - 80mm,",,,ces,1.0,202.56,14,79,0.0253,1,0,0,0,1,0.0893,0.4068,0.8332,Clear,False
-CTX193001369,7,35,"pr. okraje 70mm, rozpětí-kříže 50mm. .",,,ces,1.0,176.61,6,38,0.0,0,0,0,0,2,0.0,0.3333,0.7046,Clear,False
-CTX193001369,7,36,"Tb. XI. ,4. Č. neg. 434,",,,ces,0.75,439.02,6,24,0.0,0,0,0,0,0,0.1833,0.25,0.5614,Noisy,False
-CTX193001369,7,37,Nádoba 5 • Štíhlá amforka se dvěm protilehlými uchy při okraji a se zřetelně,,,ces,1.0,321.29,14,76,0.0132,1,0,0,0,0,0.0786,0.4262,0.8377,Clear,False
-CTX193001369,7,38,"vyznačeným dnem, přes něž se táhne mělká rýha, povrch místy hlazený, černošedý.",,,ces,1.0,98.8,12,79,0.0,0,0,0,0,0,0.0,0.375,0.9399,Clear,False
-CTX193001369,7,39,"Rozměry ; v - 7 5mm , pr. hrdla 62mm, pr.-dna 36 mm.",,,ces,0.892,420.12,13,52,0.0192,0,0,0,0,2,0.0846,0.1923,0.6567,Noisy,False
-CTX193001369,7,40,"Tb. XI. ,5. č.neg. 434. loluwxdaaq- W.—.-vi í, . A3/o",,,ces,0.75,1088.19,10,53,0.0189,0,0,0,0,1,0.11,0.4167,0.5909,Noisy,False
-CTX193001369,8,1,"Hrob XIII. Hrob nalezen dělníky ve hloubce 20 - 30 cm , kosti prý nebyly",,,ces,1.0,1132.03,15,72,0.0,0,0,1,0,0,0.08,0.4118,0.7824,Clear,False
-CTX193001369,8,2,žádné. .,,,ces,1.0,833.32,2,8,0.0,0,0,0,0,0,0.0,0.4,0.6747,Noisy,False
-CTX193001369,8,3,"Nádoba 1. Zvoncový pohár se široce rozevřeným okrajem, s mělkou proláklinou mís",,,ces,1.0,268.57,12,79,0.0,0,0,0,0,0,0.0208,0.4308,0.884,Clear,False
-CTX193001369,8,4,"místo dna. Povrch drsný, světlečervený s šedočernými skvrnami, Rozměry :v -",,,ces,0.9997,354.42,11,75,0.0133,0,0,0,0,0,0.0773,0.3333,0.8502,Clear,False
-CTX193001369,8,5,"103mm, pr. okraje 125 mm. pr. prolákliny 33 mm. Doplněný. Rozměry : v - 103 mm,",,,ces,0.9993,270.41,16,79,0.0127,0,0,0,0,0,0.0531,0.2955,0.7098,Clear,False
-CTX193001369,8,6,"pr. okraje - 325mm, pr. prolákliny - 33mm. Ě",,,ces,0.9989,488.11,9,44,0.0,0,0,0,0,1,0.2833,0.32,0.6072,Trash,False
-CTX193001369,8,7,"T.XII, ,1. č.neg.435.",,,ces,0.75,667.65,3,21,0.0,0,0,0,0,1,0.0833,0.375,0.611,Noisy,False
-CTX193001369,8,8,"Nádoba 2. Džbánek s vysokým odsazeným hrdlem, jež jest překlenuto páskovým uchem.",u,,ces,0.9999,181.95,12,81,0.0,0,0,0,0,0,0.0208,0.3636,0.9121,Clear,False
-CTX193001369,8,9,"Povrch drsný, žlutošedý. Rozměry ; v - 76 mm, pr. okraje - 60 mm, pr.dna",,chem.,ces,0.9817,261.24,15,72,0.0139,0,0,0,0,0,0.1133,0.2889,0.7339,Clear,False
+CTX193001369,7,20,"Hrob XII, Poloha kostry a milodarů jest neznáma.",,,ces,0.998,1190.78,8,48,0.0,0,0,0,0,0,0.0,0.4359,0.8069,Clear,False
+CTX193001369,7,21,"Nádoba 1. Zvoncový pohár s páskovým uchema a vyznačeným dnem. Povrch drsný ,",,,ces,0.8278,242.69,13,76,0.0,0,0,0,0,0,0.0,0.3667,0.8564,Clear,False
+CTX193001369,7,22,"žlutavý až šedočerný. Rozměry ; v - 120mm, pr. hrdla 130mm, pr. dna - 60- 64nm.",,,ces,0.9298,259.17,16,79,0.0127,0,0,0,0,1,0.0,0.2955,0.7267,Clear,False
+CTX193001369,7,23,"Tb. XII. ,1. Č. neg. 433. •",,,ces,0.75,636.91,7,27,0.037,1,0,0,0,0,0.0,0.3333,0.6025,Noisy,False
+CTX193001369,7,24,Nádoba 2. Nýzký hrneček se Širokým dnem a s páskovým uchem. Barva žlutavá až še,,,ces,0.9996,138.04,15,79,0.0,0,0,0,0,0,0.0,0.4032,0.8429,Clear,False
+CTX193001369,7,25,"dočerná, povrch místy hlazený. Rozměry ; v - 80mm, pr. hrdla 92mm, Pr. dna 60mm",,,ces,0.9797,232.78,15,79,0.0127,0,0,0,0,3,0.0,0.2745,0.7801,Clear,False
+CTX193001369,7,26,"Tb. XI. ,2. . Č.neg,433.",,,ces,0.75,647.16,5,24,0.0,0,0,0,0,1,0.0,0.25,0.5056,Noisy,False
+CTX193001369,7,27,"Nádoba 3, Široký hrnek se zaobleným lomem ve spodní části, s malým dnem a s",,,ces,1.0,196.01,15,75,0.0,0,0,0,0,0,0.0167,0.3966,0.8307,Clear,False
+CTX193001369,7,28,"pásovým uchem těsně pod okrajem. Povrch disný, barva žlutošedá s Černými skvr-",,,ces,1.0,317.11,12,78,0.0,0,0,0,0,1,0.0,0.3594,0.9199,Clear,False
+CTX193001369,7,29,"nemi. Rozbry -» v - 113mm,pr. okraje - 130mm pr. dna. 50mm. ,",,,ces,0.8384,834.31,13,61,0.0164,1,0,0,0,2,0.0308,0.2667,0.6443,Noisy,False
+CTX193001369,7,30,"Tb. XI. ,3. č. neg. 434.",,,ces,0.75,381.44,6,24,0.0,0,0,0,0,0,0.0,0.25,0.5852,Noisy,False
+CTX193001369,7,31,"Nádoba 4. Baňatý hrneček s páskovým uchem, vedeným přímo od rozevřeného okra-",,,ces,0.9989,239.93,12,77,0.0,0,0,0,0,0,0.0,0.4194,0.875,Clear,False
+CTX193001369,7,32,"tpdsgistim IR . s | ,",,,ces,0.9223,2598.97,6,21,0.0476,1,0,0,0,0,0.0,0.2308,0.4424,Noisy,False
+CTX193001369,7,33,"je. Dno, které jest velmi slabě vyznačeno, nese kříž z hlubokých prost ych linií",,,ces,1.0,628.22,14,80,0.0,0,0,0,0,0,0.0,0.375,0.8794,Clear,False
+CTX193001369,7,34,"Barva při okraji otanžově šedá, při spodku nádoby temnější* Rozměry : v - 80mm,",,,ces,1.0,202.56,14,79,0.0253,1,0,0,0,1,0.0286,0.4068,0.8373,Clear,False
+CTX193001369,7,35,"pr. okraje 70mm, rozpětí-kříže 50mm. .",,,ces,1.0,176.61,6,38,0.0,0,0,0,0,2,0.0,0.3333,0.6976,Noisy,False
+CTX193001369,7,36,"Tb. XI. ,4. Č. neg. 434,",,,ces,0.75,439.02,6,24,0.0,0,0,0,0,0,0.0,0.25,0.5805,Noisy,False
+CTX193001369,7,37,Nádoba 5 • Štíhlá amforka se dvěm protilehlými uchy při okraji a se zřetelně,,,ces,1.0,321.29,14,76,0.0132,1,0,0,0,0,0.0179,0.4262,0.837,Clear,False
+CTX193001369,7,38,"vyznačeným dnem, přes něž se táhne mělká rýha, povrch místy hlazený, černošedý.",,,ces,1.0,98.8,12,79,0.0,0,0,0,0,0,0.0,0.375,0.936,Clear,False
+CTX193001369,7,39,"Rozměry ; v - 7 5mm , pr. hrdla 62mm, pr.-dna 36 mm.",,,ces,0.892,420.12,13,52,0.0192,0,0,0,0,2,0.0192,0.1923,0.653,Noisy,False
+CTX193001369,7,40,"Tb. XI. ,5. č.neg. 434. loluwxdaaq- W.—.-vi í, . A3/o",,,ces,0.75,1088.19,10,53,0.0189,0,0,0,0,1,0.085,0.4167,0.5523,Noisy,False
+CTX193001369,8,1,"Hrob XIII. Hrob nalezen dělníky ve hloubce 20 - 30 cm , kosti prý nebyly",,,ces,1.0,1132.03,15,72,0.0,0,0,1,0,0,0.0233,0.4118,0.7484,Clear,False
+CTX193001369,8,2,žádné. .,,,ces,1.0,833.32,2,8,0.0,0,0,0,0,0,0.0,0.4,0.6413,Noisy,False
+CTX193001369,8,3,"Nádoba 1. Zvoncový pohár se široce rozevřeným okrajem, s mělkou proláklinou mís",,,ces,1.0,268.57,12,79,0.0,0,0,0,0,0,0.0,0.4308,0.8775,Clear,False
+CTX193001369,8,4,"místo dna. Povrch drsný, světlečervený s šedočernými skvrnami, Rozměry :v -",,,ces,0.9997,354.42,11,75,0.0133,0,0,0,0,0,0.0,0.3333,0.8515,Clear,False
+CTX193001369,8,5,"103mm, pr. okraje 125 mm. pr. prolákliny 33 mm. Doplněný. Rozměry : v - 103 mm,",,,ces,0.9993,270.41,16,79,0.0127,0,0,0,0,0,0.0,0.2955,0.7096,Clear,False
+CTX193001369,8,6,"pr. okraje - 325mm, pr. prolákliny - 33mm. Ě",,,ces,0.9989,488.11,9,44,0.0,0,0,0,0,1,0.0944,0.32,0.6255,Noisy,False
+CTX193001369,8,7,"T.XII, ,1. č.neg.435.",,,ces,0.75,667.65,3,21,0.0,0,0,0,0,1,0.0,0.375,0.6009,Noisy,False
+CTX193001369,8,8,"Nádoba 2. Džbánek s vysokým odsazeným hrdlem, jež jest překlenuto páskovým uchem.",u,,ces,0.9999,181.95,12,81,0.0,0,0,0,0,0,0.0,0.3636,0.909,Clear,False
+CTX193001369,8,9,"Povrch drsný, žlutošedý. Rozměry ; v - 76 mm, pr. okraje - 60 mm, pr.dna",,chem.,ces,0.9817,261.24,15,72,0.0139,0,0,0,0,0,0.0,0.2889,0.7461,Clear,False
 CTX193001369,8,10,36mm. .,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,8,11,"Tb. XII. ,2. č.neg.435. Odup-dolr N..** 27/63/3.",,,ces,0.75,493.59,7,48,0.0417,1,0,0,0,2,0.0929,0.3333,0.6329,Noisy,False
+CTX193001369,8,11,"Tb. XII. ,2. č.neg.435. Odup-dolr N..** 27/63/3.",,,ces,0.75,493.59,7,48,0.0417,1,0,0,0,2,0.0571,0.3333,0.6203,Noisy,False
 CTX193001369,8,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,8,13,Hrob XIV. Poloha kostry a milodarů neznáma. Hrob obsahoval pouze,,,ces,0.9993,1629.51,10,64,0.0,0,0,0,0,0,0.0,0.434,0.8626,Clear,False
-CTX193001369,8,14,"džbánek s prohnutým hrdlem, na němž sedí široké páskové ucho. Na zakulaceném",,,ces,0.9999,244.6,12,76,0.0,0,0,0,0,0,0.0,0.381,0.886,Clear,False
-CTX193001369,8,15,"spodku nádoby jest místo dna okrouhlá proláklina o pr. 38,,. Rozměry : v -",,,ces,0.9994,1078.24,14,74,0.0135,0,0,0,0,0,0.0607,0.3962,0.7739,Clear,False
-CTX193001369,8,16,"103M,pr. okraje - 102mm. Povrch hnědošedý , mírně lesklý. '",,,ces,1.0,388.33,10,59,0.0169,0,0,0,0,1,0.085,0.3243,0.7527,Clear,False
-CTX193001369,8,17,"Tb. XIII. ,1. č. neg. 426. J. J. - «~ č• / • /83/10 '",,,ces,0.75,407.91,15,53,0.0943,3,0,1,0,0,0.3767,0.3077,0.5334,Trash,False
+CTX193001369,8,13,Hrob XIV. Poloha kostry a milodarů neznáma. Hrob obsahoval pouze,,,ces,0.9993,1629.51,10,64,0.0,0,0,0,0,0,0.0,0.434,0.7974,Clear,False
+CTX193001369,8,14,"džbánek s prohnutým hrdlem, na němž sedí široké páskové ucho. Na zakulaceném",,,ces,0.9999,244.6,12,76,0.0,0,0,0,0,0,0.0,0.381,0.8762,Clear,False
+CTX193001369,8,15,"spodku nádoby jest místo dna okrouhlá proláklina o pr. 38,,. Rozměry : v -",,,ces,0.9994,1078.24,14,74,0.0135,0,0,0,0,0,0.0,0.3962,0.743,Clear,False
+CTX193001369,8,16,"103M,pr. okraje - 102mm. Povrch hnědošedý , mírně lesklý. '",,,ces,1.0,388.33,10,59,0.0169,0,0,0,0,1,0.0,0.3243,0.7542,Clear,False
+CTX193001369,8,17,"Tb. XIII. ,1. č. neg. 426. J. J. - «~ č• / • /83/10 '",,,ces,0.75,407.91,15,53,0.0943,3,0,1,0,0,0.0767,0.3077,0.5771,Noisy,False
 CTX193001369,8,18,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,8,19,"Hrob XV, Poloha kostry a milodarů neznáma ., Osahoval pouze střep nezdobeného,",,,ces,0.9994,943.23,12,78,0.0,0,0,0,0,0,0.0,0.4286,0.855,Clear,False
-CTX193001369,8,20,"zvoncového poháru,",,,ces,0.75,1306.54,2,18,0.0,0,0,0,0,0,0.0,0.4375,0.8546,Clear,False
-CTX193001369,8,21,"""OAWvola.,- w. J. - 0,n. 40/%0. """,,,ces,0.75,742.58,7,33,0.0909,0,1,0,0,0,0.3643,0.4,0.4945,Trash,False
+CTX193001369,8,19,"Hrob XV, Poloha kostry a milodarů neznáma ., Osahoval pouze střep nezdobeného,",,,ces,0.9994,943.23,12,78,0.0,0,0,0,0,0,0.0,0.4286,0.8173,Clear,False
+CTX193001369,8,20,"zvoncového poháru,",,,ces,0.75,1306.54,2,18,0.0,0,0,0,0,0,0.0,0.4375,0.8024,Clear,False
+CTX193001369,8,21,"""OAWvola.,- w. J. - 0,n. 40/%0. """,,,ces,0.75,742.58,7,33,0.0909,0,1,0,0,0,0.0,0.4,0.5377,Noisy,False
 CTX193001369,8,22,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,8,23,Lodarv v původní poloze vyzvednut a,,,ces,1.0,869.61,6,35,0.0,0,0,0,0,0,0.0,0.4,0.8002,Clear,False
+CTX193001369,8,23,Lodarv v původní poloze vyzvednut a,,,ces,1.0,869.61,6,35,0.0,0,0,0,0,0,0.0,0.4,0.7654,Clear,False
 CTX193001369,10,1,i,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,10,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,10,3,1,,,ces,0.7527,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.551,Noisy,False
-CTX193001369,11,1,NtrcitowííX.,,,ces,0.75,3378.36,1,12,0.0,0,1,0,0,0,0.1,0.3636,0.7402,Noisy,False
+CTX193001369,10,3,1,,,ces,0.7527,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.5509,Trash,False
+CTX193001369,11,1,NtrcitowííX.,,,ces,0.75,3378.36,1,12,0.0,0,1,0,0,0,0.1,0.3636,0.6753,Noisy,False
 CTX193001369,11,2,PB . MehiA,,,ces,0.8622,10982.33,3,10,0.0,0,1,0,0,0,0.0333,0.4286,0.4833,Noisy,False
 CTX193001369,11,3,6B.,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,11,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,11,5,z.62.1369/o,,,ces,0.75,117.57,1,11,0.0,0,0,0,0,0,0.0,0.5,0.5518,Noisy,False
+CTX193001369,11,5,z.62.1369/o,,,ces,0.75,117.57,1,11,0.0,0,0,0,0,0,0.0,0.5,0.547,Noisy,False
 CTX193001369,11,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,11,7,"Grál L, ^kclettarai.",,,ces,0.75,870.04,3,20,0.05,1,0,0,0,0,0.4167,0.3333,0.5719,Trash,False
+CTX193001369,11,7,"Grál L, ^kclettarai.",,,ces,0.75,870.04,3,20,0.05,1,0,0,0,0,0.4167,0.3333,0.5371,Trash,False
 CTX193001369,11,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,11,9,"Neraovice. ( Brandvs ""/L.) . Mrob W., kostrovv . —",,,ces,0.75,3407.77,10,50,0.04,0,0,0,0,1,0.255,0.3,0.5387,Trash,False
-CTX193001369,12,1,z.6Z. 1369/0,,,ces,0.75,290.38,2,12,0.0,0,1,0,0,1,0.05,0.0,0.5404,Trash,False
-CTX193001369,12,2,z.6Z. 1369/0,,,ces,0.75,290.38,2,12,0.0,0,1,0,0,1,0.05,0.0,0.5404,Trash,False
+CTX193001369,11,9,"Neraovice. ( Brandvs ""/L.) . Mrob W., kostrovv . —",,,ces,0.75,3407.77,10,50,0.04,0,0,0,0,1,0.0,0.3,0.526,Noisy,False
+CTX193001369,12,1,z.6Z. 1369/0,,,ces,0.75,290.38,2,12,0.0,0,1,0,0,1,0.05,0.0,0.5288,Trash,False
+CTX193001369,12,2,z.6Z. 1369/0,,,ces,0.75,290.38,2,12,0.0,0,1,0,0,1,0.05,0.0,0.5288,Trash,False
 CTX193001369,12,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,12,4,"Grad t, 5e2e497ad- •",,,ces,0.75,1317.81,4,20,0.05,1,0,0,1,0,0.4625,0.4444,0.5198,Trash,False
+CTX193001369,12,4,"Grad t, 5e2e497ad- •",,,ces,0.75,1317.81,4,20,0.05,1,0,0,1,0,0.0375,0.4444,0.5521,Noisy,False
 CTX193001369,12,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,12,6,Neratovice . C Bran d.Aj$ n/.). Hrob E.z Rostrovu,,,ces,0.8248,2502.66,9,49,0.0204,1,1,0,0,0,0.2444,0.3636,0.6007,Trash,False
+CTX193001369,12,6,Neratovice . C Bran d.Aj$ n/.). Hrob E.z Rostrovu,,,ces,0.8248,2502.66,9,49,0.0204,1,1,0,0,0,0.15,0.3636,0.5197,Trash,False
 CTX193001369,13,1,PB,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,13,2,6B,,,ces,0.75,215.04,1,2,0.0,0,0,0,0,0,0.0,0.0,0.5934,Noisy,True
+CTX193001369,13,2,6B,,,ces,0.75,215.04,1,2,0.0,0,0,0,0,0,0.0,0.0,0.5848,Noisy,True
 CTX193001369,13,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,13,4,Neratovice.(Brandys */*.). Hrob .kos*-.,,,ces,0.75,8267.0,4,39,0.0769,2,1,0,0,0,0.225,0.375,0.4825,Noisy,False
-CTX193001369,14,1,P8.MeZnzk,,,ces,0.9984,820.36,1,9,0.0,0,1,0,0,1,0.1,0.1429,0.834,Clear,False
+CTX193001369,13,4,Neratovice.(Brandys */*.). Hrob .kos*-.,,,ces,0.75,8267.0,4,39,0.0769,2,1,0,0,0,0.225,0.375,0.4825,Trash,False
+CTX193001369,14,1,P8.MeZnzk,,,ces,0.9984,820.36,1,9,0.0,0,1,0,0,1,0.1,0.1429,0.8011,Clear,False
 CTX193001369,14,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,14,3,Nerotovice . (Bramos,,,ces,0.75,557.79,3,20,0.0,0,0,0,0,0,0.0,0.4375,0.7777,Clear,False
-CTX193001369,14,4,"/z.), Ayob V., kostrovy",,,ces,0.75,2889.61,4,23,0.0,0,0,0,0,0,0.0,0.4286,0.6052,Noisy,False
-CTX193001369,15,1,b/eralowýřt_,,,ces,0.75,917.37,1,12,0.0833,0,0,0,0,0,0.0,0.4,0.842,Clear,False
-CTX193001369,15,2,Pg. M/ník,,,ces,0.9901,671.38,2,9,0.0,0,0,0,0,0,0.0,0.1667,0.6877,Noisy,False
+CTX193001369,14,3,Nerotovice . (Bramos,,,ces,0.75,557.79,3,20,0.0,0,0,0,0,0,0.0,0.4375,0.7554,Clear,False
+CTX193001369,14,4,"/z.), Ayob V., kostrovy",,,ces,0.75,2889.61,4,23,0.0,0,0,0,0,0,0.0,0.4286,0.5208,Noisy,False
+CTX193001369,15,1,b/eralowýřt_,,,ces,0.75,917.37,1,12,0.0833,0,0,0,0,0,0.0,0.4,0.8053,Clear,False
+CTX193001369,15,2,Pg. M/ník,,,ces,0.9901,671.38,2,9,0.0,0,0,0,0,0,0.0,0.1667,0.6608,Noisy,False
 CTX193001369,15,3,e B - -,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,15,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,5,Z. 62. 15Í9ÄP,,,ces,0.75,1005.17,3,13,0.0,0,0,0,1,0,0.05,0.5,0.532,Noisy,True
+CTX193001369,15,5,Z. 62. 15Í9ÄP,,,ces,0.75,1005.17,3,13,0.0,0,0,0,1,0,0.05,0.5,0.4918,Noisy,True
 CTX193001369,15,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,7,Z. 62. 15Í9ÄP,,,ces,0.75,1005.17,3,13,0.0,0,0,0,1,0,0.05,0.5,0.532,Noisy,True
+CTX193001369,15,7,Z. 62. 15Í9ÄP,,,ces,0.75,1005.17,3,13,0.0,0,0,0,1,0,0.05,0.5,0.4918,Noisy,True
 CTX193001369,15,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,9,"2. ^raíP, 2.",,,ces,0.75,967.59,3,12,0.0833,1,1,0,0,0,0.3333,0.5,0.44,Trash,False
+CTX193001369,15,9,"2. ^raíP, 2.",,,ces,0.75,967.59,3,12,0.0833,1,1,0,0,0,0.1667,0.5,0.4346,Trash,False
 CTX193001369,15,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,11,"1. 6ra22,1.",,,ces,0.75,596.52,2,11,0.0,0,0,0,0,0,0.125,0.5,0.5076,Noisy,False
+CTX193001369,15,11,"1. 6ra22,1.",,,ces,0.75,596.52,2,11,0.0,0,0,0,0,0,0.0,0.5,0.5087,Noisy,False
 CTX193001369,15,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,13,"4. Grall,2",,,ces,0.75,2100.35,2,10,0.0,0,0,0,0,1,0.125,0.2,0.611,Noisy,False
+CTX193001369,15,13,"4. Grall,2",,,ces,0.75,2100.35,2,10,0.0,0,0,0,0,1,0.0,0.2,0.552,Noisy,False
 CTX193001369,15,14,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,15,GxMMM.MM.a,,,ces,0.75,414.08,1,10,0.0,0,1,1,0,1,0.45,0.125,0.7634,Trash,False
-CTX193001369,15,16,VX5P3SosAX,,,ces,0.9829,496.31,1,10,0.0,0,1,0,1,0,0.25,0.25,0.8401,Clear,False
-CTX193001369,15,17,AAMMNAbSSOAO,,,ces,0.75,1986.92,1,12,0.0,0,1,0,0,0,0.1,0.5,0.8125,Clear,False
-CTX193001369,15,18,FAXAPOOXAXXXX,,,ces,0.75,1253.71,1,13,0.0,0,0,1,0,0,0.35,0.3846,0.7929,Trash,True
-CTX193001369,15,19,0YM2aAS2AMOSA2CXs,,,ces,0.75,193.63,1,17,0.0,0,1,0,1,0,0.25,0.4615,0.8593,Clear,False
+CTX193001369,15,15,GxMMM.MM.a,,,ces,0.75,414.08,1,10,0.0,0,1,1,0,1,0.45,0.125,0.7469,Trash,False
+CTX193001369,15,16,VX5P3SosAX,,,ces,0.9829,496.31,1,10,0.0,0,1,0,1,0,0.25,0.25,0.8203,Trash,False
+CTX193001369,15,17,AAMMNAbSSOAO,,,ces,0.75,1986.92,1,12,0.0,0,1,0,0,0,0.1,0.5,0.733,Clear,False
+CTX193001369,15,18,FAXAPOOXAXXXX,,,ces,0.75,1253.71,1,13,0.0,0,0,1,0,0,0.35,0.3846,0.7427,Trash,True
+CTX193001369,15,19,0YM2aAS2AMOSA2CXs,,,ces,0.75,193.63,1,17,0.0,0,1,0,1,0,0.25,0.4615,0.8515,Trash,False
 CTX193001369,15,20,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,21,5. 6ral K.,,,ces,0.75,1980.62,3,10,0.0,0,0,0,0,0,0.0833,0.25,0.5741,Noisy,False
-CTX193001369,15,22,"3. Gra], E>Z.",,,ces,0.75,2242.17,3,13,0.1538,1,0,0,0,0,0.2167,0.4,0.5031,Trash,False
+CTX193001369,15,21,5. 6ral K.,,,ces,0.75,1980.62,3,10,0.0,0,0,0,0,0,0.0,0.25,0.5116,Noisy,False
+CTX193001369,15,22,"3. Gra], E>Z.",,,ces,0.75,2242.17,3,13,0.1538,1,0,0,0,0,0.1333,0.4,0.43,Trash,False
 CTX193001369,15,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,15,24,NeratovicelokrBrandůs n/L.).,,,ces,0.8636,2584.06,2,28,0.0,0,2,0,0,0,0.1,0.3478,0.6261,Noisy,False
-CTX193001369,15,25,Otnamentyzvoncovvekpohdr*:obrdArobrpdrd.Nrobl.2i,,,ces,0.75,2186.21,1,48,0.0417,1,1,0,0,0,0.5,0.3023,0.4439,Noisy,False
-CTX193001369,15,26,"obr.3.Hrob .4, obr. 4. Hrob .2, obr, 5- Hrob Z. —",,,ces,0.7901,113.2,11,49,0.0204,0,1,0,0,0,0.1545,0.2727,0.7009,Clear,False
-CTX193001369,16,1,NeToiboysti.,,,ces,0.75,855.09,1,12,0.0,0,1,0,0,0,0.1,0.5455,0.8411,Clear,False
-CTX193001369,16,2,PB.ýfe7ni/c,,,ces,0.8503,1593.32,1,11,0.0,0,0,0,1,0,0.15,0.375,0.7809,Clear,False
+CTX193001369,15,24,NeratovicelokrBrandůs n/L.).,,,ces,0.8636,2584.06,2,28,0.0,0,2,0,0,0,0.1,0.3478,0.5294,Noisy,False
+CTX193001369,15,25,Otnamentyzvoncovvekpohdr*:obrdArobrpdrd.Nrobl.2i,,,ces,0.75,2186.21,1,48,0.0417,1,1,0,0,0,0.5,0.3023,0.3564,Trash,False
+CTX193001369,15,26,"obr.3.Hrob .4, obr. 4. Hrob .2, obr, 5- Hrob Z. —",,,ces,0.7901,113.2,11,49,0.0204,0,1,0,0,0,0.0091,0.2727,0.7255,Clear,False
+CTX193001369,16,1,NeToiboysti.,,,ces,0.75,855.09,1,12,0.0,0,1,0,0,0,0.1,0.5455,0.8069,Clear,False
+CTX193001369,16,2,PB.ýfe7ni/c,,,ces,0.8503,1593.32,1,11,0.0,0,0,0,1,0,0.15,0.375,0.7172,Clear,False
 CTX193001369,16,3,6R.,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,16,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,16,5,zCí-iBCO/se,,,ces,0.9111,1217.61,1,11,0.0,0,1,0,0,0,0.1,0.4444,0.8059,Clear,False
+CTX193001369,16,5,zCí-iBCO/se,,,ces,0.9111,1217.61,1,11,0.0,0,1,0,0,0,0.1,0.4444,0.7572,Clear,False
 CTX193001369,16,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,16,7,VI .,,,ces,0.75,3798.84,2,4,0.0,0,0,0,0,0,0.0,0.5,0.402,Noisy,True
-CTX193001369,16,8,VI .,,,ces,0.75,3798.84,2,4,0.0,0,0,0,0,0,0.0,0.5,0.402,Noisy,True
+CTX193001369,16,7,VI .,,,ces,0.75,3798.84,2,4,0.0,0,0,0,0,0,0.0,0.5,0.354,Trash,True
+CTX193001369,16,8,VI .,,,ces,0.75,3798.84,2,4,0.0,0,0,0,0,0,0.0,0.5,0.354,Trash,True
 CTX193001369,16,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,16,10,Gro # Skelekyrol .,,,ces,0.8849,9345.53,4,18,0.0556,1,0,0,0,0,0.2125,0.3846,0.5033,Noisy,False
+CTX193001369,16,10,Gro # Skelekyrol .,,,ces,0.8849,9345.53,4,18,0.0556,1,0,0,0,0,0.0,0.3846,0.5458,Noisy,False
 CTX193001369,16,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,16,12,2. 3. 4,,,ces,0.75,102.99,3,7,0.0,0,0,0,0,0,0.25,0.0,0.4957,Trash,False
+CTX193001369,16,12,2. 3. 4,,,ces,0.75,102.99,3,7,0.0,0,0,0,0,0,0.0833,0.0,0.525,Trash,False
 CTX193001369,16,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
 CTX193001369,16,14,I.,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,16,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,16,16,Neraovice ( Brandýs,,,ces,0.75,1624.5,3,19,0.0,0,0,0,0,0,0.0,0.4375,0.7435,Clear,False
+CTX193001369,16,16,Neraovice ( Brandýs,,,ces,0.75,1624.5,3,19,0.0,0,0,0,0,0,0.0,0.4375,0.6785,Noisy,False
 CTX193001369,16,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,16,18,"~/*). Hrob VI., kosrov.",,,ces,0.75,4255.92,4,23,0.087,1,0,0,0,0,0.1,0.3333,0.5132,Noisy,False
-CTX193001369,17,1,Nercth ndlz,,,ces,0.75,1894.61,2,11,0.0,0,0,0,0,1,0.0,0.1,0.8352,Clear,False
-CTX193001369,17,2,78.,,,ces,0.8214,47.49,1,3,0.0,0,0,0,0,0,0.0,0.0,0.5344,Noisy,False
+CTX193001369,16,18,"~/*). Hrob VI., kosrov.",,,ces,0.75,4255.92,4,23,0.087,1,0,0,0,0,0.1,0.3333,0.4834,Noisy,False
+CTX193001369,17,1,Nercth ndlz,,,ces,0.75,1894.61,2,11,0.0,0,0,0,0,1,0.0,0.1,0.7594,Clear,False
+CTX193001369,17,2,78.,,,ces,0.8214,47.49,1,3,0.0,0,0,0,0,0,0.0,0.0,0.5325,Noisy,False
 CTX193001369,17,3,6 • / * -,,,,0.0,0.0,0,9,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,17,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,17,5,2.62. 1369/30,,,ces,0.75,328.02,2,13,0.0,0,0,0,0,0,0.0,0.0,0.5537,Trash,False
-CTX193001369,17,6,2.62. 1369/30,,,ces,0.75,328.02,2,13,0.0,0,0,0,0,0,0.0,0.0,0.5537,Trash,False
-CTX193001369,17,7,2.62. 1369/30,,,ces,0.75,328.02,2,13,0.0,0,0,0,0,0,0.0,0.0,0.5537,Trash,False
+CTX193001369,17,5,2.62. 1369/30,,,ces,0.75,328.02,2,13,0.0,0,0,0,0,0,0.0,0.0,0.5406,Trash,False
+CTX193001369,17,6,2.62. 1369/30,,,ces,0.75,328.02,2,13,0.0,0,0,0,0,0,0.0,0.0,0.5406,Trash,False
+CTX193001369,17,7,2.62. 1369/30,,,ces,0.75,328.02,2,13,0.0,0,0,0,0,0,0.0,0.0,0.5406,Trash,False
 CTX193001369,17,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
 CTX193001369,17,9,Nerarovice,,,ces,0.75,32909.07,1,10,0.0,0,0,0,0,0,0.0,0.5,0.71,Noisy,False
 CTX193001369,17,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,17,11,"(okr. Brandys’/L.) HrobVIl., žárový. -",,,ces,0.75,963.39,5,38,0.0263,1,2,0,0,0,0.29,0.3333,0.6688,Trash,False
+CTX193001369,17,11,"(okr. Brandys’/L.) HrobVIl., žárový. -",,,ces,0.75,963.39,5,38,0.0263,1,2,0,0,0,0.12,0.3333,0.6643,Noisy,False
 CTX193001369,18,1,Neralowklz,,,ces,0.9439,24152.82,1,10,0.0,0,0,0,0,0,0.0,0.3,0.71,Noisy,False
-CTX193001369,18,2,?B.M/Uík,,,ces,0.75,569.43,1,8,0.0,0,0,0,0,0,0.0,0.4,0.8102,Clear,False
+CTX193001369,18,2,?B.M/Uík,,,ces,0.75,569.43,1,8,0.0,0,0,0,0,0,0.0,0.4,0.7874,Clear,False
 CTX193001369,18,3,"6B , * -",,,,0.0,0.0,0,8,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,18,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,18,5,z -62-369/3,,,ces,0.7691,1644.72,2,11,0.0,0,0,0,0,0,0.0,0.0,0.4907,Trash,False
-CTX193001369,18,6,vili.,,,ces,0.8495,1327.94,1,5,0.0,0,0,0,0,0,0.0,0.5,0.8119,Clear,False
+CTX193001369,18,5,z -62-369/3,,,ces,0.7691,1644.72,2,11,0.0,0,0,0,0,0,0.0,0.0,0.4249,Trash,False
+CTX193001369,18,6,vili.,,,ces,0.8495,1327.94,1,5,0.0,0,0,0,0,0,0.0,0.5,0.7588,Clear,False
 CTX193001369,18,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,18,8,"Neratovice(Brandys""/e)Z0robVl/kosrovr",,,ces,0.75,1382.7,1,37,0.027,0,1,0,1,0,0.25,0.3548,0.8047,Trash,False
-CTX193001369,19,1,IVercJoiym. zíí. 1369/50,,,ces,0.75,2802.06,3,24,0.0,0,1,0,0,0,0.0333,0.5385,0.6803,Trash,False
-CTX193001369,19,2,Pg Útulni í -,,,ces,0.9967,524.91,4,13,0.0,0,0,0,0,0,0.425,0.4444,0.5666,Trash,False
+CTX193001369,18,8,"Neratovice(Brandys""/e)Z0robVl/kosrovr",,,ces,0.75,1382.7,1,37,0.027,0,1,0,1,0,0.25,0.3548,0.7494,Trash,False
+CTX193001369,19,1,IVercJoiym. zíí. 1369/50,,,ces,0.75,2802.06,3,24,0.0,0,1,0,0,0,0.0333,0.5385,0.5923,Trash,False
+CTX193001369,19,2,Pg Útulni í -,,,ces,0.9967,524.91,4,13,0.0,0,0,0,0,0,0.2125,0.4444,0.5881,Trash,False
 CTX193001369,19,3,tí/,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,19,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,19,5,6Pad #7 -,,,ces,0.8475,424.81,3,9,0.1111,1,0,0,0,0,0.4167,0.3333,0.5642,Trash,False
+CTX193001369,19,5,6Pad #7 -,,,ces,0.8475,424.81,3,9,0.1111,1,0,0,0,0,0.1333,0.3333,0.6039,Noisy,False
 CTX193001369,19,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,19,7,"Neratovice.(Brandys""/).. }robIX.,kosrovy,",,,ces,0.75,6815.95,2,41,0.0488,1,2,0,0,0,0.3,0.4138,0.4773,Noisy,False
-CTX193001369,20,1,z-62. 1369/30,,,ces,0.75,398.65,2,13,0.0,0,0,0,0,0,0.0,0.0,0.5509,Trash,False
-CTX193001369,20,2,P yMehnk,,,ces,0.9008,12813.49,2,8,0.0,0,1,0,0,0,0.475,0.2857,0.463,Noisy,False
+CTX193001369,19,7,"Neratovice.(Brandys""/).. }robIX.,kosrovy,",,,ces,0.75,6815.95,2,41,0.0488,1,2,0,0,0,0.3,0.4138,0.4773,Trash,False
+CTX193001369,20,1,z-62. 1369/30,,,ces,0.75,398.65,2,13,0.0,0,0,0,0,0,0.0,0.0,0.535,Trash,False
+CTX193001369,20,2,P yMehnk,,,ces,0.9008,12813.54,2,8,0.0,0,1,0,0,0,0.05,0.2857,0.548,Noisy,False
 CTX193001369,20,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
 CTX193001369,20,4,Ara,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,20,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,20,6,"Neraovice.(Branols ""/e]. Huob XI,kostrovy.",,,ces,0.75,5158.43,4,42,0.0476,0,1,0,0,0,0.2375,0.4516,0.5814,Noisy,False
-CTX193001369,21,1,Neŕa^wt4,,,ces,0.75,2228.59,1,8,0.125,1,0,0,0,0,0.4,0.3333,0.4139,Trash,False
-CTX193001369,21,2,PB.jitlník,,,ces,0.9988,5735.58,1,10,0.0,0,0,0,0,0,0.0,0.2222,0.69,Noisy,False
+CTX193001369,20,6,"Neraovice.(Branols ""/e]. Huob XI,kostrovy.",,,ces,0.75,5158.43,4,42,0.0476,0,1,0,0,0,0.025,0.4516,0.6239,Noisy,False
+CTX193001369,21,1,Neŕa^wt4,,,ces,0.75,2228.6,1,8,0.125,1,0,0,0,0,0.4,0.3333,0.3247,Trash,False
+CTX193001369,21,2,PB.jitlník,,,ces,0.9988,5735.62,1,10,0.0,0,0,0,0,0,0.0,0.2222,0.69,Noisy,False
 CTX193001369,21,3,"6B,/ ~. —",,,,0.0,0.0,0,9,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,21,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,21,5,Z. 62. 1369/30,,,ces,0.75,336.37,3,14,0.0,0,0,0,0,0,0.0,0.0,0.5577,Trash,True
+CTX193001369,21,5,Z. 62. 1369/30,,,ces,0.75,336.37,3,14,0.0,0,0,0,0,0,0.0,0.0,0.5442,Trash,True
 CTX193001369,21,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,21,7,Gpe3H—Sketeltored.,,,ces,0.75,2020.24,1,18,0.0556,0,1,0,1,0,0.25,0.3333,0.765,Noisy,False
+CTX193001369,21,7,Gpe3H—Sketeltored.,,,ces,0.75,2020.25,1,18,0.0556,0,1,0,1,0,0.25,0.3333,0.6842,Trash,False
 CTX193001369,21,8,— V,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,21,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,21,10,"Neratovice.CBrandys""e.)..Frob XII., kostrov",,,ces,0.75,2065.65,3,43,0.0233,0,1,0,0,0,0.0333,0.3939,0.8165,Noisy,False
-CTX193001369,22,1,7.62-1369/3 A íl,,,ces,0.75,398.1,3,16,0.0,0,0,0,0,0,0.0,0.6667,0.5626,Noisy,False
+CTX193001369,21,10,"Neratovice.CBrandys""e.)..Frob XII., kostrov",,,ces,0.75,2065.64,3,43,0.0233,0,1,0,0,0,0.0333,0.3939,0.7339,Noisy,False
+CTX193001369,22,1,7.62-1369/3 A íl,,,ces,0.75,398.1,3,16,0.0,0,0,0,0,0,0.0,0.6667,0.5467,Noisy,False
 CTX193001369,22,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,22,3,"N eolovice -í Brand (s""/e). Hrob XIII. _",,,ces,0.8297,3013.48,8,40,0.05,0,0,1,0,0,0.2562,0.48,0.5782,Trash,False
-CTX193001369,23,1,Neríxto^ťtt.,,,ces,0.75,1174.97,1,12,0.0833,1,0,0,0,0,0.4,0.3,0.4517,Trash,False
-CTX193001369,23,2,PB.Půlník,,,ces,1.0,591.11,1,9,0.0,0,0,0,0,0,0.0,0.25,0.8631,Clear,False
+CTX193001369,22,3,"N eolovice -í Brand (s""/e). Hrob XIII. _",,,ces,0.8297,3013.49,8,40,0.05,0,0,1,0,0,0.0437,0.48,0.5413,Noisy,False
+CTX193001369,23,1,Neríxto^ťtt.,,,ces,0.75,1174.97,1,12,0.0833,1,0,0,0,0,0.4,0.3,0.4047,Trash,False
+CTX193001369,23,2,PB.Půlník,,,ces,1.0,591.11,1,9,0.0,0,0,0,0,0,0.0,0.25,0.8395,Clear,False
 CTX193001369,23,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,23,4,z -62- 1369/10,,,ces,0.75,1281.81,3,14,0.0,0,0,0,0,0,0.0,0.0,0.5199,Trash,False
-CTX193001369,23,5,z -62- 1369/10,,,ces,0.75,1281.81,3,14,0.0,0,0,0,0,0,0.0,0.0,0.5199,Trash,False
-CTX193001369,23,6,z -62- 1369/10,,,ces,0.75,1281.81,3,14,0.0,0,0,0,0,0,0.0,0.0,0.5199,Trash,False
+CTX193001369,23,4,z -62- 1369/10,,,ces,0.75,1281.81,3,14,0.0,0,0,0,0,0,0.0,0.0,0.4686,Trash,False
+CTX193001369,23,5,z -62- 1369/10,,,ces,0.75,1281.81,3,14,0.0,0,0,0,0,0,0.0,0.0,0.4686,Trash,False
+CTX193001369,23,6,z -62- 1369/10,,,ces,0.75,1281.81,3,14,0.0,0,0,0,0,0,0.0,0.0,0.4686,Trash,False
 CTX193001369,23,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
 CTX193001369,23,8,X1)),,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,23,9,X1)),,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,23,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,23,11,"&ret=*u,SkeZc qzab ■",,,ces,0.75,1861.07,3,20,0.2,2,1,0,0,0,0.45,0.3077,0.5056,Trash,False
+CTX193001369,23,11,"&ret=*u,SkeZc qzab ■",,,ces,0.75,1861.08,3,20,0.2,2,1,0,0,0,0.1667,0.3077,0.4878,Trash,False
 CTX193001369,23,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,23,13,"Nerotovice.lBrandysŽel.%robX.,kos2r",,,ces,0.75,1791.87,1,35,0.0286,0,1,0,1,0,0.25,0.3448,0.7848,Trash,False
-CTX193001369,24,1,Net^tíwztx,,,ces,0.9066,2085.73,1,10,0.1,1,0,0,0,0,0.4,0.2222,0.4266,Trash,False
-CTX193001369,24,2,P& /Mezník,,,ces,0.9999,5746.84,2,10,0.1,1,0,0,0,0,0.2,0.2857,0.48,Trash,False
+CTX193001369,23,13,"Nerotovice.lBrandysŽel.%robX.,kos2r",,,ces,0.75,1791.87,1,35,0.0286,0,1,0,1,0,0.25,0.3448,0.7131,Trash,False
+CTX193001369,24,1,Net^tíwztx,,,ces,0.9066,2085.74,1,10,0.1,1,0,0,0,0,0.4,0.2222,0.3431,Trash,False
+CTX193001369,24,2,P& /Mezník,,,ces,0.9999,5746.83,2,10,0.1,1,0,0,0,0,0.2,0.2857,0.48,Trash,False
 CTX193001369,24,3,6/ ~,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,24,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,24,5,z .62 l^Ao,,,ces,0.8583,3547.75,3,10,0.1,1,1,0,0,0,0.1667,0.5,0.3948,Trash,False
+CTX193001369,24,5,z .62 l^Ao,,,ces,0.8583,3547.75,3,10,0.1,1,1,0,0,0,0.1667,0.5,0.3367,Trash,False
 CTX193001369,24,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,24,7,z .62 l^Ao,,,ces,0.8583,3547.75,3,10,0.1,1,1,0,0,0,0.1667,0.5,0.3948,Trash,False
+CTX193001369,24,7,z .62 l^Ao,,,ces,0.8583,3547.75,3,10,0.1,1,1,0,0,0,0.1667,0.5,0.3367,Trash,False
 CTX193001369,24,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,24,9,z .62 l^Ao,,,ces,0.8583,3547.75,3,10,0.1,1,1,0,0,0,0.1667,0.5,0.3948,Trash,False
+CTX193001369,24,9,z .62 l^Ao,,,ces,0.8583,3547.75,3,10,0.1,1,1,0,0,0,0.1667,0.5,0.3367,Trash,False
 CTX193001369,24,10,XIV,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,24,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,24,12,"Neraovice.(Brandys n/&).-Hrobl., kostrovy.",,,ces,0.75,1879.39,3,42,0.0238,1,2,0,0,1,0.2,0.3667,0.6792,Trash,False
+CTX193001369,24,12,"Neraovice.(Brandys n/&).-Hrobl., kostrovy.",,,ces,0.75,1879.39,3,42,0.0238,1,2,0,0,1,0.2,0.3667,0.604,Trash,False
 CTX193001369,24,13,v,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,24,14,0. ‘W,,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,24,15,. 452.,,,ces,0.75,563.51,2,6,0.0,0,0,0,0,0,0.0,0.0,0.5168,Trash,False
+CTX193001369,24,15,. 452.,,,ces,0.75,563.51,2,6,0.0,0,0,0,0,0,0.0,0.0,0.4943,Trash,False
 CTX193001369,25,1,Ne,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,25,2,PB,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,25,3,lni A.,,,ces,0.9734,1290.42,2,6,0.0,0,0,0,0,0,0.0,0.5,0.671,Noisy,False
+CTX193001369,25,3,lni A.,,,ces,0.9734,1290.42,2,6,0.0,0,0,0,0,0,0.0,0.5,0.6194,Noisy,False
 CTX193001369,25,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,25,5,PliVr,,,ces,0.9882,568.59,1,5,0.0,0,1,0,0,0,0.1,0.2,0.8623,Clear,False
-CTX193001369,25,6,"L.Ao 454,",,,ces,0.75,692.6,2,9,0.0,0,0,0,0,0,0.0,0.6667,0.6869,Noisy,False
+CTX193001369,25,5,PliVr,,,ces,0.9882,568.59,1,5,0.0,0,1,0,0,0,0.1,0.2,0.8395,Clear,False
+CTX193001369,25,6,"L.Ao 454,",,,ces,0.75,692.6,2,9,0.0,0,0,0,0,0,0.0,0.6667,0.6591,Noisy,False
 CTX193001369,25,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
 CTX193001369,25,8,P2./.,,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX193001369,25,9,.453.,,,ces,0.75,788.77,1,5,0.0,0,0,0,0,0,0.0,0.0,0.4934,Noisy,False
+CTX193001369,25,9,.453.,,,ces,0.75,788.77,1,5,0.0,0,0,0,0,0,0.0,0.0,0.4619,Noisy,False
 CTX193001369,25,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,25,11,Neratovice.(Brandysw/*).Hrobľ.kostrovy.,,,ces,0.75,1122.74,1,39,0.0256,1,1,0,0,0,0.5,0.3548,0.4531,Trash,False
+CTX193001369,25,11,Neratovice.(Brandysw/*).Hrobľ.kostrovy.,,,ces,0.75,1122.74,1,39,0.0256,1,1,0,0,0,0.5,0.3548,0.4082,Trash,False
 CTX193001369,26,1,X. 62. 1364/ XVI,,,,0.0,0.0,0,16,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,26,2,X. 62. 1364/ XVI,,,,0.0,0.0,0,16,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,26,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,26,4,"zal L.,",,,ces,0.75,2027.16,2,7,0.0,0,0,0,0,0,0.425,0.25,0.5338,Noisy,False
-CTX193001369,26,5,Meleeyrad.,,,ces,0.941,3913.24,1,10,0.0,0,0,0,0,0,0.0,0.5556,0.7335,Noisy,False
-CTX193001369,26,6,Pbhr.,,,ces,1.0,519.69,1,5,0.0,0,0,0,0,1,0.0,0.0,0.8442,Clear,False
-CTX193001369,26,7,.29.457-,,,ces,0.75,479.09,1,8,0.0,0,0,0,0,0,0.0,0.0,0.5138,Trash,False
+CTX193001369,26,4,"zal L.,",,,ces,0.75,2027.15,2,7,0.0,0,0,0,0,0,0.0,0.25,0.5377,Noisy,False
+CTX193001369,26,5,Meleeyrad.,,,ces,0.941,3913.25,1,10,0.0,0,0,0,0,0,0.0,0.5556,0.69,Noisy,False
+CTX193001369,26,6,Pbhr.,,,ces,1.0,519.69,1,5,0.0,0,0,0,0,1,0.0,0.0,0.8234,Clear,False
+CTX193001369,26,7,.29.457-,,,ces,0.75,479.09,1,8,0.0,0,0,0,0,0,0.0,0.0,0.4947,Trash,False
 CTX193001369,26,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,26,9,Pl/Vr.,,,ces,0.75,353.35,1,6,0.0,0,1,0,0,1,0.1,0.0,0.8052,Trash,False
+CTX193001369,26,9,Pl/Vr.,,,ces,0.75,353.35,1,6,0.0,0,1,0,0,1,0.1,0.0,0.7911,Trash,False
 CTX193001369,26,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,26,11,"Neratovice.(Brandys n/). Jrob VI.,kostrovy. —",,,ces,0.75,2388.2,5,45,0.0222,0,1,0,0,0,0.36,0.375,0.6175,Trash,False
-CTX193001369,26,12,CL) pohleo od jihu,,,ces,0.9998,3853.02,4,18,0.0,0,0,0,0,0,0.0,0.4286,0.6028,Noisy,False
+CTX193001369,26,11,"Neratovice.(Brandys n/). Jrob VI.,kostrovy. —",,,ces,0.75,2388.2,5,45,0.0222,0,1,0,0,0,0.02,0.375,0.5899,Noisy,False
+CTX193001369,26,12,CL) pohleo od jihu,,,ces,0.9998,3853.04,4,18,0.0,0,0,0,0,0,0.0,0.4286,0.5569,Noisy,False
 CTX193001369,26,13,SeverW,,,ces,0.932,30406.29,1,6,0.0,0,1,0,0,0,0.1,0.3333,0.686,Noisy,False
-CTX193001369,27,1,Neratb*ítž.,,,ces,0.8443,704.29,1,11,0.0909,1,0,0,0,0,0.4,0.3333,0.4665,Trash,False
-CTX193001369,27,2,PĚ> ■ ^eiink,,,ces,1.0,9256.68,3,12,0.25,3,0,0,0,0,0.55,0.5714,0.252,Trash,False
+CTX193001369,27,1,Neratb*ítž.,,,ces,0.8443,704.29,1,11,0.0909,1,0,0,0,0,0.4,0.3333,0.4383,Trash,False
+CTX193001369,27,2,PĚ> ■ ^eiink,,,ces,1.0,9256.7,3,12,0.25,3,0,0,0,0,0.2667,0.5714,0.3087,Trash,False
 CTX193001369,27,3,6B • / - • - -,,,,0.0,0.0,0,14,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,27,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,27,5,.62. 1369/36,,,ces,0.75,517.91,2,12,0.0,0,0,0,0,0,0.0,0.0,0.5413,Trash,False
-CTX193001369,27,6,.62. 1369/36,,,ces,0.75,517.91,2,12,0.0,0,0,0,0,0,0.0,0.0,0.5413,Trash,False
+CTX193001369,27,5,.62. 1369/36,,,ces,0.75,517.91,2,12,0.0,0,0,0,0,0,0.0,0.0,0.5206,Trash,False
+CTX193001369,27,6,.62. 1369/36,,,ces,0.75,517.91,2,12,0.0,0,0,0,0,0,0.0,0.0,0.5206,Trash,False
 CTX193001369,27,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,27,8,XVII,,,ces,0.9929,56075.54,1,4,0.0,0,0,0,0,0,0.0,0.5,0.704,Noisy,True
-CTX193001369,27,9,XVII,,,ces,0.9929,56075.54,1,4,0.0,0,0,0,0,0,0.0,0.5,0.704,Noisy,True
-CTX193001369,27,10,XVII,,,ces,0.9929,56075.54,1,4,0.0,0,0,0,0,0,0.0,0.5,0.704,Noisy,True
+CTX193001369,27,8,XVII,,,ces,0.9929,56075.59,1,4,0.0,0,0,0,0,0,0.0,0.5,0.704,Clear,True
+CTX193001369,27,9,XVII,,,ces,0.9929,56075.59,1,4,0.0,0,0,0,0,0,0.0,0.5,0.704,Clear,True
+CTX193001369,27,10,XVII,,,ces,0.9929,56075.59,1,4,0.0,0,0,0,0,0,0.0,0.5,0.704,Clear,True
 CTX193001369,27,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,27,12,"Grab +, Bzazagraé",,,ces,0.75,10878.37,3,17,0.0588,0,0,0,0,0,0.2833,0.3846,0.5368,Noisy,False
+CTX193001369,27,12,"Grab +, Bzazagraé",,,ces,0.75,10878.4,3,17,0.0588,0,0,0,0,0,0.0,0.3846,0.5935,Noisy,False
 CTX193001369,27,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,27,14,P2N7-,,,ces,0.75,139.27,1,5,0.0,0,0,0,1,0,0.15,0.0,0.5294,Noisy,True
-CTX193001369,27,15,.0.462,,,ces,0.75,579.74,1,6,0.0,0,0,0,0,0,0.0,0.0,0.5161,Trash,False
+CTX193001369,27,14,P2N7-,,,ces,0.75,139.27,1,5,0.0,0,0,0,1,0,0.15,0.0,0.5239,Noisy,True
+CTX193001369,27,15,.0.462,,,ces,0.75,579.74,1,6,0.0,0,0,0,0,0,0.0,0.0,0.493,Trash,False
 CTX193001369,27,16,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,27,17,22.4-.,,,ces,0.75,444.63,1,6,0.0,0,0,0,0,0,0.0,0.0,0.4882,Trash,False
+CTX193001369,27,17,22.4-.,,,ces,0.75,444.63,1,6,0.0,0,0,0,0,0,0.0,0.0,0.4704,Trash,False
 CTX193001369,27,18,.neq. 464 .,,,,0.0,0.0,0,11,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,27,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,27,20,"Nerarovice( Brandys’/L) ŕ/robse zvone.poháry VII.,Zarovy.",,,ces,0.75,1669.52,5,57,0.0175,1,1,0,0,0,0.1,0.4318,0.7786,Clear,False
-CTX193001369,28,1,"G2e3 +, iedetzra,.",,,ces,0.75,1698.9,3,18,0.0556,0,0,0,1,0,0.3333,0.5,0.5389,Trash,False
+CTX193001369,27,20,"Nerarovice( Brandys’/L) ŕ/robse zvone.poháry VII.,Zarovy.",,,ces,0.75,1669.52,5,57,0.0175,1,1,0,0,0,0.1,0.4318,0.7119,Clear,False
+CTX193001369,28,1,"G2e3 +, iedetzra,.",,,ces,0.75,1698.9,3,18,0.0556,0,0,0,1,0,0.05,0.5,0.5276,Noisy,False
 CTX193001369,28,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,28,3,z. 62. 1369/0 XVIII.,,,ces,0.75,328.69,4,20,0.0,0,0,1,0,0,0.0875,0.5,0.6244,Noisy,False
-CTX193001369,28,4,z. 62. 1369/0 XVIII.,,,ces,0.75,328.69,4,20,0.0,0,0,1,0,0,0.0875,0.5,0.6244,Noisy,False
-CTX193001369,28,5,z. 62. 1369/0 XVIII.,,,ces,0.75,328.69,4,20,0.0,0,0,1,0,0,0.0875,0.5,0.6244,Noisy,False
+CTX193001369,28,3,z. 62. 1369/0 XVIII.,,,ces,0.75,328.69,4,20,0.0,0,0,1,0,0,0.0875,0.5,0.6112,Noisy,False
+CTX193001369,28,4,z. 62. 1369/0 XVIII.,,,ces,0.75,328.69,4,20,0.0,0,0,1,0,0,0.0875,0.5,0.6112,Noisy,False
+CTX193001369,28,5,z. 62. 1369/0 XVIII.,,,ces,0.75,328.69,4,20,0.0,0,0,1,0,0,0.0875,0.5,0.6112,Noisy,False
 CTX193001369,28,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,28,7,/7Ar,,,ces,0.75,7645.09,1,4,0.0,0,0,0,0,0,0.0,0.5,0.354,Noisy,False
+CTX193001369,28,7,/7Ar,,,ces,0.75,7645.01,1,4,0.0,0,0,0,0,0,0.0,0.5,0.354,Noisy,False
 CTX193001369,28,8,.neq . 465 .,,,,0.0,0.0,0,12,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
 CTX193001369,28,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,28,10,Tlh..,,,ces,0.9758,888.41,1,5,0.0,0,0,0,0,0,0.0,0.0,0.7895,Clear,False
-CTX193001369,28,11,č.nea. 466.,,,ces,0.75,354.5,2,11,0.0,0,0,0,0,0,0.0,0.5,0.6923,Noisy,False
+CTX193001369,28,10,Tlh..,,,ces,0.9758,888.4,1,5,0.0,0,0,0,0,0,0.0,0.0,0.7539,Clear,False
+CTX193001369,28,11,č.nea. 466.,,,ces,0.75,354.5,2,11,0.0,0,0,0,0,0,0.0,0.5,0.6781,Noisy,False
 CTX193001369,28,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX193001369,28,13,"poháry VII., koshovy.",,,ces,0.7551,3142.26,3,21,0.0,0,0,0,0,0,0.0,0.5,0.7667,Noisy,False
+CTX193001369,28,13,"poháry VII., koshovy.",,,ces,0.7551,3142.27,3,21,0.0,0,0,0,0,0,0.0,0.5,0.6924,Noisy,False
