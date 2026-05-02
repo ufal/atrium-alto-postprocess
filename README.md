@@ -9,7 +9,6 @@
 
 ---
 
-
 # 📦 ALTO XML Files Postprocessing Pipeline
 
 This project provides a complete workflow for processing ALTO XML files. It takes raw ALTO
@@ -252,7 +251,7 @@ Parameters are organized into **three sections**: `[CLASSIFY]`, `[AGGREGATE]`, a
  
 ```ini
 [CLASSIFY]
-BATCH_SIZE = 128        # Batch size for processing lines
+BATCH_SIZE = 32        # Batch size for processing lines
 WORKERS_MAX = 32        # Max CPU workers for parallel tasks
 EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
@@ -291,8 +290,11 @@ CATEG_PPL_WEIRD_MAX         = 400.0     # Perplexity ceiling for weird+high-ppl 
 This script reads the extracted text files, batches lines together 📦, and runs the FastText [^2]
 and Qwen2.5-0.5B [^6] models. It uses a **CPU/GPU split architecture**:
 
-- A single dedicated **GPU worker** holds the only Qwen2.5-0.5B instance and processes perplexity batches to prevent VRAM OOM errors.
-- Multiple **CPU workers** (up to `WORKERS_MAX`, default 32) read files, run FastText and structural detectors, and submit text batches to the GPU worker via a shared queue. CPU workers poll the result dictionary while the GPU processes, running language identification concurrently.
+- A single dedicated **GPU worker** holds the only Qwen2.5-0.5B instance and processes perplexity batches 
+to prevent VRAM OOM errors.
+- Multiple **CPU workers** (up to `WORKERS_MAX`, default 32) read files, run FastText and structural detectors, 
+and submit text batches to the GPU worker via a shared queue. CPU workers poll the result dictionary while 
+the GPU processes, running language identification concurrently.
 
 > [!WARNING]
 > The first of `EXPECTED_LANGS` list of languages should be the most expected language in the processed 
@@ -379,15 +381,21 @@ quality_score =
     QS_WEIGHT_VALID_WORD (def: 0.3)  × valid_word_ratio                    # share of structurally clean words
   + QS_WEIGHT_SYMBOL (def: 0.2)      × (1 − min(symbol_ratio, 1.0))       # inverted non-alphanumeric density
   + QS_WEIGHT_WEIRD (def: 0.2)       × (1 − min(word_weird_ratio, 1.0))   # inverted mean per-word weirdness
-  + QS_WEIGHT_PERPLEXITY: (def 0.2)  × (1 − min(perplexity / PPL_MAX, 1.0)) # inverted normalised perplexity
-  + QS_WEIGHT_LENGTH (def: 0.1)      × min(char_count / LENGTH_MAX, 1.0)  # reward for longer lines
+  + QS_WEIGHT_PERPLEXITY: (def 0.2)  × (1 − min(perplexity / PERPLEXITY_THRESHOLD_MAX, 1.0)) # inverted normalised perplexity
+  + QS_WEIGHT_LENGTH (def: 0.1)      × min(char_count / QS_LENGTH_MAX, 1.0)  # reward for longer lines
 ```
+
+The two scale parameters that normalize unbounded signals before weighting in the quality score formula are
+`PERPLEXITY_THRESHOLD_MAX` (default **1000.0**), which caps raw perplexity to map it into [0, 1] assigning 0 to values at or above the threshold 
+(worst) and 1 to 0 (best), calibrated for **Qwen2.5-0.5B** on corrupted OCR text to penalize noisy lines more aggressively 
+when lowered or widen the scoring range when raised; and `QS_LENGTH_MAX` (default **100**), which sets the character-count 
+ceiling for rewarding longer lines, granting the full `QS_WEIGHT_LENGTH` bonus to **lines at or above this length**.
 
 Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 > [!NOTE]
-> Perplexity contributes only one weighted component of the quality score. Although Qwen2.5-0.5B is
-> multilingual and handles Czech, German, and English natively (unlike the English-only distilgpt2 it
+> Perplexity contributes only one weighted component of the quality score. Although `Qwen2.5-0.5B` is
+> multilingual and handles **Czech**, **German**, and **English** natively (unlike the **English-only** `distilgpt2` it
 > replaced), it is still intentionally diluted by the four other signals rather than used as a standalone
 > threshold. This keeps the score robust against edge cases where even a strong model assigns unexpectedly
 > high perplexity to valid but atypical text (e.g., highly abbreviated archival labels or form-field lines).
@@ -402,7 +410,9 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 * Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
 * **Severe fragmentation**: Line has ≥ 5 words, average stripped-word length < 2.0 characters, **and**
 `weird_ratio` > 0.1 → **Trash** *(prevents valid measurement lines from being trashed)*.
-* **High perplexity on short lines**: Perplexity > `CATEG_PPL_SHORT_MAX` (default 700.0) and < 5 words → **Trash**, with two exceptions: lines composed entirely of Roman numerals and standard separators are bypassed; lines where garbage density < 0.1 **and** `weird_ratio` < 0.20 fall back to **Noisy** instead.
+* **High perplexity on short lines**: Perplexity > `CATEG_PPL_SHORT_MAX` (default 700.0) and < 5 words → **Trash**, with two exceptions: 
+lines composed entirely of Roman numerals and standard separators are bypassed; lines where garbage density < 0.1 **and** `weird_ratio` 
+< 0.20 fall back to **Noisy** instead.
 * **Single-character fragmentation**: Line has ≥ 3 words, ≥ 50% of words are isolated characters, **and**
 `weird_ratio` > 0.15 → **Trash** *(catches spaced-out gibberish like `"C A s 8."`)*.
 * **Extreme vowel ratio**: Line > 5 characters with vowel ratio < 10% or > 90% → **Trash** *(catches random consonants/vowels like `"FAXAPOOXAXXXX"`)*.
@@ -509,10 +519,13 @@ structured JSON format.
 **What gets logged?**
 
 * **Provenance 🏛️:** Captures the tool name, repository URL, Python version, and assigns a unique `run_id` to each execution.
-* **Configuration ⚙️:** Stores a complete snapshot of the runtime configuration, including script names, input/output paths, and specific model choices.
+* **Configuration ⚙️:** Stores a complete snapshot of the runtime configuration, including script names, input/output 
+paths, and specific model choices.
 * **Timing ⏱️:** Records precise UTC start times, end times, and the total duration of the run in seconds.
-* **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes performance throughput (e.g., output files generated per minute).
-* **Error Tracking 🐛:** Maintains a `skipped_files_detail` list that logs the exact filename and specific error reason if a file fails to process.
+* **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes performance 
+throughput (e.g., output files generated per minute).
+* **Error Tracking 🐛:** Maintains a `skipped_files_detail` list that logs the exact filename and specific error reason 
+if a file fails to process.
 
 **Log Location & Licensing**
 
