@@ -312,7 +312,7 @@ the GPU processes, running language identification concurrently.
 
 * **Input 1 📥:** `../PAGE_TXT/` from Step 3
 * **Input 2 📥:** `output.csv` from Step 2
-* **Output 📤:** `DOC_LINE_LANG_CLASS/` containing per-document CSVs (e.g., [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁)
+* **Output 📤:** `DOC_LINE_LANG_CLASS/` containing per-document CSVs (e.g., [DOC_LINE_QWEN_CATEG](data_samples/DOC_LINE_QWEN_CATEG) 📁)
 
 > [!TIP]
 > This script is resume-capable. If interrupted, run it again and already-present output files will be skipped.
@@ -446,7 +446,8 @@ times across a document, all instances are harmonized to share the statistical m
 two consecutive **Trash** lines (one immediately before, one immediately after), it is automatically downgraded 
 to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
 
-Example of per-document CSV files: [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁.
+Example of per-document CSV files: [DOC_LINE_QWEN_CATEG](data_samples/DOC_LINE_QWEN_CATEG) 📁 by Qwen2.5-0.5B 
+and [DOC_LINE_GPT_CATEG](data_samples/DOC_LINE_GPT_CATEG) 📁 by distilgpt2.
 ```
 DOC_LINE_LANG_CLASS/
 ├── <docname1>.csv
@@ -502,7 +503,8 @@ All numeric averages are rounded to 4 decimal places; totals are stored as integ
 
 - *Examples*: [arub_page_stats_SHORT.csv](arub_page_stats_SHORT.csv) [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎
 
-Example of per-document aggregate CSV files: [DOC_LINE_STAT](data_samples/DOC_LINE_STAT) 📁.
+Example of per-document aggregate CSV files: [DOC_LINE_QWEN_STATS](data_samples/DOC_LINE_QWEN_STATS) 📁 by Qwen2.5-0.5B 
+and [DOC_LINE_GPT_STATS](data_samples/DOC_LINE_GPT_STATS) 📁 by distilgpt2:
 ```
 DOC_LINE_STAT/
 ├── stats_<docname1>.csv

@@ -1,3 +1,0 @@
-file,page_num,Clear,Empty,Noisy,Non-text,Trash,total_word_count,total_char_count,avg_quality_score,avg_word_weird,avg_lang_score,avg_perplex,avg_symbol,avg_vowel_ratio,ch_ratio,main_lang
-CTX200603179,1,20,7,5,1,3,127,804,0.810964,0.007768,0.951112,2813.8324,0.0,0.427956,0.12,ces
-CTX200603179,3,15,6,5,9,1,109,798,0.78925,0.03299,0.92099,1908.7580000000003,0.1,0.41652500000000003,0.6,ces
