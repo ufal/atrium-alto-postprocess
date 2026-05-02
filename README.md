@@ -256,6 +256,7 @@ BATCH_SIZE = 128        # Batch size for processing lines
 WORKERS_MAX = 32        # Max CPU workers for parallel tasks
 EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
+MODEL_NAME = Qwen/Qwen2.5-0.5B
 
 [TEXT_UTILS]
 
@@ -321,7 +322,7 @@ Predicted or computed features for each line:
 
 * `lang` — predicted ISO language code from the FastText model ([full list](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200)) 🌐
 * `lang_score` — FastText confidence score for the predicted language 🎯
-* `perplex` — Qwen2.5-0.5B perplexity score of the line 📉
+* `perplex` — Qwen2.5-0.5B (or any other model of your choice, like `distilgpt2` for English) perplexity score of the line 📉
 * `word_count` — number of whitespace-delimited tokens in the line
 * `char_count` — total character count of the line
 * `garbage_density` — ratio of non-alphanumeric, non-standard-punctuation characters to total line length

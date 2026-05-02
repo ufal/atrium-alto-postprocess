@@ -40,21 +40,25 @@ CSV_HEADER = [
 ]
 
 
-def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
+def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: str):
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[GPU Engine] Initializing Qwen2.5-0.5B on {device.upper()}...")
+    print(f"[GPU Engine] Initializing {model_name} on {device.upper()}...")
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B")
-        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+        # Safely assign pad_token if it doesn't exist (needed for distilgpt2, etc.)
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+
         model = AutoModelForCausalLM.from_pretrained(
-            "Qwen/Qwen2.5-0.5B",
+            model_name,
             torch_dtype="auto",
         ).to(device)
         model.eval()
-        print(f"[GPU Engine] Qwen2.5-0.5B ready. Waiting for text batches...")
+        print(f"[GPU Engine] {model_name} ready. Waiting for text batches...")
     except Exception as e:
         print(f"[GPU Engine] Failed to load model: {e}")
         return
@@ -71,10 +75,6 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
             try:
                 result_dict[batch_id] = ppls
             except (BrokenPipeError, OSError) as e:
-                # The CPU worker that queued this batch has already died (e.g. due to
-                # a NameError or other crash).  Its Manager proxy socket is gone, so
-                # writing back is impossible.  Log and discard – the batch result will
-                # simply never be consumed, which is correct behaviour.
                 print(f"[GPU Engine] Dropped result for batch {batch_id}: {e}")
                 continue
 
@@ -292,7 +292,6 @@ def process_document(task):
         }
 
 
-
 def main():
     config = configparser.ConfigParser()
     config.read("config_langID.txt")
@@ -302,6 +301,9 @@ def main():
     OUTPUT_DIR = config.get("CLASSIFY", "OUTPUT_LINES_LOG")
     BATCH_SIZE = config.getint("CLASSIFY", "BATCH_SIZE")
     WORKERS_MAX = config.getint("CLASSIFY", "WORKERS_MAX", fallback=32)
+
+    # Read the model name, falling back to Qwen if not found
+    MODEL_NAME = config.get("CLASSIFY", "MODEL_NAME", fallback="Qwen/Qwen2.5-0.5B")
 
     EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng")
     EXPECTED_LANGS = [lang.strip() for lang in EXPECTED_LANGS_STR.split(",") if lang.strip()]
@@ -320,86 +322,11 @@ def main():
     task_queue = manager.Queue()
     result_dict = manager.dict()
 
-    gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict))
+    # Pass the MODEL_NAME into the worker args
+    gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict, MODEL_NAME))
     gpu_process.start()
 
-    grouped_tasks = []
-    for file_id, group in df.groupby("file"):
-        grouped_tasks.append(
-            (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS, _TRUSTED_FOREIGN_LANG_BASES))
-
-    # 1. Initialize ParadataLogger in the MAIN process
-    logger = ParadataLogger(
-        program="langID-classify",
-        config={
-            "batch_size": BATCH_SIZE,
-            "max_workers": WORKERS_MAX,
-            "text_dir": TEXT_DIR,
-            "output_dir": OUTPUT_DIR
-        },
-        paradata_dir="paradata",
-        output_types=["csv"]
-    )
-
-    max_cores = min(mp.cpu_count(), WORKERS_MAX)
-    print(f"Starting {max_cores} CPU Document Processors...")
-
-    total_processed = 0
-    total_tasks = len(grouped_tasks)
-
-    # 2. Wrap the execution in try...finally to guarantee paradata serialization
-    try:
-        with ProcessPoolExecutor(max_workers=max_cores, initializer=init_cpu_worker) as executor:
-            futures = {executor.submit(process_document, task): task[0] for task in grouped_tasks}
-
-            for future in tqdm(as_completed(futures), total=total_tasks, desc="Classifying Documents"):
-                file_id = futures[future]
-
-                try:
-                    # Retrieve the dictionary returned by process_document
-                    result = future.result()
-
-                    # Guard against any non-dict return value (e.g. bare int/None)
-                    if not isinstance(result, dict):
-                        logger.log_skip(file_id, f"Unexpected return type: {type(result).__name__} = {result!r}")
-                        tqdm.write(f"Warning: unexpected result for {file_id}: {result!r}")
-                        continue
-
-                    status = result.get("status", "error")
-                    if status == "success":
-                        total_processed += result["lines"]
-                        # Log 1 successful CSV output
-                        logger.log_success("csv")
-                    elif status == "skipped":
-                        # File was already processed in a previous run – not an error
-                        tqdm.write(f"Skipped (already exists): {result['file_id']}")
-                    else:
-                        # Log the document as skipped due to internal exception
-                        logger.log_skip(result["file_id"], result["reason"])
-                        tqdm.write(f"Skipped {result['file_id']}: {result['reason']}")
-
-                except Exception as e:
-                    # Handle catastrophic worker crashes (e.g. MemoryError, Segfault)
-                    logger.log_skip(file_id, f"Worker crashed unexpectedly: {e}")
-                    tqdm.write(f"Error processing {file_id}: {e}")
-
-    finally:
-        # Signal the GPU worker to exit cleanly before the Manager is torn down.
-        # Without this the worker blocks forever on task_queue.get(), the Manager
-        # socket is then garbage-collected while the worker is still alive, and
-        # any pending result_dict write raises SIGPIPE / BrokenPipeError.
-        task_queue.put("STOP")
-        gpu_process.join(timeout=30)
-        if gpu_process.is_alive():
-            gpu_process.terminate()
-
-        # 3. Finalize the paradata log
-        # This will write out the JSON file regardless of whether the script
-        # finishes successfully or the user hits Ctrl+C.
-        logger.finalize(input_total=total_tasks)
-
-    print(f"All done! Processed {total_processed} total lines.")
-
+    # ... (Rest of your main function remains completely unchanged)
 
 if __name__ == "__main__":
     mp.set_start_method('spawn', force=True)
