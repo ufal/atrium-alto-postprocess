@@ -283,6 +283,13 @@ CATEG_PPL_WEIRD_MAX         = 400.0     # Perplexity ceiling for weird+high-ppl 
 
 </details>
 
+Parameters that depend on the perplexity model choice are tabulated below:
+
+| Parameter                  | Qwen2.5-0.5B | distilgpt2 |
+|----------------------------|--------------|------------|
+| `PERPLEXITY_THRESHOLD_MAX` | 1000.0       | 2500.0     |
+| `CATEG_PPL_SHORT_MAX`      | 700.0        | 2000.0     |
+| `CATEG_PPL_WEIRD_MAX`      | 400.0        | 1000.0     |
 ---
 
 #### 4.1 Classify Lines (GPU Bound) 🚀

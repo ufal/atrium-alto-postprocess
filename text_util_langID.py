@@ -372,15 +372,20 @@ def compute_word_weird_ratio(word_scores: list[tuple[str, float]]) -> float:
 def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> list[float]:
     if not texts: return []
     try:
-        max_length = model.config.max_position_embeddings
-        tokenizer.pad_token = tokenizer.eos_token
+        # GPT-2 family uses n_positions; Qwen/others use max_position_embeddings[cite: 2]
+        max_length = getattr(
+            model.config, "max_position_embeddings",
+            getattr(model.config, "n_positions", 1024)
+        )
 
+        # tokenizer.pad_token is already safely set in gpu_inference_worker; do not repeat here.
         encodings = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
         input_ids = encodings.input_ids.to(device)
         attention_mask = encodings.attention_mask.to(device)
 
         target_ids = input_ids.clone()
-        target_ids[target_ids == tokenizer.pad_token_id] = -100
+        # Mask padding only using the attention mask, preventing EOS token masking[cite: 2]
+        target_ids[attention_mask == 0] = -100
 
         with torch.no_grad():
             outputs = model(input_ids, attention_mask=attention_mask, labels=target_ids)
@@ -403,7 +408,6 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
     except Exception as e:
         print(f"[Error] Batch PPL: {e}", file=sys.stderr)
         return [0.0] * len(texts)
-
 
 # ---------------------------------------------------------------------------
 # Categorisation

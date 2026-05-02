@@ -322,11 +322,95 @@ def main():
     task_queue = manager.Queue()
     result_dict = manager.dict()
 
+    # Pre-download on the main process so the spawned GPU worker finds it in cache[cite: 3]
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    print(f"[Main] Ensuring {MODEL_NAME} is cached...")
+    AutoTokenizer.from_pretrained(MODEL_NAME)
+    AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype="auto")
+    print(f"[Main] Cache OK.")
+
     # Pass the MODEL_NAME into the worker args
     gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict, MODEL_NAME))
     gpu_process.start()
 
-    # ... (Rest of your main function remains completely unchanged)
+    grouped_tasks = []
+    for file_id, group in df.groupby("file"):
+        grouped_tasks.append(
+            (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS, _TRUSTED_FOREIGN_LANG_BASES))
+
+    # 1. Initialize ParadataLogger in the MAIN process
+    logger = ParadataLogger(
+        program="langID-classify",
+        config={
+            "batch_size": BATCH_SIZE,
+            "max_workers": WORKERS_MAX,
+            "text_dir": TEXT_DIR,
+            "output_dir": OUTPUT_DIR
+        },
+        paradata_dir="paradata",
+        output_types=["csv"]
+    )
+
+    max_cores = min(mp.cpu_count(), WORKERS_MAX)
+    print(f"Starting {max_cores} CPU Document Processors...")
+
+    total_processed = 0
+    total_tasks = len(grouped_tasks)
+
+    # 2. Wrap the execution in try...finally to guarantee paradata serialization
+    try:
+        with ProcessPoolExecutor(max_workers=max_cores, initializer=init_cpu_worker) as executor:
+            futures = {executor.submit(process_document, task): task[0] for task in grouped_tasks}
+
+            for future in tqdm(as_completed(futures), total=total_tasks, desc="Classifying Documents"):
+                file_id = futures[future]
+
+                try:
+                    # Retrieve the dictionary returned by process_document
+                    result = future.result()
+
+                    # Guard against any non-dict return value (e.g. bare int/None)
+                    if not isinstance(result, dict):
+                        logger.log_skip(file_id, f"Unexpected return type: {type(result).__name__} = {result!r}")
+                        tqdm.write(f"Warning: unexpected result for {file_id}: {result!r}")
+                        continue
+
+                    status = result.get("status", "error")
+                    if status == "success":
+                        total_processed += result["lines"]
+                        # Log 1 successful CSV output
+                        logger.log_success("csv")
+                    elif status == "skipped":
+                        # File was already processed in a previous run – not an error
+                        tqdm.write(f"Skipped (already exists): {result['file_id']}")
+                    else:
+                        # Log the document as skipped due to internal exception
+                        logger.log_skip(result["file_id"], result["reason"])
+                        tqdm.write(f"Skipped {result['file_id']}: {result['reason']}")
+
+                except Exception as e:
+                    # Handle catastrophic worker crashes (e.g. MemoryError, Segfault)
+                    logger.log_skip(file_id, f"Worker crashed unexpectedly: {e}")
+                    tqdm.write(f"Error processing {file_id}: {e}")
+
+    finally:
+        # Signal the GPU worker to exit cleanly before the Manager is torn down.
+        # Without this the worker blocks forever on task_queue.get(), the Manager
+        # socket is then garbage-collected while the worker is still alive, and
+        # any pending result_dict write raises SIGPIPE / BrokenPipeError.
+        task_queue.put("STOP")
+        gpu_process.join(timeout=30)
+        if gpu_process.is_alive():
+            gpu_process.terminate()
+
+        # 3. Finalize the paradata log
+        # This will write out the JSON file regardless of whether the script
+        # finishes successfully or the user hits Ctrl+C.
+        logger.finalize(input_total=total_tasks)
+
+    print(f"All done! Processed {total_processed} total lines.")
+
+
 
 if __name__ == "__main__":
     mp.set_start_method('spawn', force=True)
