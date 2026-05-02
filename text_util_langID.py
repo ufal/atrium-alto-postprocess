@@ -62,7 +62,6 @@ def _lang_base(lang_code: str) -> str:
 _EXPECTED_LANGS_BASES: frozenset = frozenset(_lang_base(l) for l in COMMON_LANGS)
 
 PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
-PERPLEXITY_THRESHOLD_MIN = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MIN", 300.0)
 
 # Perplexity cut-offs used inside categorize_line.
 # Qwen2.5-0.5B scores clean text far lower than distilgpt2 did, so these are

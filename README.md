@@ -256,12 +256,11 @@ BATCH_SIZE = 128        # Batch size for processing lines
 WORKERS_MAX = 32        # Max CPU workers for parallel tasks
 EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
-MODEL_NAME = Qwen/Qwen2.5-0.5B
+MODEL_NAME = Qwen/Qwen2.5-0.5B  # Language model for perplexity scoring; English-only collections: distilgpt2 
 
 [TEXT_UTILS]
 
 PERPLEXITY_THRESHOLD_MAX = 1000.0       # Normalization ceiling for quality score (Qwen2.5-0.5B range)
-PERPLEXITY_THRESHOLD_MIN = 300.0        # Lower boundary reference
 LANG_SCORE_ROUGH = 0.45     # Threshold for rough language confidence
 LANG_SCORE_CLEAR = 0.75     # Threshold for clear language confidence
 ALLOWED_INTERNAL = .-,+()"'_—–:%;?!/        # Allowed punctuation inside words
