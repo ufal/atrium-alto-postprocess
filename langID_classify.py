@@ -181,7 +181,12 @@ def process_document(task):
     try:
         out_path = Path(output_dir) / f"{file_id}.csv"
         if out_path.exists():
-            return 0
+            return {
+                "status": "skipped",
+                "file_id": file_id,
+                "lines": 0,
+                "reason": "output already exists",
+            }
 
         batch_lines = []
         batch_meta = []
@@ -351,10 +356,20 @@ def main():
                     # Retrieve the dictionary returned by process_document
                     result = future.result()
 
-                    if result["status"] == "success":
+                    # Guard against any non-dict return value (e.g. bare int/None)
+                    if not isinstance(result, dict):
+                        logger.log_skip(file_id, f"Unexpected return type: {type(result).__name__} = {result!r}")
+                        tqdm.write(f"Warning: unexpected result for {file_id}: {result!r}")
+                        continue
+
+                    status = result.get("status", "error")
+                    if status == "success":
                         total_processed += result["lines"]
                         # Log 1 successful CSV output
                         logger.log_success("csv")
+                    elif status == "skipped":
+                        # File was already processed in a previous run – not an error
+                        tqdm.write(f"Skipped (already exists): {result['file_id']}")
                     else:
                         # Log the document as skipped due to internal exception
                         logger.log_skip(result["file_id"], result["reason"])
