@@ -46,18 +46,16 @@ def load_config(config_path):
     if not Path(config_path).exists():
         print(f"Warning: Configuration file {config_path} not found. Using defaults.")
         return {
-            "input_dir":   "data_samples/DOC_LINE_LANG_CLASS",
-            "output_dir":  "data_samples/DOC_PAGE_STAT",
+            "input_dir": "data_samples/DOC_LINE_LANG_CLASS",
+            "output_dir": "data_samples/DOC_PAGE_STAT",
             "output_stats": "AGGREGATED_PAGE_STATS.csv",
         }
     config.read(config_path)
-    # BUG FIX 1: The config uses section [AGGREGATE], not [Paths].
-    # Keys are RAW_LINES_CSV (input dir), OUTPUT_DOC_DIR (per-doc output dir),
-    # and OUTPUT_STATS (path for the single consolidated CSV).
+
     return {
-        "input_dir":    config.get("AGGREGATE", "RAW_LINES_CSV",   fallback="data_samples/DOC_LINE_LANG_CLASS"),
-        "output_dir":   config.get("AGGREGATE", "OUTPUT_DOC_DIR",  fallback="data_samples/DOC_PAGE_STAT"),
-        "output_stats": config.get("AGGREGATE", "OUTPUT_STATS",    fallback="AGGREGATED_PAGE_STATS.csv"),
+        "input_dir": config.get("AGGREGATE", "RAW_LINES_CSV", fallback="data_samples/DOC_LINE_LANG_CLASS"),
+        "output_dir": config.get("AGGREGATE", "OUTPUT_DOC_DIR", fallback="data_samples/DOC_PAGE_STAT"),
+        "output_stats": config.get("AGGREGATE", "OUTPUT_STATS", fallback="AGGREGATED_PAGE_STATS.csv"),
     }
 
 
@@ -68,11 +66,9 @@ def _sum_metrics(df):
     if df.empty:
         return pd.DataFrame()
 
-    # BUG FIX 2a: The classifier writes the column as 'categ', not 'category'.
     # Isolate relevant lines for metrics (Clear and Noisy)
     valid_lines = df[df['categ'].isin(["Clear", "Noisy"])].copy()
 
-    # BUG FIX 2b: groupby must also use 'categ', not 'category'.
     # Count categories per page
     cat_counts = df.groupby(['file', 'page_num', 'categ']).size().unstack(fill_value=0).reset_index()
     for col in STANDARD_COLS:
@@ -86,33 +82,30 @@ def _sum_metrics(df):
             stats[col] = 0
         for col in ['avg_quality_score', 'avg_word_weird', 'avg_lang_score',
                     'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'ch_ratio']:
-            stats[col] = float('nan')  # float('nan') keeps dtype as float64; pd.NA creates object dtype
+            stats[col] = float('nan')
         stats['main_lang'] = "None"
 
         final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
         return final_page_df
 
     # NaN cascades on boolean columns:
-    # csv.writer formats bools as 'True' / 'False'. Coerce back to float for .mean().
-    # Use .map() rather than .replace() — .replace() triggers a pandas FutureWarning
-    # about downcasting on mixed string/bool columns.
+    # Coerce back to float for .mean(). Use .map() rather than .replace()
+    # to avoid downcasting warnings on mixed string/bool columns.
     if 'caps_header' in valid_lines.columns:
         valid_lines['caps_header'] = valid_lines['caps_header'].map(
             {'True': 1.0, 'False': 0.0, True: 1.0, False: 0.0}
         ).astype(float)
 
-    # BUG FIX 2c: Aggregation tuple names must match the actual CSV column names.
-    # 'word_weirdness' → 'word_weird', 'symbol_count' → 'symbol'.
     # Calculate main stats for valid lines
     stats = valid_lines.groupby(['file', 'page_num']).agg(
-        total_word_count=('word_count',     'sum'),
-        total_char_count=('char_count',     'sum'),
+        total_word_count=('word_count', 'sum'),
+        total_char_count=('char_count', 'sum'),
         avg_quality_score=('quality_score', 'mean'),
-        avg_word_weird=('word_weird',       'mean'),   # was: 'word_weirdness'
-        avg_lang_score=('lang_score',       'mean'),
-        avg_perplex=('perplex',             'mean'),
-        avg_symbol=('symbol',               'mean'),   # was: 'symbol_count'
-        avg_vowel_ratio=('vowel_ratio',     'mean')
+        avg_word_weird=('word_weird', 'mean'),
+        avg_lang_score=('lang_score', 'mean'),
+        avg_perplex=('perplex', 'mean'),
+        avg_symbol=('symbol', 'mean'),
+        avg_vowel_ratio=('vowel_ratio', 'mean')
     ).reset_index()
 
     # Calculate caps header ratio
@@ -149,24 +142,18 @@ def process_csv_file(file_path):
     inferences, and returns aggregated page metrics.
     """
     try:
-        # BUG FIX 2d: dtype keys must match actual CSV column names.
-        # 'word_weirdness' → 'word_weird', 'symbol_count' → 'symbol'.
         dtype_map = {
-            # String columns: must be explicit so pandas never tries to sniff
-            # a mix of real strings and bare NaNs across chunks (cols 4 & 5).
-            'split_ws':        str,
-            'split_we':        str,
-            # Numeric columns
-            'word_count':      'float64',
-            'char_count':      'float64',
-            'quality_score':   'float64',
-            'word_weird':      'float64',
-            'lang_score':      'float64',
-            'perplex':         'float64',
+            'split_ws': str,
+            'split_we': str,
+            'word_count': 'float64',
+            'char_count': 'float64',
+            'quality_score': 'float64',
+            'word_weird': 'float64',
+            'lang_score': 'float64',
+            'perplex': 'float64',
             'garbage_density': 'float64',
-            'symbol':          'float64',
-            'vowel_ratio':     'float64',
-            # caps_header handled specifically later due to bool/string mix
+            'symbol': 'float64',
+            'vowel_ratio': 'float64',
         }
 
         # Handle empty/missing rows gracefully
@@ -193,10 +180,8 @@ def main():
     args = parser.parse_args()
 
     config = load_config(args.config)
-    input_dir  = Path(config["input_dir"])
+    input_dir = Path(config["input_dir"])
     output_dir = Path(config["output_dir"])
-    # BUG FIX 3: Use the OUTPUT_STATS key from [AGGREGATE] for the consolidated file path
-    # instead of hardcoding a name inside output_dir (which is the per-doc directory).
     output_stats_path = Path(config["output_stats"])
 
     if not input_dir.exists():
@@ -227,8 +212,6 @@ def main():
 
     try:
         with ProcessPoolExecutor(max_workers=max_cores) as executor:
-            # BUG FIX 3 (cont.): output_dir was passed into the worker tuple but
-            # immediately discarded there as `_`.  Pass only the file path.
             futures = {executor.submit(process_csv_file, f): f for f in csv_files}
 
             for future in tqdm(as_completed(futures), total=len(csv_files), desc="Aggregating Page Stats"):
