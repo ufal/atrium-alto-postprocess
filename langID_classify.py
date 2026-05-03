@@ -5,7 +5,7 @@ langID_classify.py
 Step 2: Read TXT files → Merge Split Words → Batch classify.
 
 Architecture (Solution B - CPU/GPU Split Queue):
-1. ONE dedicated GPU Worker loops continuously, holding the only distilgpt2 instance to prevent VRAM OOM errors.
+1. ONE dedicated GPU Worker loops continuously, holding the only Qwen2.5-0.5B instance to prevent VRAM OOM errors.
 2. MULTIPLE CPU Workers read files, run Regex/FastText, and place texts into a multiprocessing Task Queue.
 3. CPU Workers poll a Result Dictionary until the GPU returns their Perplexity scores.
 """
@@ -40,18 +40,25 @@ CSV_HEADER = [
 ]
 
 
-def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
+def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: str):
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[GPU Engine] Initializing DistilGPT2 on {device.upper()}...")
+    print(f"[GPU Engine] Initializing {model_name} on {device.upper()}...")
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
-        tokenizer.pad_token = tokenizer.eos_token
-        model = AutoModelForCausalLM.from_pretrained("distilgpt2").to(device)
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+        # Safely assign pad_token if it doesn't exist (needed for distilgpt2, etc.)
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype="auto",
+        ).to(device)
         model.eval()
-        print(f"[GPU Engine] Ready. Waiting for text batches...")
+        print(f"[GPU Engine] {model_name} ready. Waiting for text batches...")
     except Exception as e:
         print(f"[GPU Engine] Failed to load model: {e}")
         return
@@ -68,10 +75,6 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict):
             try:
                 result_dict[batch_id] = ppls
             except (BrokenPipeError, OSError) as e:
-                # The CPU worker that queued this batch has already died (e.g. due to
-                # a NameError or other crash).  Its Manager proxy socket is gone, so
-                # writing back is impossible.  Log and discard – the batch result will
-                # simply never be consumed, which is correct behaviour.
                 print(f"[GPU Engine] Dropped result for batch {batch_id}: {e}")
                 continue
 
@@ -181,7 +184,12 @@ def process_document(task):
     try:
         out_path = Path(output_dir) / f"{file_id}.csv"
         if out_path.exists():
-            return 0
+            return {
+                "status": "skipped",
+                "file_id": file_id,
+                "lines": 0,
+                "reason": "output already exists",
+            }
 
         batch_lines = []
         batch_meta = []
@@ -284,7 +292,6 @@ def process_document(task):
         }
 
 
-
 def main():
     config = configparser.ConfigParser()
     config.read("config_langID.txt")
@@ -294,6 +301,9 @@ def main():
     OUTPUT_DIR = config.get("CLASSIFY", "OUTPUT_LINES_LOG")
     BATCH_SIZE = config.getint("CLASSIFY", "BATCH_SIZE")
     WORKERS_MAX = config.getint("CLASSIFY", "WORKERS_MAX", fallback=32)
+
+    # Read the model name, falling back to Qwen if not found
+    MODEL_NAME = config.get("CLASSIFY", "MODEL_NAME", fallback="Qwen/Qwen2.5-0.5B")
 
     EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng")
     EXPECTED_LANGS = [lang.strip() for lang in EXPECTED_LANGS_STR.split(",") if lang.strip()]
@@ -312,7 +322,15 @@ def main():
     task_queue = manager.Queue()
     result_dict = manager.dict()
 
-    gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict))
+    # Pre-download on the main process so the spawned GPU worker finds it in cache[cite: 3]
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    print(f"[Main] Ensuring {MODEL_NAME} is cached...")
+    AutoTokenizer.from_pretrained(MODEL_NAME)
+    AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype="auto")
+    print(f"[Main] Cache OK.")
+
+    # Pass the MODEL_NAME into the worker args
+    gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict, MODEL_NAME))
     gpu_process.start()
 
     grouped_tasks = []
@@ -351,10 +369,20 @@ def main():
                     # Retrieve the dictionary returned by process_document
                     result = future.result()
 
-                    if result["status"] == "success":
+                    # Guard against any non-dict return value (e.g. bare int/None)
+                    if not isinstance(result, dict):
+                        logger.log_skip(file_id, f"Unexpected return type: {type(result).__name__} = {result!r}")
+                        tqdm.write(f"Warning: unexpected result for {file_id}: {result!r}")
+                        continue
+
+                    status = result.get("status", "error")
+                    if status == "success":
                         total_processed += result["lines"]
                         # Log 1 successful CSV output
                         logger.log_success("csv")
+                    elif status == "skipped":
+                        # File was already processed in a previous run – not an error
+                        tqdm.write(f"Skipped (already exists): {result['file_id']}")
                     else:
                         # Log the document as skipped due to internal exception
                         logger.log_skip(result["file_id"], result["reason"])
@@ -381,6 +409,7 @@ def main():
         logger.finalize(input_total=total_tasks)
 
     print(f"All done! Processed {total_processed} total lines.")
+
 
 
 if __name__ == "__main__":

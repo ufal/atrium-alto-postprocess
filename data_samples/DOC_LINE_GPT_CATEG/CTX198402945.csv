@@ -1,0 +1,79 @@
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
+CTX198402945,1,1,Kat. obec Beroun,,,ces,0.9735,19108.09,3,16,0.0,0,0,0,0,0,0.0,0.4615,0.7035,Noisy,False
+CTX198402945,1,2,_ I,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
+CTX198402945,1,3,Osada,,,ces,0.9996,65469.16,1,5,0.0,0,0,0,0,0,0.0,0.6,0.705,Noisy,False
+CTX198402945,1,4,"Trať čp. 34, 35, 36",,,ces,0.8773,116.21,5,19,0.0,0,0,0,0,0,0.0,0.1667,0.6381,Noisy,False
+CTX198402945,1,5,Okres Beroun,,,ces,0.8835,45753.29,2,12,0.0,0,0,0,0,0,0.0,0.4545,0.712,Noisy,False
+CTX198402945,1,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,7,CSAV’ -cheologický ústav,,,ces,0.75,622.06,3,24,0.0417,1,0,0,0,0,0.1333,0.4,0.7309,Clear,False
+CTX198402945,1,8,• 2 *6. X 1984,,,ces,0.75,3271.54,5,14,0.1429,2,0,0,0,0,0.3,0.0,0.3111,Trash,True
+CTX198402945,1,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,10,Druh a kultura,,,ces,0.9973,624.84,3,14,0.0,0,0,0,0,0,0.0,0.4167,0.764,Clear,False
+CTX198402945,1,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,12,. 2415/2..,,,ces,0.75,2163.72,2,10,0.0,0,0,0,0,0,0.0,0.0,0.3569,Noisy,False
+CTX198402945,1,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,14,středověká městiště,,,ces,1.0,48.45,2,19,0.0,0,0,0,0,0,0.0,0.3889,0.9151,Clear,False
+CTX198402945,1,15,-ved. výzkumu,,,ces,0.997,706.86,2,13,0.0,0,0,0,0,0,0.0,0.4,0.8257,Clear,False
+CTX198402945,1,16,Zpráva,,,ces,1.0,4574.99,1,6,0.0,0,0,0,0,0,0.0,0.3333,0.706,Noisy,False
+CTX198402945,1,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,18,koreferenta,,,ces,0.7718,1114.81,1,11,0.0,0,0,0,0,0,0.0,0.4545,0.8218,Clear,False
+CTX198402945,1,19,komise,,,ces,0.8208,4172.54,1,6,0.0,0,0,0,0,0,0.0,0.5,0.706,Noisy,False
+CTX198402945,1,20,ved. oddelení,,,ces,0.9958,5201.02,2,13,0.0,0,0,0,0,0,0.0,0.4545,0.6976,Noisy,False
+CTX198402945,1,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,22,za Období 10.9.- 26.9.1984,,,ces,0.8247,519.1,4,26,0.0,0,0,0,0,0,0.0,0.5,0.621,Noisy,False
+CTX198402945,1,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,24,V tomto období jsme v zadním traktu domu čp. 36 na Gottwaldově,,,ces,1.0,925.5,12,62,0.0,0,0,0,0,0,0.0,0.3542,0.7597,Clear,False
+CTX198402945,1,25,"nám. v Berouně odkryli patrně provozní jímku hlubokou 180 cm,",,,ces,1.0,590.15,10,61,0.0,0,0,0,0,0,0.0,0.4043,0.8172,Clear,False
+CTX198402945,1,26,"z lomového zdivá nasucho a jen místy na maltu, ve spodní části",,,ces,1.0,538.7,12,62,0.0,0,0,0,0,0,0.0,0.42,0.8157,Clear,False
+CTX198402945,1,27,"uvnitř sporadicky omítnutou, s vakovitým dnem. Spodní část jímky",jím,,ces,1.0,571.18,9,64,0.0,0,0,0,0,0,0.0,0.3889,0.8787,Clear,False
+CTX198402945,1,28,byla až do výše c. 100 cm zavezena šedým říčním pískem s,,ky,ces,1.0,171.43,12,56,0.0,0,0,0,0,0,0.0,0.3902,0.7887,Clear,False
+CTX198402945,1,29,"hrubým štěrkem, v němž se vyskytl jediný střípek cihlově zbarvené",zbar,,ces,1.0,177.98,10,65,0.0,0,0,0,0,0,0.0,0.3455,0.8877,Clear,False
+CTX198402945,1,30,režné keramiky c. 16. století. V této výši byla jímka opatřena,o,vené,ces,1.0,462.08,11,62,0.0,0,0,0,0,0,0.0,0.4468,0.8335,Clear,False
+CTX198402945,1,31,zvýšeným dnem z plochých kamenů. Na tomto dně spočívala,spočíva,patřena,ces,0.9988,222.47,9,55,0.0,0,0,0,0,0,0.0,0.3696,0.8669,Clear,False
+CTX198402945,1,32,c. 10 cm silná vrstva černé popelovité hlíny s četnými zlomky,zlom,la,ces,0.75,473.53,11,61,0.0,0,0,0,0,0,0.0,0.3542,0.8107,Clear,False
+CTX198402945,1,33,berounského zboží. Nad touto vrstvou byla horní část jímky,,ky,ces,1.0,635.38,9,58,0.0,0,0,0,0,0,0.0,0.4082,0.9037,Clear,False
+CTX198402945,1,34,"vyplněna odspodu hlinitou hnědou vrstvou, pískovým zásypem a",,,ces,0.9998,228.22,8,60,0.0,0,0,0,0,0,0.0,0.4231,0.9009,Clear,False
+CTX198402945,1,35,"svrchní šedohnědou hlinitou vrstvou, která sahala až k povrchu.",povr,,ces,0.9999,493.58,9,63,0.0,0,0,1,0,1,0.0389,0.3774,0.8427,Clear,False
+CTX198402945,1,36,"Rozšířením sondy k V bylo zjištěno, že na oblouk jímky",,chu.,ces,1.0,316.34,10,54,0.0,0,0,0,0,0,0.0,0.4091,0.805,Clear,False
+CTX198402945,1,37,"navazuje zdivo, náležející snad zadnímu traktu domu čp. 36,",,,ces,1.0,210.01,9,59,0.0,0,0,0,0,0,0.0,0.413,0.8654,Clear,False
+CTX198402945,1,38,vybíhající z nejsevernějšího bodu jímky směrem k V. Nelze,,,ces,1.0,437.8,9,57,0.0,0,0,0,0,0,0.0,0.3958,0.8185,Clear,False
+CTX198402945,1,39,"vyloučit, že v nějaké souvislosti s jímkou je též nasucho",,,ces,1.0,280.39,10,57,0.0,0,0,0,0,0,0.0,0.4468,0.8111,Clear,False
+CTX198402945,1,40,"kladená zídka J jímky, běžící S-J směrem. S zed zadního traktu",trak,,ces,1.0,292.05,11,62,0.0,0,0,0,0,0,0.0,0.3673,0.8471,Clear,False
+CTX198402945,1,41,domu čp. 36 s jímkou je kryta šedohnědou hlinitou vrstvou,,tu,ces,0.9946,440.39,10,57,0.0,0,0,0,0,0,0.0,0.4222,0.7983,Clear,False
+CTX198402945,1,42,"místy popelovité konsistence, která též vyplňuje ústí jímky",,,ces,1.0,461.44,8,59,0.0,0,0,0,0,0,0.0,0.4118,0.9187,Clear,False
+CTX198402945,1,43,"a obsahuje pozdní berounské zboží /režná keramika s předžahem,",,,ces,0.9994,658.02,9,62,0.0,0,0,0,0,0,0.0,0.4231,0.8362,Clear,False
+CTX198402945,1,44,"zelené, žluté i rezavě hnědé glazury/. . od touto vrstvou se",,,ces,0.9999,329.29,11,60,0.0,0,0,0,0,0,0.0,0.4565,0.8112,Clear,False
+CTX198402945,1,45,"nachází pískový pokryv, kterým bylo zasypáno zdivo jímky i",,,ces,1.0,263.76,9,58,0.0,0,0,0,0,0,0.0,0.4286,0.9001,Clear,False
+CTX198402945,1,46,domovního traktu. Pod pískem pak spodní část jímky vyplňuje,,,ces,1.0,334.33,9,59,0.0,0,0,0,0,0,0.0,0.36,0.9289,Clear,False
+CTX198402945,1,47,a ke zdivu přiléhá šedá hlinito-jílovitá vrstva s četnými uhlíky,u,,ces,0.9998,331.97,10,64,0.0,0,0,0,0,0,0.0,0.4259,0.8443,Clear,False
+CTX198402945,1,48,/i celé části spálené konstrukce/ a střepy staršího berounského,be,hlíky,ces,1.0,558.88,9,63,0.0,0,0,0,0,0,0.0,0.4151,0.8453,Clear,False
+CTX198402945,1,49,"zboží - zde převažuje režná, cihlově zbarvená keramika,",kera,rounského,ces,1.0,198.82,8,55,0.0,0,0,0,0,0,0.0,0.4222,0.8907,Clear,False
+CTX198402945,1,50,nečetné glazované střepy jsou především živě zelené a,,"mika,",ces,1.0,249.43,8,53,0.0,0,0,0,0,0,0.0,0.4348,0.8955,Clear,False
+CTX198402945,1,51,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,1,52,Poznámka: Pište pokud možno strojem. Na konci uveďte datum odeslání a čitelný podpis. Zprávy koreferentů a komisí vyhotovte dvojmo.,,,ces,0.9882,284.05,19,131,0.0076,0,0,0,0,0,0.0,0.422,0.9238,Clear,False
+CTX198402945,1,53,ST 23 3891 73,,,ces,0.75,8150.79,4,13,0.0,0,0,0,0,0,0.0,0.0,0.413,Noisy,True
+CTX198402945,2,1,vyskytují se pozdně renesanční kachle. Bylo by velmi lákavé,,,ces,1.0,538.49,9,59,0.0,0,0,0,0,0,0.0,0.42,0.8459,Clear,False
+CTX198402945,2,2,spojovat tuto spodní vrstvu s katastrofálním požárem města,,,ces,1.0,263.04,8,58,0.0,0,0,0,0,0,0.0,0.3529,0.8995,Clear,False
+CTX198402945,2,3,"r. 1599, následující pískový pokryv s úpravou celého prostoru",prosto,,ces,0.9994,633.29,9,61,0.0,0,0,0,0,0,0.0,0.4255,0.8038,Clear,False
+CTX198402945,2,4,při obnově zničených příbytků a svrchní hlinitou až popelo-,,ru,ces,1.0,334.9,9,59,0.0,0,0,0,0,1,0.0,0.4,0.8622,Clear,False
+CTX198402945,2,5,vitou vrstvu přičíst pohromám třicetileté války.,,,ces,1.0,210.49,6,48,0.0,0,0,0,0,0,0.0,0.381,0.927,Clear,False
+CTX198402945,2,6,Vzhledem k nedostatku času a velmi neutěšené situaci v,,,ces,1.0,1435.04,9,54,0.0,0,0,0,0,0,0.0,0.4348,0.7392,Clear,False
+CTX198402945,2,7,oblasti pracovních sil rozhodli jsme se prozkoumat terén domovních,do,,ces,1.0,732.53,9,66,0.0,0,0,0,0,0,0.0,0.3621,0.8741,Clear,False
+CTX198402945,2,8,"parcel bagrovanou sondou, kterou bychom dokumentovali",,movních,ces,0.997,1640.99,6,53,0.0,0,0,0,0,0,0.0,0.4468,0.8179,Clear,False
+CTX198402945,2,9,stratigrafickou situaci a případně odkryli nejstarší dosažitelné,dosaži,,ces,1.0,583.78,7,64,0.0,0,0,0,0,0,0.0,0.431,0.8744,Clear,False
+CTX198402945,2,10,"pozůstatky. Sonda, kterou provedl bagrista. CSP Peroun,",,telné,ces,0.9988,1932.63,7,55,0.0,0,0,0,0,0,0.0,0.3778,0.7858,Clear,False
+CTX198402945,2,11,"dosáhla u náměstí hloubky pouze c. 180 cm, kde jsme narazili",,,ces,1.0,591.84,11,60,0.0,0,0,0,0,0,0.0,0.4222,0.7969,Clear,False
+CTX198402945,2,12,na spodní vodu. Směrem k S se terén zvyšuje a sonda zde dosáhla,,,ces,1.0,785.12,13,63,0.0,0,0,0,0,0,0.0,0.4,0.7816,Clear,False
+CTX198402945,2,13,hloubky téměř 4 m.,,,ces,1.0,515.09,4,18,0.0,0,0,0,0,0,0.0625,0.3846,0.7032,Clear,False
+CTX198402945,2,14,"Protože nelze očekávat, že v letošním roce zdokumentujeme",,,ces,1.0,157.2,8,57,0.0,0,0,0,0,0,0.0,0.4286,0.8659,Clear,False
+CTX198402945,2,15,bagrovanou sondu a ještě dokončíme výzkum zadního traktu domu,do,,ces,1.0,205.55,9,61,0.0,0,0,0,0,0,0.0,0.434,0.9112,Clear,False
+CTX198402945,2,16,"čp. 36, pokusíme se dohodnout s MěstNV Beroun a zejména s",,mu,ces,1.0,910.22,11,57,0.0,0,1,0,0,0,0.0091,0.3953,0.7117,Clear,False
+CTX198402945,2,17,"odpovědnými pracovníky ( S , který bude na místě provádět stavební",sta,,ces,1.0,228.77,11,66,0.0,0,0,0,0,0,0.0,0.4074,0.8325,Clear,False
+CTX198402945,2,18,"oráče, zda by bylo možno tento výzkum dokončit v letních",let,vební,ces,1.0,398.92,10,56,0.0,0,0,0,0,0,0.0,0.3913,0.8605,Clear,False
+CTX198402945,2,19,"měsících příštího roku. ude-li to možné, bylo by třeba",,ních,ces,1.0,152.38,9,54,0.0,0,0,0,0,0,0.0,0.4419,0.864,Clear,False
+CTX198402945,2,20,"na tento výzkum podat návrh na hospodářskou smlouvu, a to přibližně",při,,ces,1.0,359.04,11,67,0.0,0,0,0,0,0,0.0,0.3929,0.8262,Clear,False
+CTX198402945,2,21,"ve výši c. 20 000,- Kčs na dělnické mzdy. Podrobné informace",in,bližně,ces,1.0,509.5,11,60,0.0,0,0,1,0,0,0.0318,0.3659,0.7632,Clear,False
+CTX198402945,2,22,podám ve svých dalších hlášeních.,,formace,ces,1.0,193.67,5,33,0.0,0,0,0,0,0,0.0,0.3214,0.8514,Clear,False
+CTX198402945,2,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198402945,2,24,V Praze 1.10. 1984,,,ces,0.814,1016.93,4,18,0.0,0,0,0,0,0,0.0,0.3333,0.5894,Noisy,False
+CTX198402945,2,25,harvát,,,ces,0.9847,339.71,1,6,0.0,0,0,0,0,0,0.0,0.3333,0.8788,Clear,False

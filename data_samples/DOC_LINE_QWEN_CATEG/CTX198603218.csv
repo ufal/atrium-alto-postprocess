@@ -1,0 +1,26 @@
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
+CTX198603218,1,1,"479. TUROVEC, o. Nová Ves u Chýnova, okr. Tábor",,,ces,0.75,324.0,9,47,0.0,0,0,0,0,0,0.0,0.4516,0.7609,Clear,False
+CTX198603218,1,2,"1980-81 - KULT: Středověk. LOK: ZSV Kravín, ca 6,5km JV od Tábora; Ikm sev. od silnice",,,ces,0.9978,174.0,16,86,0.0349,0,0,0,0,0,0.0,0.3333,0.799,Clear,False
+CTX198603218,1,3,"Planá n.Luž. - Turovec-Chýnov; v lese s pomístním názvem ""Stará ves"" /""Pustá ves""/. ZM 23-133 Tábor,",Tá,,ces,0.9868,144.0,16,100,0.05,0,2,1,0,0,0.0344,0.3485,0.8426,Clear,False
+CTX198603218,1,4,217 od Z a 65 mm od J s.č. OKOL: Systematický výzkum zaniklé středověké vesnice Kravín. NÁLEZ:,,"bor,",ces,0.9999,84.5,17,94,0.0213,0,0,0,0,0,0.0,0.3824,0.8076,Clear,False
+CTX198603218,1,5,"Po předchozích výzkumech v letech 1965-1967 a 1973-1974 odkryt jeden z dalších objektů ZSV, tentokrát",,,ces,1.0,16.62,15,101,0.0,0,0,0,0,0,0.0,0.3235,0.8707,Clear,False
+CTX198603218,1,6,"jako součást ""Experimentu na středověkém objektu"", prováděném ve spolupráci AÚ ČSAV Praha a MHRH",,,ces,1.0,40.5,14,96,0.0208,0,0,0,0,1,0.0,0.4125,0.8959,Clear,False
+CTX198603218,1,7,Tábor. Výzkumem měla být ověřena vypovídací schopnost geodeticko-topografického průzkumu v detailní,,,ces,1.0,29.62,11,99,0.0,0,0,0,0,0,0.0,0.4253,0.9618,Clear,False
+CTX198603218,1,8,situaci jednoho z objektů. Archeologický výzkum byl zařazen do výzkumného úkolu systematického zkoumání,,,ces,1.0,22.0,13,103,0.0,0,0,0,0,0,0.0,0.4444,0.9475,Clear,False
+CTX198603218,1,9,ZSV tzv. husitského období na Táborskú. Výzkumem byl zjištěn jednoprostorový obytný objekt zemnicové-,,,ces,0.9982,68.0,13,101,0.0,0,0,0,0,0,0.0,0.3721,0.9574,Clear,False
+CTX198603218,1,10,"ho typu s prostým otevřeným ohništěm, zásobní jámou, svahovitou vstupní šíjí a kamennou plentou podél",,,ces,0.9998,60.0,15,101,0.0,0,0,0,0,0,0.0,0.4353,0.924,Clear,False
+CTX198603218,1,11,podpovrchových částí stěn. Objekt dosahoval rozměrů 500-540 x 220-270 cm s delší osou V - Z. Jihovýchodně,Jihovýchod,,ces,1.0,32.5,17,105,0.0,0,0,2,0,0,0.0912,0.3611,0.8246,Clear,False
+CTX198603218,1,12,"od tohoto objektu, 350 cm od stěn a 250 cm od počátku vchodu do něj, byly odkryty zbytky povrchové stavby.",stav,ně,ces,1.0,22.75,20,106,0.0,0,0,1,0,0,0.0175,0.3846,0.8513,Clear,False
+CTX198603218,1,13,Rozkládala se na ploše cca 500 x 500 cm a její stěny byly shodně orientovány s obytným objektem. Získaný,Zís,by.,ces,1.0,19.5,19,104,0.0,0,0,0,0,0,0.0447,0.4177,0.8589,Clear,False
+CTX198603218,1,14,materiál této sídelní jednotky /dům + oddělená hospodářská stavba/ je datován do první poloviny 15.,,kaný,ces,1.0,42.5,15,99,0.0101,0,0,0,0,0,0.0,0.4177,0.9024,Clear,False
+CTX198603218,1,15,"století. Mezi objekty č. 1 /dům/ a č. 3 /povrchová stavba/byla odkryta oválná studna, prostě vyhloubená",,,ces,1.0,54.5,16,103,0.0,0,0,0,0,0,0.0312,0.4103,0.8736,Clear,False
+CTX198603218,1,16,"do podloží, dosahující průměru 140-175cm a hloubky 410 cm. Ve středu dna bylo zjištěno pravidelné kruhovité",kru,,ces,1.0,19.12,16,107,0.0,0,0,0,0,0,0.0,0.4125,0.8781,Clear,False
+CTX198603218,1,17,"zahloubení o průměru 60cm a hloubce 20 cm, sloužící jako odkalovač. Objekt je datován do konce 13.,",,hovité,ces,1.0,37.5,17,99,0.0,0,0,0,0,1,0.0,0.4384,0.8422,Clear,False
+CTX198603218,1,18,či na přelom 13.-14. stol. V roce 1981 byla dále provedena preparace částí objektů z let 1973-1974a u jednoho,jed,,ces,1.0,20.12,19,109,0.0,0,0,0,0,0,0.0,0.4286,0.8605,Clear,False
+CTX198603218,1,19,"z nich byla odkryta 810 cm hluboká studna, roubená na sucho loženým kamením, dosahující vnitřního",,noho,ces,1.0,63.75,15,97,0.0,0,0,0,0,0,0.0,0.4103,0.9001,Clear,False
+CTX198603218,1,20,průměru 80-90cm. Materiál datuje objekt do první poloviny 15. stol. ULOŽ: MHRH Tábor. LIT: Shrnuta,,,ces,0.9989,63.75,15,98,0.0204,0,0,0,0,1,0.0,0.3662,0.911,Clear,False
+CTX198603218,1,21,"in: Krajíc R. , Přehled archeologických výzkumů středověku na Táborskú/se zaměřením na ZSO/, Archeologické",Arche,,ces,1.0,58.0,14,106,0.0094,0,0,0,0,0,0.0,0.4023,0.8699,Clear,False
+CTX198603218,1,22,"výzkumy v jižních Čechách 1, 1983, 101-105.",,ologické,ces,0.9999,12.56,7,43,0.0,0,0,1,0,0,0.0857,0.3182,0.7333,Clear,False
+CTX198603218,1,23,R. Krajíc,,,ces,0.9999,334.0,2,9,0.0,0,0,0,0,0,0.0,0.2857,0.67,Noisy,False
+CTX198603218,1,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
+CTX198603218,1,25,BZU 1982-1983 4,,,ces,0.75,22.75,3,15,0.0,0,0,0,0,0,0.0833,0.3333,0.6805,Noisy,True

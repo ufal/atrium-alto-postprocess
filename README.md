@@ -1,14 +1,13 @@
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" title="Python Version"></a>
   <a href="https://huggingface.co/facebook/fasttext-language-identification"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-fasttext--langID-yellow.svg" title="FastText Language Identification"></a>
-  <a href="https://huggingface.co/distilbert/distilgpt2"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-distilgpt2-yellow.svg" title="DistilGPT2 Perplexity"></a>
+  <a href="https://huggingface.co/Qwen/Qwen2.5-0.5B"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-Qwen2.5--0.5B-yellow.svg" title="Qwen2.5-0.5B Perplexity"></a>
   <a href="https://github.com/cneud/alto-tools"><img src="https://img.shields.io/badge/dep-alto--tools-lightgrey.svg" title="alto-tools"></a>
   <a href="https://opensource.org/license/mit/"><img src="https://img.shields.io/github/license/ufal/atrium-alto-postprocess" title="MIT License"></a>
   <a href="https://atrium-research.eu/"><img src="https://img.shields.io/badge/funded%20by-ATRIUM-8A2BE2.svg" title="ATRIUM Project"></a>
 </p>
 
 ---
-
 
 # 📦 ALTO XML Files Postprocessing Pipeline
 
@@ -222,18 +221,20 @@ This is a key ⌛ time-consuming step that analyzes the text quality of each pag
 assigning each line a quality category to filter out OCR noise 🔇.
 
 It uses the [FastText language identification model](https://huggingface.co/facebook/fasttext-language-identification) 😊
-and perplexity scores from [distilGPT2](https://huggingface.co/distilbert/distilgpt2) 😊 to detect noise [^2] [^6].
+and perplexity scores from [Qwen2.5-0.5B](https://huggingface.co/Qwen/Qwen2.5-0.5B) 😊 to detect noise [^2] [^6].
 
 More post-processing of TXT files can be found in the [GitHub repository](https://github.com/ufal/atrium-nlp-enrich)
 of the ATRIUM project, which covers NLP enrichment using Nametag for NER and UDPipe for CONLL-U files with lemmas & POS tags [^5].
 
 As the script processes, it assigns each line one of five categories 🪧:
 
-* ✅ **Clear** — Passes all structural checks; high composite quality score.
-* ⚠️ **Noisy** — Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.
-* 🗑️ **Trash** — Severely corrupted: high garbage density or a composite quality score below the Trash threshold.
-* 🔣 **Non-text** — Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation.
-* 🫙 **Empty** — Line contains only whitespace.
+|    Category     |                       Action                       | Description                                                                                                                                                                 |
+|:---------------:|:--------------------------------------------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|   ✅ **Clear**   |        Ready to be processed by further NLP        | Passes all structural checks; high composite quality score.                                                                                                                 |
+|  ⚠️ **Noisy**   | Corrections of generally readable words are needed | Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.                                     |
+|  🗑️ **Trash**  |     Should be re-processed by another OCR tool     | Severely corrupted: high garbage density or a composite quality score below the Trash threshold.                                                                            |
+| 🔣 **Non-text** |   May be checked for identifiers of finds/sites    | Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation. |
+|  🫙 **Empty**   |                   Can be ignored                   | Line contains only whitespace (paragraphs separator)                                                                                                                        |
 
 > [!NOTE]
 > This script generates two primary output directories:
@@ -250,15 +251,15 @@ Parameters are organized into **three sections**: `[CLASSIFY]`, `[AGGREGATE]`, a
  
 ```ini
 [CLASSIFY]
-BATCH_SIZE = 128        # Batch size for processing lines
+BATCH_SIZE = 32        # Batch size for processing lines
 WORKERS_MAX = 32        # Max CPU workers for parallel tasks
 EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
+MODEL_NAME = Qwen/Qwen2.5-0.5B  # Language model for perplexity scoring; English-only collections: distilgpt2 
 
 [TEXT_UTILS]
 
-PERPLEXITY_THRESHOLD_MAX = 3000.0       # Max perplexity threshold
-PERPLEXITY_THRESHOLD_MIN = 1500.0       # Min perplexity threshold
+PERPLEXITY_THRESHOLD_MAX = 1000.0       # Normalization ceiling for quality score (Qwen2.5-0.5B range)
 LANG_SCORE_ROUGH = 0.45     # Threshold for rough language confidence
 LANG_SCORE_CLEAR = 0.75     # Threshold for clear language confidence
 ALLOWED_INTERNAL = .-,+()"'_—–:%;?!/        # Allowed punctuation inside words
@@ -276,6 +277,8 @@ CATEG_GARBAGE_DENSITY_SHORT = 0.20      # Garbage density for short lines
 CATEG_GARBAGE_SHORT_WC      = 3     # Word count for short line checks
 CATEG_TRASH_SCORE_MAX       = 0.40      # Max QS for Trash category
 CATEG_NOISY_SCORE_MAX       = 0.70      # Max QS for Noisy category
+CATEG_PPL_SHORT_MAX         = 700.0     # Perplexity ceiling for short-line trap (Qwen2.5-0.5B; was 2000.0 for distilgpt2)
+CATEG_PPL_WEIRD_MAX         = 400.0     # Perplexity ceiling for weird+high-ppl Trash catch (Qwen2.5-0.5B; was 1000.0)
 ```
 
 </details>
@@ -285,10 +288,13 @@ CATEG_NOISY_SCORE_MAX       = 0.70      # Max QS for Noisy category
 #### 4.1 Classify Lines (GPU Bound) 🚀
 
 This script reads the extracted text files, batches lines together 📦, and runs the FastText [^2]
-and DistilGPT2 [^6] models. It uses a **CPU/GPU split architecture**:
+and Qwen2.5-0.5B [^6] models. It uses a **CPU/GPU split architecture**:
 
-- A single dedicated **GPU worker** holds the only DistilGPT2 instance and processes perplexity batches to prevent VRAM OOM errors.
-- Multiple **CPU workers** (up to `WORKERS_MAX`, default 32) read files, run FastText and structural detectors, and submit text batches to the GPU worker via a shared queue. CPU workers poll the result dictionary while the GPU processes, running language identification concurrently.
+- A single dedicated **GPU worker** holds the only Qwen2.5-0.5B instance and processes perplexity batches 
+to prevent VRAM OOM errors.
+- Multiple **CPU workers** (up to `WORKERS_MAX`, default 32) read files, run FastText and structural detectors, 
+and submit text batches to the GPU worker via a shared queue. CPU workers poll the result dictionary while 
+the GPU processes, running language identification concurrently.
 
 > [!WARNING]
 > The first of `EXPECTED_LANGS` list of languages should be the most expected language in the processed 
@@ -317,7 +323,7 @@ Predicted or computed features for each line:
 
 * `lang` — predicted ISO language code from the FastText model ([full list](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200)) 🌐
 * `lang_score` — FastText confidence score for the predicted language 🎯
-* `perplex` — DistilGPT2 perplexity score of the line 📉
+* `perplex` — Qwen2.5-0.5B (or any other model of your choice, like `distilgpt2` for English) perplexity score of the line 📉
 * `word_count` — number of whitespace-delimited tokens in the line
 * `char_count` — total character count of the line
 * `garbage_density` — ratio of non-alphanumeric, non-standard-punctuation characters to total line length
@@ -326,15 +332,19 @@ Predicted or computed features for each line:
 * `repeated` — count of words where a non-standard character makes up ≥ 40% of the word
 * `ldl_fuses` — count of words with a letter–digit–letter sandwich (e.g., `w0rd`)
 * `gibberish` — count of words flagged as gibberish (all-caps, no vowels, or extreme vowel ratio)
-* `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol, repeated-symbol, LDL-fusion, and mid-uppercase signals weighted per token (0 = fully clean)
+* `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol, repeated-symbol, LDL-fusion, 
+and mid-uppercase signals weighted per token (0 = fully clean). *Note: Random isolated letters receive a severe weirdness 
+penalty (0.85) to catch spaced-out OCR noise, while isolated numbers/measurements receive a lower, tolerable penalty (0.25).*
 * `vowel_ratio` — ratio of vowel characters to total alphabetic characters in the line
-* `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, text length, and word weirdness; higher = cleaner 📈
+* `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, 
+text length, and word weirdness; higher = cleaner 📈
 * `categ` — assigned category: **Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙
 * `caps_header` — boolean flag indicating whether all alphabetic words in the line are uppercase (typical of section headers)
 
 ##### CPU Pre-filter
 
-Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side check and assigns `Empty` or `Non-text` directly, bypassing the ML pipeline entirely:
+Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side check and assigns `Empty` or `Non-text` 
+directly, bypassing the ML pipeline entirely:
 
 * Line is blank → **Empty**
 * Fewer than 4 characters, or fewer than 3 unique non-whitespace symbols → **Non-text**
@@ -344,11 +354,15 @@ Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side c
 
 ##### Language Handling
 
-FastText is run on the lowercased line text. If the predicted language is not in either `EXPECTED_LANGS` or `TRUSTED_FOREIGN_LANGS`, the language is force-remapped to the first entry of `EXPECTED_LANGS` (default `ces`) with a minimum confidence of `LANG_SCORE_CLEAR` (default 0.75). This prevents foreign-language false positives from polluting the quality assessment for predominantly Czech collections.
+FastText is run on the lowercased line text. If the predicted language is not in either `EXPECTED_LANGS` or 
+`TRUSTED_FOREIGN_LANGS`, the language is force-remapped to the first entry of `EXPECTED_LANGS` (default `ces`), 
+**preserving the FastText script suffix (e.g., `_Latn`)**, with a minimum confidence of `LANG_SCORE_CLEAR` (default 0.75). 
+This prevents foreign-language false positives from polluting the quality assessment for predominantly Czech collections, 
+while keeping the output format stable for downstream consumers.
 
 ##### Structural Detectors
 
-Lines that pass the pre-filter are analysed by five structural detectors defined in [text_util_langID.py](text_util_langID.py) 📎:
+Lines that pass the pre-filter are analysed by five structural detectors defined in `text_util_langID.py`:
 
 | Detector                     | What it counts                                                                                                                                                                                                 |
 |------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -360,51 +374,70 @@ Lines that pass the pre-filter are analysed by five structural detectors defined
 
 ##### Composite Quality Score
 
-After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by `compute_quality_score()` in [text_util_langID.py](text_util_langID.py) 📎. The score is a weighted sum of five normalised signals:
-
-```
+After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by 
+`compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of five normalised signals:
+```text
 quality_score =
     QS_WEIGHT_VALID_WORD (def: 0.3)  × valid_word_ratio                    # share of structurally clean words
   + QS_WEIGHT_SYMBOL (def: 0.2)      × (1 − min(symbol_ratio, 1.0))       # inverted non-alphanumeric density
   + QS_WEIGHT_WEIRD (def: 0.2)       × (1 − min(word_weird_ratio, 1.0))   # inverted mean per-word weirdness
-  + QS_WEIGHT_PERPLEXITY: (def 0.2)  × (1 − min(perplexity / PPL_MAX, 1.0)) # inverted normalised perplexity
-  + QS_WEIGHT_LENGTH (def: 0.1)      × min(char_count / LENGTH_MAX, 1.0)  # reward for longer lines
+  + QS_WEIGHT_PERPLEXITY: (def 0.2)  × (1 − min(perplexity / PERPLEXITY_THRESHOLD_MAX, 1.0)) # inverted normalised perplexity
+  + QS_WEIGHT_LENGTH (def: 0.1)      × min(char_count / QS_LENGTH_MAX, 1.0)  # reward for longer lines
 ```
+
+The two scale parameters that normalize unbounded signals before weighting in the quality score formula are
+`PERPLEXITY_THRESHOLD_MAX` (default **1000.0**), which caps raw perplexity to map it into [0, 1] assigning 0 to values at or above the threshold 
+(worst) and 1 to 0 (best), calibrated for **Qwen2.5-0.5B** on corrupted OCR text to penalize noisy lines more aggressively 
+when lowered or widen the scoring range when raised; and `QS_LENGTH_MAX` (default **100**), which sets the character-count 
+ceiling for rewarding longer lines, granting the full `QS_WEIGHT_LENGTH` bonus to **lines at or above this length**.
 
 Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 > [!NOTE]
-> Perplexity contributes only one weighted component of the quality score. `distilgpt2` is an English
-> model and assigns high perplexity to legitimate short Czech strings (place names, postal codes,
-> form-field labels), so it is intentionally diluted by the four other signals rather than used as
-> a standalone threshold.
+> Perplexity contributes only one weighted component of the quality score. Although `Qwen2.5-0.5B` is
+> multilingual and handles **Czech**, **German**, and **English** natively (unlike the **English-only** `distilgpt2` it
+> replaced), it is still intentionally diluted by the four other signals rather than used as a standalone
+> threshold. This keeps the score robust against edge cases where even a strong model assigns unexpectedly
+> high perplexity to valid but atypical text (e.g., highly abbreviated archival labels or form-field lines).
 
 ##### Categorisation Logic
 
-`categorize_line()` in [text_util_langID.py](text_util_langID.py) 📎 classifies each line in two stages:
+`categorize_line()` in `text_util_langID.py` classifies each line in two stages:
 
 **Immediate Trash overrides** (checked first, before the quality score):
 
 * Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
 * Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
-* Line has ≥ 4 words **and** average stripped-word length < 2.5 characters → **Trash** *(severe fragmentation: catches lines like `"C A s 8."` or `"wl tW r Ij S"` whose individual tokens look innocuous but together signal OCR scatter)*
+* **Severe fragmentation**: Line has ≥ 5 words, average stripped-word length < 2.0 characters, **and**
+`weird_ratio` > 0.1 → **Trash** *(prevents valid measurement lines from being trashed)*.
+* **High perplexity on short lines**: Perplexity > `CATEG_PPL_SHORT_MAX` (default 700.0) and < 5 words → **Trash**, with two exceptions: 
+lines composed entirely of Roman numerals and standard separators are bypassed; lines where garbage density < 0.1 **and** `weird_ratio` 
+< 0.20 fall back to **Noisy** instead.
+* **Single-character fragmentation**: Line has ≥ 3 words, ≥ 50% of words are isolated characters, **and**
+`weird_ratio` > 0.15 → **Trash** *(catches spaced-out gibberish like `"C A s 8."`)*.
+* **Extreme vowel ratio**: Line > 5 characters with vowel ratio < 10% or > 90% → **Trash** *(catches random consonants/vowels like `"FAXAPOOXAXXXX"`)*.
+* **High overall weirdness**: `weird_ratio` ≥ 0.25 → **Trash**.
+* **Moderate weirdness + high perplexity**: `weird_ratio` > 0.15 and perplexity > `CATEG_PPL_WEIRD_MAX` (default 400.0) → **Trash**.
 
 **Quality score thresholds** (applied to lines that pass all overrides):
-
-```
+```text
 quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash
 quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.70)  →  Noisy
 otherwise                                              →  Clear
 ```
 
-All threshold values are configurable in the `[TEXT_UTILS]` section of [config_langID.txt](config_langID.txt) 📎
+All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
 
 ##### Post-Processing Smoothing
 
-After all lines in a document are classified and written to CSV, a final data-smoothing pass is applied before the file is finalized to prevent unnatural categorization anomalies:
+After all lines in a document are classified and written to CSV, a final data-smoothing pass is applied before the file
+is finalized to prevent unnatural categorization anomalies:
 
-1. **Header/Footer Deduplication** — Resolves edge-case flip-flopping. If the exact same text string appears multiple times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
-2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between two consecutive **Trash** lines (one immediately before, one immediately after), it is automatically downgraded to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
+1. **Header/Footer Deduplication** — Resolves edge-case flip-flopping. If the exact same text string appears multiple 
+times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
+2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between 
+two consecutive **Trash** lines (one immediately before, one immediately after), it is automatically downgraded 
+to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
 
 Example of per-document CSV files: [DOC_LINE_LANG_CLASS](data_samples/DOC_LINE_LANG_CLASS) 📁.
 ```
@@ -445,7 +478,7 @@ For each page, the aggregation computes:
 * `avg_quality_score` — mean composite quality score in [0, 1]; higher = cleaner OCR output 📈
 * `avg_word_weird` — mean per-word weirdness ratio in [0, 1]; 0 = fully clean, lower is better 📉
 * `avg_lang_score` — mean FastText confidence score
-* `avg_perplex` — mean DistilGPT2 perplexity score
+* `avg_perplex` — mean Qwen2.5-0.5B perplexity score
 * `avg_symbol` — mean strange-symbol word count per line
 * `avg_vowel_ratio` — mean vowel-to-alphabetic-character ratio per line
 * `ch_ratio` — mean fraction of lines flagged as all-caps headers (`caps_header = True`)
@@ -486,10 +519,13 @@ structured JSON format.
 **What gets logged?**
 
 * **Provenance 🏛️:** Captures the tool name, repository URL, Python version, and assigns a unique `run_id` to each execution.
-* **Configuration ⚙️:** Stores a complete snapshot of the runtime configuration, including script names, input/output paths, and specific model choices.
+* **Configuration ⚙️:** Stores a complete snapshot of the runtime configuration, including script names, input/output 
+paths, and specific model choices.
 * **Timing ⏱️:** Records precise UTC start times, end times, and the total duration of the run in seconds.
-* **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes performance throughput (e.g., output files generated per minute).
-* **Error Tracking 🐛:** Maintains a `skipped_files_detail` list that logs the exact filename and specific error reason if a file fails to process.
+* **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes performance 
+throughput (e.g., output files generated per minute).
+* **Error Tracking 🐛:** Maintains a `skipped_files_detail` list that logs the exact filename and specific error reason 
+if a file fails to process.
 
 **Log Location & Licensing**
 
@@ -507,7 +543,7 @@ By default, JSON logs are written to the [paradata](paradata) 📁 directory fol
 - **Shared by** ATRIUM [^4] & UFAL [^7] 🔗
 - **Models used**:
   - FastText [^2] for language identification
-  - DistilGPT2 [^6] for perplexity scoring
+  - Qwen2.5-0.5B [^6] for perplexity scoring
   - GLM-4v-9b [^10] for generative OCR (LLM-based method)
   - LayoutLMv3 [^9] for layout-aware text extraction
 
@@ -518,7 +554,7 @@ By default, JSON logs are written to the [paradata](paradata) 📁 directory fol
 [^3]: https://github.com/ufal/ker
 [^4]: https://atrium-research.eu/
 [^5]: https://github.com/ufal/atrium-nlp-enrich
-[^6]: https://huggingface.co/distilbert/distilgpt2
+[^6]: https://huggingface.co/Qwen/Qwen2.5-0.5B
 [^7]: https://ufal.mff.cuni.cz/home-page
 [^8]: https://github.com/ufal/atrium-alto-postprocess
 [^9]: https://github.com/ppaanngggg/layoutreader
