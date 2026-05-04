@@ -274,12 +274,55 @@ def process_document(task):
                     lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
                 df["categ"] = text_modes
 
-                if len(df) >= 3:
+                # Fix 4: Require 2 Trash neighbours on each side instead of 1, and
+                # protect lines with a quality_score comfortably above the Trash boundary.
+                if len(df) >= 5:
                     prev_cat = df["categ"].shift(1)
                     next_cat = df["categ"].shift(-1)
+                    prev2_cat = df["categ"].shift(2)
+                    next2_cat = df["categ"].shift(-2)
 
-                    surrounded_by_trash = (prev_cat == "Trash") & (next_cat == "Trash") & (df["categ"] == "Noisy")
+                    surrounded_by_trash = (
+                            (prev_cat == "Trash") & (next_cat == "Trash") &
+                            (prev2_cat == "Trash") & (next2_cat == "Trash") &
+                            (df["categ"] == "Noisy") &
+                            (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
+                    )
                     df.loc[surrounded_by_trash, "categ"] = "Trash"
+
+                # Fix 5: Page-level inverted-scan sweep.
+                # If a contiguous run of 4+ non-Empty/Non-text lines on one page all lack Czech diacritics
+                # and have a rough lang_score, mark the whole run as Trash.
+                CZ_DIACS = set("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ")
+                MIN_RUN = 4
+
+                def _has_cz_diacs(text):
+                    return any(c in CZ_DIACS for c in str(text))
+
+                for page_id, page_df in df.groupby("page_num"):
+                    candidates = page_df[~page_df["categ"].isin(["Empty", "Non-text"])].copy()
+                    if candidates.empty:
+                        continue
+
+                    no_diacs = ~candidates["text"].apply(_has_cz_diacs)
+                    low_lang = candidates["lang_score"].astype(float) < LANG_SCORE_ROUGH
+
+                    suspicious = no_diacs & low_lang
+
+                    # Find contiguous runs of suspicious lines
+                    run_len = 0
+                    run_indices = []
+                    for idx, flag in suspicious.items():
+                        if flag:
+                            run_len += 1
+                            run_indices.append(idx)
+                        else:
+                            if run_len >= MIN_RUN:
+                                df.loc[run_indices, "categ"] = "Trash"
+                            run_len = 0
+                            run_indices = []
+                    if run_len >= MIN_RUN:
+                        df.loc[run_indices, "categ"] = "Trash"
 
             df.to_csv(out_path, index=False)
 

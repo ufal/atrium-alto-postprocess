@@ -459,8 +459,14 @@ def categorize_line(
         return "Trash"
 
     # Catch 3: High overall word weirdness
+    # Exception: a long single-token string is likely a fused caption (OCR ran
+    # words together). Its quality_score still gives a meaningful signal, so only
+    # Trash it if quality is also poor.
     if weird_ratio >= 0.25:
-        return "Trash"
+        if wc == 1 and len(text_source.strip()) > 25 and quality_score > CATEG_TRASH_SCORE_MAX:
+            pass  # fall through to quality_score-based decision below
+        else:
+            return "Trash"
 
     # Catch 4 / FIX C: Moderately high weirdness combined with high perplexity
     if weird_ratio > 0.15 and perplexity > CATEG_PPL_WEIRD_MAX:
@@ -475,12 +481,18 @@ def categorize_line(
         return "Noisy"
 
     # FIX D: lines with a noticeable spaced-letter OCR pattern
-    if single_char_ratio >= 0.25 and wc >= 3:
+    # Guard: genuine fragmentation always has non-zero word weirdness.
+    # Clean Czech prepositions/Roman numerals (v, k, i, I…) have weird_ratio == 0
+    # and must not be penalised here.
+    if single_char_ratio >= 0.25 and wc >= 3 and weird_ratio > 0.05:
         return "Noisy"
 
     # FIX E-2: Pre-remap confidence gate
+    # Bypass if Czech diacritics are present — they are stronger evidence than
+    # a low-confidence FastText score on a short string.
     if original_lang_score is not None and original_lang_score < LANG_SCORE_ROUGH:
-        return "Noisy"
+        if infer_lang_from_diacritics(text_source, _EXPECTED_LANGS_BASES) is None:
+            return "Noisy"
 
     return "Clear"
 
