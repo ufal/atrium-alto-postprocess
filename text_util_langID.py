@@ -64,10 +64,8 @@ _EXPECTED_LANGS_BASES: frozenset = frozenset(_lang_base(l) for l in COMMON_LANGS
 PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
 
 # Perplexity cut-offs used inside categorize_line.
-# Qwen2.5-0.5B scores clean text far lower than distilgpt2 did, so these are
-# calibrated to its range.  Override in config_langID.txt if needed.
-CATEG_PPL_SHORT_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_SHORT_MAX", 700.0)   # was hardcoded 2000.0
-CATEG_PPL_WEIRD_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_WEIRD_MAX", 400.0)   # was hardcoded 1000.0
+CATEG_PPL_SHORT_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_SHORT_MAX", 700.0)
+CATEG_PPL_WEIRD_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_WEIRD_MAX", 400.0)
 
 LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
@@ -82,8 +80,10 @@ QS_LENGTH_MAX        = _get_float("TEXT_UTILS", "QS_LENGTH_MAX",        100.0)
 CATEG_GARBAGE_DENSITY_HIGH  = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH",  0.35)
 CATEG_GARBAGE_DENSITY_SHORT = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_SHORT", 0.20)
 CATEG_GARBAGE_SHORT_WC      = _config.getint("TEXT_UTILS", "CATEG_GARBAGE_SHORT_WC", fallback=3)
+
+# Note: Noisy max raised slightly to force more garbled edge cases out of Clear
 CATEG_TRASH_SCORE_MAX       = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX",       0.40)
-CATEG_NOISY_SCORE_MAX       = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX",       0.70)
+CATEG_NOISY_SCORE_MAX       = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX",       0.75)
 
 # Characters allowed inside words without triggering the "strange symbol" penalty.
 ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/_—–:%;?!/'))
@@ -97,6 +97,7 @@ RE_TRASH_LDL: re.Pattern = re.compile(r'[a-zA-Z][^a-zA-Z\s]+[a-zA-Z]')  # e.g., 
 RE_NON_TEXT: re.Pattern = re.compile(r'^[\d\s\-\u2013\u2014/:.,()%]+$')
 RE_GARBAGE_CLUSTERS: re.Pattern = re.compile(r'[~=]|[\u00C0-\u017F]{2,}|[A-Z]=[A-Z]')
 RE_ROMAN_NUMERAL: re.Pattern = re.compile(r'^[IVXLCDMivxlcdm]+\.?$')
+RE_STAMP: re.Pattern = re.compile(r'^(?:[A-Za-z]+)?[\W_]*\d{2,4}\s*/\s*\d{2,4}[\W_]*$') # Archive stamps
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
     "ces": frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ"),
@@ -127,6 +128,14 @@ def compute_garbage_density(text: str) -> float:
     # Exclude / and - from being counted as garbage
     noise_chars = sum(1 for c in text if not c.isalnum() and c not in ' ,.?!()/-')
     return noise_chars / len(text)
+
+
+def compute_rotatable_ratio(text: str) -> float:
+    alpha_chars = [c.lower() for c in text if c.isalpha()]
+    if not alpha_chars: return 0.0
+    rotatable_set = frozenset("pbqdnuwmoxszeyv")
+    rotatable_count = sum(1 for c in alpha_chars if c in rotatable_set)
+    return rotatable_count / len(alpha_chars)
 
 
 def detect_strange_symbols(text: str) -> int:
@@ -269,6 +278,10 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     if RE_ROMAN_NUMERAL.match(clean_text.strip()):
         return "Non-text", clean_text
 
+    # NEW: Catch Document stamps / Archive references
+    if RE_STAMP.search(clean_text) or "IVerc" in clean_text:
+        return "Non-text", clean_text
+
     # NEW: Allow highly numeric lines (dates, measurements) to survive
     if sum(c.isdigit() for c in clean_text) / n_chars > 0.4:
         return "Process", clean_text
@@ -314,14 +327,14 @@ def score_word(word: str) -> float:
     core = word.strip(_STRIP_CHARS)
 
     if len(core) == 1:
-        # Expanded whitelist: includes prepositions + common archival initials (p. = pan, d. = doktor/den, etc.)
+        # Expanded whitelist: includes prepositions + common archival initials
         if core in "aAiIoOuUvVzZkKsSpPbBjJdDrRnNmMtT" or '.' in word:
             return 0.0
         if core.isdigit():
-            return 0.25  # Tolerable penalty for isolated numbers/measurements
+            return 0.25
         if not core.isalpha():
-            return 0.0  # Forgive surviving punctuation separators like '-'
-        return 0.85  # Severe weirdness for random isolated letters
+            return 0.0
+        return 0.85
 
     if len(core) < 2:
         return 0.0
@@ -427,6 +440,26 @@ def categorize_line(
             wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
         return "Trash"
 
+    # NEW: Catch Uppercase gibberish
+    if is_all_caps_line(text_source) and vowel_ratio < 0.15:
+        return "Trash"
+
+    # NEW: Catch Upside-down / Hallucinated text
+    if wc >= 3:
+        rot_ratio = compute_rotatable_ratio(text_source)
+        has_cz_diacs = any(c in _LANG_DIACRITICS["ces"] for c in text_source)
+        if rot_ratio > 0.85 and not has_cz_diacs:
+            return "Trash"
+
+    # NEW: Catch Erratic fragmentation (excessive hyphens or dots)
+    if wc > 0:
+        hyphen_count = text_source.count('-')
+        dot_count = text_source.count('.')
+        if (hyphen_count / wc) > 0.4 or (dot_count / wc) > 0.5:
+            if quality_score < CATEG_TRASH_SCORE_MAX:
+                return "Trash"
+            return "Noisy"
+
     avg_word_len = sum(len(w.strip(_STRIP_CHARS)) for w in text_source.split()) / wc if wc > 0 else 0
     if wc >= 5 and avg_word_len < 2.0 and weird_ratio > 0.1:
         return "Trash"
@@ -459,12 +492,9 @@ def categorize_line(
         return "Trash"
 
     # Catch 3: High overall word weirdness
-    # Exception: a long single-token string is likely a fused caption (OCR ran
-    # words together). Its quality_score still gives a meaningful signal, so only
-    # Trash it if quality is also poor.
     if weird_ratio >= 0.25:
         if wc == 1 and len(text_source.strip()) > 25 and quality_score > CATEG_TRASH_SCORE_MAX:
-            pass  # fall through to quality_score-based decision below
+            pass
         else:
             return "Trash"
 
@@ -475,21 +505,20 @@ def categorize_line(
             return "Noisy"
         return "Trash"
 
+    # NEW: Catch Garbled OOV words without a dictionary
+    if weird_ratio > 0.08 and perplexity > 200.0 and quality_score < 0.85:
+        return "Noisy"
+
     if quality_score < CATEG_TRASH_SCORE_MAX:
         return "Trash"
     if quality_score < CATEG_NOISY_SCORE_MAX:
         return "Noisy"
 
     # FIX D: lines with a noticeable spaced-letter OCR pattern
-    # Guard: genuine fragmentation always has non-zero word weirdness.
-    # Clean Czech prepositions/Roman numerals (v, k, i, I…) have weird_ratio == 0
-    # and must not be penalised here.
     if single_char_ratio >= 0.25 and wc >= 3 and weird_ratio > 0.05:
         return "Noisy"
 
     # FIX E-2: Pre-remap confidence gate
-    # Bypass if Czech diacritics are present — they are stronger evidence than
-    # a low-confidence FastText score on a short string.
     if original_lang_score is not None and original_lang_score < LANG_SCORE_ROUGH:
         if infer_lang_from_diacritics(text_source, _EXPECTED_LANGS_BASES) is None:
             return "Noisy"

@@ -34,7 +34,7 @@ CSV_HEADER = [
     "garbage_density",
     "symbol", "upper", "repeated",
     "ldl_fuses", "gibberish",
-    "word_weird", "vowel_ratio",
+    "word_weird", "vowel_ratio", "rot_ratio",
     "quality_score",
     "categ", "caps_header"
 ]
@@ -126,12 +126,10 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     for i in range(len(lines)):
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
 
-        # FIX E-1: Save original FastText score before any forced remapping
         original_lang_score = scores[i]
 
-        # Force language remapping and fix the score
         if langs[i] not in trusted_langs + expected_langs:
-            langs[i] = expected_langs[0]  # ces
+            langs[i] = expected_langs[0]
             scores[i] = max(scores[i], LANG_SCORE_CLEAR)
 
         ppl_val = ppls[i]
@@ -147,6 +145,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         gibb_count = detect_gibberish_words(text_content)
 
         vowel_ratio = compute_vowel_ratio(text_content)
+        rot_ratio = compute_rotatable_ratio(text_content) # <-- ADDED
         caps_header = is_all_caps_line(text_content)
 
         word_scores = score_words_in_line(text_content)
@@ -165,13 +164,14 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             original_lang_score=original_lang_score
         )
 
+        # <-- ADDED f"{rot_ratio:.4f}" below next to vowel_ratio
         row = [
             file_id, page_id, line_num, text_content,
             split_ws, split_we, langs[i], f"{scores[i]:.4f}", f"{ppl_val:.2f}",
             wc, cc, f"{g_density:.4f}",
             sym_count, upper_count, rep_count,
             fuse_count, gibb_count,
-            f"{weird_ratio:.4f}", f"{vowel_ratio:.4f}",
+            f"{weird_ratio:.4f}", f"{vowel_ratio:.4f}", f"{rot_ratio:.4f}",
             f"{q_score:.4f}", categ, caps_header
         ]
         results.append(row)
@@ -179,7 +179,6 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     results.sort(key=lambda x: x[0])
     for doc_id, group in groupby(results, key=lambda x: x[0]):
         write_rows_to_doc(out_dir, doc_id, list(group))
-
 
 def process_document(task):
     """

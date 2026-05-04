@@ -66,37 +66,32 @@ def _sum_metrics(df):
     if df.empty:
         return pd.DataFrame()
 
-    # Isolate relevant lines for metrics (Clear and Noisy)
     valid_lines = df[df['categ'].isin(["Clear", "Noisy"])].copy()
 
-    # Count categories per page
     cat_counts = df.groupby(['file', 'page_num', 'categ']).size().unstack(fill_value=0).reset_index()
     for col in STANDARD_COLS:
         if col not in cat_counts.columns:
             cat_counts[col] = 0
 
     if valid_lines.empty:
-        # If no valid lines, return zeros/NaNs for stats
         stats = df[['file', 'page_num']].drop_duplicates().copy()
         for col in ['total_word_count', 'total_char_count']:
             stats[col] = 0
+        # <-- ADDED 'avg_rot_ratio' to the list below
         for col in ['avg_quality_score', 'avg_word_weird', 'avg_lang_score',
-                    'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'ch_ratio']:
+                    'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'avg_rot_ratio', 'ch_ratio']:
             stats[col] = float('nan')
         stats['main_lang'] = "None"
 
         final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
         return final_page_df
 
-    # NaN cascades on boolean columns:
-    # Coerce back to float for .mean(). Use .map() rather than .replace()
-    # to avoid downcasting warnings on mixed string/bool columns.
     if 'caps_header' in valid_lines.columns:
         valid_lines['caps_header'] = valid_lines['caps_header'].map(
             {'True': 1.0, 'False': 0.0, True: 1.0, False: 0.0}
         ).astype(float)
 
-    # Calculate main stats for valid lines
+    # <-- ADDED avg_rot_ratio to the agg function below
     stats = valid_lines.groupby(['file', 'page_num']).agg(
         total_word_count=('word_count', 'sum'),
         total_char_count=('char_count', 'sum'),
@@ -105,17 +100,16 @@ def _sum_metrics(df):
         avg_lang_score=('lang_score', 'mean'),
         avg_perplex=('perplex', 'mean'),
         avg_symbol=('symbol', 'mean'),
-        avg_vowel_ratio=('vowel_ratio', 'mean')
+        avg_vowel_ratio=('vowel_ratio', 'mean'),
+        avg_rot_ratio=('rot_ratio', 'mean')
     ).reset_index()
 
-    # Calculate caps header ratio
     if 'caps_header' in valid_lines.columns:
         ch_stats = valid_lines.groupby(['file', 'page_num'])['caps_header'].mean().reset_index(name='ch_ratio')
         stats = pd.merge(stats, ch_stats, on=['file', 'page_num'], how='left')
     else:
         stats['ch_ratio'] = 0.0
 
-    # Calculate statistical mode for language
     if 'lang' in valid_lines.columns:
         def mode_lang(x):
             return x.mode().iloc[0] if not x.empty else "None"
@@ -125,16 +119,13 @@ def _sum_metrics(df):
     else:
         stats['main_lang'] = "None"
 
-    # Merge category counts with the stats
     final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
 
-    # int casting — fill NaN before converting count columns to int
     for count_col in ['total_word_count', 'total_char_count', 'word_count', 'char_count']:
         if count_col in final_page_df.columns:
             final_page_df[count_col] = final_page_df[count_col].fillna(0).astype(int)
 
     return final_page_df
-
 
 def process_csv_file(file_path):
     """
@@ -154,15 +145,14 @@ def process_csv_file(file_path):
             'garbage_density': 'float64',
             'symbol': 'float64',
             'vowel_ratio': 'float64',
+            'rot_ratio': 'float64', # <-- ADDED
         }
 
-        # Handle empty/missing rows gracefully
         df = pd.read_csv(file_path, dtype=dtype_map, on_bad_lines='skip')
 
         if df.empty:
             return None
 
-        # Strip any whitespace from column names just in case
         df.columns = df.columns.str.strip()
 
         return _sum_metrics(df)
@@ -170,9 +160,7 @@ def process_csv_file(file_path):
     except pd.errors.EmptyDataError:
         return None
     except Exception as exc:
-        # Return the exception to the main thread so we can handle it safely without a loop crash
         return exc
-
 
 def main():
     parser = argparse.ArgumentParser(description="Aggregate post-classification line metrics into page stats.")
