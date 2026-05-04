@@ -113,8 +113,15 @@ def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: 
 
 def compute_garbage_density(text: str) -> float:
     if not text: return 0.0
-    noise_chars = sum(1 for c in text if not c.isalnum() and c not in ' ,.?!()/-')
-    return noise_chars / len(text)
+
+    # Pre-clean: Remove leader dots and ellipses (3 or more consecutive periods)
+    # as these are structural formatting, not OCR noise.
+    clean_text = re.sub(r'\.{3,}', '', text)
+    if not clean_text: return 0.0
+
+    # Calculate noise against the cleaned text length
+    noise_chars = sum(1 for c in clean_text if not c.isalnum() and c not in ' ,.?!()/-')
+    return noise_chars / len(clean_text)
 
 
 def compute_rotatable_ratio(text: str) -> float:
@@ -143,7 +150,12 @@ def detect_repeated_chars(text: str) -> int:
         core = word.strip(_STRIP_CHARS)
         if len(core) < 4: continue
         for ch in set(core):
-            if core.count(ch) / len(core) >= 0.40 and core.count(ch) >= 3:
+            # Flag 1: True OCR stutter (3 consecutive identical chars, e.g., 'hrobbb')
+            if ch * 3 in core:
+                count += 1
+                break
+            # Flag 2: Abnormal distribution, explicitly ignoring common Czech vowels
+            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.40) and core.count(ch) >= 3:
                 count += 1
                 break
     return count
@@ -295,9 +307,15 @@ def score_word(word: str) -> float:
     has_rep = False
     if len(core) >= 4:
         for ch in set(core):
-            if core.count(ch) / len(core) >= 0.40 and core.count(ch) >= 3:
+            # Flag 1: True OCR stutter (3 consecutive identical chars, e.g., 'hrobbb')
+            if ch * 3 in core:
                 has_rep = True
                 break
+            # Flag 2: Abnormal distribution, explicitly ignoring common Czech vowels
+            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.40) and core.count(ch) >= 3:
+                has_rep = True
+                break
+
     has_ldl = False
     prev2, prev1 = None, None
     for ch in core:
@@ -372,7 +390,6 @@ def categorize_line(
         prp: float,
         ols: float | None = None
 ) -> tuple[str, float]:
-
     def _determine_category(
             quality_score: float,
             text_source: str,
@@ -386,10 +403,19 @@ def categorize_line(
         if wc == 0 or not text_source.strip():
             return "Empty"
 
+        # --- NEW INJECTION: Fragment Rescue ---
+        # If the line has multiple words and is overwhelmingly structurally valid,
+        # protect it from immediate Trash demotion.
+        valid_ratio = compute_valid_ratio(text_source)
+        is_legible_fragment = wc >= 3 and valid_ratio >= 0.70 and perplexity < 800.0
+
         g_density = compute_garbage_density(text_source)
         if g_density > CATEG_GARBAGE_DENSITY_HIGH or (
                 wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
-            return "Trash"
+            # Bypass Trash demotion if it's a legible fragment
+            if not is_legible_fragment:
+                return "Trash"
+        # --------------------------------------
 
         if is_all_caps_line(text_source) and vowel_ratio < 0.15:
             return "Trash"
