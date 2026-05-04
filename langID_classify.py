@@ -235,7 +235,7 @@ def process_document(task):
                     write_rows_to_doc(Path(output_dir), file_id, [[
                         file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
                         "N/A", "0.0000", "0.00", 0, len(clean_merged), "0.0000",
-                        0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", cat, False
+                        0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", "0.0000", cat, False
                     ]])
                     continue
 
