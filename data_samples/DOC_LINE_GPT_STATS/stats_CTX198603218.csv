@@ -1,2 +1,2 @@
-file,page_num,Clear,Empty,Noisy,Trash,Non-text,total_word_count,total_char_count,avg_quality_score,avg_word_weird,avg_lang_score,avg_perplex,avg_symbol,avg_vowel_ratio,ch_ratio,main_lang
-CTX198603218,1,19,1,5,0,0,334,2128,0.8386375,0.016166666666666666,0.9783833333333334,406.1225,0.0,0.3881583333333333,0.041666666666666664,ces
+file,page_num,Clear,Empty,Noisy,Trash,Non-text,total_word_count,total_char_count,avg_quality_score,avg_word_weird,avg_lang_score,avg_perplex,avg_symbol,avg_vowel_ratio,avg_rot_ratio,ch_ratio,main_lang
+CTX198603218,1,19,1,4,1,0,331,2113,0.8341913043478261,0.012486956521739132,0.9883130434782609,402.6847826086956,0.0,0.39054347826086955,0.5000347826086956,0.0,ces
