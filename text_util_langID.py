@@ -484,14 +484,14 @@ def categorize_line(
 
     # Enforce interconnected boundaries without modifying the logical routing
     if categ == "Trash":
-        aligned_score = min(quality_score, CATEG_TRASH_SCORE_MAX - 0.0001)
+        aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
     elif categ == "Noisy":
-        aligned_score = max(quality_score, CATEG_TRASH_SCORE_MAX)
+        aligned_score = max(qs, CATEG_TRASH_SCORE_MAX)
         aligned_score = min(aligned_score, CATEG_NOISY_SCORE_MAX - 0.0001)
     elif categ == "Clear":
-        aligned_score = max(quality_score, CATEG_NOISY_SCORE_MAX)
+        aligned_score = max(qs, CATEG_NOISY_SCORE_MAX)
     else:
-        aligned_score = quality_score  # "Empty" or "Non-text"
+        aligned_score = qs  # "Empty" or "Non-text"
 
     return categ, aligned_score
 

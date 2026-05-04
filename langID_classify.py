@@ -204,7 +204,10 @@ def process_document(task):
 
         for _, row in group.iterrows():
             page_id = str(row["page"])
+            # Support both separator conventions: {file_id}-{page}.txt and {file_id}_{page}.txt
             txt_path = Path(text_dir) / file_id / f"{file_id}-{page_id}.txt"
+            if not txt_path.exists():
+                txt_path = Path(text_dir) / file_id / f"{file_id}_{page_id}.txt"
 
             if not txt_path.exists():
                 continue
