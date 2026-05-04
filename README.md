@@ -424,9 +424,9 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 * **Fragment Rescue**: Lines with ≥ 3 words, a structurally valid word ratio ≥ 70%, and a perplexity < 800.0 
 are protected from Garbage-Density Trash demotions.
-* Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
-* Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
-* All-caps lines with a vowel ratio < 15% → **Trash**
+  * Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
+  * Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
+  * All-caps lines with a vowel ratio < 15% → **Trash**
 * **High Rotatable Ratio**: Lines with ≥ 3 words, > 85% rotatable characters, and no Czech 🇨🇿 diacritics → **Trash**
 * **Excessive Punctuation**: Lines where hyphens make up > 40% of the word count or dots > 50% → **Trash** (if 
 quality score < 0.40), otherwise **Noisy**.
