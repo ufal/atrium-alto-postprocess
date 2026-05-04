@@ -1,45 +1,4 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
-CTX195603828,1,1,Věc : Stará Kouřim / Kolín/,,,ces,1.0,1280.94,6,27,0.037,0,0,0,0,0,0.0,0.4211,0.7194,Clear,False
-CTX195603828,1,2,v Praze dne 6.října 1956.,,,ces,0.9909,1263.16,5,25,0.0,0,0,0,0,0,0.0,0.3571,0.7048,Clear,False
-CTX195603828,1,3,Výzkum slovanského hradiště,,,ces,0.9998,353.78,3,27,0.0,0,0,0,0,0,0.0,0.36,0.9034,Clear,False
-CTX195603828,1,4,Zpráva za září 1956.,,,ces,1.0,303.29,4,20,0.0,0,0,0,0,0,0.0,0.4167,0.7398,Clear,False
-CTX195603828,1,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX195603828,1,6,"Vedoucím výzkumu • Dr ""iloš Solle ,",,,ces,0.9984,984.79,7,35,0.0571,1,0,0,0,0,0.0,0.4231,0.7236,Clear,False
-CTX195603828,1,7,"Spolupracovali • r V. Vojáček, J.Hub.",,,ces,0.8184,598.76,6,37,0.027,1,0,0,0,0,0.0,0.3704,0.7201,Clear,False
-CTX195603828,1,8,"Počet dělníků : 4 stálí , 4 výpomocní.",,,ces,1.0,212.26,8,38,0.0263,0,0,0,0,0,0.0625,0.4231,0.7456,Noisy,False
-CTX195603828,1,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX195603828,1,10,Práce :,,,ces,0.8918,4204.53,2,7,0.1429,0,0,0,0,0,0.0,0.4,0.5284,Trash,False
-CTX195603828,1,11,Pracoviště 1/56 : Práce na tomto úseku uzavřena.Rozšířenou,,,ces,0.9999,249.25,8,58,0.0172,0,1,0,0,0,0.0125,0.4667,0.816,Clear,False
-CTX195603828,1,12,"křížovou sondou bylo ověřeno ukončení hradby středního vslu,",,,ces,1.0,306.4,8,60,0.0,0,0,0,0,0,0.0,0.4423,0.9362,Clear,False
-CTX195603828,1,13,připnutého k jižnímu srázu hradiska a horizontální a vertikální,verti,,ces,1.0,322.4,9,63,0.0,0,0,0,0,0,0.0,0.4182,0.8415,Clear,False
-CTX195603828,1,14,výzkumnou metodou zjištěn charakter opevnění přemyslovského,přemyslov,kální,ces,1.0,210.05,6,59,0.0,0,0,0,0,0,0.0,0.4074,0.945,Clear,False
-CTX195603828,1,15,typu s kamennou a roštovou dřevěnou konsttukcí valového,,ského,ces,1.0,350.16,8,55,0.0,0,0,0,0,0,0.0,0.4583,0.8567,Clear,False
-CTX195603828,1,16,tělesa.Pozůstatky dřevěné konstrukce místy i positivně nachovány.,nacho,,ces,1.0,171.25,7,65,0.0,0,1,0,0,0,0.0143,0.4211,0.9017,Clear,False
-CTX195603828,1,17,,,vány.,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX195603828,1,18,Pracoviště 2/56: Na tomto úseku pare 826 zachyceny stopy,,,ces,0.9842,933.59,9,56,0.0179,0,0,0,0,0,0.0,0.45,0.7866,Clear,False
-CTX195603828,1,19,jižní hradby na okr- ji hradiska s kamennou,,,ces,0.9998,386.78,8,43,0.0,0,0,0,0,0,0.0,0.4,0.8001,Clear,False
-CTX195603828,1,20,patou ve formě zřetelné kamenné podezdívky.Za touto kamennnou,,,ces,1.0,287.54,8,61,0.0,0,1,0,0,0,0.0125,0.4528,0.8986,Clear,False
-CTX195603828,1,21,podezdívkou zjištěn sídlištní prostor s popelovitými vrstvami,,,ces,0.9992,281.81,7,61,0.0,0,0,0,0,0,0.0,0.3636,0.8994,Clear,False
-CTX195603828,1,22,"a nálezy , příčně členěný zídkou a řadou kůlů.e nutno zde rozlišit",roz,,ces,1.0,160.98,12,66,0.0,0,0,0,0,0,0.0,0.4717,0.8742,Clear,False
-CTX195603828,1,23,2 základní slovanské sídlištní fáse a třetí ve formě stavební,sta,lišit,ces,1.0,287.74,10,61,0.0,0,0,0,0,0,0.025,0.3922,0.8468,Clear,False
-CTX195603828,1,24,úpravy. Z nejstarší fáse pocházejí 3 hluboké zásobní LÁzE,,vební,ces,1.0,533.91,9,57,0.0,0,1,0,0,0,0.0389,0.4255,0.8435,Clear,False
-CTX195603828,1,25,j ámy .,,,ces,0.9961,4278.14,3,7,0.0,0,0,0,0,0,0.0,0.5,0.4784,Noisy,False
-CTX195603828,1,26,Pracoviště 5/56: Sondou bylo zachyceno prostorově omezené řadové,řa,,ces,1.0,704.6,8,64,0.0156,0,0,0,0,0,0.0,0.4615,0.8733,Clear,False
-CTX195603828,1,27,pohřebiště s 20 hrobovými jamami a 57,,dové,ces,1.0,662.62,7,37,0.0,0,0,0,0,0,0.0,0.4444,0.7214,Clear,False
-CTX195603828,1,28,"pohřby.Hroby byly obloženy kameny,kostry v natažené poloze",,,ces,0.9995,509.09,7,58,0.0,0,1,0,0,0,0.0143,0.44,0.8715,Clear,False
-CTX195603828,1,29,"V-Z orientace,často etažovitě nad sebou uložené.Většina pohřbů",pohř,,ces,1.0,266.85,7,62,0.0,0,1,0,0,0,0.0143,0.4717,0.8888,Clear,False
-CTX195603828,1,30,byla bez milodarů a bez ozdob. ' jedné čtvrtiny byly přiloženy,přilože,bů,ces,1.0,541.95,11,62,0.0161,0,0,0,0,0,0.0,0.42,0.8649,Clear,False
-CTX195603828,1,31,"věci osobní potřeby.""atím byl nejpříznačněxjší pohřeb muže",,ny,ces,1.0,250.48,7,58,0.0172,0,0,0,0,0,0.0,0.4,0.9344,Clear,False
-CTX195603828,1,32,"s 2 železnými nožíky a brouskem, a pohřeb dítěte s esovitou",,,ces,1.0,308.06,11,59,0.0,0,0,0,0,0,0.0227,0.4681,0.7942,Clear,False
-CTX195603828,1,33,"bronzovou záušničkou ,perlovým náhrdelníkem a částí textilie.",,,ces,0.9963,377.74,7,61,0.0,0,0,0,0,0,0.0,0.434,0.8864,Clear,False
-CTX195603828,1,34,"Pohřebiště lze předběžně datovat do mladší hradištní periody,",,,ces,1.0,153.53,8,61,0.0,0,0,0,0,0,0.0,0.3962,0.91,Clear,False
-CTX195603828,1,35,lze je určit jako křeštanské. Významná je sama existence pohřebiště,pohře,,ces,1.0,207.66,10,67,0.0,0,0,0,0,0,0.0,0.4035,0.8902,Clear,False
-CTX195603828,1,36,"na hradišti, jeho umístění v těsné souvislosti s jezírkem",,biště,ces,1.0,277.58,9,57,0.0,0,0,0,0,0,0.0,0.4167,0.835,Clear,False
-CTX195603828,2,1,"u Libuše.Pohřebiště není celé prokopáno,v příštím roce bude nutno",,,ces,1.0,267.32,9,65,0.0,0,1,0,0,0,0.0111,0.4364,0.9055,Clear,False
-CTX195603828,2,2,celé prozkoumat plošným odkryvem při čemž byde naděje objeviti i,,,ces,1.0,223.28,10,64,0.0,0,0,0,0,0,0.0,0.4182,0.9191,Clear,False
-CTX195603828,2,3,kostel nebo jiné centrum hrobové akumulace.,,,ces,1.0,1605.74,6,43,0.0,0,0,0,0,0,0.0,0.4324,0.8313,Clear,False
-CTX195603828,2,4,Vystopování tohoto pohřebiště je hlavním úspěchem předchozí,,,ces,1.0,260.23,7,59,0.0,0,0,1,0,0,0.05,0.3962,0.8888,Clear,False
-CTX195603828,2,5,fosfátové metody.,,,ces,0.977,1333.09,2,17,0.0,0,0,0,0,0,0.0,0.4667,0.8164,Clear,False
-CTX195603828,2,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX195603828,2,7,Výzkum bude uzavřen po stránce výzkumné 10.10 t.r. do konce,,,ces,1.0,252.09,10,59,0.0,0,0,0,0,0,0.0,0.3721,0.812,Clear,False
-CTX195603828,2,8,měsíce budou sondy zaházeny bez účasti vedoucího výzkumu.,,,ces,1.0,221.33,8,57,0.0,0,0,0,0,0,0.0,0.4898,0.9387,Clear,False
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
+CTX195603828,1,5,,,,N/A,0.0000,0.00,0,0,0.0000,0,0,0,0,0,0.0000,0.0000,0.0000,0.0000,Empty,False
+CTX195603828,1,9,,,,N/A,0.0000,0.00,0,0,0.0000,0,0,0,0,0,0.0000,0.0000,0.0000,0.0000,Empty,False
+CTX195603828,1,17,,,vány.,N/A,0.0000,0.00,0,0,0.0000,0,0,0,0,0,0.0000,0.0000,0.0000,0.0000,Empty,False
