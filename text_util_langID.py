@@ -27,7 +27,6 @@ from pathlib import Path
 # Configuration & Regular Expressions
 # ---------------------------------------------------------------------------
 
-# Use RawConfigParser to prevent string interpolation errors on characters like '%'
 _config = configparser.RawConfigParser()
 _config_path = Path("config_langID.txt")
 if _config_path.exists():
@@ -42,7 +41,6 @@ def _get_str(section, key, default):
     return _config.get(section, key, fallback=default) if _config.has_section(section) else default
 
 
-# Default languages deemed standard for this pipeline.
 COMMON_LANGS = ["ces", "deu", "eng"]
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
     COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
@@ -55,7 +53,6 @@ _TRUSTED_FOREIGN_LANG_BASES: frozenset = frozenset(
 
 
 def _lang_base(lang_code: str) -> str:
-    """Strip FastText script suffix: 'ces_Latn' → 'ces', 'eng_Latn' → 'eng'."""
     return lang_code.split("_")[0]
 
 
@@ -63,7 +60,6 @@ _EXPECTED_LANGS_BASES: frozenset = frozenset(_lang_base(l) for l in COMMON_LANGS
 
 PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
 
-# Perplexity cut-offs used inside categorize_line.
 CATEG_PPL_SHORT_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_SHORT_MAX", 700.0)
 CATEG_PPL_WEIRD_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_WEIRD_MAX", 400.0)
 
@@ -71,33 +67,29 @@ LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
 QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.3)
-QS_WEIGHT_SYMBOL     = _get_float("TEXT_UTILS", "QS_WEIGHT_SYMBOL",     0.2)
-QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.2)
+QS_WEIGHT_SYMBOL = _get_float("TEXT_UTILS", "QS_WEIGHT_SYMBOL", 0.2)
+QS_WEIGHT_WEIRD = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD", 0.2)
 QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.2)
-QS_WEIGHT_LENGTH     = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH",     0.1)
-QS_LENGTH_MAX        = _get_float("TEXT_UTILS", "QS_LENGTH_MAX",        100.0)
+QS_WEIGHT_LENGTH = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH", 0.1)
+QS_LENGTH_MAX = _get_float("TEXT_UTILS", "QS_LENGTH_MAX", 100.0)
 
-CATEG_GARBAGE_DENSITY_HIGH  = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH",  0.35)
+CATEG_GARBAGE_DENSITY_HIGH = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH", 0.35)
 CATEG_GARBAGE_DENSITY_SHORT = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_SHORT", 0.20)
-CATEG_GARBAGE_SHORT_WC      = _config.getint("TEXT_UTILS", "CATEG_GARBAGE_SHORT_WC", fallback=3)
+CATEG_GARBAGE_SHORT_WC = _config.getint("TEXT_UTILS", "CATEG_GARBAGE_SHORT_WC", fallback=3)
 
-# Note: Noisy max raised slightly to force more garbled edge cases out of Clear
-CATEG_TRASH_SCORE_MAX       = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX",       0.40)
-CATEG_NOISY_SCORE_MAX       = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX",       0.75)
+# Boundary Thresholds
+CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.40)
+CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.70)
 
-# Characters allowed inside words without triggering the "strange symbol" penalty.
 ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/_—–:%;?!/'))
-
-# Characters stripped from the edges of words before evaluation.
 _STRIP_CHARS: str = _get_str("TEXT_UTILS", "STRIP_CHARS", '.,;:!?()[]"\'/\\')
 
-# Standard regex for isolating specific structural errors.
 RE_TRASH_MULTI_SYMBOL: re.Pattern = re.compile(r'[^\w\s]{2,}')
-RE_TRASH_LDL: re.Pattern = re.compile(r'[a-zA-Z][^a-zA-Z\s]+[a-zA-Z]')  # e.g., "a1b"
+RE_TRASH_LDL: re.Pattern = re.compile(r'[a-zA-Z][^a-zA-Z\s]+[a-zA-Z]')
 RE_NON_TEXT: re.Pattern = re.compile(r'^[\d\s\-\u2013\u2014/:.,()%]+$')
 RE_GARBAGE_CLUSTERS: re.Pattern = re.compile(r'[~=]|[\u00C0-\u017F]{2,}|[A-Z]=[A-Z]')
 RE_ROMAN_NUMERAL: re.Pattern = re.compile(r'^[IVXLCDMivxlcdm]+\.?$')
-RE_STAMP: re.Pattern = re.compile(r'^(?:[A-Za-z]+)?[\W_]*\d{2,4}\s*/\s*\d{2,4}[\W_]*$') # Archive stamps
+RE_STAMP: re.Pattern = re.compile(r'^(?:[A-Za-z]+)?[\W_]*\d{2,4}\s*/\s*\d{2,4}[\W_]*$')
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
     "ces": frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ"),
@@ -111,21 +103,16 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
 
 def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: float = 0.07) -> str | None:
     alpha = [c for c in text if c.isalpha()]
-    if not alpha:
-        return None
+    if not alpha: return None
     for lang_code, diacs in _LANG_DIACRITICS.items():
-        if lang_code not in expected_bases:
-            continue
+        if lang_code not in expected_bases: continue
         ratio = sum(1 for c in alpha if c in diacs) / len(alpha)
-        if ratio >= threshold:
-            return lang_code
+        if ratio >= threshold: return lang_code
     return None
 
 
 def compute_garbage_density(text: str) -> float:
-    if not text:
-        return 0.0
-    # Exclude / and - from being counted as garbage
+    if not text: return 0.0
     noise_chars = sum(1 for c in text if not c.isalnum() and c not in ' ,.?!()/-')
     return noise_chars / len(text)
 
@@ -156,7 +143,6 @@ def detect_repeated_chars(text: str) -> int:
         core = word.strip(_STRIP_CHARS)
         if len(core) < 4: continue
         for ch in set(core):
-            # Trigger if character makes up 40% of the word AND appears at least 3 times
             if core.count(ch) / len(core) >= 0.40 and core.count(ch) >= 3:
                 count += 1
                 break
@@ -172,30 +158,22 @@ def compute_vowel_ratio(text: str) -> float:
 
 def detect_gibberish_words(text: str) -> int:
     words = text.split()
-    if not words:
-        return 0
-
+    if not words: return 0
     count = 0
     vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
     for word in words:
         core = word.strip(_STRIP_CHARS)
-        if len(core) < 4:
-            continue
-
+        if len(core) < 4: continue
         if len(core) > 0:
             numeric_chars = sum(1 for c in core if c.isdigit() or c in '-./,;:')
-            if numeric_chars / len(core) >= 0.6:
-                continue
-
+            if numeric_chars / len(core) >= 0.6: continue
         vowel_count = sum(1 for c in core if c in vowels)
         if vowel_count == 0:
             count += 1
             continue
-
         v_ratio = vowel_count / len(core)
         if v_ratio < 0.15 or v_ratio > 0.80:
             count += 1
-
     return count
 
 
@@ -216,7 +194,6 @@ def detect_mid_uppercase(text: str) -> int:
     for word in text.split():
         core = word.strip('.,;:!?()[]"\'-/')
         if len(core) < 2 or core.isupper(): continue
-
         flagged = False
         lower_run = 0
         for ch in core:
@@ -225,7 +202,6 @@ def detect_mid_uppercase(text: str) -> int:
             elif ch.isupper() and lower_run >= 1:
                 flagged = True
                 break
-
         if not flagged and len(core) >= 5:
             upper_start = 0
             for ch in core:
@@ -235,7 +211,6 @@ def detect_mid_uppercase(text: str) -> int:
                     break
             if (upper_start >= 3 and upper_start < len(core) and core[upper_start].islower()):
                 flagged = True
-
         if flagged: count += 1
     return count
 
@@ -254,7 +229,6 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     clean_text = line.strip()
     if not clean_text: return "Empty", ""
 
-    # Expanded metadata markers
     metadata_markers = [
         "Tb.", "č.neg", "neg.", "obr.", "obr ", "neg ", "Tb ", "č. neg",
         "č neg", "č.neg.", "neg.", "neg ", "Tb.", "Tb ", "č.neg.",
@@ -270,30 +244,16 @@ def pre_filter_line(line: str) -> tuple[str, str]:
 
     n_chars = len(clean_text)
 
-    # FIX A-1: Run is_non_text() BEFORE the digit-ratio bypass
-    if is_non_text(clean_text):
-        return "Non-text", clean_text
-
-    # FIX A-2: Standalone Roman numerals are plate/table labels, not text
-    if RE_ROMAN_NUMERAL.match(clean_text.strip()):
-        return "Non-text", clean_text
-
-    # NEW: Catch Document stamps / Archive references
-    if RE_STAMP.search(clean_text) or "IVerc" in clean_text:
-        return "Non-text", clean_text
-
-    # NEW: Allow highly numeric lines (dates, measurements) to survive
-    if sum(c.isdigit() for c in clean_text) / n_chars > 0.4:
-        return "Process", clean_text
+    if is_non_text(clean_text): return "Non-text", clean_text
+    if RE_ROMAN_NUMERAL.match(clean_text.strip()): return "Non-text", clean_text
+    if RE_STAMP.search(clean_text) or "IVerc" in clean_text: return "Non-text", clean_text
+    if sum(c.isdigit() for c in clean_text) / n_chars > 0.4: return "Process", clean_text
 
     unique_symbols = set(c for c in clean_text if not c.isspace())
-
-    if n_chars < 4 or len(unique_symbols) < 3:
-        return "Non-text", clean_text
+    if n_chars < 4 or len(unique_symbols) < 3: return "Non-text", clean_text
 
     letters = sum(c.isalpha() for c in clean_text)
-    if letters / n_chars < 0.3:
-        return "Non-text", clean_text
+    if letters / n_chars < 0.3: return "Non-text", clean_text
 
     return "Process", clean_text
 
@@ -303,7 +263,6 @@ def parse_line_splits(line_text: str) -> tuple[str, str, str]:
     pattern = r"(\S+)(?:-|­|\xad)\s*\{([^}]+)\}"
     matches = list(re.finditer(pattern, clean_line))
     if not matches: return clean_line, "", ""
-
     last_prefix = ""
     last_suffix = ""
 
@@ -325,29 +284,20 @@ def parse_line_splits(line_text: str) -> tuple[str, str, str]:
 
 def score_word(word: str) -> float:
     core = word.strip(_STRIP_CHARS)
-
     if len(core) == 1:
-        # Expanded whitelist: includes prepositions + common archival initials
-        if core in "aAiIoOuUvVzZkKsSpPbBjJdDrRnNmMtT" or '.' in word:
-            return 0.0
-        if core.isdigit():
-            return 0.25
-        if not core.isalpha():
-            return 0.0
+        if core in "aAiIoOuUvVzZkKsSpPbBjJdDrRnNmMtT" or '.' in word: return 0.0
+        if core.isdigit(): return 0.25
+        if not core.isalpha(): return 0.0
         return 0.85
-
-    if len(core) < 2:
-        return 0.0
+    if len(core) < 2: return 0.0
 
     has_strange = any(not ch.isalnum() and ch not in ALLOWED_INTERNAL for ch in core)
-
     has_rep = False
     if len(core) >= 4:
         for ch in set(core):
             if core.count(ch) / len(core) >= 0.40 and core.count(ch) >= 3:
                 has_rep = True
                 break
-
     has_ldl = False
     prev2, prev1 = None, None
     for ch in core:
@@ -355,7 +305,6 @@ def score_word(word: str) -> float:
             has_ldl = True
             break
         prev2, prev1 = prev1, ch
-
     has_uppercase = False
     if len(core) >= 2 and not core.isupper():
         lower_run = 0
@@ -365,7 +314,6 @@ def score_word(word: str) -> float:
             elif ch.isupper() and lower_run >= 1:
                 has_uppercase = True
                 break
-
     return min(1.0, 0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase)
 
 
@@ -385,11 +333,7 @@ def compute_word_weird_ratio(word_scores: list[tuple[str, float]]) -> float:
 def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> list[float]:
     if not texts: return []
     try:
-        max_length = getattr(
-            model.config, "max_position_embeddings",
-            getattr(model.config, "n_positions", 1024)
-        )
-
+        max_length = getattr(model.config, "max_position_embeddings", getattr(model.config, "n_positions", 1024))
         encodings = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
         input_ids = encodings.input_ids.to(device)
         attention_mask = encodings.attention_mask.to(device)
@@ -400,130 +344,157 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
         with torch.no_grad():
             outputs = model(input_ids, attention_mask=attention_mask, labels=target_ids)
             logits = outputs.logits
-
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = target_ids[..., 1:].contiguous()
-
             loss_fct = nn.CrossEntropyLoss(reduction='none')
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
             loss = loss.view(target_ids.size(0), -1)
-
             non_masked = shift_labels != -100
             seq_loss = (loss * non_masked).sum(dim=1)
             num_tokens = non_masked.sum(dim=1).clamp(min=1)
-
             ppl = torch.exp(seq_loss / num_tokens)
             return ppl.tolist()
-
     except Exception as e:
         print(f"[Error] Batch PPL: {e}", file=sys.stderr)
         return [0.0] * len(texts)
 
+
 # ---------------------------------------------------------------------------
-# Categorisation
+# Categorisation & Clamping
 # ---------------------------------------------------------------------------
 
 def categorize_line(
-        quality_score: float,
-        text_source: str,
-        wc: int,
-        weird_ratio: float,
-        vowel_ratio: float,
-        perplexity: float,
-        original_lang_score: float | None = None
-) -> str:
-    if wc == 0 or not text_source.strip():
-        return "Empty"
+        qs: float,
+        txt: str,
+        w: int,
+        wr: float,
+        vr: float,
+        prp: float,
+        ols: float | None = None
+) -> tuple[str, float]:
 
-    g_density = compute_garbage_density(text_source)
-    if g_density > CATEG_GARBAGE_DENSITY_HIGH or (
-            wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
-        return "Trash"
+    def _determine_category(
+            quality_score: float,
+            text_source: str,
+            wc: int,
+            weird_ratio: float,
+            vowel_ratio: float,
+            perplexity: float,
+            original_lang_score: float | None = None
+    ) -> str:
+        """Internal logic runner determining the conceptual category."""
+        if wc == 0 or not text_source.strip():
+            return "Empty"
 
-    # NEW: Catch Uppercase gibberish
-    if is_all_caps_line(text_source) and vowel_ratio < 0.15:
-        return "Trash"
-
-    # NEW: Catch Upside-down / Hallucinated text
-    if wc >= 3:
-        rot_ratio = compute_rotatable_ratio(text_source)
-        has_cz_diacs = any(c in _LANG_DIACRITICS["ces"] for c in text_source)
-        if rot_ratio > 0.85 and not has_cz_diacs:
+        g_density = compute_garbage_density(text_source)
+        if g_density > CATEG_GARBAGE_DENSITY_HIGH or (
+                wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
             return "Trash"
 
-    # NEW: Catch Erratic fragmentation (excessive hyphens or dots)
-    if wc > 0:
-        hyphen_count = text_source.count('-')
-        dot_count = text_source.count('.')
-        if (hyphen_count / wc) > 0.4 or (dot_count / wc) > 0.5:
-            if quality_score < CATEG_TRASH_SCORE_MAX:
+        if is_all_caps_line(text_source) and vowel_ratio < 0.15:
+            return "Trash"
+
+        if wc >= 3:
+            rot_ratio = compute_rotatable_ratio(text_source)
+            has_cz_diacs = any(c in _LANG_DIACRITICS["ces"] for c in text_source)
+            if rot_ratio > 0.85 and not has_cz_diacs:
                 return "Trash"
-            return "Noisy"
 
-    avg_word_len = sum(len(w.strip(_STRIP_CHARS)) for w in text_source.split()) / wc if wc > 0 else 0
-    if wc >= 5 and avg_word_len < 2.0 and weird_ratio > 0.1:
-        return "Trash"
+        if wc > 0:
+            hyphen_count = text_source.count('-')
+            dot_count = text_source.count('.')
+            if (hyphen_count / wc) > 0.4 or (dot_count / wc) > 0.5:
+                if quality_score < CATEG_TRASH_SCORE_MAX:
+                    return "Trash"
+                return "Noisy"
 
-    # Catch 1: High perplexity on short lines
-    if perplexity > CATEG_PPL_SHORT_MAX and wc < 5:
-        if not all(c in "IVXLCDMivxlcdm.-, " for c in text_source):
-            if g_density < 0.1 and weird_ratio < 0.20:
+        avg_word_len = sum(len(w.strip(_STRIP_CHARS)) for w in text_source.split()) / wc if wc > 0 else 0
+        if wc >= 5 and avg_word_len < 2.0 and weird_ratio > 0.1:
+            return "Trash"
+
+        if perplexity > CATEG_PPL_SHORT_MAX and wc < 5:
+            if not all(c in "IVXLCDMivxlcdm.-, " for c in text_source):
+                if g_density < 0.1 and weird_ratio < 0.20:
+                    return "Noisy"
+                return "Trash"
+
+        def _is_initial(w):
+            return len(w) == 2 and w[0].isupper() and w[1] == '.'
+
+        single_char_ratio = (
+            sum(1 for w in text_source.split() if len(w.strip(_STRIP_CHARS)) <= 1 and not _is_initial(w)) / wc
+            if wc > 0 else 0
+        )
+
+        if wc >= 3 and single_char_ratio >= 0.50 and weird_ratio > 0.15:
+            normal_word_count = sum(
+                1 for w in text_source.split()
+                if len(w.strip(_STRIP_CHARS)) >= 4
+            )
+            if normal_word_count >= 3:
                 return "Noisy"
             return "Trash"
 
-    # We pre-calculate single_char_ratio for Catch 7 and Fix D.
-    single_char_ratio = (
-        sum(1 for w in text_source.split() if len(w.strip(_STRIP_CHARS)) <= 1) / wc
-        if wc > 0 else 0
-    )
-
-    # Catch 7 / FIX B: Single-character fragmentation (spaced out text)
-    if wc >= 3 and single_char_ratio >= 0.50 and weird_ratio > 0.15:
-        normal_word_count = sum(
-            1 for w in text_source.split()
-            if len(w.strip(_STRIP_CHARS)) >= 4
-        )
-        if normal_word_count >= 3:
-            return "Noisy"
-        return "Trash"
-
-    # Catch 2: Extremely skewed vowel ratios
-    if len(text_source) > 5 and (vowel_ratio < 0.1 or vowel_ratio > 0.9):
-        return "Trash"
-
-    # Catch 3: High overall word weirdness
-    if weird_ratio >= 0.25:
-        if wc == 1 and len(text_source.strip()) > 25 and quality_score > CATEG_TRASH_SCORE_MAX:
-            pass
-        else:
+        if len(text_source) > 5 and (vowel_ratio < 0.1 or vowel_ratio > 0.9):
             return "Trash"
 
-    # Catch 4 / FIX C: Moderately high weirdness combined with high perplexity
-    if weird_ratio > 0.15 and perplexity > CATEG_PPL_WEIRD_MAX:
-        valid_wr = compute_valid_ratio(text_source)
-        if valid_wr >= 0.5:
-            return "Noisy"
-        return "Trash"
+        if weird_ratio >= 0.25:
+            if wc == 1 and len(text_source.strip()) > 25 and quality_score > CATEG_TRASH_SCORE_MAX:
+                pass
+            else:
+                return "Trash"
 
-    # NEW: Catch Garbled OOV words without a dictionary
-    if weird_ratio > 0.08 and perplexity > 200.0 and quality_score < 0.85:
-        return "Noisy"
+        if weird_ratio > 0.15 and perplexity > CATEG_PPL_WEIRD_MAX:
+            valid_wr = compute_valid_ratio(text_source)
+            if valid_wr >= 0.5: return "Noisy"
+            return "Trash"
 
-    if quality_score < CATEG_TRASH_SCORE_MAX:
-        return "Trash"
-    if quality_score < CATEG_NOISY_SCORE_MAX:
-        return "Noisy"
-
-    # FIX D: lines with a noticeable spaced-letter OCR pattern
-    if single_char_ratio >= 0.25 and wc >= 3 and weird_ratio > 0.05:
-        return "Noisy"
-
-    # FIX E-2: Pre-remap confidence gate
-    if original_lang_score is not None and original_lang_score < LANG_SCORE_ROUGH:
-        if infer_lang_from_diacritics(text_source, _EXPECTED_LANGS_BASES) is None:
+        if weird_ratio > 0.08 and perplexity > 200.0 and quality_score < 0.85:
             return "Noisy"
 
-    return "Clear"
+        if re.search(r'[.,!?][a-zA-Z]', text_source):
+            if quality_score >= CATEG_NOISY_SCORE_MAX:
+                return "Noisy"
+
+        if quality_score < CATEG_TRASH_SCORE_MAX:
+            if wc >= 3 and compute_valid_ratio(text_source) >= 0.40:
+                return "Noisy"
+            return "Trash"
+
+        if quality_score < CATEG_NOISY_SCORE_MAX:
+            return "Noisy"
+
+        if single_char_ratio >= 0.25 and wc >= 3 and weird_ratio > 0.05:
+            return "Noisy"
+
+        if original_lang_score is not None and original_lang_score < LANG_SCORE_ROUGH:
+            if infer_lang_from_diacritics(text_source, _EXPECTED_LANGS_BASES) is None:
+                return "Noisy"
+
+        if detect_strange_symbols(text_source) > 0:
+            return "Noisy"
+
+        return "Clear"
+
+    """
+    Evaluates the string to assign an OCR category and aligns the final
+    quality score to strictly match the mathematical bounds of that category.
+    """
+    categ = _determine_category(qs, txt, w, wr, vr, prp, ols)
+
+    # Enforce interconnected boundaries without modifying the logical routing
+    if categ == "Trash":
+        aligned_score = min(quality_score, CATEG_TRASH_SCORE_MAX - 0.0001)
+    elif categ == "Noisy":
+        aligned_score = max(quality_score, CATEG_TRASH_SCORE_MAX)
+        aligned_score = min(aligned_score, CATEG_NOISY_SCORE_MAX - 0.0001)
+    elif categ == "Clear":
+        aligned_score = max(quality_score, CATEG_NOISY_SCORE_MAX)
+    else:
+        aligned_score = quality_score  # "Empty" or "Non-text"
+
+    return categ, aligned_score
+
 
 # ---------------------------------------------------------------------------
 # Simple Ratio & General Helpers
@@ -568,14 +539,14 @@ def compute_quality_score(valid_word_ratio: float, symbol_ratio: float, perplexi
                           weird_ratio: float, ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
                           length_max: float = QS_LENGTH_MAX) -> float:
     norm_symbol = min(symbol_ratio, 1.0)
-    norm_ppl    = 1.0 - min(perplexity / ppl_max, 1.0)
-    norm_len    = min(text_length / length_max, 1.0)
-    norm_weird  = 1.0 - min(weird_ratio, 1.0)
+    norm_ppl = 1.0 - min(perplexity / ppl_max, 1.0)
+    norm_len = min(text_length / length_max, 1.0)
+    norm_weird = 1.0 - min(weird_ratio, 1.0)
 
     return (
-        QS_WEIGHT_VALID_WORD * valid_word_ratio
-        + QS_WEIGHT_SYMBOL   * (1.0 - norm_symbol)
-        + QS_WEIGHT_WEIRD    * norm_weird
-        + QS_WEIGHT_PERPLEXITY * norm_ppl
-        + QS_WEIGHT_LENGTH   * norm_len
+            QS_WEIGHT_VALID_WORD * valid_word_ratio
+            + QS_WEIGHT_SYMBOL * (1.0 - norm_symbol)
+            + QS_WEIGHT_WEIRD * norm_weird
+            + QS_WEIGHT_PERPLEXITY * norm_ppl
+            + QS_WEIGHT_LENGTH * norm_len
     )
