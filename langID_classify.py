@@ -161,7 +161,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
 
         categ, q_score = categorize_line(
             q_score, text_content, wc, weird_ratio, vowel_ratio, ppl_val,
-            original_lang_score=original_lang_score
+            ols=original_lang_score
         )
 
         # <-- ADDED f"{rot_ratio:.4f}" below next to vowel_ratio
