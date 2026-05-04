@@ -106,7 +106,8 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
 
 
 def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tuple], out_dir: Path,
-                                task_queue: mp.Queue, result_dict: dict, expected_langs: list[str] = None, trusted_langs: list[str] = None):
+                                task_queue: mp.Queue, result_dict: dict, expected_langs: list[str] = None,
+                                trusted_langs: list[str] = None):
     ft = worker_models['ft']
 
     task_queue.put((batch_id, lines))
@@ -124,6 +125,9 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     results = []
     for i in range(len(lines)):
         file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
+
+        # FIX E-1: Save original FastText score before any forced remapping
+        original_lang_score = scores[i]
 
         # Force language remapping and fix the score
         if langs[i] not in trusted_langs + expected_langs:
@@ -156,7 +160,10 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             weird_ratio=weird_ratio
         )
 
-        categ = categorize_line(q_score, text_content, wc, weird_ratio, vowel_ratio, ppl_val)
+        categ = categorize_line(
+            q_score, text_content, wc, weird_ratio, vowel_ratio, ppl_val,
+            original_lang_score=original_lang_score
+        )
 
         row = [
             file_id, page_id, line_num, text_content,
@@ -239,7 +246,8 @@ def process_document(task):
 
                 if len(batch_lines) >= batch_size:
                     b_id = f"{file_id}_{batch_counter}"
-                    process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue, result_dict,
+                    process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue,
+                                                result_dict,
                                                 expected_langs, trusted_bases)
                     batch_lines.clear()
                     batch_meta.clear()
@@ -322,7 +330,7 @@ def main():
     task_queue = manager.Queue()
     result_dict = manager.dict()
 
-    # Pre-download on the main process so the spawned GPU worker finds it in cache[cite: 3]
+    # Pre-download on the main process so the spawned GPU worker finds it in cache
     from transformers import AutoModelForCausalLM, AutoTokenizer
     print(f"[Main] Ensuring {MODEL_NAME} is cached...")
     AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -336,7 +344,8 @@ def main():
     grouped_tasks = []
     for file_id, group in df.groupby("file"):
         grouped_tasks.append(
-            (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS, _TRUSTED_FOREIGN_LANG_BASES))
+            (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS,
+             _TRUSTED_FOREIGN_LANG_BASES))
 
     # 1. Initialize ParadataLogger in the MAIN process
     logger = ParadataLogger(
@@ -409,7 +418,6 @@ def main():
         logger.finalize(input_total=total_tasks)
 
     print(f"All done! Processed {total_processed} total lines.")
-
 
 
 if __name__ == "__main__":
