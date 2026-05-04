@@ -287,28 +287,29 @@ Parameters that depend on the perplexity model choice are tabulated below:
 
 | Parameter                  | Qwen2.5-0.5B | distilgpt2 |
 |----------------------------|--------------|------------|
-| `PERPLEXITY_THRESHOLD_MAX` | 1000.0       | 2500.0     |
+| `PERPLEXITY_THRESHOLD_MAX` | 1000.0       | 3000.0     |
 | `CATEG_PPL_SHORT_MAX`      | 700.0        | 2000.0     |
 | `CATEG_PPL_WEIRD_MAX`      | 400.0        | 1000.0     |
 ---
 
 #### 4.1 Classify Lines (GPU Bound) 🚀
 
-This script reads the extracted text files, batches lines together 📦, and runs the FastText [^2]
-and Qwen2.5-0.5B [^6] models. It uses a **CPU/GPU split architecture**:
+This script reads the extracted text files, batches lines together 📦, and runs the FastText and Qwen2.5-0.5B models. 
+It uses a **CPU/GPU split architecture**:
 
-- A single dedicated **GPU worker** holds the only Qwen2.5-0.5B instance and processes perplexity batches 
-to prevent VRAM OOM errors.
-- Multiple **CPU workers** (up to `WORKERS_MAX`, default 32) read files, run FastText and structural detectors, 
-and submit text batches to the GPU worker via a shared queue. CPU workers poll the result dictionary while 
-the GPU processes, running language identification concurrently.
+- A single dedicated **GPU worker** holds the only Qwen2.5-0.5B instance and processes perplexity batches to 
+prevent VRAM OOM errors.
+- Multiple **CPU workers** (up to `WORKERS_MAX`, default 32) read files, run FastText and structural detectors, and 
+submit text batches to the GPU worker via a shared queue. CPU workers poll the result dictionary while the GPU 
+processes, running language identification concurrently.
 
 > [!WARNING]
 > The first of `EXPECTED_LANGS` list of languages should be the most expected language in the processed 
 > collection to work as a default replacement of ambiguous language recognition predictions.
 
-
-    python3 langID_classify.py
+```bash
+python3 langID_classify.py
+```
 
 * **Input 1 📥:** `../PAGE_TXT/` from Step 3
 * **Input 2 📥:** `output.csv` from Step 2
@@ -330,7 +331,7 @@ Predicted or computed features for each line:
 
 * `lang` — predicted ISO language code from the FastText model ([full list](https://github.com/facebookresearch/flores/tree/main/flores200#languages-in-flores-200)) 🌐
 * `lang_score` — FastText confidence score for the predicted language 🎯
-* `perplex` — Qwen2.5-0.5B (or any other model of your choice, like `distilgpt2` for English) perplexity score of the line 📉
+* `perplex` — Qwen2.5-0.5B (or any other model of your choice, like `distilgpt2` for English 🇬🇧) perplexity score of the line 📉
 * `word_count` — number of whitespace-delimited tokens in the line
 * `char_count` — total character count of the line
 * `garbage_density` — ratio of non-alphanumeric, non-standard-punctuation characters to total line length
@@ -343,10 +344,13 @@ Predicted or computed features for each line:
 and mid-uppercase signals weighted per token (0 = fully clean). *Note: Random isolated letters receive a severe weirdness 
 penalty (0.85) to catch spaced-out OCR noise, while isolated numbers/measurements receive a lower, tolerable penalty (0.25).*
 * `vowel_ratio` — ratio of vowel characters to total alphabetic characters in the line
+* `rot_ratio` — the ratio of structurally ambiguous/rotatable characters (`pbqdnuwmoxszeyv`) to the total number of alphabetic characters in the line.
 * `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, 
 text length, and word weirdness; higher = cleaner 📈
 * `categ` — assigned category: **Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙
 * `caps_header` — boolean flag indicating whether all alphabetic words in the line are uppercase (typical of section headers)
+
+
 
 ##### CPU Pre-filter
 
@@ -354,30 +358,35 @@ Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side c
 directly, bypassing the ML pipeline entirely:
 
 * Line is blank → **Empty**
+* Matches the all-digits/symbols regex pattern, Roman numerals, or stamp regexes → **Non-text**
 * Fewer than 4 characters, or fewer than 3 unique non-whitespace symbols → **Non-text**
 * Letter ratio below 30% of total characters → **Non-text**
-* Matches the all-digits/symbols regex pattern → **Non-text**
+* **Bypass Exceptions**: Lines containing specific metadata markers (e.g., `Tb.`, `č.neg`) or composed of > 40% digits 
+are explicitly forwarded as **Process** to preserve measurement/archival data.
 * Otherwise → forwarded for ML classification as **Process**
 
 ##### Language Handling
 
 FastText is run on the lowercased line text. If the predicted language is not in either `EXPECTED_LANGS` or 
 `TRUSTED_FOREIGN_LANGS`, the language is force-remapped to the first entry of `EXPECTED_LANGS` (default `ces`), 
-**preserving the FastText script suffix (e.g., `_Latn`)**, with a minimum confidence of `LANG_SCORE_CLEAR` (default 0.75). 
-This prevents foreign-language false positives from polluting the quality assessment for predominantly Czech collections, 
-while keeping the output format stable for downstream consumers.
+**preserving the FastText script suffix**. This remapping guarantees a minimum confidence of `LANG_SCORE_CLEAR` 
+(default 0.75) to prevent foreign-language false positives from polluting the quality assessment for predominantly
+Czech 🇨🇿 collections.
 
 ##### Structural Detectors
 
 Lines that pass the pre-filter are analysed by five structural detectors defined in `text_util_langID.py`:
 
-| Detector                     | What it counts                                                                                                                                                                                                 |
-|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the **allowed** set `{ . - , + ( ) " ' / _ — – : % }`. Edge punctuation is stripped before inspection.                                      |
-| `detect_letter_digit_letter` | Words with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g., `vyt1ačená`, `nalez2í`). **Legitimate** patterns like `90,9g`, `80-90cm`, `26.IX.1957` do not trigger. |
-| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`, `obkLADem`) or an uppercase run at the start followed by lowercase (`XXWžkumu`). All-caps words and **titles** (`PhDr`, `MUDr`) are **excluded**.           |
-| `detect_repeated_chars`      | Words where a single non-standard character makes up ≥ 40% of the word and appears at least **3 times** (e.g., OCR stutter like `bxxxoxx`).                                                                    |
-| `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 15% or above 80%. Words that are **predominantly numeric** (≥ 60% digits and separators) are **excluded**.                             |
+| Detector                     | What it counts                                                                                                                                                                         |
+|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the **allowed** set `{ . - , + ( ) " ' / _ — – : % ; ? ! }`. Edge punctuation is stripped before inspection.        |
+| `detect_letter_digit_letter` | Words with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g., `vyt1ačená`). **Legitimate** patterns like `90,9g` do not trigger.             |
+| `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`). All-caps words and specific capitalized sequences are **excluded**.                                                                |
+| `detect_repeated_chars`      | Words where a single character makes up ≥ 40% of the word and appears at least **3 times**. Explicitly ignores natural repetition of common Czech 🇨🇿 vowels (e.g., `a, e, i, o, u`). |
+| `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 15% or above 80%. Words that are **predominantly numeric** (≥ 60% digits and separators) are **excluded**.     |
+| `compute_rotatable_ratio`    | Measures the concentration of structurally ambiguous/rotatable letters (`pbqdnuwmoxszeyv`) to catch severe visual noise interpreting graphical textures as characters.                 |
+
+
 
 ##### Composite Quality Score
 
@@ -402,36 +411,45 @@ Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 > [!NOTE]
 > Perplexity contributes only one weighted component of the quality score. Although `Qwen2.5-0.5B` is
-> multilingual and handles **Czech**, **German**, and **English** natively (unlike the **English-only** `distilgpt2` it
+> multilingual and handles **Czech 🇨🇿**, **German 🇩🇪**, and **English 🇬🇧** natively (unlike the **English-only 🇬🇧** `distilgpt2` it
 > replaced), it is still intentionally diluted by the four other signals rather than used as a standalone
 > threshold. This keeps the score robust against edge cases where even a strong model assigns unexpectedly
 > high perplexity to valid but atypical text (e.g., highly abbreviated archival labels or form-field lines).
 
 ##### Categorisation Logic
 
-`categorize_line()` in `text_util_langID.py` classifies each line in two stages:
+`categorize_line()` classifies each line in two stages:
 
 **Immediate Trash overrides** (checked first, before the quality score):
 
+* **Fragment Rescue**: Lines with ≥ 3 words, a structurally valid word ratio ≥ 70%, and a perplexity < 800.0 
+are protected from Garbage-Density Trash demotions.
 * Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
 * Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
-* **Severe fragmentation**: Line has ≥ 5 words, average stripped-word length < 2.0 characters, **and**
-`weird_ratio` > 0.1 → **Trash** *(prevents valid measurement lines from being trashed)*.
-* **High perplexity on short lines**: Perplexity > `CATEG_PPL_SHORT_MAX` (default 700.0) and < 5 words → **Trash**, with two exceptions: 
-lines composed entirely of Roman numerals and standard separators are bypassed; lines where garbage density < 0.1 **and** `weird_ratio` 
-< 0.20 fall back to **Noisy** instead.
-* **Single-character fragmentation**: Line has ≥ 3 words, ≥ 50% of words are isolated characters, **and**
-`weird_ratio` > 0.15 → **Trash** *(catches spaced-out gibberish like `"C A s 8."`)*.
-* **Extreme vowel ratio**: Line > 5 characters with vowel ratio < 10% or > 90% → **Trash** *(catches random consonants/vowels like `"FAXAPOOXAXXXX"`)*.
+* All-caps lines with a vowel ratio < 15% → **Trash**
+* **High Rotatable Ratio**: Lines with ≥ 3 words, > 85% rotatable characters, and no Czech 🇨🇿 diacritics → **Trash**
+* **Excessive Punctuation**: Lines where hyphens make up > 40% of the word count or dots > 50% → **Trash** (if 
+quality score < 0.40), otherwise **Noisy**.
+* **Severe fragmentation**: Line has ≥ 5 words, average stripped-word length < 2.0 characters, **and** `weird_ratio` > 0.1 → **Trash**.
+* **High perplexity on short lines**: Perplexity > `CATEG_PPL_SHORT_MAX` (default 700.0) and < 5 words → **Trash** 
+(unless composed of Roman numerals/separators; if garbage density < 0.1 and weird ratio < 0.20 it falls back to **Noisy**).
+* **Single-character fragmentation**: Line has ≥ 3 words, ≥ 50% of words are isolated characters, **and** 
+`weird_ratio` > 0.15 → **Trash** (unless there are ≥ 3 normal-length words, which falls back to **Noisy**).
+* **Extreme vowel ratio**: Line > 5 characters with vowel ratio < 10% or > 90% → **Trash**.
 * **High overall weirdness**: `weird_ratio` ≥ 0.25 → **Trash**.
-* **Moderate weirdness + high perplexity**: `weird_ratio` > 0.15 and perplexity > `CATEG_PPL_WEIRD_MAX` (default 400.0) → **Trash**.
+* **Moderate weirdness + high perplexity**: `weird_ratio` > 0.15 and perplexity > `CATEG_PPL_WEIRD_MAX` (default 
+400.0) → **Trash** (unless valid word ratio ≥ 50%, then **Noisy**).
 
-**Quality score thresholds** (applied to lines that pass all overrides):
+**Quality score thresholds & Bypasses** (applied to lines that pass all overrides):
 ```text
-quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash
+quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash (Unless valid_word_ratio ≥ 40% and words ≥ 3, then Noisy)
 quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.70)  →  Noisy
-otherwise                                              →  Clear
+Original Language Score < 0.45 without CZ Diacritics → Noisy
+Strange Symbol Count > 0                            →  Noisy
+otherwise                                           →  Clear
 ```
+
+
 
 All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
 
@@ -442,9 +460,11 @@ is finalized to prevent unnatural categorization anomalies:
 
 1. **Header/Footer Deduplication** — Resolves edge-case flip-flopping. If the exact same text string appears multiple 
 times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
-2. **Context Smoothing (Rolling Window)** — Applies a 3-line rolling window. If a **Noisy** line is sandwiched between 
-two consecutive **Trash** lines (one immediately before, one immediately after), it is automatically downgraded 
-to **Trash** to prevent isolated "noisy" categorizations in otherwise heavily corrupted regions.
+2. **Context Smoothing (Rolling Window)** — Applies a 5-line rolling window. If a **Noisy** line is sandwiched 
+between *two* consecutive **Trash** lines on *each* side, and its quality score is < 0.55 (Trash Max + 0.15), it is downgraded to **Trash**.
+3. **Page-level Inverted-Scan Sweep** — If a contiguous run of 4+ non-Empty/Non-text lines on a single page all lack 
+Czech 🇨🇿 diacritics and have a rough language score (< 0.45), the entire sequence is downgraded to **Trash**.
+
 
 Example of per-document CSV files: [DOC_LINE_QWEN_CATEG](data_samples/DOC_LINE_QWEN_CATEG) 📁 by Qwen2.5-0.5B 
 and [DOC_LINE_GPT_CATEG](data_samples/DOC_LINE_GPT_CATEG) 📁 by distilgpt2.
@@ -489,6 +509,7 @@ For each page, the aggregation computes:
 * `avg_perplex` — mean Qwen2.5-0.5B perplexity score
 * `avg_symbol` — mean strange-symbol word count per line
 * `avg_vowel_ratio` — mean vowel-to-alphabetic-character ratio per line
+* `avg_rot_ratio` — mean rotatable character ratio per line.
 * `ch_ratio` — mean fraction of lines flagged as all-caps headers (`caps_header = True`)
 
 **Language profile:**
