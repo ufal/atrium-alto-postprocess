@@ -1,7 +1,7 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
-CTX199405706,1,1,"1,4442,70/",,,,0.0,0.0,0,10,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX199405706,1,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199405706,1,3,"504 ONDREJOV, okr. Praha-východ",,,ces,0.8522,245.0,4,31,0.0,0,0,0,0,0,0.0,0.3636,0.7876,Clear,False
-CTX199405706,1,4,504/1 DAT: 1820. KULT: 7. LOK: Bubníkova usedlost. NALEZ: kostr. hrob.,,,ces,0.8386,179.0,11,70,0.0571,0,0,0,0,0,0.0,0.3415,0.8238,Clear,False
-CTX199405706,1,5,"OKOL: kopání základu hrnčíř, pece. ULOŽ: 7. LIT: Kalina b. d. A,",,,ces,0.909,185.0,12,64,0.0469,0,0,0,0,0,0.0,0.4186,0.7989,Noisy,False
-CTX199405706,1,6,107b.,,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
+CTX199405706,1,1,"1,4442,70/",,,,0.0,0.0,0,10,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199405706,1,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199405706,1,3,"504 ONDREJOV, okr. Praha-východ",,,ces,0.8522,245.0,4,31,0.0,0,0,0,0,0,0.0,0.3636,0.5,0.7876,Clear,False
+CTX199405706,1,4,504/1 DAT: 1820. KULT: 7. LOK: Bubníkova usedlost. NALEZ: kostr. hrob.,,,ces,0.8386,179.0,11,70,0.0571,0,0,0,0,0,0.0,0.3415,0.5366,0.8238,Clear,False
+CTX199405706,1,5,"OKOL: kopání základu hrnčíř, pece. ULOŽ: 7. LIT: Kalina b. d. A,",,,ces,0.909,179.0,12,64,0.0469,0,0,0,0,0,0.0,0.4186,0.3953,0.8001,Clear,False
+CTX199405706,1,6,107b.,,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False

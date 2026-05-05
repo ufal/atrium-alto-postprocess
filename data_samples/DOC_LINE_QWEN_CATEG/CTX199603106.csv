@@ -1,198 +1,198 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,quality_score,categ,caps_header
-CTX199603106,1,1,3444/74,,,ces,0.75,40.5,1,7,0.0,0,0,1,0,0,0.35,0.0,0.5003,Trash,False
-CTX199603106,1,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,3,NÁLEZOVÁ ZPRÁVA O ARCHEOLOGICKÉM VÝZKUMU V DOMĚ ČP. 193/1 NA,,,ces,1.0,45.25,10,60,0.0,0,0,0,0,0,0.0,0.4222,0.7943,Clear,True
-CTX199603106,1,4,KŘIŽOVNICKÉN NÁMĚSTÍ NA STARÉM MĚSTĚ PRAŽSKÉM,,,ces,1.0,53.75,6,45,0.0,0,0,0,0,0,0.0,0.35,0.8843,Clear,True
-CTX199603106,1,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,6,Číslo vý=kumu 21/93,,,ces,0.75,252.0,3,19,0.0526,1,0,0,0,0,0.1333,0.4545,0.6209,Noisy,False
-CTX199603106,1,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,8,Obsah :,,,ces,0.75,520.0,2,7,0.1429,0,0,0,0,0,0.0,0.4,0.6244,Noisy,False
-CTX199603106,1,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,10,1. Dějiny objektu 1,,,ces,1.0,48.25,4,19,0.0,0,0,0,0,0,0.0625,0.4615,0.7363,Clear,False
-CTX199603106,1,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,12,"2, Popis nálezu i - 3",,,ces,0.979,260.0,6,21,0.0,0,0,0,0,0,0.0833,0.5,0.6333,Noisy,False
-CTX199603106,1,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,14,3. Vyhodnocení nálezu 3 - 4,,,ces,0.9968,40.0,6,27,0.0,0,0,0,0,0,0.0833,0.4706,0.6875,Noisy,False
-CTX199603106,1,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,16,4. Literatura 5,,,ces,0.75,324.0,3,15,0.0,0,0,0,0,0,0.0833,0.5,0.6202,Noisy,False
-CTX199603106,1,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,18,5. Popis fotografií a plánků 5,,,ces,1.0,174.0,6,30,0.0,0,0,0,0,0,0.0417,0.4545,0.7302,Clear,False
-CTX199603106,1,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,20,6. Fotogra f 1 e 1 - 3,,,ces,0.75,112.0,8,22,0.0,0,0,0,0,0,0.3063,0.4444,0.5577,Trash,False
-CTX199603106,1,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,22,"7, Plánky 1 - 2",,,ces,0.75,148.0,5,15,0.0,0,0,0,0,0,0.15,0.3333,0.5887,Noisy,False
-CTX199603106,1,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,1,24,V Prase 15. 1. 1995,,,ces,0.75,33.75,5,19,0.0,0,0,0,0,0,0.0,0.3333,0.6512,Noisy,False
-CTX199603106,1,25,PhDr. Zdeněk Dragoun,,,ces,0.9986,223.0,3,20,0.0,0,1,0,0,1,0.0333,0.2941,0.8587,Clear,False
-CTX199603106,2,1,Dějiny objektu,,,ces,1.0,54.5,2,14,0.0,0,0,0,0,0,0.0,0.4615,0.9031,Clear,False
-CTX199603106,2,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,2,3,Jako nejstarší dm se v této bezprostřední blízkosti Karlova,,,ces,1.0,66.0,9,59,0.0,0,0,0,0,0,0.0,0.3529,0.8458,Clear,False
-CTX199603106,2,4,mostu uvádí domek mosteckého celného v letech 1406 - 1430.,,,ces,0.9999,53.75,10,58,0.0,0,0,0,0,0,0.0,0.4103,0.8204,Clear,False
-CTX199603106,2,5,Spolehlivé písemné doložená existence zástavby pochází až z roku,,,ces,0.9979,84.5,9,64,0.0,0,0,0,0,0,0.0,0.4286,0.8804,Clear,False
-CTX199603106,2,6,"""1640, kdy je zde jednoznačné lokalizována ""nákladné vystavěný dům""",,,ces,1.0,34.75,9,67,0.0448,0,0,0,0,0,0.0,0.4118,0.8814,Clear,False
-CTX199603106,2,7,celnice. Tento objekt je zřetelně zachycen na Sadelerové prospektu,,,ces,0.9997,99.0,9,66,0.0,0,0,0,0,0,0.0,0.4035,0.8765,Clear,False
-CTX199603106,2,8,"z roku 1606. V dalžím vývoj i byl o na budově dostaveno 3. patro,",,,ces,1.0,87.0,14,65,0.0,0,0,0,0,0,0.0,0.4318,0.7884,Clear,False
-CTX199603106,2,9,které zaznamenávají mladší ikonografické prameny včetně Langveilova,,,ces,1.0,39.25,7,67,0.0,0,0,0,0,0,0.0,0.4262,0.9591,Clear,False
-CTX199603106,2,10,modelu. Dnešní vzhled budovy je výsledkem klasicistní přestavby,,,ces,1.0,58.0,8,63,0.0,0,0,0,0,0,0.0,0.3636,0.9107,Clear,False
-CTX199603106,2,11,"z roku 1841 (Vilímková - Ebel 1988, s. 1 - 4).",,,ces,0.7857,41.75,11,46,0.0,0,0,0,0,0,0.0227,0.4211,0.6845,Noisy,False
-CTX199603106,2,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,2,13,Popis nálezu,,,ces,0.9915,472.0,2,12,0.0,0,0,0,0,0,0.0,0.4545,0.8176,Clear,False
-CTX199603106,2,14,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,2,15,V březnu 1993 byla v rámci rekonstrukčních prací na objektu,,,ces,1.0,23.88,10,59,0.0,0,0,0,0,0,0.0,0.3478,0.8342,Clear,False
-CTX199603106,2,16,snižována podlaha v jedné z místnosti při západní fasádě objektu nad,,,ces,1.0,58.0,11,68,0.0,0,0,0,0,0,0.0,0.3966,0.9019,Clear,False
-CTX199603106,2,17,tzv. lagunou jižně od Karlova mostu. Při této příležitosti bylo,,,ces,1.0,44.5,10,63,0.0,0,0,0,0,0,0.0,0.4231,0.9178,Clear,False
-CTX199603106,2,18,"odhaleno v delším úseku zdlvo, zaznamenané při stavebně historickém",,,ces,1.0,230.0,9,67,0.0,0,0,0,0,0,0.0,0.3966,0.8847,Clear,False
-CTX199603106,2,19,průzkumu objektu a interpretované jako torzo prvního pilíře Karlova,,,ces,1.0,99.0,9,67,0.0,0,0,0,0,0,0.0,0.4237,0.9139,Clear,False
-CTX199603106,2,20,mostu od staroměstského břehu. Ze zdivá byla v inkriminované,,,ces,1.0,96.0,9,60,0.0,0,0,0,0,0,0.0,0.4118,0.8375,Clear,False
-CTX199603106,2,21,"místnosti odhalena západní líc, probíhající ve směru SSZ - JJV.",,,ces,1.0,79.5,10,63,0.0,0,0,0,0,0,0.0,0.3725,0.8776,Clear,False
-CTX199603106,2,22,Vlastní hmota zdivá dosahovala až k východní stěně místnosti. Na,,,ces,1.0,51.25,10,64,0.0,0,0,0,0,0,0.0,0.3889,0.8606,Clear,False
-CTX199603106,2,23,nevelkém dochovaném úseku bylo zdivo překryto podlahou z cihel,,,ces,1.0,296.0,9,62,0.0,0,0,0,0,0,0.0,0.4259,0.8695,Clear,False
-CTX199603106,2,24,"formátu 30 x 14 x 6,5 cm. Před snižováním úrovně byla líc zdi",,,ces,1.0,31.12,13,61,0.0,0,0,0,0,0,0.1308,0.3659,0.7836,Clear,False
-CTX199603106,2,25,"zachycena pouze při severní stěně místnosti, do níž vystupovalo",,,ces,1.0,84.5,9,63,0.0,0,0,0,0,0,0.0,0.4259,0.9096,Clear,False
-CTX199603106,2,26,"torzo 70 cm vysoké a cm dlouhé. Po snížení podlahy bylo zřejmé, že",,,ces,1.0,27.0,13,66,0.0,0,0,0,0,0,0.0,0.42,0.8161,Clear,False
-CTX199603106,2,27,"se jednalo pouze o nepatrnou část zdivá, probíhajícího přes celou",,,ces,1.0,87.0,10,65,0.0,0,0,0,0,0,0.0,0.4545,0.8845,Clear,False
-CTX199603106,2,28,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,2,29,1,,,ces,0.7527,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.5508,Trash,False
-CTX199603106,3,1,délku místnosti a vertikálně pokračujícího do dále nesledované,,,ces,1.0,72.5,8,62,0.0,0,0,0,0,0,0.0,0.4364,0.8725,Clear,False
-CTX199603106,3,2,hloubky. Výkop v interiéru zasáhl do písčité vrstvy násypového,,,ces,0.8433,93.0,9,62,0.0,0,0,0,0,0,0.0,0.4151,0.8735,Clear,False
-CTX199603106,3,3,"charakteru s příměsí malty a úlomků opuky a cihel, ani ä v ní byly",,,ces,1.0,286.0,14,66,0.0,0,0,0,0,0,0.0607,0.4808,0.7651,Clear,False
-CTX199603106,3,4,nalezeny chronologicky citlivé artefakty. Vlastní hmota zdivá až,,,ces,0.9893,216.0,8,64,0.0,0,0,0,0,0,0.0,0.4107,0.8802,Clear,False
-CTX199603106,3,5,k východní zdi místnosti byla vyaděna výlučně z lomové opuky,,,ces,1.0,51.25,10,60,0.0,0,0,0,0,0,0.0,0.4314,0.8898,Clear,False
-CTX199603106,3,6,"nevelkých rozměrů, spojovaných vápennou maltou z hrubého říčního",,,ces,0.9999,54.5,8,64,0.0,0,0,0,0,0,0.0,0.4107,0.9125,Clear,False
-CTX199603106,3,7,"písku. Přestože opticky nevypadá podíl vápna v maltě jako výrazný,",,,ces,1.0,99.0,10,66,0.0,0,0,0,0,0,0.0,0.4182,0.9101,Clear,False
-CTX199603106,3,8,malta samotná je kvalitní a velmi pevná. Nejmarkantnější partií,,,ces,1.0,60.0,9,63,0.0,0,0,0,0,0,0.0,0.4074,0.8812,Clear,False
-CTX199603106,3,9,"zdivá byla její líc, tvořená řádkovaným obkladem z pečlivě",,,ces,1.0,93.0,9,58,0.0,0,0,0,0,0,0.0,0.4082,0.9026,Clear,False
-CTX199603106,3,10,opracovaných pískovcových kvádrů narezavěle Slutého zbarvení (foto,,,ces,1.0,197.0,7,66,0.0,0,0,0,0,0,0.0,0.4068,0.9236,Clear,False
-CTX199603106,3,11,1-3). Nejvyšší odhalená partie byla tvořena čtyřmi pískovcovými,,,ces,1.0,35.75,8,63,0.0,0,0,0,0,0,0.0,0.4314,0.9088,Clear,False
-CTX199603106,3,12,řádky o ce 1 kové výšce 156 cm. Dva horn í řádky o shodné výšce 35 cm,,,ces,1.0,32.0,17,69,0.0,0,0,0,0,0,0.0647,0.3913,0.7879,Clear,False
-CTX199603106,3,13,byly dochovány jen u severní stěny místnosti a představují doposud,,,ces,1.0,168.0,10,66,0.0,0,0,0,0,0,0.0,0.4211,0.8724,Clear,False
-CTX199603106,3,14,známý úsek zdivá. Nově byly odkryty dalSÍ dva pískovcové řádky.,,,ces,1.0,119.5,10,63,0.0,0,1,0,0,0,0.01,0.4231,0.9308,Clear,False
-CTX199603106,3,15,Horní z nich kolísá ve výšce 32 - 36 cm a u 5 kompletně dochovaných,,,ces,1.0,66.0,15,67,0.0,0,0,0,0,0,0.0167,0.383,0.7675,Clear,False
-CTX199603106,3,16,"kvádrů činil jejich horizontální rozměr 126, 120, 122, 130 a 116 cm.",,,ces,1.0,11.62,12,68,0.0,0,0,0,0,0,0.0,0.3684,0.7789,Clear,False
-CTX199603106,3,17,Spodní řádek dosahoval výšky 52 cm a skládal se z kvádrů dlouhých,,,ces,1.0,27.5,12,65,0.0,0,0,0,0,0,0.0,0.3654,0.8345,Clear,False
-CTX199603106,3,18,"70, 69, 52, 120, 46, 73, 78, 110 a 120 cm. Většina z kvádrů byla na",,,ces,1.0,11.44,16,67,0.0,0,0,0,0,0,0.0,0.3913,0.6971,Noisy,False
-CTX199603106,3,19,své lícové stěně opatřena důlkem pro lepší uchycení do nůžkové,,,ces,1.0,61.75,10,62,0.0,0,0,0,0,0,0.0,0.434,0.9197,Clear,False
-CTX199603106,3,20,"krenpy, při čemě podstatně větší procento výskytu důlku bylo",,,ces,1.0,54.5,9,60,0.0,0,0,0,0,0,0.0,0.3922,0.9458,Clear,False
-CTX199603106,3,21,zaznamenáno v dolní z dvou řádek souvisle dochovaného zdivá. Důlky,,,ces,1.0,112.0,10,66,0.0,0,0,0,0,0,0.0,0.4286,0.8806,Clear,False
-CTX199603106,3,22,"byly situovány horizontálně zhruba uprostřed kvádru, ve vertikálním",,,ces,1.0,96.0,8,67,0.0,0,0,0,0,0,0.0,0.4068,0.9073,Clear,False
-CTX199603106,3,23,rozměru byly umístěny blíže horní hrany ( zhruba 15 cm pod) lícového,,,ces,1.0,82.0,12,68,0.0,0,0,0,0,0,0.0,0.4151,0.8707,Clear,False
-CTX199603106,3,24,kvádru. Ma1 ta vyt1ačená z úzkých spár by1a rozetřena do plochy,,,ces,0.9943,185.0,11,63,0.0,0,0,0,2,0,0.0273,0.4082,0.8083,Clear,False
-CTX199603106,3,25,"kvádrů, dosahují ce tak aä 6 cm šfřky. Stavební úpravy v sousední m",,,ces,1.0,158.0,13,67,0.0,0,0,0,0,0,0.0192,0.4038,0.7871,Clear,False
-CTX199603106,3,26,"východním prostoru sklepa rovně zasáhly pod úroveň podlahy, i když",,,ces,1.0,40.0,10,66,0.0,0,0,0,0,0,0.0,0.3929,0.925,Clear,False
-CTX199603106,3,27,ve výrazně omezenější míře. Zhruba 1 m široké průkopy podél západní,,,ces,1.0,35.75,11,67,0.0,0,0,0,0,0,0.0227,0.4364,0.8705,Clear,False
-CTX199603106,3,28,části severní stěny a podél dodatečné příčky ve sklepě prostoru,,,ces,1.0,77.0,10,63,0.0,0,0,0,0,0,0.0,0.4074,0.8876,Clear,False
-CTX199603106,3,29,zaznamenaly znovu existenci opukového zdivá s maltou obdobného,,,ces,0.8238,404.0,8,62,0.0,0,0,0,0,0,0.0,0.4545,0.8437,Clear,False
-CTX199603106,3,30,složení jako v západní partií sklepa. V žádné z obou částí nebyla,,,ces,1.0,31.62,12,65,0.0,0,0,0,0,0,0.0,0.434,0.8806,Clear,False
-CTX199603106,3,31,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,3,32,2,,,ces,0.75,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.5508,Trash,False
-CTX199603106,4,1,3406/96,,,ces,0.75,29.25,1,7,0.0,0,0,0,0,0,0.0,0.0,0.5726,Trash,False
-CTX199603106,4,2,"hmota zdivá ukončena lícem, pouze v severní zdi stávajícího sklepa",,,ces,1.0,131.0,10,66,0.0,0,0,0,0,0,0.0,0.4286,0.9068,Clear,False
-CTX199603106,4,3,byla v nevelké dochované výšce ve vzdálenosti 420 cm od západní zdi,,,ces,1.0,40.5,12,67,0.0,0,0,0,0,0,0.0,0.3962,0.8339,Clear,False
-CTX199603106,4,4,"sklepní prostory 2jiStěna spára, tvořená pískovcovým kvádrem,",,,ces,1.0,112.0,7,61,0.0,0,1,0,0,0,0.0143,0.3654,0.9292,Clear,False
-CTX199603106,4,5,k němuž bylo dalSÍ pokračování zdi k východu přizděno. Pokračování,,,ces,1.0,79.5,10,66,0.0,0,1,0,0,0,0.01,0.4107,0.8851,Clear,False
-CTX199603106,4,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,7,pískovcového bloku směrem k jihu do interiéru sklepa bylo odlomeno,,,ces,0.9999,99.0,10,66,0.0,0,0,0,0,0,0.0,0.4386,0.8862,Clear,False
-CTX199603106,4,8,a jeho východní hrana probíhala v linii kolmé na průběh severní,,,ces,1.0,61.75,11,63,0.0,0,0,1,0,0,0.0318,0.434,0.8625,Clear,False
-CTX199603106,4,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,10,obvodové zdi (plánek č. 1).,,,ces,0.9965,99.0,5,27,0.0,0,0,0,0,0,0.0,0.3889,0.7576,Clear,False
-CTX199603106,4,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,12,Vyhodnocení nálezu,,,ces,0.999,70.0,2,18,0.0,0,0,0,0,0,0.0,0.4706,0.904,Clear,False
-CTX199603106,4,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,14,Vzhledem k situování odkrytého zdivá i k charakteru jeho,,,ces,1.0,123.0,9,56,0.0,0,0,0,0,0,0.0,0.4167,0.8314,Clear,False
-CTX199603106,4,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,16,pískovcového obkladu je samozřejmé uvažovat o příslušnosti,,,ces,1.0,47.5,7,58,0.0,0,0,0,0,0,0.0,0.4231,0.8628,Clear,False
-CTX199603106,4,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,18,zjištěného torza ke gotickému Karlovu mostu. V úvahu přichází již,,,ces,1.0,119.5,10,65,0.0,0,0,0,0,0,0.0,0.4182,0.878,Clear,False
-CTX199603106,4,19,"zmíněná interpretace jako pozůstatek dalSfho pilíře (Muk 1988,s.",,,ces,1.0,268.0,8,64,0.0,0,1,0,0,0,0.0125,0.4,0.861,Clear,False
-CTX199603106,4,20,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,21,27) nebo možná konstrukce zpevněné nábřežní zdi v partii paty mostu.,,,ces,1.0,87.0,11,68,0.0,0,0,0,0,0,0.0,0.3889,0.8902,Clear,False
-CTX199603106,4,22,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,23,Rozsah a dispozice odkrytého zdivá jednoznačně hovoří pro prvou,,,ces,1.0,61.75,9,63,0.0,0,0,0,0,0,0.0,0.4182,0.9173,Clear,False
-CTX199603106,4,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,25,variantu výkladu. Ve sklepni prostoře domu zůstala částečně,,,ces,1.0,63.75,8,59,0.0,0,0,0,0,0,0.0,0.4118,0.9054,Clear,False
-CTX199603106,4,26,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,27,zachovaná téměř celá západní líc pískovcového obkladu jižního zhlavl,,,ces,0.9999,115.5,9,68,0.0,0,0,0,0,0,0.0,0.4,0.9449,Clear,False
-CTX199603106,4,28,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,29,"gotického pilíře, jehož hrot předpokládáme v těsné blízkosti jižního",,,ces,1.0,34.25,9,68,0.0,0,0,0,0,0,0.0,0.3898,0.9249,Clear,False
-CTX199603106,4,30,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,31,dochovaného konce zdivá. Opukové jádro zdivá bylo zaznamenáno,,,ces,0.9997,148.0,8,61,0.0,0,0,0,0,0,0.0,0.4528,0.9281,Clear,False
-CTX199603106,4,32,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,33,"i v sousední sklepní prostoře, kde se již pískovcový obklad",,,ces,1.0,197.0,10,59,0.0,0,0,0,0,0,0.0,0.3878,0.8262,Clear,False
-CTX199603106,4,34,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,35,nedochoval (plánek č. 2). Je pravděpodobné. Že jako velmi kvalitní,,,ces,1.0,46.75,10,66,0.0,0,0,0,0,0,0.0,0.3922,0.8215,Clear,False
-CTX199603106,4,36,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,37,"stavební materiál byl použit při stavbě domu čp. 193 a je s podivem,",,,ces,1.0,77.0,13,68,0.0,0,0,0,0,0,0.0,0.4118,0.8313,Clear,False
-CTX199603106,4,38,že na druhé straně zhlaví přečkal období výstavby stávajícího,,,ces,1.0,25.0,9,61,0.0,0,0,0,0,0,0.0,0.3962,0.8893,Clear,False
-CTX199603106,4,39,"objektu ve 2. polovině 16. nebo na počátku 17. století (Muk 1988,",,,ces,1.0,17.75,12,65,0.0,0,0,0,0,0,0.0,0.45,0.7961,Clear,False
-CTX199603106,4,40,"s.27). Pískovcový kvádr, zjištěný v severní obvodové stěně sklepa,",,,ces,1.0,47.5,9,66,0.0,0,0,0,0,0,0.0,0.3725,0.8747,Clear,False
-CTX199603106,4,41,by mohl vzhledem k linii své vnější líce náležet již k vlastnímu,,,ces,1.0,79.5,12,64,0.0,0,0,1,0,0,0.0292,0.3585,0.8673,Clear,False
-CTX199603106,4,42,tělu pilíře a nikoliv k jeho jižnímu zhlaví. Niveleta koruny,,,ces,1.0,93.0,10,60,0.0,0,0,0,0,0,0.0,0.46,0.8781,Clear,False
-CTX199603106,4,43,"dochovaného zdivá (188,9 m) odpovídá horní, ústupkem an*ené parti1",,,ces,0.99,216.0,9,66,0.0152,1,0,0,0,0,0.0444,0.4375,0.7988,Clear,False
-CTX199603106,4,44,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,4,45,3,,,ces,0.75,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.5508,Trash,False
-CTX199603106,5,1,3406/45,,,ces,0.75,28.75,1,7,0.0,0,0,0,0,0,0.0,0.0,0.5727,Trash,False
-CTX199603106,5,2,zhlaví pilíře. Nasazení spodní cca o 65 cm roze f řené části,,,ces,1.0,108.5,12,60,0.0,0,0,0,0,0,0.0708,0.413,0.8208,Clear,False
-CTX199603106,5,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,4,"u následujících dvou pilířů mostu se nachází v úrovni 186,1 - 186,2",,,ces,1.0,25.38,12,67,0.0,0,0,0,0,0,0.0,0.4444,0.803,Clear,False
-CTX199603106,5,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,6,■ n. m. a přechod ve střechoví té vertikální ukončení zhlaví evidujeme,,,ces,1.0,131.0,12,70,0.0143,1,0,0,0,0,0.0,0.4107,0.7852,Clear,False
-CTX199603106,5,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,8,"ve výšce cca 192,8 • n. e. Rozpon oblouku mezi tímto pil I řem",,,ces,1.0,230.0,14,62,0.0161,1,0,0,0,0,0.0,0.439,0.7745,Clear,False
-CTX199603106,5,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,10,a pi 1ířem nesoucím Staroměstskou mosteckou věž by činí 1 zhruba 19 m.,,,ces,1.0,96.0,13,70,0.0,0,0,0,0,0,0.0192,0.434,0.8056,Clear,False
-CTX199603106,5,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,12,Vzdálenost mezi následujícími pilíři ve vltavském řečišti kolísá,,,ces,1.0,28.38,8,64,0.0,0,0,0,0,0,0.0,0.4035,0.9208,Clear,False
-CTX199603106,5,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,14,"zhruba mezi 20,5 až 22 m. Menší rozpon oblouku u břehu nepovažujeme",,,ces,0.9996,70.0,12,67,0.0,0,0,0,0,0,0.0,0.449,0.822,Clear,False
-CTX199603106,5,15,za výjimečný zjev. Provedenou dokumentací tak byla potvrzena,,,ces,1.0,30.12,8,60,0.0,0,0,0,0,0,0.0,0.4231,0.9131,Clear,False
-CTX199603106,5,16,existence donedávna neznámého pilíře Karlova mostu. Přesné situování,,,ces,1.0,87.0,8,68,0.0,0,0,0,0,0,0.0,0.45,0.9477,Clear,False
-CTX199603106,5,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,18,stabilizovaného pravého břehu Vltavy zůstává otázkou. Je třeba jej,,,ces,1.0,28.38,9,66,0.0,0,0,0,0,0,0.0,0.4386,0.924,Clear,False
-CTX199603106,5,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,20,"předpokládat v těsném východním sousedství zjištěného pilíře,",,,ces,1.0,19.12,7,61,0.0,0,0,0,0,0,0.0,0.3704,0.911,Clear,False
-CTX199603106,5,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,22,protože pozůstatky románské (kvádříkový dům v Colloredo,,,ces,1.0,119.5,7,55,0.0,0,0,0,0,0,0.0,0.3958,0.8846,Clear,False
-CTX199603106,5,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,24,- Mannsfeldském paláci čp. 189/1) a raně gotické zástavby,,,ces,0.9999,296.0,9,57,0.0,0,0,0,0,0,0.0,0.3659,0.7504,Clear,False
-CTX199603106,5,25,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,5,26,(křižovnícký kostel sv. Františka) jsou v bezprostřední blízkosti.,,,ces,1.0,27.88,8,66,0.0,0,0,0,0,0,0.0,0.3273,0.8733,Clear,False
-CTX199603106,6,1,Literatura,,,ces,0.75,163.0,1,10,0.0,0,0,0,0,0,0.0,0.5,0.8774,Clear,False
-CTX199603106,6,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,3,840./46,,,ces,0.75,131.0,1,7,0.0,0,0,0,0,0,0.0,0.0,0.5237,Trash,False
-CTX199603106,6,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,5,"Muk Jan 1988, Stavební historie, in: Pasport domu p. 193/1.",,,ces,0.7831,108.5,10,59,0.0169,0,0,0,0,0,0.0,0.3889,0.797,Clear,False
-CTX199603106,6,6,SÚRPMO Praha.,,,ces,0.9952,1456.0,2,13,0.0,0,0,0,0,0,0.0,0.3636,0.6976,Noisy,False
-CTX199603106,6,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,8,"Vilímková Milada - Ebel Martin 1988, Stručné dějiny budovy, in:",,,ces,0.953,79.5,10,63,0.0159,0,0,0,0,0,0.0,0.4348,0.8444,Clear,False
-CTX199603106,6,9,Pasport domu čp. 193/1. SÚRPMO Praha.,,,ces,0.9272,185.0,6,37,0.0,0,0,0,0,0,0.0,0.3333,0.7784,Clear,False
-CTX199603106,6,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,11,Popis fotografií,,,ces,0.9902,664.0,2,16,0.0,0,0,0,0,0,0.0,0.4667,0.7832,Clear,False
-CTX199603106,6,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,13,Foto 1. Odhalená líc pískovcového obkladu pilíře. Vlevo nevelký,,,ces,0.996,105.0,9,63,0.0,0,0,0,0,0,0.0,0.4423,0.9023,Clear,False
-CTX199603106,6,14,úsek dochovaných čtyř řádků. Pohled od jihozápadu. Archiv,,,ces,1.0,61.75,8,57,0.0,0,0,0,0,0,0.0,0.3958,0.9001,Clear,False
-CTX199603106,6,15,"PÚPP, č. fot. 56 814. Foto K. Fink.",,,ces,0.75,185.0,8,35,0.0,0,0,1,0,0,0.0437,0.2941,0.705,Clear,False
-CTX199603106,6,16,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,17,Foto 2. Střední partie odkryté líce pískovcového obkladu,,,ces,0.9994,70.0,8,56,0.0,0,0,0,0,0,0.0,0.4255,0.9009,Clear,False
-CTX199603106,6,18,pilíře s důlky pro uchycení kvádrů do zednických kleští. Pohled,,,ces,1.0,90.0,10,63,0.0,0,0,0,0,0,0.0,0.3774,0.8818,Clear,False
-CTX199603106,6,19,"od západu. Archiv PÚPP, č. fot. 56 815. Foto K. Fink.",,,ces,0.75,93.0,11,53,0.0,0,0,1,0,0,0.0318,0.3548,0.7653,Clear,False
-CTX199603106,6,20,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,21,Foto 3. Detail odhaleného líce pískovcového obkladu pilíře,,,ces,0.9964,127.0,8,58,0.0,0,0,0,0,0,0.0,0.4694,0.8917,Clear,False
-CTX199603106,6,22,"s rozetřenou maltou spár. Pohled od jihu. Archív PÚPP, č. fot.",,,ces,0.9999,356.0,11,62,0.0,0,0,1,0,0,0.0318,0.383,0.7865,Clear,False
-CTX199603106,6,23,56 816. Foto K. Fink.,,,ces,0.75,179.0,5,21,0.0,0,0,0,0,0,0.0,0.3333,0.6766,Noisy,False
-CTX199603106,6,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,25,Plánek č. 1. Půdorys domu čp. 193/1 v úrovni suterénu,,,ces,0.9929,70.0,10,53,0.0,0,0,0,0,0,0.0,0.4,0.7739,Clear,False
-CTX199603106,6,26,s vynesením nálezu. 1 - pískovcový obklad pilíře 2 - zachycené,,,ces,0.982,87.0,11,62,0.0,0,0,0,0,0,0.0455,0.4255,0.7895,Clear,False
-CTX199603106,6,27,opukové zdlvo jádra pilíře 3 - předpokládaný průběh líce,,,ces,1.0,153.0,9,56,0.0,0,0,0,0,0,0.0278,0.413,0.8496,Clear,False
-CTX199603106,6,28,Pilíře. Zaměření a kresba J. Mourek.,,,ces,1.0,153.0,6,36,0.0,0,0,0,0,0,0.0,0.4643,0.7887,Clear,False
-CTX199603106,6,29,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,30,Plánek č. 2. ŠlrSÍ situace prvního staroměstského pilíře.,,,ces,1.0,61.75,8,57,0.0,0,1,0,0,0,0.0125,0.3696,0.8566,Clear,False
-CTX199603106,6,31,Kresba J. Mourek.,,,ces,0.75,1280.0,3,17,0.0,0,0,0,0,0,0.0,0.3846,0.5935,Noisy,False
-CTX199603106,6,32,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,6,33,5,,,ces,0.75,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.5508,Trash,False
-CTX199603106,8,1,3,,,ces,0.75,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.5508,Trash,False
-CTX199603106,9,1,Plánek č. 1,,,ces,1.0,82.0,3,11,0.0,0,0,0,0,0,0.0833,0.2857,0.6598,Noisy,False
-CTX199603106,9,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,9,3,Vltava,,,ces,0.75,2176.0,1,6,0.0,0,0,0,0,0,0.0,0.3333,0.706,Noisy,False
-CTX199603106,9,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,Empty,False
-CTX199603106,9,5,■ 1 %2,,,,0.0,0.0,0,6,0.0,0,0,0,0,0,0.0,0.0,0.0,Non-text,False
-CTX199603106,9,6,3,,,ces,0.75,1.0,1,1,0.0,0,0,0,0,0,0.25,0.0,0.5508,Trash,False
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
+CTX199603106,1,1,3444/74,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,1,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,3,NÁLEZOVÁ ZPRÁVA O ARCHEOLOGICKÉM VÝZKUMU V DOMĚ ČP. 193/1 NA,,,ces,1.0,45.25,10,60,0.0,0,0,0,0,0,0.0,0.4222,0.5333,0.7943,Clear,True
+CTX199603106,1,4,KŘIŽOVNICKÉN NÁMĚSTÍ NA STARÉM MĚSTĚ PRAŽSKÉM,,,ces,1.0,53.75,6,45,0.0,0,0,0,0,0,0.0,0.35,0.375,0.8843,Clear,True
+CTX199603106,1,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,6,Číslo vý=kumu 21/93,,,ces,0.75,252.0,3,19,0.0526,1,0,0,0,0,0.1333,0.4545,0.5455,0.6209,Noisy,False
+CTX199603106,1,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,8,Obsah :,,,ces,0.75,520.0,2,7,0.1429,0,0,0,0,0,0.0,0.4,0.6,0.6244,Noisy,False
+CTX199603106,1,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,10,1. Dějiny objektu 1,,,ces,1.0,48.25,4,19,0.0,0,0,0,0,0,0.0625,0.4615,0.5385,0.6999,Noisy,False
+CTX199603106,1,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,12,"2, Popis nálezu i - 3",,,ces,0.979,260.0,6,21,0.0,0,0,0,0,0,0.0833,0.5,0.6667,0.6333,Noisy,False
+CTX199603106,1,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,14,3. Vyhodnocení nálezu 3 - 4,,,ces,0.9968,40.0,6,27,0.0,0,0,0,0,0,0.0833,0.4706,0.7059,0.6875,Noisy,False
+CTX199603106,1,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,16,4. Literatura 5,,,ces,0.75,324.0,3,15,0.0,0,0,0,0,0,0.0833,0.5,0.2,0.6202,Noisy,False
+CTX199603106,1,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,18,5. Popis fotografií a plánků 5,,,ces,1.0,174.0,6,30,0.0,0,0,0,0,0,0.0417,0.4545,0.3636,0.7302,Clear,False
+CTX199603106,1,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,20,6. Fotogra f 1 e 1 - 3,,,ces,0.75,112.0,8,22,0.0,0,0,0,0,0,0.3063,0.4444,0.3333,0.3999,Trash,False
+CTX199603106,1,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,22,"7, Plánky 1 - 2",,,ces,0.75,148.0,5,15,0.0,0,0,0,0,0,0.15,0.3333,0.5,0.5887,Noisy,False
+CTX199603106,1,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,1,24,V Prase 15. 1. 1995,,,ces,0.75,33.75,5,19,0.0,0,0,0,0,0,0.0,0.3333,0.6667,0.6512,Noisy,False
+CTX199603106,1,25,PhDr. Zdeněk Dragoun,,,ces,0.9986,223.0,3,20,0.0,0,1,0,0,1,0.0333,0.2941,0.5882,0.8587,Clear,False
+CTX199603106,2,1,Dějiny objektu,,,ces,1.0,54.5,2,14,0.0,0,0,0,0,0,0.0,0.4615,0.5385,0.9031,Clear,False
+CTX199603106,2,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,2,3,Jako nejstarší dm se v této bezprostřední blízkosti Karlova,,,ces,1.0,66.0,9,59,0.0,0,0,0,0,0,0.0,0.3529,0.4902,0.8458,Clear,False
+CTX199603106,2,4,mostu uvádí domek mosteckého celného v letech 1406 - 1430.,,,ces,0.9999,53.75,10,58,0.0,0,0,0,0,0,0.0,0.4103,0.5641,0.8204,Clear,False
+CTX199603106,2,5,Spolehlivé písemné doložená existence zástavby pochází až z roku,,,ces,0.9979,84.5,9,64,0.0,0,0,0,0,0,0.0,0.4286,0.5714,0.8804,Clear,False
+CTX199603106,2,6,"""1640, kdy je zde jednoznačné lokalizována ""nákladné vystavěný dům""",,,ces,1.0,34.75,9,67,0.0448,0,0,0,0,0,0.0,0.4118,0.549,0.8814,Clear,False
+CTX199603106,2,7,celnice. Tento objekt je zřetelně zachycen na Sadelerové prospektu,,,ces,0.9997,99.0,9,66,0.0,0,0,0,0,0,0.0,0.4035,0.5439,0.8765,Clear,False
+CTX199603106,2,8,"z roku 1606. V dalžím vývoj i byl o na budově dostaveno 3. patro,",,,ces,1.0,87.0,14,65,0.0,0,0,0,0,0,0.0,0.4318,0.6136,0.7884,Clear,False
+CTX199603106,2,9,které zaznamenávají mladší ikonografické prameny včetně Langveilova,,,ces,1.0,39.25,7,67,0.0,0,0,0,0,0,0.0,0.4262,0.4262,0.9591,Clear,False
+CTX199603106,2,10,modelu. Dnešní vzhled budovy je výsledkem klasicistní přestavby,,,ces,1.0,58.0,8,63,0.0,0,0,0,0,0,0.0,0.3636,0.6364,0.9107,Clear,False
+CTX199603106,2,11,"z roku 1841 (Vilímková - Ebel 1988, s. 1 - 4).",,,ces,0.7857,41.75,11,46,0.0,0,0,0,0,0,0.0227,0.4211,0.5789,0.6845,Noisy,False
+CTX199603106,2,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,2,13,Popis nálezu,,,ces,0.9915,472.0,2,12,0.0,0,0,0,0,0,0.0,0.4545,0.7273,0.8176,Clear,False
+CTX199603106,2,14,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,2,15,V březnu 1993 byla v rámci rekonstrukčních prací na objektu,,,ces,1.0,23.88,10,59,0.0,0,0,0,0,0,0.0,0.3478,0.4783,0.8342,Clear,False
+CTX199603106,2,16,snižována podlaha v jedné z místnosti při západní fasádě objektu nad,,,ces,1.0,58.0,11,68,0.0,0,0,0,0,0,0.0,0.3966,0.5345,0.9019,Clear,False
+CTX199603106,2,17,tzv. lagunou jižně od Karlova mostu. Při této příležitosti bylo,,,ces,1.0,44.5,10,63,0.0,0,0,0,0,0,0.0,0.4231,0.4615,0.9178,Clear,False
+CTX199603106,2,18,"odhaleno v delším úseku zdlvo, zaznamenané při stavebně historickém",,,ces,1.0,230.0,9,67,0.0,0,0,0,0,0,0.0,0.3966,0.5517,0.8847,Clear,False
+CTX199603106,2,19,průzkumu objektu a interpretované jako torzo prvního pilíře Karlova,,,ces,1.0,99.0,9,67,0.0,0,0,0,0,0,0.0,0.4237,0.4746,0.9139,Clear,False
+CTX199603106,2,20,mostu od staroměstského břehu. Ze zdivá byla v inkriminované,,,ces,1.0,96.0,9,60,0.0,0,0,0,0,0,0.0,0.4118,0.5686,0.8375,Clear,False
+CTX199603106,2,21,"místnosti odhalena západní líc, probíhající ve směru SSZ - JJV.",,,ces,1.0,79.5,10,63,0.0,0,0,0,0,0,0.0,0.3725,0.4902,0.8776,Clear,False
+CTX199603106,2,22,Vlastní hmota zdivá dosahovala až k východní stěně místnosti. Na,,,ces,1.0,50.5,10,64,0.0,0,0,0,0,0,0.0,0.3889,0.463,0.8608,Clear,False
+CTX199603106,2,23,nevelkém dochovaném úseku bylo zdivo překryto podlahou z cihel,,,ces,1.0,296.0,9,62,0.0,0,0,0,0,0,0.0,0.4259,0.5926,0.8695,Clear,False
+CTX199603106,2,24,"formátu 30 x 14 x 6,5 cm. Před snižováním úrovně byla líc zdi",,,ces,1.0,31.12,13,61,0.0,0,0,0,0,0,0.1308,0.3659,0.5366,0.7836,Clear,False
+CTX199603106,2,25,"zachycena pouze při severní stěně místnosti, do níž vystupovalo",,,ces,1.0,84.5,9,63,0.0,0,0,0,0,0,0.0,0.4259,0.6111,0.9096,Clear,False
+CTX199603106,2,26,"torzo 70 cm vysoké a cm dlouhé. Po snížení podlahy bylo zřejmé, že",,,ces,1.0,27.0,13,66,0.0,0,0,0,0,0,0.0,0.42,0.58,0.8161,Clear,False
+CTX199603106,2,27,"se jednalo pouze o nepatrnou část zdivá, probíhajícího přes celou",,,ces,1.0,87.0,10,65,0.0,0,0,0,0,0,0.0,0.4545,0.5818,0.8845,Clear,False
+CTX199603106,2,28,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,2,29,1,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,3,1,délku místnosti a vertikálně pokračujícího do dále nesledované,,,ces,1.0,72.5,8,62,0.0,0,0,0,0,0,0.0,0.4364,0.4727,0.8725,Clear,False
+CTX199603106,3,2,hloubky. Výkop v interiéru zasáhl do písčité vrstvy násypového,,,ces,0.8433,93.0,9,62,0.0,0,0,0,0,0,0.0,0.4151,0.5283,0.8735,Clear,False
+CTX199603106,3,3,"charakteru s příměsí malty a úlomků opuky a cihel, ani ä v ní byly",,,ces,1.0,286.0,14,66,0.0,0,0,0,0,0,0.0607,0.4808,0.4038,0.6999,Noisy,False
+CTX199603106,3,4,nalezeny chronologicky citlivé artefakty. Vlastní hmota zdivá až,,,ces,0.9893,216.0,8,64,0.0,0,0,0,0,0,0.0,0.4107,0.3929,0.8802,Clear,False
+CTX199603106,3,5,k východní zdi místnosti byla vyaděna výlučně z lomové opuky,,,ces,1.0,51.25,10,60,0.0,0,0,0,0,0,0.0,0.4314,0.5686,0.8898,Clear,False
+CTX199603106,3,6,"nevelkých rozměrů, spojovaných vápennou maltou z hrubého říčního",,,ces,0.9999,54.5,8,64,0.0,0,0,0,0,0,0.0,0.4107,0.5179,0.9125,Clear,False
+CTX199603106,3,7,"písku. Přestože opticky nevypadá podíl vápna v maltě jako výrazný,",,,ces,1.0,99.0,10,66,0.0,0,0,0,0,0,0.0,0.4182,0.5273,0.9101,Clear,False
+CTX199603106,3,8,malta samotná je kvalitní a velmi pevná. Nejmarkantnější partií,,,ces,1.0,60.0,9,63,0.0,0,0,0,0,0,0.0,0.4074,0.3889,0.8812,Clear,False
+CTX199603106,3,9,"zdivá byla její líc, tvořená řádkovaným obkladem z pečlivě",,,ces,1.0,93.0,9,58,0.0,0,0,0,0,0,0.0,0.4082,0.4898,0.9026,Clear,False
+CTX199603106,3,10,opracovaných pískovcových kvádrů narezavěle Slutého zbarvení (foto,,,ces,1.0,197.0,7,66,0.0,0,0,0,0,0,0.0,0.4068,0.4746,0.9236,Clear,False
+CTX199603106,3,11,1-3). Nejvyšší odhalená partie byla tvořena čtyřmi pískovcovými,,,ces,1.0,35.75,8,63,0.0,0,0,0,0,0,0.0,0.4314,0.4902,0.9088,Clear,False
+CTX199603106,3,12,řádky o ce 1 kové výšce 156 cm. Dva horn í řádky o shodné výšce 35 cm,,,ces,1.0,32.0,17,69,0.0,0,0,0,0,0,0.0647,0.3913,0.5,0.7879,Clear,False
+CTX199603106,3,13,byly dochovány jen u severní stěny místnosti a představují doposud,,,ces,1.0,168.0,10,66,0.0,0,0,0,0,0,0.0,0.4211,0.6667,0.8724,Clear,False
+CTX199603106,3,14,známý úsek zdivá. Nově byly odkryty dalSÍ dva pískovcové řádky.,,,ces,1.0,119.5,10,63,0.0,0,1,0,0,0,0.01,0.4231,0.5769,0.9308,Clear,False
+CTX199603106,3,15,Horní z nich kolísá ve výšce 32 - 36 cm a u 5 kompletně dochovaných,,,ces,1.0,66.0,15,67,0.0,0,0,0,0,0,0.0167,0.383,0.4681,0.7675,Clear,False
+CTX199603106,3,16,"kvádrů činil jejich horizontální rozměr 126, 120, 122, 130 a 116 cm.",,,ces,1.0,11.62,12,68,0.0,0,0,0,0,0,0.0,0.3684,0.3421,0.7789,Clear,False
+CTX199603106,3,17,Spodní řádek dosahoval výšky 52 cm a skládal se z kvádrů dlouhých,,,ces,1.0,27.5,12,65,0.0,0,0,0,0,0,0.0,0.3654,0.4808,0.8345,Clear,False
+CTX199603106,3,18,"70, 69, 52, 120, 46, 73, 78, 110 a 120 cm. Většina z kvádrů byla na",,,ces,1.0,11.44,16,67,0.0,0,0,0,0,0,0.0,0.3913,0.3913,0.6971,Noisy,False
+CTX199603106,3,19,své lícové stěně opatřena důlkem pro lepší uchycení do nůžkové,,,ces,1.0,61.75,10,62,0.0,0,0,0,0,0,0.0,0.434,0.4906,0.9197,Clear,False
+CTX199603106,3,20,"krenpy, při čemě podstatně větší procento výskytu důlku bylo",,,ces,1.0,54.5,9,60,0.0,0,0,0,0,0,0.0,0.3922,0.5294,0.9458,Clear,False
+CTX199603106,3,21,zaznamenáno v dolní z dvou řádek souvisle dochovaného zdivá. Důlky,,,ces,1.0,112.0,10,66,0.0,0,0,0,0,0,0.0,0.4286,0.6429,0.8806,Clear,False
+CTX199603106,3,22,"byly situovány horizontálně zhruba uprostřed kvádru, ve vertikálním",,,ces,1.0,96.0,8,67,0.0,0,0,0,0,0,0.0,0.4068,0.5424,0.9073,Clear,False
+CTX199603106,3,23,rozměru byly umístěny blíže horní hrany ( zhruba 15 cm pod) lícového,,,ces,1.0,82.0,12,68,0.0,0,0,0,0,0,0.0,0.4151,0.5283,0.8707,Clear,False
+CTX199603106,3,24,kvádru. Ma1 ta vyt1ačená z úzkých spár by1a rozetřena do plochy,,,ces,0.9943,185.0,11,63,0.0,0,0,0,2,0,0.0273,0.4082,0.4898,0.8083,Clear,False
+CTX199603106,3,25,"kvádrů, dosahují ce tak aä 6 cm šfřky. Stavební úpravy v sousední m",,,ces,1.0,158.0,13,67,0.0,0,0,0,0,0,0.0192,0.4038,0.5,0.7871,Clear,False
+CTX199603106,3,26,"východním prostoru sklepa rovně zasáhly pod úroveň podlahy, i když",,,ces,1.0,40.0,10,66,0.0,0,0,0,0,0,0.0,0.3929,0.5536,0.925,Clear,False
+CTX199603106,3,27,ve výrazně omezenější míře. Zhruba 1 m široké průkopy podél západní,,,ces,1.0,35.25,11,67,0.0,0,0,0,0,0,0.0227,0.4364,0.5273,0.8706,Clear,False
+CTX199603106,3,28,části severní stěny a podél dodatečné příčky ve sklepě prostoru,,,ces,1.0,77.0,10,63,0.0,0,0,0,0,0,0.0,0.4074,0.537,0.8876,Clear,False
+CTX199603106,3,29,zaznamenaly znovu existenci opukového zdivá s maltou obdobného,,,ces,0.8238,404.0,8,62,0.0,0,0,0,0,0,0.0,0.4545,0.6727,0.8437,Clear,False
+CTX199603106,3,30,složení jako v západní partií sklepa. V žádné z obou částí nebyla,,,ces,1.0,31.62,12,65,0.0,0,0,0,0,0,0.0,0.434,0.5094,0.8806,Clear,False
+CTX199603106,3,31,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,3,32,2,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,4,1,3406/96,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,4,2,"hmota zdivá ukončena lícem, pouze v severní zdi stávajícího sklepa",,,ces,1.0,131.0,10,66,0.0,0,0,0,0,0,0.0,0.4286,0.5536,0.9068,Clear,False
+CTX199603106,4,3,byla v nevelké dochované výšce ve vzdálenosti 420 cm od západní zdi,,,ces,1.0,40.5,12,67,0.0,0,0,0,0,0,0.0,0.3962,0.6038,0.8339,Clear,False
+CTX199603106,4,4,"sklepní prostory 2jiStěna spára, tvořená pískovcovým kvádrem,",,,ces,1.0,112.0,7,61,0.0,0,1,0,0,0,0.0143,0.3654,0.5385,0.9292,Clear,False
+CTX199603106,4,5,k němuž bylo dalSÍ pokračování zdi k východu přizděno. Pokračování,,,ces,1.0,79.5,10,66,0.0,0,1,0,0,0,0.01,0.4107,0.5179,0.8851,Clear,False
+CTX199603106,4,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,7,pískovcového bloku směrem k jihu do interiéru sklepa bylo odlomeno,,,ces,0.9999,99.0,10,66,0.0,0,0,0,0,0,0.0,0.4386,0.5789,0.8862,Clear,False
+CTX199603106,4,8,a jeho východní hrana probíhala v linii kolmé na průběh severní,,,ces,1.0,61.75,11,63,0.0,0,0,0,0,0,0.0,0.434,0.4151,0.8688,Clear,False
+CTX199603106,4,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,10,obvodové zdi (plánek č. 1).,,,ces,0.9965,99.0,5,27,0.0,0,0,0,0,0,0.0,0.3889,0.6667,0.7576,Clear,False
+CTX199603106,4,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,12,Vyhodnocení nálezu,,,ces,0.999,70.0,2,18,0.0,0,0,0,0,0,0.0,0.4706,0.7059,0.904,Clear,False
+CTX199603106,4,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,14,Vzhledem k situování odkrytého zdivá i k charakteru jeho,,,ces,1.0,123.0,9,56,0.0,0,0,0,0,0,0.0,0.4167,0.4583,0.8314,Clear,False
+CTX199603106,4,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,16,pískovcového obkladu je samozřejmé uvažovat o příslušnosti,,,ces,1.0,47.5,7,58,0.0,0,0,0,0,0,0.0,0.4231,0.5577,0.8628,Clear,False
+CTX199603106,4,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,18,zjištěného torza ke gotickému Karlovu mostu. V úvahu přichází již,,,ces,1.0,119.5,10,65,0.0,0,0,0,0,0,0.0,0.4182,0.3818,0.878,Clear,False
+CTX199603106,4,19,"zmíněná interpretace jako pozůstatek dalSfho pilíře (Muk 1988,s.",,,ces,1.0,268.0,8,64,0.0,0,1,0,0,0,0.0125,0.4,0.46,0.6999,Noisy,False
+CTX199603106,4,20,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,21,27) nebo možná konstrukce zpevněné nábřežní zdi v partii paty mostu.,,,ces,1.0,87.0,11,68,0.0,0,0,0,0,0,0.0,0.3889,0.5926,0.8902,Clear,False
+CTX199603106,4,22,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,23,Rozsah a dispozice odkrytého zdivá jednoznačně hovoří pro prvou,,,ces,1.0,61.75,9,63,0.0,0,0,0,0,0,0.0,0.4182,0.5818,0.9173,Clear,False
+CTX199603106,4,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,25,variantu výkladu. Ve sklepni prostoře domu zůstala částečně,,,ces,1.0,63.75,8,59,0.0,0,0,0,0,0,0.0,0.4118,0.5098,0.9054,Clear,False
+CTX199603106,4,26,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,27,zachovaná téměř celá západní líc pískovcového obkladu jižního zhlavl,,,ces,0.9999,115.5,9,68,0.0,0,0,0,0,0,0.0,0.4,0.4167,0.9449,Clear,False
+CTX199603106,4,28,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,29,"gotického pilíře, jehož hrot předpokládáme v těsné blízkosti jižního",,,ces,1.0,34.25,9,68,0.0,0,0,0,0,0,0.0,0.3898,0.4068,0.9249,Clear,False
+CTX199603106,4,30,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,31,dochovaného konce zdivá. Opukové jádro zdivá bylo zaznamenáno,,,ces,0.9997,148.0,8,61,0.0,0,0,0,0,0,0.0,0.4528,0.6226,0.9281,Clear,False
+CTX199603106,4,32,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,33,"i v sousední sklepní prostoře, kde se již pískovcový obklad",,,ces,1.0,197.0,10,59,0.0,0,0,0,0,0,0.0,0.3878,0.6122,0.8262,Clear,False
+CTX199603106,4,34,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,35,nedochoval (plánek č. 2). Je pravděpodobné. Že jako velmi kvalitní,,,ces,1.0,46.75,10,66,0.0,0,0,0,0,0,0.0,0.3922,0.5098,0.8215,Clear,False
+CTX199603106,4,36,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,37,"stavební materiál byl použit při stavbě domu čp. 193 a je s podivem,",,,ces,1.0,77.0,13,68,0.0,0,0,0,0,0,0.0,0.4118,0.5686,0.8313,Clear,False
+CTX199603106,4,38,že na druhé straně zhlaví přečkal období výstavby stávajícího,,,ces,1.0,25.0,9,61,0.0,0,0,0,0,0,0.0,0.3962,0.434,0.8893,Clear,False
+CTX199603106,4,39,"objektu ve 2. polovině 16. nebo na počátku 17. století (Muk 1988,",,,ces,1.0,17.75,12,65,0.0,0,0,0,0,0,0.0,0.45,0.6,0.7961,Clear,False
+CTX199603106,4,40,"s.27). Pískovcový kvádr, zjištěný v severní obvodové stěně sklepa,",,,ces,1.0,47.5,9,66,0.0,0,0,0,0,0,0.0,0.3725,0.5686,0.8747,Clear,False
+CTX199603106,4,41,by mohl vzhledem k linii své vnější líce náležet již k vlastnímu,,,ces,1.0,79.5,12,64,0.0,0,0,0,0,0,0.0,0.3585,0.4528,0.8731,Clear,False
+CTX199603106,4,42,tělu pilíře a nikoliv k jeho jižnímu zhlaví. Niveleta koruny,,,ces,1.0,93.0,10,60,0.0,0,0,0,0,0,0.0,0.46,0.42,0.8781,Clear,False
+CTX199603106,4,43,"dochovaného zdivá (188,9 m) odpovídá horní, ústupkem an*ené parti1",,,ces,0.99,216.0,9,66,0.0152,1,0,0,0,0,0.0444,0.4375,0.5625,0.6999,Noisy,False
+CTX199603106,4,44,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,4,45,3,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,5,1,3406/45,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,5,2,zhlaví pilíře. Nasazení spodní cca o 65 cm roze f řené části,,,ces,1.0,108.5,12,60,0.0,0,0,0,0,0,0.0708,0.413,0.4783,0.8208,Clear,False
+CTX199603106,5,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,4,"u následujících dvou pilířů mostu se nachází v úrovni 186,1 - 186,2",,,ces,1.0,25.38,12,67,0.0,0,0,0,0,0,0.0,0.4444,0.5111,0.803,Clear,False
+CTX199603106,5,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,6,■ n. m. a přechod ve střechoví té vertikální ukončení zhlaví evidujeme,,,ces,1.0,131.0,12,70,0.0143,1,0,0,0,0,0.0,0.4107,0.5179,0.6999,Noisy,False
+CTX199603106,5,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,8,"ve výšce cca 192,8 • n. e. Rozpon oblouku mezi tímto pil I řem",,,ces,1.0,230.0,14,62,0.0161,1,0,0,0,0,0.0,0.439,0.5854,0.6999,Noisy,False
+CTX199603106,5,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,10,a pi 1ířem nesoucím Staroměstskou mosteckou věž by činí 1 zhruba 19 m.,,,ces,1.0,96.0,13,70,0.0,0,0,0,0,0,0.0192,0.434,0.566,0.8056,Clear,False
+CTX199603106,5,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,12,Vzdálenost mezi následujícími pilíři ve vltavském řečišti kolísá,,,ces,1.0,28.38,8,64,0.0,0,0,0,0,0,0.0,0.4035,0.4561,0.9208,Clear,False
+CTX199603106,5,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,14,"zhruba mezi 20,5 až 22 m. Menší rozpon oblouku u břehu nepovažujeme",,,ces,0.9996,70.0,12,67,0.0,0,0,0,0,0,0.0,0.449,0.6735,0.822,Clear,False
+CTX199603106,5,15,za výjimečný zjev. Provedenou dokumentací tak byla potvrzena,,,ces,1.0,30.12,8,60,0.0,0,0,0,0,0,0.0,0.4231,0.5962,0.9131,Clear,False
+CTX199603106,5,16,existence donedávna neznámého pilíře Karlova mostu. Přesné situování,,,ces,1.0,87.0,8,68,0.0,0,0,0,0,0,0.0,0.45,0.6,0.9477,Clear,False
+CTX199603106,5,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,18,stabilizovaného pravého břehu Vltavy zůstává otázkou. Je třeba jej,,,ces,1.0,28.38,9,66,0.0,0,0,0,0,0,0.0,0.4386,0.4737,0.924,Clear,False
+CTX199603106,5,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,20,"předpokládat v těsném východním sousedství zjištěného pilíře,",,,ces,1.0,19.12,7,61,0.0,0,0,0,0,0,0.0,0.3704,0.5185,0.911,Clear,False
+CTX199603106,5,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,22,protože pozůstatky románské (kvádříkový dům v Colloredo,,,ces,1.0,119.5,7,55,0.0,0,0,0,0,0,0.0,0.3958,0.5208,0.8846,Clear,False
+CTX199603106,5,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,24,- Mannsfeldském paláci čp. 189/1) a raně gotické zástavby,,,ces,0.9999,296.0,9,57,0.0,0,0,0,0,0,0.0,0.3659,0.4146,0.7504,Clear,False
+CTX199603106,5,25,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,5,26,(křižovnícký kostel sv. Františka) jsou v bezprostřední blízkosti.,,,ces,1.0,27.88,8,66,0.0,0,0,0,0,0,0.0,0.3273,0.4727,0.8733,Clear,False
+CTX199603106,6,1,Literatura,,,ces,0.75,163.0,1,10,0.0,0,0,0,0,0,0.0,0.5,0.2,0.8774,Clear,False
+CTX199603106,6,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,3,840./46,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,6,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,5,"Muk Jan 1988, Stavební historie, in: Pasport domu p. 193/1.",,,ces,0.7831,108.5,10,59,0.0169,0,0,0,0,0,0.0,0.3889,0.5833,0.797,Clear,False
+CTX199603106,6,6,SÚRPMO Praha.,,,ces,0.9952,1456.0,2,13,0.0,0,0,0,0,0,0.0,0.3636,0.4545,0.6976,Noisy,False
+CTX199603106,6,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,8,"Vilímková Milada - Ebel Martin 1988, Stručné dějiny budovy, in:",,,ces,0.953,79.5,10,63,0.0159,0,0,0,0,0,0.0,0.4348,0.5217,0.8444,Clear,False
+CTX199603106,6,9,Pasport domu čp. 193/1. SÚRPMO Praha.,,,ces,0.9272,185.0,6,37,0.0,0,0,0,0,0,0.0,0.3333,0.5833,0.7784,Clear,False
+CTX199603106,6,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,11,Popis fotografií,,,ces,0.9902,664.0,2,16,0.0,0,0,0,0,0,0.0,0.4667,0.4,0.7832,Clear,False
+CTX199603106,6,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,13,Foto 1. Odhalená líc pískovcového obkladu pilíře. Vlevo nevelký,,,ces,0.996,105.0,9,63,0.0,0,0,0,0,0,0.0,0.4423,0.5192,0.9023,Clear,False
+CTX199603106,6,14,úsek dochovaných čtyř řádků. Pohled od jihozápadu. Archiv,,,ces,1.0,61.75,8,57,0.0,0,0,0,0,0,0.0,0.3958,0.4375,0.9001,Clear,False
+CTX199603106,6,15,"PÚPP, č. fot. 56 814. Foto K. Fink.",,,ces,0.75,185.0,8,35,0.0,0,0,1,0,0,0.0437,0.2941,0.4118,0.6999,Noisy,False
+CTX199603106,6,16,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,17,Foto 2. Střední partie odkryté líce pískovcového obkladu,,,ces,0.9994,70.0,8,56,0.0,0,0,0,0,0,0.0,0.4255,0.4894,0.9009,Clear,False
+CTX199603106,6,18,pilíře s důlky pro uchycení kvádrů do zednických kleští. Pohled,,,ces,1.0,90.0,10,63,0.0,0,0,0,0,0,0.0,0.3774,0.4528,0.8818,Clear,False
+CTX199603106,6,19,"od západu. Archiv PÚPP, č. fot. 56 815. Foto K. Fink.",,,ces,0.75,93.0,11,53,0.0,0,0,1,0,0,0.0318,0.3548,0.4516,0.6999,Noisy,False
+CTX199603106,6,20,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,21,Foto 3. Detail odhaleného líce pískovcového obkladu pilíře,,,ces,0.9964,127.0,8,58,0.0,0,0,0,0,0,0.0,0.4694,0.4694,0.8917,Clear,False
+CTX199603106,6,22,"s rozetřenou maltou spár. Pohled od jihu. Archív PÚPP, č. fot.",,,ces,0.9999,356.0,11,62,0.0,0,0,1,0,0,0.0318,0.383,0.5319,0.7865,Clear,False
+CTX199603106,6,23,56 816. Foto K. Fink.,,,ces,0.75,185.0,5,21,0.0,0,0,0,0,0,0.0,0.3333,0.3333,0.6754,Noisy,False
+CTX199603106,6,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,25,Plánek č. 1. Půdorys domu čp. 193/1 v úrovni suterénu,,,ces,0.9929,70.0,10,53,0.0,0,0,0,0,0,0.0,0.4,0.6286,0.7739,Clear,False
+CTX199603106,6,26,s vynesením nálezu. 1 - pískovcový obklad pilíře 2 - zachycené,,,ces,0.982,87.0,11,62,0.0,0,0,0,0,0,0.0455,0.4255,0.5957,0.7895,Clear,False
+CTX199603106,6,27,opukové zdlvo jádra pilíře 3 - předpokládaný průběh líce,,,ces,1.0,158.0,9,56,0.0,0,0,0,0,0,0.0278,0.413,0.4783,0.8486,Clear,False
+CTX199603106,6,28,Pilíře. Zaměření a kresba J. Mourek.,,,ces,1.0,153.0,6,36,0.0,0,0,0,0,0,0.0,0.4643,0.4643,0.7887,Clear,False
+CTX199603106,6,29,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,30,Plánek č. 2. ŠlrSÍ situace prvního staroměstského pilíře.,,,ces,1.0,61.75,8,57,0.0,0,1,0,0,0,0.0125,0.3696,0.413,0.8566,Clear,False
+CTX199603106,6,31,Kresba J. Mourek.,,,ces,0.75,1280.0,3,17,0.0,0,0,0,0,0,0.0,0.3846,0.5385,0.5935,Noisy,False
+CTX199603106,6,32,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,6,33,5,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,8,1,3,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,9,1,Plánek č. 1,,,ces,1.0,79.5,3,11,0.0,0,0,0,0,0,0.0833,0.2857,0.4286,0.6603,Noisy,False
+CTX199603106,9,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,9,3,Vltava,,,ces,0.75,2176.0,1,6,0.0,0,0,0,0,0,0.0,0.3333,0.3333,0.6999,Noisy,False
+CTX199603106,9,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX199603106,9,5,■ 1 %2,,,,0.0,0.0,0,6,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX199603106,9,6,3,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
