@@ -184,7 +184,7 @@ def detect_gibberish_words(text: str) -> int:
             count += 1
             continue
         v_ratio = vowel_count / len(core)
-        if v_ratio < 0.15 or v_ratio > 0.80:
+        if v_ratio < 0.20 or v_ratio > 0.80:
             count += 1
     return count
 
@@ -202,28 +202,17 @@ def detect_letter_digit_letter(text: str) -> int:
 
 
 def detect_mid_uppercase(text: str) -> int:
+    # Strict regex: any lowercase letter immediately followed by an uppercase letter
+    # inside a word body is a reliable OCR mid-capitalisation artifact.
+    # The word must not be all-caps (e.g. acronyms) and must be at least 2 chars.
+    _RE_MID_UPPER = re.compile(r'[a-záčďéěíňóřšťůúýžäöü][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽÄÖÜ]')
     count = 0
     for word in text.split():
         core = word.strip('.,;:!?()[]"\'-/')
-        if len(core) < 2 or core.isupper(): continue
-        flagged = False
-        lower_run = 0
-        for ch in core:
-            if ch.islower():
-                lower_run += 1
-            elif ch.isupper() and lower_run >= 1:
-                flagged = True
-                break
-        if not flagged and len(core) >= 5:
-            upper_start = 0
-            for ch in core:
-                if ch.isupper():
-                    upper_start += 1
-                else:
-                    break
-            if (upper_start >= 3 and upper_start < len(core) and core[upper_start].islower()):
-                flagged = True
-        if flagged: count += 1
+        if len(core) < 2 or core.isupper():
+            continue
+        if _RE_MID_UPPER.search(core):
+            count += 1
     return count
 
 
@@ -240,6 +229,48 @@ def is_all_caps_line(text: str) -> bool:
 def pre_filter_line(line: str) -> tuple[str, str]:
     clean_text = line.strip()
     if not clean_text: return "Empty", ""
+
+    # ------------------------------------------------------------------
+    # Phase 1 – OCR Normalisation (applied before any quality routing)
+    # ------------------------------------------------------------------
+
+    # 1a. Digit-letter substitution repair
+    # Classic Type-1 OCR swap: isolated digit 1 inside a word → 'l',
+    # and leading/mid digit 2 that forms a word-initial consonant → 'z'.
+    # Only fires when the surrounding characters are alphabetic so we
+    # don't corrupt genuine numbers.
+    clean_text = re.sub(r'(?<=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])1(?=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])', 'l', clean_text)
+    clean_text = re.sub(r'\b2(?=[a-záčďéěíňóřšťůúýž])', 'z', clean_text)
+
+    # 1b. Prostrkávání / spaced-letter repair
+    # Headers OCR'd with one space between every letter, e.g.:
+    #   "S K U H R O V N A D B Ě L O U"  →  "Skuhrov nad Bělou"
+    # Detection: 4+ consecutive single uppercase/diacritic letters each
+    # separated by exactly one space.
+    _RE_SPACED_CAPS = re.compile(
+        r'(?<!\S)'                          # preceded by whitespace or start
+        r'([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ] ){3,}'    # 3+ spaced caps
+        r'[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]'            # final cap (no trailing space)
+        r'(?!\S)'                           # followed by whitespace or end
+    )
+    def _collapse_spaced_caps(m: re.Match) -> str:
+        # Collapse spaces and title-case the run
+        letters = m.group(0).replace(' ', '')
+        return letters[0].upper() + letters[1:].lower()
+    clean_text = _RE_SPACED_CAPS.sub(_collapse_spaced_caps, clean_text)
+
+    # 1c. OCR word-split repair for lone inserted characters
+    # Handles cases like "Fotogra f ie" → "Fotografie" where OCR places a
+    # single letter as its own token inside a word.  Conservative: only
+    # collapses a lone single character that is flanked by word-body fragments
+    # of at least 3 letters each on both sides.
+    clean_text = re.sub(
+        r'([a-záčďéěíňóřšťůúýž]{3,})\s([a-záčďéěíňóřšťůúýž])\s(?=[a-záčďéěíňóřšťůúýž]{2,})',
+        lambda m: m.group(1) + m.group(2),
+        clean_text,
+    )
+
+    # ------------------------------------------------------------------
 
     metadata_markers = [
         "Tb.", "č.neg", "neg.", "obr.", "obr ", "neg ", "Tb ", "č. neg",
@@ -420,10 +451,13 @@ def categorize_line(
         if is_all_caps_line(text_source) and vowel_ratio < 0.15:
             return "Trash"
 
-        if wc >= 3:
+        # wc >= 1: even single-word reversed/mirrored fragments should be caught.
+        # Threshold lowered 0.85 → 0.80 to compensate for DistilGPT-2's weaker
+        # perplexity signal on this artifact type.
+        if wc >= 1:
             rot_ratio = compute_rotatable_ratio(text_source)
             has_cz_diacs = any(c in _LANG_DIACRITICS["ces"] for c in text_source)
-            if rot_ratio > 0.85 and not has_cz_diacs:
+            if rot_ratio > 0.80 and not has_cz_diacs:
                 return "Trash"
 
         if wc > 0:
@@ -477,6 +511,15 @@ def categorize_line(
 
         if weird_ratio > 0.08 and perplexity > 200.0 and quality_score < 0.85:
             return "Noisy"
+
+        # --- Ultra-low perplexity bypass (Change 7) ---
+        # If the GPU model is nearly certain the text is valid Czech prose,
+        # trust it over structural nitpicking (isolated punctuation, heavy
+        # dashes, etc.).  Only fires for multi-word strings so single tokens
+        # with low perplexity (e.g. common abbreviations) aren't promoted.
+        if perplexity < 50.0 and wc >= 3:
+            return "Clear"
+        # -----------------------------------------------
 
         if re.search(r'[.,!?][a-zA-Z]', text_source):
             if quality_score >= CATEG_NOISY_SCORE_MAX:
@@ -556,8 +599,14 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
 
 def is_non_text(text: str) -> bool:
     if not text: return False
+    # Czech postal code + city: e.g. "625 00 Brno" or "118 01 Praha 1 – Malá Strana"
+    # These are readable geographic metadata and must not be discarded.
+    if re.match(r'^\d{3}\s\d{2}\s+[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]', text.strip()):
+        return False
     if RE_NON_TEXT.match(text.strip()): return True
-    if len(text) < 15 and compute_digit_ratio(text) > 0.4: return True
+    # Relaxed from 0.4 → 0.5: short lines with addresses or codes shouldn't
+    # be caught by the digit ratio alone if they have real letters too.
+    if len(text) < 15 and compute_digit_ratio(text) > 0.5: return True
     return False
 
 
