@@ -1,28 +1,28 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
-CTX201601688,1,1,SKU H R O V N A D B Ě L O U,,,ces,0.9998,153.0,13,27,0.0,0,0,0,0,0,0.1962,0.4,0.6,0.3999,Trash,True
+CTX201601688,1,1,SKU Hrovnadbělou,,,ces,0.9999,1928.0,2,16,0.0,0,0,0,0,0,0.0,0.4,0.6,0.6999,Noisy,False
 CTX201601688,1,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX201601688,1,3,"Hrad, sběry 1998",,,ces,0.9994,168.0,3,16,0.0,0,0,0,0,0,0.0,0.3333,0.4444,0.7699,Clear,False
 CTX201601688,1,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX201601688,1,5,Muzeum a galerie v Rychnově n. Kn.,,,ces,1.0,314.0,7,34,0.0,0,0,0,0,0,0.0,0.4231,0.5769,0.688,Noisy,False
+CTX201601688,1,5,Muzeumagalerie v Rychnově n. Kn.,,,ces,1.0,334.0,5,32,0.0,0,0,0,0,0,0.0,0.4231,0.5769,0.6727,Noisy,False
 CTX201601688,1,6,PhDr. Martina Beková,,,ces,0.75,286.0,3,20,0.0,0,1,0,0,1,0.0333,0.3529,0.4706,0.6999,Noisy,False
 CTX201601688,1,7,Bohumír Dragoun,,,ces,0.8297,856.0,2,15,0.0,0,0,0,0,0,0.0,0.4286,0.5714,0.6999,Noisy,False
 CTX201601688,2,1,"SKUHROV NAD BĚLOU hrad, sběry 1998",,,ces,0.9998,153.0,6,34,0.0,0,0,0,0,0,0.0,0.375,0.5417,0.8475,Clear,False
 CTX201601688,2,2,Geomorfologický popis,,,ces,0.8482,216.0,2,21,0.0,0,0,0,0,0,0.0,0.45,0.5,0.8778,Clear,False
-CTX201601688,2,3,"Hrad se nachází na ostrožně nad řekou Bělou, na úpatí svahů svírajících tok Bělé v rámci",,,ces,1.0,66.0,16,88,0.0,0,0,0,0,0,0.0,0.4306,0.3889,0.8975,Clear,False
+CTX201601688,2,3,"Hrad se nachází na ostrožně nad řekou Bělou, na úpatí svahů svírajících tok Bělévrámci",,,ces,1.0,131.0,14,86,0.0,0,0,0,0,0,0.0,0.4306,0.3889,0.8932,Clear,False
 CTX201601688,2,4,"skuhrovské části Podorlické pahorkatiny (SLÁDEK, J. 1977: Zeměpisné vymezení a",,,ces,0.9983,82.0,10,78,0.0128,0,0,0,0,0,0.0,0.4098,0.4918,0.8613,Clear,False
 CTX201601688,2,5,"regionální členění in: Příroda Orlických hor a Podorlicka, Praha 1977, 13-87).",,,ces,1.0,82.0,11,78,0.0128,0,0,0,0,0,0.0,0.4259,0.3333,0.8371,Clear,False
 CTX201601688,2,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX201601688,2,7,Podloží a půdní pokryv,,,ces,1.0,135.0,4,22,0.0,0,0,0,0,0,0.0,0.4211,0.5789,0.82,Clear,False
+CTX201601688,2,7,Podložíapůdní pokryv,,,ces,0.9995,472.0,2,20,0.0,0,0,0,0,0,0.0,0.4211,0.5789,0.8256,Clear,False
 CTX201601688,2,8,"Oglejené půdy na fylitech ( NÁLEVKA, B. 1977: Půdní poměry, in: Příroda Orlických hor a",,,ces,1.0,127.0,15,87,0.023,0,0,0,0,0,0.0,0.4286,0.4286,0.8278,Clear,False
-CTX201601688,2,9,"Podorlicka, Praha 1977, 287-308.).",,,ces,0.75,36.25,4,34,0.0,0,0,0,0,0,0.0,0.4,0.3333,0.6999,Noisy,False
+CTX201601688,2,9,"Podorlicka, Praha 1977, 287-308.).",,,ces,0.75,36.25,4,34,0.0,0,0,0,0,0,0.0,0.4,0.3333,0.7415,Clear,False
 CTX201601688,2,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX201601688,2,11,Historie naleziště,,,ces,1.0,708.0,2,18,0.0,0,0,0,0,0,0.0,0.4706,0.3529,0.6999,Noisy,False
-CTX201601688,2,12,"Hrad na ostrožně, dvojdílný (předhradí a vlastní hradní areál, patrně plášťový). Patrně založen",,,ces,1.0,51.25,13,95,0.0,0,0,0,0,0,0.0,0.3718,0.4103,0.9281,Clear,False
+CTX201601688,2,12,"Hrad na ostrožně, dvojdílný (předhradíavlastní hradní areál, patrně plášťový). Patrně založen",,,ces,1.0,70.0,11,93,0.0,0,0,0,0,0,0.0,0.3718,0.4103,0.941,Clear,False
 CTX201601688,2,13,"Tasem ze Skuhrova kolem r. 1320, za Jiřího z Poděbrad pustne, v roce 1558 jmenován jako",,,ces,1.0,79.5,16,87,0.0,0,0,0,0,0,0.0,0.3934,0.5738,0.833,Clear,False
-CTX201601688,2,14,"pustý (Musil, F., Svoboda, L. 1998: Hrady zámky a tvrze okresu Rychnov nad Kněžnou, s.",,,ces,0.9945,58.0,15,86,0.0116,0,0,0,0,0,0.0,0.3729,0.5932,0.8535,Clear,False
+CTX201601688,2,14,"pustý (Musil, F., Svoboda, L. 1998: Hrady zámkyatvrze okresu Rychnov nad Kněžnou, s.",,,ces,0.992,63.75,13,84,0.0119,0,0,0,0,0,0.0,0.3729,0.5932,0.8575,Clear,False
 CTX201601688,2,15,153-156).,,,,0.0,0.0,0,9,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX201601688,2,16,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX201601688,2,17,Okolnosti a cíl výzkumu,,,ces,0.9993,179.0,4,23,0.0,0,0,0,0,0,0.0,0.45,0.5,0.8122,Clear,False
+CTX201601688,2,17,Okolnostiacíl výzkumu,,,ces,0.9373,430.0,2,21,0.0,0,0,0,0,0,0.0,0.45,0.5,0.835,Clear,False
 CTX201601688,2,18,Sběr.,,,ces,1.0,1864.0,1,5,0.0,0,0,0,0,0,0.0,0.25,0.5,0.665,Noisy,False
 CTX201601688,2,19,"1. Sběr J. Slavík, Památkový ústav Pardubice.",,,ces,0.9997,35.75,7,45,0.0,0,0,0,0,0,0.0,0.3824,0.4412,0.8344,Clear,False
 CTX201601688,2,20,2. Sběr archeologický kroužek Villa Nova pod vedením D. Vícha.,,,ces,0.9991,123.0,10,62,0.0,0,0,0,0,0,0.0,0.4082,0.4694,0.8677,Clear,False
@@ -37,18 +37,18 @@ CTX201601688,2,28,Popis terénní situace,,,ces,1.0,1208.0,3,21,0.0,0,0,0,0,0,0.
 CTX201601688,2,29,1. Sběr J. Slavík nad vnitřním příkopem jak ze strany předhradí tak vlastního hradu (viz,,,ces,1.0,74.5,15,88,0.0,0,0,0,0,0,0.0,0.3286,0.4571,0.9063,Clear,False
 CTX201601688,2,30,plánek polohy 1). Nalezeny 4 fragmenty keramiky. 5. 3. 1998,,,ces,0.9874,38.0,10,59,0.0,0,0,0,0,0,0.025,0.4324,0.5405,0.7795,Clear,False
 CTX201601688,2,31,"2. Sběr archeologický kroužek Villa Nova 11. 8. 1998, úbočí hradního kopce směrem",,,ces,1.0,45.25,13,81,0.0,0,0,0,0,0,0.0,0.4211,0.4211,0.8698,Clear,False
-CTX201601688,2,32,"k vesnici (viz. plánek poloha 2). Nalezeno 14 drobnějších fragmentů, okraje a zl.",,,ces,0.9999,74.5,13,81,0.0,0,0,0,0,0,0.0,0.3833,0.4667,0.8359,Clear,False
+CTX201601688,2,32,"k vesnici (viz. plánek poloha 2). Nalezeno 14 drobnějších fragmentů, okrajeazl.",,,ces,0.9997,102.0,11,79,0.0,0,0,0,0,0,0.0,0.3833,0.4667,0.8616,Clear,False
 CTX201601688,2,33,"zásobnice, vše 14. -15. stol.",,,ces,0.768,56.25,5,29,0.0,0,0,0,0,0,0.0,0.375,0.625,0.6999,Noisy,False
 CTX201601688,2,34,"3. Sběr J. Slavík, jádro hradu (viz plánek polohy 3). Nalezeny 3 fragmenty keramiky. 5.",,,ces,0.9994,96.0,15,87,0.0,0,0,0,0,0,0.0167,0.3934,0.4918,0.8461,Clear,False
 CTX201601688,2,35,3.1998,,,,0.0,0.0,0,6,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX201601688,2,36,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX201601688,2,37,Zhodnocení a interpretace výsledků výzkumu,,,ces,1.0,25.0,5,42,0.0,0,0,0,0,0,0.0,0.4211,0.5526,0.877,Clear,False
-CTX201601688,2,38,"Nalezeny zlomky keramiky z kulturních vrstev existence hradu, 14. -15. stol., naprostá",,,ces,0.9974,119.5,12,86,0.0,0,0,0,0,0,0.0,0.3692,0.5385,0.8731,Clear,False
+CTX201601688,2,37,Zhodnoceníainterpretace výsledků výzkumu,,,ces,1.0,72.5,3,40,0.0,0,0,0,0,0,0.0,0.4211,0.5526,0.9255,Clear,False
+CTX201601688,2,38,"Nalezeny zlomky keramikyzkulturních vrstev existence hradu, 14. -15. stol., naprostá",,,ces,0.9973,216.0,10,84,0.0,0,0,0,0,1,0.0,0.3692,0.5385,0.8665,Clear,False
 CTX201601688,2,39,převaha zl. z 15. stol.,,,ces,1.0,60.0,5,23,0.0,0,0,0,0,0,0.0,0.2857,0.5,0.6999,Noisy,False
 CTX201601688,2,40,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX201601688,2,41,Seznam nálezů,,,ces,1.0,49.75,2,13,0.0,0,0,0,0,0,0.0,0.4167,0.6667,0.9031,Clear,False
 CTX201601688,2,42,Viz příloha,,,ces,1.0,230.0,2,11,0.0,0,0,0,0,0,0.0,0.4,0.4,0.865,Clear,False
-CTX201601688,3,1,Přír.č.,,,ces,1.0,115.5,1,7,0.0,0,0,0,0,0,0.0,0.2,0.2,0.6999,Noisy,False
+CTX201601688,3,1,Přír.č.,,,ces,1.0,115.5,1,7,0.0,0,0,0,0,1,0.0,0.2,0.2,0.6999,Noisy,False
 CTX201601688,3,2,Název,,,ces,1.0,30.62,1,5,0.0,0,0,0,0,0,0.0,0.4,0.8,0.8989,Clear,False
 CTX201601688,3,3,Počet,,,ces,0.75,8.5,1,5,0.0,0,0,0,0,0,0.0,0.4,0.6,0.9033,Clear,False
 CTX201601688,3,4,Výzkum,,,ces,1.0,35.75,1,6,0.0,0,0,0,0,0,0.0,0.3333,0.6667,0.8988,Clear,False
@@ -71,7 +71,7 @@ CTX201601688,3,20,poloha 1),,,ces,0.75,286.0,2,9,0.0,0,0,0,0,0,0.125,0.5,0.5,0.6
 CTX201601688,3,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX201601688,3,22,A1737,,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX201601688,3,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX201601688,3,24,3 atypické zlomky z výdutí,,,ces,0.916,268.0,5,26,0.0,0,0,0,0,0,0.05,0.4286,0.4762,0.7424,Clear,False
+CTX201601688,3,24,3 atypické zlomkyzvýdutí,,,ces,0.787,304.0,3,24,0.0,0,0,0,0,0,0.0833,0.4286,0.4762,0.6999,Noisy,False
 CTX201601688,3,25,"nepolévaných nádob, prakticky bílé",,,ces,0.9932,536.0,4,34,0.0,0,0,0,0,0,0.0,0.4,0.4333,0.8209,Clear,False
 CTX201601688,3,26,"zboží, 2. pol. 15. stol. + zlomek",,,ces,0.75,46.0,7,33,0.0303,0,0,0,0,0,0.0,0.3333,0.6111,0.6999,Noisy,False
 CTX201601688,3,27,okraje - velmi nizké vysazené,,,ces,1.0,237.0,5,29,0.0,0,0,0,0,0,0.0,0.4583,0.5417,0.8147,Clear,False
@@ -118,8 +118,8 @@ CTX201601688,3,67,2 drobné atypické zlomky + 1,,,ces,0.75,99.0,6,28,0.0357,0,0
 CTX201601688,3,68,"zlomek dna - bílé zboží, 2. pol. 15.",,,ces,0.9968,131.0,8,36,0.0,0,0,0,0,0,0.0,0.381,0.5714,0.7695,Clear,False
 CTX201601688,3,69,"století, váha 14,6g.",,,ces,0.75,216.0,3,20,0.0,0,0,0,0,0,0.0,0.4167,0.3333,0.7468,Clear,False
 CTX201601688,3,70,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX201601688,3,71,Terénní a obrazová dokumentace,,,ces,0.9995,314.0,4,30,0.0,0,0,0,0,0,0.0,0.4815,0.5556,0.7922,Clear,False
-CTX201601688,3,72,"Obr. 1. SKUHROV NAD BĚLOU hrad, sběry 1998. Umístění lokality a plánek hradu se zákresem",,,ces,1.0,82.0,15,88,0.0,0,0,0,0,0,0.0,0.4154,0.5077,0.8825,Clear,False
+CTX201601688,3,71,Terénníaobrazová dokumentace,,,ces,0.9929,1544.0,2,28,0.0,0,0,0,0,0,0.0,0.4815,0.5556,0.6999,Noisy,False
+CTX201601688,3,72,"Obr. 1. SKUHROV NAD BĚLOU hrad, sběry 1998. Umístění lokalityaplánek hradu se zákresem",,,ces,1.0,123.0,13,86,0.0,0,0,0,0,0,0.0,0.4154,0.5077,0.8829,Clear,False
 CTX201601688,3,73,sběrů.,,,ces,1.0,502.0,1,6,0.0,0,0,0,0,0,0.0,0.4,0.4,0.6999,Noisy,False
 CTX201601688,3,74,"Obr. 2. SKUHROV NAD BĚLOU hrad, sběry 1998. Nálezy -poloha 1 (př. č. A678/2015).",,,ces,0.9913,60.0,14,80,0.0,0,0,0,0,0,0.0179,0.3953,0.5349,0.8084,Clear,False
 CTX201601688,3,75,"Obr. 3. SKUHROV NAD BĚLOU hrad, sběry 1998. Nálezy -poloha 2 (př. č. A679/201).",,,ces,0.9916,72.5,14,79,0.0,0,0,0,0,0,0.0179,0.3953,0.5349,0.8045,Clear,False
@@ -128,11 +128,11 @@ CTX201601688,3,77,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX201601688,3,78,V Rychnově nad Kněžnou dne 27. 11. 2015,,,ces,1.0,21.75,8,39,0.0,0,0,0,0,0,0.0,0.3636,0.6364,0.7744,Clear,False
 CTX201601688,3,79,PhDr. Martina Beková,,,ces,0.75,286.0,3,20,0.0,0,1,0,0,1,0.0333,0.3529,0.4706,0.6999,Noisy,False
 CTX201601688,3,80,Bohumír Dragoun,,,ces,0.8297,856.0,2,15,0.0,0,0,0,0,0,0.0,0.4286,0.5714,0.6999,Noisy,False
-CTX201601688,4,1,"Obr. 1. SKUHROV NAD BĚLOU hrad, sběry 1998. Umístění lokality a plánek hradu se",,,ces,1.0,70.0,14,79,0.0,0,0,0,0,0,0.0,0.4211,0.4912,0.8692,Clear,False
+CTX201601688,4,1,"Obr. 1. SKUHROV NAD BĚLOU hrad, sběry 1998. Umístění lokalityaplánek hradu se",,,ces,1.0,108.5,12,77,0.0,0,0,0,0,0,0.0,0.4211,0.4912,0.8699,Clear,False
 CTX201601688,4,2,zákresem sběrů.,,,ces,1.0,286.0,2,15,0.0,0,0,0,0,0,0.0,0.3846,0.5385,0.8445,Clear,False
 CTX201601688,5,1,"Obr. 2. SKUHROV NAD BĚLOU hrad, sběry 1998. Nálezy - poloha 1 (př. č. A678/2015).",,,ces,0.991,53.0,15,81,0.0,0,0,0,0,0,0.0167,0.3953,0.5349,0.7999,Clear,False
 CTX201601688,6,1,"Obr. 3. SKUHROV NAD BĚLOU hrad, sběry 1998. Nálezy - poloha 2 (př. č. A679/2015).",,,ces,0.99,53.75,15,81,0.0,0,0,0,0,0,0.0167,0.3953,0.5349,0.7998,Clear,False
-CTX201601688,7,1,Stitrr ■ Seil ■■,,,ces,0.75,9152.0,4,16,0.1875,2,0,0,0,0,0.1,0.3,0.3,0.3999,Trash,False
+CTX201601688,7,1,Stitrr ■ Seil ■■,,,ces,0.75,9152.0,4,16,0.1875,2,0,0,0,1,0.1,0.3,0.3,0.3999,Trash,False
 CTX201601688,7,2,"Tu,",,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX201601688,7,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX201601688,7,4,"Skulrov nD-lou,",,,ces,0.75,5568.0,2,15,0.0,0,1,0,0,0,0.05,0.3333,0.6667,0.6783,Noisy,False

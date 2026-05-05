@@ -1,87 +1,87 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
 CTX192100040,2,1,STÁTNÍ ARCHAEOLOGICKÝ ÚSTAV ‘o/2/,,,ces,0.9991,96.0,4,33,0.0303,1,0,0,0,0,0.1,0.4615,0.3077,0.6999,Noisy,False
 CTX192100040,2,2,"Došlo dne 6/,1921 Lodenice, dne 7.února 1921.",,,ces,0.7892,58.0,7,45,0.0,0,0,0,0,0,0.0,0.4583,0.6667,0.8255,Clear,False
-CTX192100040,2,3,Počet příloh I,,,ces,1.0,278.0,3,14,0.0,0,0,0,0,0,0.0,0.4167,0.4167,0.7584,Clear,False
-CTX192100040,2,4,P. T. Pan,,,ces,0.75,105.0,3,9,0.0,0,0,0,0,0,0.0,0.2,0.6,0.6436,Noisy,False
-CTX192100040,2,5,"Jos. A. Jíra ,",,,ces,0.9943,368.0,4,14,0.0,0,0,0,0,0,0.0,0.5,0.25,0.6475,Noisy,False
-CTX192100040,2,6,konservátor pro Čechy v P r a z e 1,,,ces,0.9899,90.0,10,35,0.0,0,0,0,0,0,0.11,0.36,0.56,0.685,Noisy,False
+CTX192100040,2,3,Počet příloh I,,,ces,1.0,286.0,3,14,0.0,0,0,0,0,0,0.0,0.4167,0.4167,0.7568,Clear,False
+CTX192100040,2,4,P. T. Pan,,,ces,0.75,99.0,3,9,0.0,0,0,0,0,0,0.0,0.2,0.6,0.6448,Noisy,False
+CTX192100040,2,5,"Jos. A. Jíra ,",,,ces,0.9943,346.0,4,14,0.0,0,0,0,0,0,0.0,0.5,0.25,0.6519,Noisy,False
+CTX192100040,2,6,konservátor pro Čechy v P r a z e 1,,,ces,0.9899,93.0,10,35,0.0,0,0,0,0,0,0.11,0.36,0.56,0.6844,Noisy,False
 CTX192100040,2,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,2,8,K ct.dopisu Vašemu ze dne 31.XII.m.r.dovoluji si,,,ces,0.9953,908.0,7,48,0.0,0,0,0,0,0,0.0,0.4286,0.6286,0.5741,Noisy,False
+CTX192100040,2,8,K ct.dopisu Vašemu ze dne 31.XII.m.r.dovoluji si,,,ces,0.9953,968.0,7,48,0.0,0,0,0,0,0,0.0,0.4286,0.6286,0.5621,Noisy,False
 CTX192100040,2,9,odpověděti trochu obšírněji:,,,ces,1.0,93.0,3,28,0.0357,0,0,0,0,0,0.0,0.44,0.44,0.9023,Clear,False
 CTX192100040,2,10,"Směrem sev.záp.od městyse Loděnice,1 hod.cesty - vzdušnou",,,ces,1.0,664.0,7,57,0.0,0,0,0,0,0,0.0,0.4,0.7111,0.6999,Noisy,False
 CTX192100040,2,11,čarou as 4 km - za obcí Nenačovicemi při pravém břehu lodenického potoka,,,ces,0.9999,153.0,13,72,0.0,0,0,0,0,0,0.0192,0.4483,0.5,0.8194,Clear,False
-CTX192100040,2,12,"zv."" Kačák "" prostírají se v údolí luka a pole .Louka čí s. katastr. 222 jest",,,ces,0.9999,286.0,16,77,0.026,0,0,0,0,0,0.0,0.4151,0.3774,0.6999,Noisy,False
-CTX192100040,2,13,majetkem velkostatku v Chrustenicích - pole s ní sousedící čís.kat.218 jest,,,ces,1.0,368.0,11,75,0.0,0,0,0,0,0,0.0,0.3729,0.4746,0.6999,Noisy,False
-CTX192100040,2,14,v majetku rolníka p.Rabocha z Nenačovic. _,,,ces,0.8836,940.0,7,42,0.0238,0,1,0,0,0,0.0143,0.3939,0.4545,0.6083,Noisy,False
+CTX192100040,2,12,"zv."" Kačák "" prostírají se v údolí lukaapole .Louka čí s. katastr. 222 jest",,,ces,0.9999,356.0,14,75,0.0267,0,0,0,0,0,0.0,0.4151,0.3774,0.6999,Noisy,False
+CTX192100040,2,13,majetkem velkostatku v Chrustenicích - polesní sousedící čís.kat.218 jest,,,ces,1.0,458.0,9,73,0.0,0,0,0,0,1,0.0,0.3729,0.4746,0.6999,Noisy,False
+CTX192100040,2,14,v majetku rolníka p.Rabocha z Nenačovic. _,,,ces,0.8836,968.0,7,42,0.0238,0,0,0,0,0,0.0143,0.3939,0.4545,0.6027,Noisy,False
 CTX192100040,2,15,Laskavostí tohoto pána bylo mi dovoleno již roku 1919 na,,,ces,1.0,60.0,10,56,0.0,0,0,0,0,0,0.0,0.4651,0.5349,0.854,Clear,False
 CTX192100040,2,16,e •,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX192100040,2,17,"Poli $om zv. "" Holonohy "" kopati.Název tento upoutal moji pozornost nejen",,,ces,0.9972,688.0,12,73,0.0411,1,1,0,0,0,0.0417,0.4386,0.6491,0.6999,Noisy,False
-CTX192100040,2,18,"svým jménem, nýbrž i lidovým podáním,které tvrdí,že v místech těchto stávala",,,ces,1.0,27.0,11,76,0.0,0,0,0,0,0,0.0,0.3492,0.4603,0.6999,Noisy,False
+CTX192100040,2,17,"Poli $om zv. "" Holonohy "" kopati.Název tento upoutal moji pozornost nejen",,,ces,0.9972,664.0,12,73,0.0411,1,0,0,0,0,0.0417,0.4386,0.6491,0.6999,Noisy,False
+CTX192100040,2,18,"svým jménem, nýbržilidovým podáním,které tvrdí,že v místech těchto stávala",,,ces,1.0,35.75,9,74,0.0,0,0,0,0,0,0.0,0.3492,0.4603,0.9254,Clear,False
 CTX192100040,2,19,"kdysi obec,která byla za válek husitských zničena.",,,ces,1.0,430.0,7,50,0.0,0,0,0,0,0,0.0,0.4048,0.4524,0.6999,Noisy,False
-CTX192100040,2,20,Pátral Jsem v první řadě po stříbrných penězích .které prý,,,ces,1.0,47.5,10,58,0.0,0,0,0,0,0,0.0,0.3125,0.4167,0.6999,Noisy,False
-CTX192100040,2,21,"prý po dlouhé léta jmenovaný majetník vyorával, sám a děti poblíže pasoucí",,,ces,1.0,185.0,12,74,0.0,0,0,0,0,0,0.0,0.4677,0.4839,0.8843,Clear,False
-CTX192100040,2,22,"sbíral.Z těchto peněz viděl jsem pouze jeden kus,nebot ostatní z neznalosti'",,,ces,1.0,153.0,11,76,0.0132,0,1,0,0,0,0.0091,0.381,0.6032,0.6999,Noisy,False
+CTX192100040,2,20,Pátral Jsemvprvní řadě po stříbrných penězích .které prý,,,ces,1.0,87.0,8,56,0.0,0,0,0,0,0,0.0,0.3125,0.4167,0.6999,Noisy,False
+CTX192100040,2,21,"prý po dlouhé léta jmenovaný majetník vyorával, sámaděti poblíže pasoucí",,,ces,1.0,286.0,10,72,0.0,0,0,0,0,0,0.0,0.4677,0.4839,0.882,Clear,False
+CTX192100040,2,22,"sbíral.Z těchto peněz viděl jsem pouze jeden kus,nebot ostatnízneznalosti'",,,ces,1.0,216.0,9,74,0.0135,0,0,0,0,0,0.0111,0.381,0.6032,0.6999,Noisy,False
 CTX192100040,2,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,2,24,byly pohozeny a jsou tudíž ztraceny.Počet Jich odhaduji více než na 100 kusí,,,ces,1.0,131.0,13,76,0.0,0,1,0,0,0,0.0077,0.45,0.55,0.6999,Noisy,False
-CTX192100040,2,25,Dne 27.IX. 1919. šel Jsem odpoledne opět na toto pole a štast,,,ces,0.9997,63.75,12,61,0.0,0,0,0,0,0,0.0,0.4146,0.6098,0.6999,Noisy,False
-CTX192100040,2,26,nou náhodou jsem nalezl 1 peníz.Počal Jsem ihned pátrati na onom mistě a,,,ces,1.0,223.0,13,72,0.0,0,1,0,0,0,0.0269,0.431,0.5862,0.6999,Noisy,False
+CTX192100040,2,24,byly pohozenyajsou tudíž ztraceny.Počet Jich odhaduji více než na 100 kusí,,,ces,1.0,203.0,11,74,0.0,0,0,0,0,0,0.0091,0.45,0.55,0.6999,Noisy,False
+CTX192100040,2,25,Dne 27.IX. 1919. šel Jsem odpoledne opět na toto poleaštast,,,ces,0.9998,82.0,10,59,0.0,0,0,0,0,0,0.0,0.4146,0.6098,0.6999,Noisy,False
+CTX192100040,2,26,nou náhodou jsem nalezl 1 peníz.Počal Jsem ihned pátrati na onom mistě a,,,ces,1.0,223.0,13,72,0.0,0,0,0,0,0,0.0269,0.431,0.5862,0.6999,Noisy,False
 CTX192100040,2,27,"při opatrném odhrabání asi 20 cm ornice nalezl jsem celé "" hnízdy n: na",,,ces,1.0,135.0,14,71,0.0282,0,0,0,0,0,0.0,0.3889,0.5,0.8312,Clear,False
-CTX192100040,2,28,hromádce bylo složeno celkem 120 kusů stříbrných těchto peržzů pouze v zemi.,,,ces,1.0,30.12,12,76,0.0,0,0,0,0,0,0.0,0.377,0.541,0.9173,Clear,False
+CTX192100040,2,28,hromádce bylo složeno celkem 120 kusů stříbrných těchto peržzů pouzevzemi.,,,ces,1.0,43.25,10,74,0.0,0,0,0,0,0,0.0,0.377,0.541,0.9326,Clear,False
 CTX192100040,3,1,. ■■ . . 4/2/ .,,,,0.0,0.0,0,15,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,3,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,3,3,"Při nich ani kolem nebyla žádná nádoba,neb střepina.Byly tudí*",,,ces,1.0,131.0,9,62,0.0161,1,1,0,0,0,0.0556,0.4314,0.549,0.6999,Noisy,False
-CTX192100040,3,4,"uložony prostě v zemi.Ten den pršelo stále od rána tak,že peníze ty byly",,,ces,0.9999,209.0,13,72,0.0,0,1,0,0,0,0.0077,0.431,0.6034,0.6999,Noisy,False
-CTX192100040,3,5,"celé hlínou pomazané.Byly pa sobě složeny, takže jsem je musel jen nehtem",,,ces,1.0,216.0,12,73,0.0,0,1,0,0,0,0.0083,0.4333,0.6,0.6999,Noisy,False
-CTX192100040,3,6,"odlupovat*.bych je nepoškodil .Ještě dnes jsou hlinou znečistěný,neb neznám",,,ces,1.0,127.0,9,75,0.0133,1,0,0,0,0,0.0444,0.3968,0.619,0.6999,Noisy,False
-CTX192100040,3,7,"způsobu,Jak je očistiti,sniž by se setřela krásně zelená patina,která mnohé",,,ces,1.0,93.0,10,75,0.0,0,1,0,0,0,0.01,0.4286,0.4762,0.6999,Noisy,False
-CTX192100040,3,8,"z nich pokrývá.Na straně Jedné Jest dvojocasý lev s vyplazeným Jazykem,na",,,ces,0.9991,252.0,11,73,0.0,0,1,0,0,0,0.0091,0.377,0.541,0.6999,Noisy,False
-CTX192100040,3,9,"druhé koruna královská s nápisem kolem: WENZEZLAUS TERCLUS,",,,ces,0.9973,216.0,8,59,0.0169,0,0,0,0,0,0.0,0.38,0.56,0.8715,Clear,False
-CTX192100040,3,10,nad ním neznatelný nápis - snad Del gratia dux v .,,,ces,0.9445,404.0,11,50,0.0,0,0,0,0,0,0.0,0.3684,0.5789,0.7794,Clear,False
-CTX192100040,3,11,"Dle studia 11 Památek arch.a místopisných "" soudím, že jsou",,,ces,1.0,1128.0,10,59,0.0169,0,0,0,0,0,0.0,0.4222,0.5111,0.6588,Noisy,False
+CTX192100040,3,3,"Při nich ani kolem nebyla žádná nádoba,neb střepina.Byly tudí*",,,ces,1.0,131.0,9,62,0.0161,1,0,0,0,0,0.0556,0.4314,0.549,0.6999,Noisy,False
+CTX192100040,3,4,"uložony prostěvzemi.Ten den pršelo stále od rána tak,že peníze ty byly",,,ces,0.9997,324.0,11,70,0.0,0,0,0,0,0,0.0091,0.431,0.6034,0.6999,Noisy,False
+CTX192100040,3,5,"celé hlínou pomazané.Byly pa sobě složeny, takže jsem je musel jen nehtem",,,ces,1.0,216.0,12,73,0.0,0,0,0,0,0,0.0083,0.4333,0.6,0.6999,Noisy,False
+CTX192100040,3,6,"odlupovat*.bych je nepoškodil .Ještě dnes jsou hlinou znečistěný,neb neznám",,,ces,1.0,131.0,9,75,0.0133,1,0,0,0,0,0.0444,0.3968,0.619,0.6999,Noisy,False
+CTX192100040,3,7,"způsobu,Jak je očistiti,sniž by se setřela krásně zelená patina,která mnohé",,,ces,1.0,93.0,10,75,0.0,0,0,0,0,0,0.01,0.4286,0.4762,0.6999,Noisy,False
+CTX192100040,3,8,"z nich pokrývá.Na straně Jedné Jest dvojocasý levsvyplazeným Jazykem,na",,,ces,0.9993,368.0,9,71,0.0,0,0,0,0,0,0.0111,0.377,0.541,0.6999,Noisy,False
+CTX192100040,3,9,"druhé koruna královskásnápisem kolem: WENZEZLAUS TERCLUS,",,,ces,0.9958,486.0,6,57,0.0175,0,0,0,0,0,0.0,0.38,0.56,0.8528,Clear,False
+CTX192100040,3,10,nad ním neznatelný nápis - snad Del gratia dux v .,,,ces,0.9445,416.0,11,50,0.0,0,0,0,0,0,0.0,0.3684,0.5789,0.777,Clear,False
+CTX192100040,3,11,"Dle studia 11 Památek arch.a místopisných "" soudím, že jsou",,,ces,1.0,1208.0,10,59,0.0169,0,0,0,0,0,0.0,0.4222,0.5111,0.6588,Noisy,False
 CTX192100040,3,12,peníze tyto raženy za krále Václava IV:,,,ces,1.0,153.0,7,39,0.0256,0,0,0,0,0,0.0,0.4688,0.4688,0.8176,Clear,False
-CTX192100040,3,13,"Dle "" Pamětí okresu Unhoštského * od Frt.Melichara,učitele",,,ces,0.9984,828.0,8,58,0.0345,1,1,0,0,0,0.0125,0.4255,0.4255,0.6636,Noisy,False
-CTX192100040,3,14,měšt. školy z roku 1890 - Jiné prameny jsou mi zde nedostupné - byla již,,,ces,1.0,56.25,15,72,0.0,0,0,0,0,0,0.0,0.4118,0.5686,0.8524,Clear,False
+CTX192100040,3,13,"Dle "" Pamětí okresu Unhoštského * od Frt.Melichara,učitele",,,ces,0.9984,828.0,8,58,0.0345,1,0,0,0,0,0.0125,0.4255,0.4255,0.6636,Noisy,False
+CTX192100040,3,14,měšt. školyzroku 1890 - Jiné prameny jsou mi zde nedostupné - byla již,,,ces,1.0,105.0,13,70,0.0,0,0,0,0,0,0.0,0.4118,0.5686,0.8481,Clear,False
 CTX192100040,3,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,3,16,"vesnice "" Holonohy * v první polovici 14. století' zašlá str.154 ./.la str.253",,,ces,0.9958,144.0,13,78,0.0385,1,0,0,0,2,0.0,0.3673,0.4898,0.6999,Noisy,False
 CTX192100040,3,17,"jest psáno,že * dle urbáře kláštera Strahovského z r.1416. /Erben, Reg. 106/",,,ces,0.9976,127.0,12,76,0.0132,1,0,0,0,0,0.0,0.36,0.48,0.6999,Noisy,False
-CTX192100040,3,18,patřily ke zmíněnému klšteru z nynějšího okresu Unhoštského Úhonice s blíz-,,,ces,1.0,77.0,11,75,0.0,0,0,0,0,0,0.0,0.4062,0.4844,0.8751,Clear,False
+CTX192100040,3,18,patřily ke zmíněnému klšteruznynějšího okresu Unhoštského Úhonicesblíz-,,,ces,1.0,216.0,7,71,0.0,0,0,0,0,0,0.0,0.4062,0.4844,0.8821,Clear,False
 CTX192100040,3,19,"skými Holonohy a Chýně. Na str.254 píše: "" v Holonozích byli dva lid",,,ces,0.9982,79.5,13,68,0.0294,0,0,0,0,1,0.0,0.4082,0.4694,0.825,Clear,False
 CTX192100040,3,20,"z nichž jeden měl- půl lánu, druhý něco málo země, nepraví se,kolik. *",,,ces,1.0,108.5,13,70,0.0143,1,0,0,0,0,0.0,0.4038,0.5,0.6999,Noisy,False
 CTX192100040,3,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,3,22,"Z toho soudím,že skutečně na počátku válek husitských,kdy",,,ces,1.0,119.5,8,57,0.0,0,0,0,0,0,0.0,0.3958,0.5,0.6999,Noisy,False
-CTX192100040,3,23,"dle lidového podání vesnice ta byla úplně zničena,byly peníze ty zakopány do",,,ces,1.0,72.5,12,76,0.0,0,0,0,0,0,0.0,0.4688,0.6094,0.6999,Noisy,False
-CTX192100040,3,24,"země - snad od jednoho z těchto dvou obyvatelů - a to snad ve spěchu, nebot",,,ces,1.0,38.75,16,75,0.0,0,0,0,0,0,0.0,0.4211,0.6491,0.828,Clear,False
-CTX192100040,3,25,"byly asi pouze vhozeny do vykopané skrýše a opět zatézeny.Možné též,že byly",,,ces,1.0,252.0,12,75,0.0,0,1,0,0,0,0.0083,0.4839,0.6129,0.6999,Noisy,False
+CTX192100040,3,22,"Z toho soudím,že skutečně na počátku válek husitských,kdy",,,ces,1.0,123.0,8,57,0.0,0,0,0,0,0,0.0,0.3958,0.5,0.6999,Noisy,False
+CTX192100040,3,23,"dle lidového podání vesnice ta byla úplně zničena,byly peníze ty zakopány do",,,ces,1.0,70.0,12,76,0.0,0,0,0,0,0,0.0,0.4688,0.6094,0.6999,Noisy,False
+CTX192100040,3,24,"země - snad od jednohoztěchto dvou obyvatelů - a to snad ve spěchu, nebot",,,ces,1.0,84.5,14,73,0.0,0,0,0,0,0,0.0,0.4211,0.6491,0.8193,Clear,False
+CTX192100040,3,25,"byly asi pouze vhozeny do vykopané skrýšeaopět zatézeny.Možné též,že byly",,,ces,1.0,378.0,10,73,0.0,0,0,0,0,0,0.01,0.4839,0.6129,0.6999,Noisy,False
 CTX192100040,3,26,"přikryty shora nádobou, avšak, Jak Jsem se zmínil, nezůstalo po ní dnes již",,,ces,1.0,77.0,13,75,0.0,0,0,0,0,0,0.0,0.4,0.5333,0.8824,Clear,False
 CTX192100040,3,27,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,3,28,žádné památky .Místo nálezu jejich Jest u nejvyššího bodu onoho pole.které se,,,ces,1.0,53.0,12,77,0.0,0,0,0,0,0,0.0,0.4375,0.5469,0.6999,Noisy,False
-CTX192100040,3,29,"svužvje směrem k potoku.Půda ornice byla během času jistě splavena níže,takže",,,ces,1.0,108.5,11,77,0.0,0,1,0,0,0,0.0091,0.4154,0.5231,0.6999,Noisy,False
+CTX192100040,3,28,žádné památky .Místo nálezu jejich Jestunejvyššího bodu onoho pole.které se,,,ces,1.0,105.0,10,75,0.0,0,0,0,0,0,0.0,0.4375,0.5469,0.6999,Noisy,False
+CTX192100040,3,29,"svužvje směremkpotoku.Půda ornice byla během času jistě splavena níže,takže",,,ces,1.0,168.0,9,75,0.0,0,0,0,0,0,0.0111,0.4154,0.5231,0.6999,Noisy,False
 CTX192100040,3,30,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,3,31,/,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,3,32,• /,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX192100040,4,1,r. • r'' v,,,ces,0.75,1280.0,4,10,0.3,1,0,0,0,0,0.0,0.0,0.3333,0.33,Trash,False
-CTX192100040,4,2,"peníze ony octly se blíže povrchu dnešního .Tím se ovšem dostatečně vysvětluje,Že",vysvět,,ces,1.0,53.0,12,81,0.0,0,1,0,0,0,0.0083,0.4118,0.6176,0.6999,Noisy,False
-CTX192100040,4,3,špička pluhu při orání vždy Vynesla na povrch nějaký eníz.,,"luje,Že",ces,1.0,209.0,10,58,0.0,0,0,0,0,0,0.0,0.3958,0.4792,0.8828,Clear,False
-CTX192100040,4,4,loňského roku jsem pokrašorálma poli\temto v nižší poloze,,,ces,0.9996,314.0,8,57,0.0175,1,0,0,0,0,0.05,0.4082,0.4898,0.6999,Noisy,False
-CTX192100040,4,5,"opět ve výzkumech a sice podél mezí, dosti vysoké,oddělu Jí cí pole toto od",,,ces,1.0,135.0,14,75,0.0,0,0,0,0,0,0.0,0.4667,0.5833,0.6999,Noisy,False
-CTX192100040,4,6,dolejšího s loukou velkoststku rověž mezujícíbo.Mez ona zdá se bíti,,,ces,1.0,568.0,10,67,0.0,0,1,0,0,0,0.01,0.4386,0.5789,0.6999,Noisy,False
-CTX192100040,4,7,TozŮstetkemjakésihradby kamenné.Pří mezi té jsem-nslezl pod ornici i vní,,,ces,1.0,1496.0,9,72,0.0,0,2,0,0,0,0.0222,0.3871,0.5161,0.6953,Noisy,False
-CTX192100040,4,8,"spoustu střepin z nádob, popel dřevěnný a rozličné kůstky.Nádoby J soux",,,ces,1.0,203.0,11,71,0.0,0,1,0,0,0,0.0091,0.3898,0.6441,0.6999,Noisy,False
-CTX192100040,4,9,"rozmanítě zdobeny,buä čarami neb v’novkou, jedno duěpird vícenásobně .Jsou",,,ces,1.0,804.0,9,74,0.0135,1,0,0,0,0,0.0444,0.4516,0.6613,0.6999,Noisy,False
+CTX192100040,4,1,r. • r'' v,,,ces,0.75,1208.0,4,10,0.3,1,0,0,0,0,0.0,0.0,0.3333,0.33,Trash,False
+CTX192100040,4,2,"peníze ony octly se blíže povrchu dnešního .Tím se ovšem dostatečně vysvětluje,Že",vysvět,,ces,1.0,52.0,12,81,0.0,0,0,0,0,0,0.0083,0.4118,0.6176,0.6999,Noisy,False
+CTX192100040,4,3,špička pluhu při orání vždy Vynesla na povrch nějaký eníz.,,"luje,Že",ces,1.0,197.0,10,58,0.0,0,0,0,0,1,0.0,0.3958,0.4792,0.8852,Clear,False
+CTX192100040,4,4,loňského roku jsem pokrašorálma poli\temtovnižší poloze,,,ces,0.9998,392.0,6,55,0.0182,1,0,0,0,0,0.0667,0.4082,0.4898,0.6999,Noisy,False
+CTX192100040,4,5,"opět ve výzkumechasice podél mezí, dosti vysoké,oddělu Jí cí pole toto od",,,ces,1.0,197.0,12,73,0.0,0,0,0,0,0,0.0,0.4667,0.5833,0.6999,Noisy,False
+CTX192100040,4,6,dolejšíhosloukou velkoststku rověž mezujícíbo.Mez ona zdá se bíti,,,ces,1.0,604.0,8,65,0.0,0,0,0,0,0,0.0125,0.4386,0.5789,0.6999,Noisy,False
+CTX192100040,4,7,TozŮstetkemjakésihradby kamenné.Pří mezi té jsem-nslezl pod orniciivní,,,ces,1.0,1864.0,7,70,0.0,0,1,0,0,1,0.0286,0.3871,0.5161,0.6999,Noisy,False
+CTX192100040,4,8,"spoustu střepinznádob, popel dřevěnnýarozličné kůstky.Nádoby J soux",,,ces,1.0,486.0,7,67,0.0,0,0,0,0,0,0.0143,0.3898,0.6441,0.6999,Noisy,False
+CTX192100040,4,9,"rozmanítě zdobeny,buä čarami neb v’novkou, jedno duěpird vícenásobně .Jsou",,,ces,1.0,776.0,9,74,0.0135,1,0,0,0,0,0.0444,0.4516,0.6613,0.6999,Noisy,False
 CTX192100040,4,10,"do nádob vesměs ryty. Podobná jsem halezl 'i' na louce vblkostatku letos,",,,ces,0.9998,368.0,12,73,0.0274,0,0,0,0,0,0.0,0.3966,0.6207,0.8134,Clear,False
 CTX192100040,4,11,kdež však Jsem nemohl pro dosti pokročilý čas ročhí důklsdněji pátrat! i,,,ces,1.0,502.0,12,72,0.0,0,0,0,0,0,0.0,0.35,0.4167,0.8438,Clear,False
 CTX192100040,4,12,"pro podmínku rchní správy v Jenči,že totiž musím uvésti louku do půvedního",,,ces,1.0,185.0,12,74,0.0,0,0,0,0,0,0.0,0.4032,0.5806,0.8843,Clear,False
-CTX192100040,4,13,"stavu.Podmínku onu bych byl- nemohl- dodržet!, neb ne vykopávky jsem byl",,,ces,1.0,346.0,11,72,0.0,0,1,0,0,0,0.0091,0.3684,0.7018,0.6999,Noisy,False
+CTX192100040,4,13,"stavu.Podmínku onu bych byl- nemohl- dodržet!, neb ne vykopávky jsem byl",,,ces,1.0,356.0,11,72,0.0,0,0,0,0,0,0.0091,0.3684,0.7018,0.6999,Noisy,False
 CTX192100040,4,14,"sám s Jedním poúze ochotným děLníkem, který nezištně mi po oba roky pomáhal.",,,ces,1.0,144.0,13,76,0.0,0,1,0,0,0,0.0077,0.4194,0.5484,0.8712,Clear,False
-CTX192100040,4,15,Chci letos opětně pekračovati Velvýzkumech na poli jak jmenované,,,ces,1.0,404.0,9,64,0.0,0,0,0,0,0,0.0,0.4107,0.4643,0.8499,Clear,False
-CTX192100040,4,16,"‘ p.Rsbocha tak '! na scusedním,kuvrlopatimí""býlo rovněž po sklizni dovolen",,,ces,0.9658,1496.0,10,75,0.04,1,1,0,0,0,0.01,0.3667,0.55,0.637,Noisy,False
+CTX192100040,4,15,Chci letos opětně pekračovati Velvýzkumech na poli jak jmenované,,,ces,1.0,392.0,9,64,0.0,0,0,0,0,0,0.0,0.4107,0.4643,0.8523,Clear,False
+CTX192100040,4,16,"‘ p.Rsbocha tak '! na scusedním,kuvrlopatimí""býlo rovněž po sklizni dovolen",,,ces,0.9658,1544.0,10,75,0.04,1,0,0,0,0,0.01,0.3667,0.55,0.637,Noisy,False
 CTX192100040,4,17,"Kožn o-l i, dovodil byctši po pF. Vás navštíví €1 a přinésti typické'",,,ces,0.9976,664.0,13,69,0.029,1,1,0,0,0,0.0385,0.3922,0.451,0.6756,Noisy,False
-CTX192100040,4,18,"st řepíný, které sám netroufám sl blíže odhsdnouti.K ‘důkl adnému vzdělaní ve",,,ces,1.0,430.0,12,77,0.013,1,1,0,0,0,0.0417,0.381,0.5238,0.6999,Noisy,False
+CTX192100040,4,18,"st řepíný, které sám netroufám sl blíže odhsdnouti.K ‘důkl adnému vzdělaní ve",,,ces,1.0,444.0,12,77,0.013,1,0,0,0,0,0.0417,0.381,0.5238,0.6999,Noisy,False
 CTX192100040,4,19,"vědě tetp,po němž toužím, schází m1‘mžno‘st opatřití si neb vypůjčiti",,,ces,1.0,223.0,10,69,0.029,1,0,0,0,1,0.04,0.3818,0.4909,0.6999,Noisy,False
-CTX192100040,4,20,různé prameny.,,,ces,1.0,99.0,2,14,0.0,0,0,0,0,0,0.0,0.4167,0.5833,0.8799,Clear,False
+CTX192100040,4,20,různé prameny.,,,ces,1.0,108.5,2,14,0.0,0,0,0,0,0,0.0,0.4167,0.5833,0.878,Clear,False
 CTX192100040,4,21,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,4,22,""" ■ ■ 3 - b i""",,,,0.0,0.0,0,14,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX192100040,4,23,"nt ■ "" o Zároveň bych přinesl stéž plének,kopii místa nálen vzatu z ckatastá",,,ces,1.0,804.0,14,76,0.0263,1,0,0,0,0,0.0,0.3667,0.4667,0.6999,Noisy,False
+CTX192100040,4,23,"nt ■ "" o Zároveň bych přinesl stéž plének,kopii místa nálen vzatuzckatastá",,,ces,0.9999,752.0,12,74,0.027,1,0,0,0,0,0.0,0.3667,0.4667,0.6999,Noisy,False
 CTX192100040,4,24,mapy obce TTenalovic. ',,,ces,0.75,15168.0,4,23,0.0435,0,0,0,0,0,0.0,0.4444,0.5556,0.6306,Noisy,False
 CTX192100040,4,25,"Těše se na laskavou odpovši * "" ' • • ■ ! - j odu ■ ■ - "" -",,,ces,0.9999,260.0,20,59,0.1525,6,0,0,0,0,0.0,0.4815,0.5926,0.6229,Noisy,False
 CTX192100040,4,26,5 -i - -1 **:e r : • t • znamenám ae v úctě :n3nt,,,ces,1.0,908.0,15,49,0.1429,3,0,0,1,1,0.0533,0.4091,0.5,0.4759,Noisy,False
@@ -91,12 +91,12 @@ CTX192100040,5,3,Došlo.9..11-21.-,,,ces,0.938,324.0,1,16,0.0,0,0,0,0,0,0.0,0.4,
 CTX192100040,5,4,zasílá. ..J.. Chpc.. účeiní.. lodenics,,,ces,0.8263,1320.0,5,38,0.0,0,0,0,0,1,0.0,0.4,0.4,0.6306,Noisy,False
 CTX192100040,5,5,. n.,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,5,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,5,7,Dřívější spisy:. 469/20 • -,,,ces,1.0,127.0,5,27,0.0741,1,0,0,0,0,0.0,0.3846,0.4615,0.6846,Noisy,False
+CTX192100040,5,7,Dřívější spisy:. 469/20 • -,,,ces,1.0,123.0,5,27,0.0741,1,0,0,0,0,0.0,0.3846,0.4615,0.6854,Noisy,False
 CTX192100040,5,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,5,9,Pozdějěí spisy:......,,,ces,0.9999,940.0,2,21,0.0667,0,0,0,0,0,0.0,0.4615,0.6154,0.6663,Noisy,False
+CTX192100040,5,9,Pozdějěí spisy:......,,,ces,0.9999,1000.0,2,21,0.0667,0,0,0,0,0,0.0,0.4615,0.6154,0.6543,Noisy,False
 CTX192100040,5,10,Zúroveň sevyiizují ....,,,ces,0.996,1280.0,3,23,0.0,0,0,0,0,0,0.0,0.5294,0.5882,0.5882,Noisy,False
 CTX192100040,5,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,5,12,Předmět; . .. <,,,ces,1.0,304.0,4,15,0.1333,1,0,0,0,0,0.0,0.2857,0.5714,0.5625,Noisy,False
+CTX192100040,5,12,Předmět; . .. <,,,ces,1.0,314.0,4,15,0.1333,1,0,0,0,0,0.0,0.2857,0.5714,0.5605,Noisy,False
 CTX192100040,5,13,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,5,14,". Josef. Ch99.. úřotní. äplp. ř.. y. .. y. Chlnstenicáoh.,. bytem ...",,,ces,0.8852,1032.0,12,69,0.0,0,0,0,0,1,0.0,0.3684,0.4737,0.5418,Noisy,False
 CTX192100040,5,15,lpděricích- ě- 35B-. Zpráva- D-jeho. -činnosti- arohaeolgie ké-,,,ces,0.9988,458.0,8,63,0.0,0,0,0,0,0,0.0,0.4318,0.3864,0.6999,Noisy,False
@@ -105,81 +105,81 @@ CTX192100040,5,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,5,18,K nahl Sdnutí:,,,ces,0.75,92672.0,3,14,0.0714,0,0,0,0,0,0.0,0.2727,0.4545,0.5997,Noisy,False
 CTX192100040,5,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,5,20,Došlo do spisovny:,,,ces,0.75,216.0,3,18,0.0556,0,0,0,0,0,0.0,0.4,0.8,0.7637,Clear,False
-CTX192100040,5,21,popis spisu:,,,ces,0.8457,2464.0,2,12,0.0833,0,0,0,0,0,0.0,0.4,0.8,0.6953,Noisy,False
-CTX192100040,5,22,Znečka.,,,ces,0.8292,502.0,1,7,0.0,0,0,0,0,0,0.0,0.3333,0.5,0.6999,Noisy,False
-CTX192100040,5,23,Budiž skartováno:9...,,,ces,0.9988,2800.0,2,21,0.0556,0,0,0,0,0,0.0,0.4,0.5333,0.6829,Noisy,False
+CTX192100040,5,21,popis spisu:,,,ces,0.8457,2720.0,2,12,0.0833,0,0,0,0,0,0.0,0.4,0.8,0.6953,Noisy,False
+CTX192100040,5,22,Znečka.,,,ces,0.8292,520.0,1,7,0.0,0,0,0,0,0,0.0,0.3333,0.5,0.6999,Noisy,False
+CTX192100040,5,23,Budiž skartováno:9...,,,ces,0.9988,2720.0,2,21,0.0556,0,0,0,0,0,0.0,0.4,0.5333,0.6829,Noisy,False
 CTX192100040,5,24,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,5,25,P.T. panu,,,ces,0.75,1928.0,2,9,0.0,0,0,0,0,0,0.0,0.3333,0.6667,0.5146,Noisy,False
-CTX192100040,5,26,"Josefu Chocovi,",,,ces,0.75,4352.0,2,15,0.0,0,0,0,0,0,0.0,0.4615,0.5385,0.6999,Noisy,False
+CTX192100040,5,25,P.T. panu,,,ces,0.75,1808.0,2,9,0.0,0,0,0,0,0,0.0,0.3333,0.6667,0.5146,Noisy,False
+CTX192100040,5,26,"Josefu Chocovi,",,,ces,0.75,4080.0,2,15,0.0,0,0,0,0,0,0.0,0.4615,0.5385,0.6999,Noisy,False
 CTX192100040,5,27,účetnímu dolu,,,ces,0.9997,314.0,2,13,0.0,0,0,0,0,0,0.0,0.5,0.5833,0.8502,Clear,False
-CTX192100040,5,28,v Loděnicích u Berouna.,,,ces,1.0,1696.0,4,23,0.0,0,0,0,0,0,0.0,0.4737,0.5263,0.5643,Noisy,False
+CTX192100040,5,28,v Loděnicích u Berouna.,,,ces,1.0,1808.0,4,23,0.0,0,0,0,0,0,0.0,0.4737,0.5263,0.5643,Noisy,False
 CTX192100040,5,29,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,5,30,Velectěný pane!,,,ces,1.0,2400.0,2,15,0.0,0,0,0,0,0,0.0,0.4615,0.5385,0.6999,Noisy,False
+CTX192100040,5,30,Velectěný pane!,,,ces,1.0,2624.0,2,15,0.0,0,0,0,0,0,0.0,0.4615,0.5385,0.6999,Noisy,False
 CTX192100040,5,31,"Děkuji vám za milý váě list,",,,ces,1.0,314.0,6,28,0.0,0,0,0,0,0,0.0,0.4545,0.3636,0.8081,Clear,False
 CTX192100040,5,32,kterým jste mně byl nadmíru potěšil.,,,ces,1.0,60.0,6,36,0.0,0,0,0,0,0,0.0,0.3667,0.4667,0.9184,Clear,False
 CTX192100040,5,33,K jeho obsahu dovoluji si následující,,,ces,1.0,68.0,6,37,0.0,0,0,0,0,0,0.0,0.4688,0.5312,0.8234,Clear,False
-CTX192100040,5,34,odpovědět!:,,,ces,1.0,223.0,1,11,0.0909,0,0,0,0,0,0.0,0.4444,0.6667,0.83,Clear,False
+CTX192100040,5,34,odpovědět!:,,,ces,1.0,203.0,1,11,0.0909,0,0,0,0,0,0.0,0.4444,0.6667,0.834,Clear,False
 CTX192100040,5,35,"Mince , které jsetbyl vykopal",,,ces,1.0,880.0,5,29,0.0,0,0,0,0,0,0.0,0.375,0.5,0.6861,Noisy,False
-CTX192100040,5,36,"na poli, zvaném""Holonohy"", byly raženy",raže,,ces,0.9998,1064.0,5,38,0.0526,0,1,0,0,0,0.02,0.4667,0.6,0.6529,Noisy,False
-CTX192100040,5,37,za krále českého Václava Iv./syna,,ny,ces,0.9891,163.0,5,33,0.0,0,0,0,0,0,0.0,0.4444,0.4074,0.8283,Clear,False
+CTX192100040,5,36,"na poli, zvaném""Holonohy"", byly raženy",raže,,ces,0.9998,1032.0,5,38,0.0526,0,0,0,0,0,0.02,0.4667,0.6,0.6529,Noisy,False
+CTX192100040,5,37,za krále českého Václava Iv./syna,,ny,ces,0.9891,174.0,5,33,0.0,0,0,0,0,0,0.0,0.4444,0.4074,0.8261,Clear,False
 CTX192100040,5,38,a nástupce Karla IV.7 Na nich je nápis,,,ces,0.8601,732.0,8,38,0.0,0,0,0,0,0,0.0,0.4138,0.4138,0.6363,Noisy,False
-CTX192100040,5,39,"pokud se pamatuji, následující: Kolam",,,ces,1.0,46.75,5,37,0.027,0,0,0,0,0,0.0,0.4516,0.5161,0.8568,Clear,False
-CTX192100040,5,40,koruny v kruhu prvém WENCEZLAUS TER -,,,ces,0.9821,1168.0,7,37,0.0,0,0,0,0,0,0.0,0.3667,0.6,0.6459,Noisy,False
+CTX192100040,5,39,"pokud se pamatuji, následující: Kolam",,,ces,1.0,48.25,5,37,0.027,0,0,0,0,0,0.0,0.4516,0.5161,0.8565,Clear,False
+CTX192100040,5,40,korunyvkruhu prvém WENCEZLAUS TER -,,,ces,0.9807,4352.0,5,35,0.0,0,0,0,0,0,0.0,0.3667,0.6,0.6693,Noisy,False
 CTX192100040,5,41,CIUS - v kruhu druhém DEI GRACIA REX,,,ces,0.75,856.0,8,36,0.0,0,0,0,0,0,0.0,0.4286,0.4286,0.6842,Noisy,False
 CTX192100040,5,42,výpravna:,,,ces,0.9976,174.0,1,9,0.1111,0,0,0,0,0,0.0,0.375,0.5,0.852,Clear,False
 CTX192100040,5,43,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,5,44,"Doblonc: :3o/, 2;",,,ces,0.75,1496.0,3,17,0.1765,0,0,0,0,0,0.0833,0.375,0.75,0.3999,Trash,False
-CTX192100040,5,45,Podepsino.). .,,,ces,0.75,32000.0,2,14,0.0,0,0,0,0,0,0.0,0.4444,0.8889,0.5069,Noisy,False
-CTX192100040,5,46,vypraveno/..,,,ces,0.9416,3168.0,1,12,0.0,0,0,0,0,0,0.0,0.4444,0.7778,0.662,Noisy,False
+CTX192100040,5,44,"Doblonc: :3o/, 2;",,,ces,0.75,1456.0,3,17,0.1765,0,0,0,0,0,0.0833,0.375,0.75,0.3999,Trash,False
+CTX192100040,5,45,Podepsino.). .,,,ces,0.75,30080.0,2,14,0.0,0,0,0,0,0,0.0,0.4444,0.8889,0.3999,Trash,False
+CTX192100040,5,46,vypraveno/..,,,ces,0.9416,2800.0,1,12,0.0,0,0,0,0,0,0.0,0.4444,0.7778,0.662,Noisy,False
 CTX192100040,5,47,B. • -přílohami.,,,ces,1.0,732.0,3,16,0.0625,1,0,0,0,0,0.0,0.4,0.4,0.5196,Noisy,False
-CTX192100040,6,1,BOHEMIAB. Na druhé pak straně jest,,,ces,1.0,334.0,6,34,0.0,0,0,0,0,0,0.0,0.3929,0.4643,0.8113,Clear,False
-CTX192100040,6,2,český lev a kolem něho v kruhu: GROSSI,,,ces,0.9999,77.0,8,38,0.0263,0,0,0,0,0,0.0,0.4,0.5,0.8423,Clear,False
-CTX192100040,6,3,"PRAGENSES,t. j.""václav III""/václava III.",,,ces,0.75,458.0,4,40,0.05,0,0,1,0,0,0.0875,0.4667,0.3333,0.6999,Noisy,False
+CTX192100040,6,1,BOHEMIAB. Na druhé pak straně jest,,,ces,1.0,324.0,6,34,0.0,0,0,0,0,0,0.0,0.3929,0.4643,0.8133,Clear,False
+CTX192100040,6,2,český levakolem něhovkruhu: GROSSI,,,ces,0.9999,1128.0,4,34,0.0294,0,0,0,0,0,0.0,0.4,0.5,0.6999,Noisy,False
+CTX192100040,6,3,"PRAGENSES,t. j.""václav III""/václava III.",,,ces,0.75,444.0,4,40,0.05,0,0,1,0,0,0.0875,0.4667,0.3333,0.6999,Noisy,False
 CTX192100040,6,4,Přemyslovce; který byl zavražděn v 010-,,,ces,1.0,24.25,6,39,0.0256,0,0,0,0,0,0.0,0.3448,0.5517,0.8239,Clear,False
-CTX192100040,6,5,"mouci roku 1306, nebrgli do počtu/,",,,ces,0.9343,346.0,6,35,0.0,0,0,0,0,0,0.0,0.4348,0.5652,0.7487,Clear,False
+CTX192100040,6,5,"mouci roku 1306, nebrgli do počtu/,",,,ces,0.9343,334.0,6,35,0.0,0,0,0,0,0,0.0,0.4348,0.5652,0.7511,Clear,False
 CTX192100040,6,6,"""z Boží milusti krúl český"", a na""",,,ces,0.75,1408.0,7,34,0.0882,0,0,0,0,0,0.0,0.4167,0.375,0.5819,Noisy,False
 CTX192100040,6,7,"druhá straně"" Groša pražské."" ■",,,ces,0.993,144.0,5,31,0.0968,1,0,0,0,0,0.0,0.3478,0.3043,0.6999,Noisy,False
-CTX192100040,6,8,"Až pojedete do Prehy, vez-",,,ces,0.9612,7616.0,5,26,0.0,0,0,0,0,0,0.0,0.45,0.7,0.5906,Noisy,False
-CTX192100040,6,9,"měteyje s sebou, a zatím, než si pohovoříme,",poho,,ces,1.0,37.5,8,44,0.0,0,0,0,0,0,0.0,0.5,0.6471,0.8104,Clear,False
-CTX192100040,6,10,budou vám peníze v neší laboratoři,labo,"voříme,",ces,1.0,296.0,6,34,0.0,0,0,0,0,0,0.0,0.4828,0.6207,0.8248,Clear,False
+CTX192100040,6,8,"Až pojedete do Prehy, vez-",,,ces,0.9612,8096.0,5,26,0.0,0,0,0,0,0,0.0,0.45,0.7,0.5906,Noisy,False
+CTX192100040,6,9,"měteyjessebou, a zatím, než si pohovoříme,",poho,,ces,0.9999,82.0,6,42,0.0,0,0,0,0,0,0.0,0.5,0.6471,0.8113,Clear,False
+CTX192100040,6,10,budou vám penízevneší laboratoři,labo,"voříme,",ces,1.0,216.0,4,32,0.0,0,0,0,0,0,0.0,0.4828,0.6207,0.8888,Clear,False
 CTX192100040,6,11,"vyčištěny, .Neb o přejete-li si,",,ratoři,ces,1.0,237.0,5,32,0.0,0,0,0,0,0,0.0,0.4583,0.5417,0.6999,Noisy,False
 CTX192100040,6,12,"pošlu vám návod, jak byste súm si je me",,,ces,0.8134,148.0,9,39,0.0,0,0,0,0,0,0.0,0.4,0.6333,0.8043,Clear,False
 CTX192100040,6,13,hl vyčistiti .,,,ces,0.75,1496.0,3,14,0.0,0,0,0,0,0,0.0,0.3636,0.2727,0.4997,Noisy,False
 CTX192100040,6,14,váš úsudek O obci samet-,,,ces,0.8929,1096.0,5,24,0.0,0,0,0,0,0,0.0,0.4737,0.5789,0.6557,Noisy,False
-CTX192100040,6,15,né jest správný.,,,ces,0.9973,203.0,3,16,0.0,0,0,0,0,0,0.0,0.3077,0.5385,0.7629,Clear,False
-CTX192100040,6,16,"Bude mne velice těšiti,",,,ces,0.9999,356.0,4,23,0.0,0,0,0,0,0,0.0,0.4737,0.5263,0.8431,Clear,False
+CTX192100040,6,15,né jest správný.,,,ces,0.9973,209.0,3,16,0.0,0,0,0,0,0,0.0,0.3077,0.5385,0.7617,Clear,False
+CTX192100040,6,16,"Bude mne velice těšiti,",,,ces,0.9999,346.0,4,23,0.0,0,0,0,0,0,0.0,0.4737,0.5263,0.8451,Clear,False
 CTX192100040,6,17,"navštívíte-li uane, až zavítáte do Prahy.",Pra,,ces,0.75,127.0,6,41,0.0,0,0,0,0,0,0.0,0.4848,0.4242,0.801,Clear,False
 CTX192100040,6,18,"Pokusím se ovšem, abych vís nepřipravil",nepři,hy.,ces,1.0,68.0,6,39,0.0,0,0,0,0,0,0.0,0.3939,0.6061,0.8703,Clear,False
-CTX192100040,6,19,o mnoho času.,,pravil,ces,0.7631,588.0,3,13,0.0,0,0,0,0,0,0.0,0.5,0.7,0.68,Noisy,False
+CTX192100040,6,19,o mnoho času.,,pravil,ces,0.7631,568.0,3,13,0.0,0,0,0,0,0,0.0,0.5,0.7,0.684,Noisy,False
 CTX192100040,6,20,"Těším se na ony střepy, '",,,ces,1.0,223.0,6,25,0.04,0,0,0,0,0,0.0,0.4444,0.6111,0.7144,Clear,False
-CTX192100040,6,21,"z nichž vezměte, prosím, nejen ty or- ■",,,ces,1.0,644.0,8,39,0.0256,1,0,0,0,0,0.0,0.3571,0.6071,0.6397,Noisy,False
-CTX192100040,6,22,"namentované, ale i všechnyod okrajů, |",,,ces,0.9861,230.0,6,38,0.0263,1,0,0,0,0,0.0,0.4667,0.5,0.6999,Noisy,False
-CTX192100040,6,23,"příyadně též dna,jsou-li nanich nějaké",něja,,ces,1.0,278.0,5,38,0.0,0,0,0,0,0,0.0,0.4375,0.375,0.6999,Noisy,False
-CTX192100040,6,24,značky.,,ké,ces,0.7604,93.0,1,7,0.0,0,0,0,0,0,0.0,0.3333,0.5,0.6999,Noisy,False
-CTX192100040,6,25,Taxtéž na kopii plániu na-,,,ces,0.9964,1752.0,5,26,0.0,0,0,0,0,0,0.0,0.4762,0.381,0.5983,Noisy,False
-CTX192100040,6,26,"ziště, rterou hoaláte s sebou vzíti, |",,,ces,0.9949,356.0,7,38,0.0263,1,0,0,0,0,0.0,0.4828,0.4828,0.6999,Noisy,False
-CTX192100040,6,27,se těším. .,,,ces,1.0,203.0,3,11,0.0,0,0,0,0,0,0.0,0.4286,0.4286,0.634,Noisy,False
-CTX192100040,6,28,"Budu vám velice povděčen, |",,,ces,1.0,252.0,5,27,0.037,1,0,0,0,0,0.0,0.4286,0.7143,0.6999,Noisy,False
-CTX192100040,6,29,podáte-li mi zprávy laskavě i o dalších,dal,,ces,1.0,60.0,7,39,0.0,0,0,0,0,0,0.0,0.4375,0.4062,0.7933,Clear,False
-CTX192100040,6,30,svých plánech kopacích a núle- 7,,ších,ces,0.9982,486.0,6,32,0.0,0,0,0,0,0,0.0417,0.36,0.36,0.7202,Clear,False
-CTX192100040,6,31,"zech, případně o známých vÁn nalezištěc",,,ces,1.0,119.5,6,39,0.0,0,1,0,0,0,0.0167,0.3636,0.4545,0.8566,Clear,False
+CTX192100040,6,21,"z nichž vezměte, prosím, nejen ty or- ■",,,ces,1.0,604.0,8,39,0.0256,1,0,0,0,0,0.0,0.3571,0.6071,0.6477,Noisy,False
+CTX192100040,6,22,"namentované, aleivšechnyod okrajů, |",,,ces,0.9372,940.0,4,36,0.0278,1,0,0,0,0,0.0,0.4667,0.5,0.6563,Noisy,False
+CTX192100040,6,23,"příyadně též dna,jsou-li nanich nějaké",něja,,ces,1.0,268.0,5,38,0.0,0,0,0,0,0,0.0,0.4375,0.375,0.6999,Noisy,False
+CTX192100040,6,24,značky.,,ké,ces,0.7604,84.5,1,7,0.0,0,0,0,0,0,0.0,0.3333,0.5,0.6999,Noisy,False
+CTX192100040,6,25,Taxtéž na kopii plániu na-,,,ces,0.9964,1864.0,5,26,0.0,0,0,0,0,0,0.0,0.4762,0.381,0.5983,Noisy,False
+CTX192100040,6,26,"ziště, rterou hoalátessebou vzíti, |",,,ces,0.9945,856.0,5,36,0.0278,1,0,0,0,0,0.0,0.4828,0.4828,0.6881,Noisy,False
+CTX192100040,6,27,se těším. .,,,ces,1.0,209.0,3,11,0.0,0,0,0,0,0,0.0,0.4286,0.4286,0.6328,Noisy,False
+CTX192100040,6,28,"Budu vám velice povděčen, |",,,ces,1.0,268.0,5,27,0.037,1,0,0,0,0,0.0,0.4286,0.7143,0.6999,Noisy,False
+CTX192100040,6,29,podáte-li mi zprávy laskavě i o dalších,dal,,ces,1.0,61.75,7,39,0.0,0,0,0,0,0,0.0,0.4375,0.4062,0.793,Clear,False
+CTX192100040,6,30,svých plánech kopacíchanúle- 7,,ších,ces,0.9882,502.0,4,30,0.0,0,0,0,0,0,0.0625,0.36,0.36,0.6999,Noisy,False
+CTX192100040,6,31,"zech, případněoznámých vÁn nalezištěc",,,ces,1.0,168.0,4,37,0.0,0,1,0,0,0,0.025,0.3636,0.4545,0.893,Clear,False
 CTX192100040,6,32,"' v okolí,která,budou-li pro nás zajímavá,dovolil",zajíma,,ces,0.9995,153.0,6,49,0.0204,0,0,0,0,0,0.0,0.4615,0.5128,0.6999,Noisy,False
 CTX192100040,6,33,bych si se pak za laakavéno,,"vá,dovolil",ces,1.0,2720.0,6,27,0.0,0,0,0,0,0,0.0,0.4545,0.4545,0.577,Noisy,False
-CTX192100040,6,34,Vašeho průvodu ohledsti.,,,ces,1.0,127.0,3,24,0.0,0,0,0,0,0,0.0,0.4286,0.5714,0.8903,Clear,False
-CTX192100040,7,1,Budete-li sikdykollv“piastadsesess,,,ces,0.75,4928.0,2,34,0.0294,1,0,0,0,0,0.2,0.3871,0.6129,0.5322,Noisy,False
+CTX192100040,6,34,Vašeho průvodu ohledsti.,,,ces,1.0,123.0,3,24,0.0,0,0,0,0,0,0.0,0.4286,0.5714,0.8911,Clear,False
+CTX192100040,7,1,Budete-li sikdykollv“piastadsesess,,,ces,0.75,5216.0,2,34,0.0294,1,0,0,0,0,0.2,0.3871,0.6129,0.5322,Noisy,False
 CTX192100040,7,2,V . . X 40/24,,,,0.0,0.0,0,13,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX192100040,7,3,"ci nějakých informací,račte ae vŽdy ni",,,ces,0.999,458.0,6,38,0.0,0,1,0,0,0,0.0167,0.4375,0.3125,0.6878,Noisy,False
-CTX192100040,7,4,mne obrátiti. Bude mí velikým potěše­,,,ces,0.9995,1000.0,6,37,0.027,1,0,0,0,0,0.0667,0.4667,0.5333,0.6129,Noisy,False
-CTX192100040,7,5,"ním,budu-li moci v té věci vám něčím",,,ces,1.0,139.0,7,36,0.0,0,0,0,0,0,0.0,0.4286,0.5,0.6999,Noisy,False
-CTX192100040,7,6,býti k službám.,,,ces,0.8161,139.0,3,15,0.0,0,0,0,0,0,0.0,0.3333,0.4167,0.7739,Clear,False
+CTX192100040,7,3,"ci nějakých informací,račte ae vŽdy ni",,,ces,0.999,472.0,6,38,0.0,0,1,0,0,0,0.0167,0.4375,0.3125,0.685,Noisy,False
+CTX192100040,7,4,mne obrátiti. Bude mí velikým potěše­,,,ces,0.9995,968.0,6,37,0.027,1,0,0,0,0,0.0667,0.4667,0.5333,0.6193,Noisy,False
+CTX192100040,7,5,"ním,budu-li mocivté věci vám něčím",,,ces,1.0,304.0,5,34,0.0,0,0,0,0,0,0.0,0.4286,0.5,0.6999,Noisy,False
+CTX192100040,7,6,býtikslužbám.,,,ces,0.9664,752.0,1,13,0.0,0,0,0,0,0,0.0,0.3333,0.4167,0.6999,Noisy,False
 CTX192100040,7,7,Děguje vám za laskavou,,,ces,1.0,416.0,4,22,0.0,0,0,0,0,0,0.0,0.4737,0.5263,0.7638,Clear,False
 CTX192100040,7,8,"Vaši zprávu, znamenám se vám",,,ces,1.0,22.0,5,28,0.0,0,0,0,0,0,0.0,0.3913,0.6522,0.8565,Clear,False
-CTX192100040,7,9,v plné úctě oddaný,,,ces,1.0,1592.0,4,18,0.0,0,0,0,0,0,0.0,0.4,0.4667,0.643,Noisy,False
+CTX192100040,7,9,v plné úctě oddaný,,,ces,1.0,1648.0,4,18,0.0,0,0,0,0,0,0.0,0.4,0.4667,0.643,Noisy,False
 CTX192100040,7,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,7,11,"v Praze, dne 30-dubna 1921.",,,ces,0.8752,38.75,5,27,0.0,0,0,0,0,0,0.0,0.3571,0.7857,0.717,Clear,False
+CTX192100040,7,11,"v Praze, dne 30-dubna 1921.",,,ces,0.8752,38.0,5,27,0.0,0,0,0,0,0,0.0,0.3571,0.7857,0.7172,Clear,False
 CTX192100040,8,1,"C. j. ApoSlodne2/-74o ' (0)., '",,,ces,0.75,940.0,6,31,0.0645,0,1,0,0,0,0.0167,0.4167,0.6667,0.3752,Trash,False
 CTX192100040,8,2,Pocet príloh —kresní správa politická na Kladně.,,,ces,0.75,135.0,7,48,0.0208,0,0,0,0,0,0.0,0.375,0.4,0.8698,Clear,False
-CTX192100040,8,3,ameeyrtny--------------.-,,,ces,0.75,2400.0,1,25,0.0,0,0,1,0,0,0.35,0.5556,0.6667,0.227,Trash,False
+CTX192100040,8,3,ameeyrtny--------------.-,,,ces,0.75,2720.0,1,25,0.0,0,0,1,0,0,0.35,0.5556,0.6667,0.227,Trash,False
 CTX192100040,8,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,8,5,lis. 52.903./I. Dne 25. října 1920.,,,ces,0.9932,25.38,6,35,0.0,0,0,0,0,0,0.0,0.4167,0.4167,0.6999,Noisy,False
 CTX192100040,8,6,. I .,,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
@@ -187,91 +187,91 @@ CTX192100040,8,7,0%r,,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,8,8,‘ - I,,,,0.0,0.0,0,5,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,8,9,"""*! trí archeolcrickí vstav""",,,ces,0.9792,5216.0,4,28,0.1071,1,0,0,0,0,0.0,0.3333,0.2381,0.3999,Trash,False
 CTX192100040,8,10,v,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX192100040,8,11,Praze. .Strahovský klášter,,,ces,0.9161,72.5,3,26,0.0,0,0,0,0,0,0.0,0.3182,0.3636,0.6999,Noisy,False
+CTX192100040,8,11,Praze. .Strahovský klášter,,,ces,0.9161,74.5,3,26,0.0,0,0,0,0,0,0.0,0.3182,0.3636,0.6999,Noisy,False
 CTX192100040,8,12,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,8,13,"Vzhledem ko přípisu ze dne .""ra 1S20,čí8. 131 -i1s20, oznamuji,",,,ces,0.9996,197.0,10,63,0.0159,0,0,0,1,0,0.015,0.4054,0.6216,0.7184,Clear,False
-CTX192100040,8,14,že účetní dolu čís. V.v Jhrusten icích Josef Jhoc z Lodenice čp.158 jest,,,ces,0.9858,968.0,13,72,0.0,0,0,0,0,0,0.0,0.3519,0.4815,0.6778,Noisy,False
-CTX192100040,8,15,členem společnosti lusea Král.českého v Praze a skutečně pátrá po před-,,,ces,1.0,82.0,11,71,0.0,0,0,0,0,0,0.0,0.3898,0.5254,0.8671,Clear,False
-CTX192100040,8,16,histori cký ch parná t ká ch .,,,ces,0.75,2048.0,8,30,0.0,0,0,0,0,0,0.0,0.3182,0.1818,0.5358,Noisy,False
-CTX192100040,8,17,Minulého roku vykopal na poli rolníka habocha v ilenačovicích parcela,par,,ces,0.8565,856.0,10,69,0.0,0,0,0,0,0,0.0,0.45,0.4,0.7378,Clear,False
+CTX192100040,8,13,"Vzhledem ko přípisu ze dne .""ra 1S20,čí8. 131 -ils20, oznamuji,",,,ces,0.9996,296.0,10,63,0.0159,0,0,0,0,1,0.0,0.3947,0.6053,0.7016,Clear,False
+CTX192100040,8,14,že účetní dolu čís. V.v Jhrusten icích Josef Jhoc z Lodenice čp.158 jest,,,ces,0.9858,940.0,13,72,0.0,0,0,0,0,0,0.0,0.3519,0.4815,0.6834,Noisy,False
+CTX192100040,8,15,členem společnosti lusea Král.českého v Prazeaskutečně pátrá po před-,,,ces,1.0,191.0,9,69,0.0,0,0,0,0,0,0.0,0.3898,0.5254,0.8583,Clear,False
+CTX192100040,8,16,histori cký ch parnátká ch .,,,ces,0.9079,3168.0,6,28,0.0,0,0,0,0,0,0.0,0.3182,0.1818,0.5709,Noisy,False
+CTX192100040,8,17,Minulého roku vykopal na poli rolníka habochavilenačovicích parcela,par,,ces,0.8963,856.0,8,67,0.0,0,0,0,0,0,0.0,0.45,0.4,0.7583,Clear,False
 CTX192100040,8,18,"č.218,stodvacet kusů stříbrných českých grošů,na nichž je vyražena",vyraže,cela,ces,1.0,99.0,8,66,0.0,0,0,0,0,0,0.0,0.3396,0.3774,0.6999,Noisy,False
-CTX192100040,8,19,"česká koruna a lev na okraji těchto grošů jest ražen nápis "" Venzes-",,na,ces,0.9999,144.0,13,68,0.0147,0,0,0,0,0,0.0,0.4074,0.4444,0.8641,Clear,False
-CTX192100040,8,20,"laus"" .",,,ces,0.7746,209.0,2,7,0.1429,0,0,0,0,0,0.0,0.5,0.5,0.6581,Noisy,False
-CTX192100040,8,21,"Během, tohoto roku vykopal Jhocwa louce v katastru obce nenačovic-",,,ces,0.9971,688.0,10,66,0.0,0,0,0,0,0,0.0,0.4364,0.5091,0.7923,Clear,False
+CTX192100040,8,19,"česká korunaalev na okraji těchto grošů jest ražen nápis "" Venzes-",,na,ces,0.9999,185.0,11,66,0.0152,0,0,0,0,0,0.0,0.4074,0.4444,0.8684,Clear,False
+CTX192100040,8,20,"laus"" .",,,ces,0.7746,216.0,2,7,0.1429,0,0,0,0,0,0.0,0.5,0.5,0.6567,Noisy,False
+CTX192100040,8,21,"Během, tohoto roku vykopal Jhocwa loucevkatastru obce nenačovic-",,,ces,0.9963,1032.0,8,64,0.0,0,0,0,0,0,0.0,0.4364,0.5091,0.7578,Clear,False
 CTX192100040,8,22,"ká,parcela 222a 222 a/,patřící zdejšímu státnímu velkostatku několik",,,ces,1.0,52.0,8,68,0.0,0,0,1,0,0,0.0437,0.4231,0.3654,0.6999,Noisy,False
-CTX192100040,8,23,"střepů z hliněných nádob, jejichž předhistorickou památnost nechá teprve",,,ces,1.0,41.25,9,72,0.0,0,0,0,0,0,0.0,0.3492,0.4603,0.9276,Clear,False
-CTX192100040,8,24,zjistiti.,,,ces,0.9552,1456.0,1,9,0.0,0,0,0,0,0,0.0,0.375,0.25,0.6868,Noisy,False
-CTX192100040,8,25,Podobných namátek doufá lhoc ještě více nalezli a hodlá je hromadně,,,ces,1.0,127.0,11,67,0.0,0,0,0,0,0,0.0,0.4211,0.4561,0.8871,Clear,False
+CTX192100040,8,23,"střepůzhliněných nádob, jejichž předhistorickou památnost nechá teprve",,,ces,1.0,61.75,7,70,0.0,0,0,0,0,0,0.0,0.3492,0.4603,0.9548,Clear,False
+CTX192100040,8,24,zjistiti.,,,ces,0.9552,1368.0,1,9,0.0,0,0,0,0,0,0.0,0.375,0.25,0.6868,Noisy,False
+CTX192100040,8,25,Podobných namátek doufá lhoc ještě více nalezliahodlá je hromadně,,,ces,1.0,203.0,9,65,0.0,0,0,0,0,0,0.0,0.4211,0.4561,0.8911,Clear,False
 CTX192100040,8,26,"Museu Král, českého v Praze všnovati.",,,ces,0.984,191.0,6,37,0.0,0,0,0,0,0,0.0,0.4,0.5333,0.838,Clear,False
 CTX192100040,8,27,। í । -,,,,0.0,0.0,0,7,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX192100040,8,28,"Tyto vyKopavKy pounina UnOC Sail většinou QO zeine 1 1/6 I niuDOKO,",,,ces,0.9993,1456.0,12,67,0.0,0,3,0,0,0,0.0458,0.5294,0.6275,0.6519,Noisy,False
+CTX192100040,8,28,"Tyto vyKopavKy pounina UnOC Sail většinou QO zeine 1 1/6 I niuDOKO,",,,ces,0.9993,1496.0,12,67,0.0,0,3,0,0,0,0.0458,0.5294,0.6275,0.6519,Noisy,False
 CTX192100040,8,29,"šíře 12- m, se svolerímajitelů těchto pozemků.",,,ces,1.0,135.0,7,46,0.0,0,0,0,0,0,0.0,0.4286,0.4571,0.7774,Clear,False
 CTX192100040,8,30,Týž pátrá nyní na výše uvedené louce po předhistorické vesnici,,,ces,1.0,70.0,10,62,0.0,0,0,0,0,0,0.0,0.4528,0.5094,0.888,Clear,False
 CTX192100040,8,31,""" Holonohy"" a po bojišti bitvy u Lodenice / dle dějin Fi ant .ľalackého/""",,,ces,0.9332,1408.0,14,73,0.0411,0,0,0,0,0,0.0,0.463,0.4444,0.628,Noisy,False
 CTX192100040,8,32,z čehož si slibuje skvělý výsledek.,,,ces,1.0,27.0,6,35,0.0,0,0,0,0,0,0.0,0.3793,0.5172,0.8239,Clear,False
-CTX192100040,8,33,"Podotýká se,že účetní Jhoc jest horlivým sběr: Úlem starých památek",pamá,,ces,0.9998,209.0,10,67,0.0149,0,0,0,0,0,0.0,0.3929,0.4107,0.9192,Clear,False
+CTX192100040,8,33,"Podotýká se,že účetní Jhoc jest horlivým sběr: Úlem starých památek",pamá,,ces,0.9998,216.0,10,67,0.0149,0,0,0,0,0,0.0,0.3929,0.4107,0.9178,Clear,False
 CTX192100040,8,34,"a velkým milovníkem vykopávek předhis tonických památek,nemá však",,tek,ces,1.0,108.5,8,65,0.0,0,0,0,0,0,0.0,0.386,0.4912,0.6999,Noisy,False
-CTX192100040,8,35,hmotných prostředků a proto ve své práci pomalu pokračuje.,,,ces,1.0,36.25,9,58,0.0,0,0,0,0,0,0.0,0.3878,0.4898,0.8806,Clear,False
+CTX192100040,8,35,hmotných prostředkůaproto ve své práci pomalu pokračuje.,,,ces,1.0,93.0,7,56,0.0,0,0,0,0,0,0.0,0.3878,0.4898,0.891,Clear,False
 CTX192100040,9,1,"Jak důverně bylo zjištěno, vyjádřil se Jhoc,že kdyby byl někým",,,ces,1.0,31.62,10,62,0.0,0,0,0,0,0,0.0,0.3922,0.4902,0.9192,Clear,False
-CTX192100040,9,2,"odporován finančně, pokračoval by ve svém díle rychleji a tím,hlavně",,,ces,1.0,39.25,10,68,0.0,0,0,0,0,0,0.0,0.4035,0.4912,0.6999,Noisy,False
+CTX192100040,9,2,"odporován finančně, pokračoval by ve svém díle rychlejiatím,hlavně",,,ces,1.0,54.5,8,66,0.0,0,0,0,0,0,0.0,0.4035,0.4912,0.6999,Noisy,False
 CTX192100040,9,3,"okolí Lodenice a Nenačovic,nalezlby spoustu předhistorických památek.",,,ces,0.9997,237.0,7,69,0.0,0,0,0,0,0,0.0,0.4262,0.5082,0.6999,Noisy,False
 CTX192100040,9,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,9,5,Min isterský,,,ces,0.75,3376.0,2,12,0.0,0,0,0,0,0,0.0,0.3636,0.4545,0.6999,Noisy,False
 CTX192100040,10,1,nos! KuogQARA q>tqo qo9sA,,,ces,0.8513,1752.0,4,25,0.04,1,2,0,1,0,0.1875,0.4211,0.6316,0.5965,Noisy,False
-CTX192100040,10,2,I A W9PQAz 0z[ T41[q OgA,,,ces,0.75,968.0,6,24,0.0833,1,1,0,1,1,0.1083,0.3846,0.5385,0.4921,Noisy,False
-CTX192100040,10,3,ouqíqopau nped A tunox 09 yo,,,ces,0.75,1808.0,6,28,0.0,0,0,0,0,0,0.0,0.5714,0.8095,0.578,Noisy,False
+CTX192100040,10,2,I A W9PQAz 0z[ T41[q OgA,,,ces,0.75,968.0,6,24,0.0833,1,1,0,1,2,0.1083,0.3846,0.5385,0.4921,Noisy,False
+CTX192100040,10,3,ouqíqopau nped A tunox 09 yo,,,ces,0.75,1752.0,6,28,0.0,0,0,0,0,0,0.0,0.5714,0.8095,0.578,Noisy,False
 CTX192100040,10,4,i pupzodo oqeu omnuauodo,,,ces,0.75,5568.0,4,24,0.0,0,0,0,0,0,0.0,0.619,0.9048,0.3999,Trash,False
-CTX192100040,10,5,[UP[OA HKq nozy ez ‘oqo 97 n,,,ces,0.75,2112.0,7,28,0.1071,2,0,0,0,0,0.1143,0.4706,0.8235,0.4694,Noisy,False
+CTX192100040,10,5,[UP[OA HKq nozy ez ‘oqo 97 n,,,ces,0.75,2112.0,7,28,0.1071,2,0,0,0,0,0.1143,0.4706,0.8235,0.3999,Trash,False
 CTX192100040,10,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,7,mos( Ku>gaaKa q>toqo \p9sA,,,ces,0.75,1000.0,4,26,0.1154,2,2,0,1,0,0.2875,0.4444,0.5556,0.3999,Trash,False
-CTX192100040,10,8,"os v).*"" ‘yasvmAa z vontso.d rorsaur A WPPQAz oz[ WI •%A",,,ces,0.75,8640.0,11,56,0.1071,3,2,1,0,1,0.15,0.4054,0.6757,0.4757,Noisy,False
-CTX192100040,10,9,qup g op ze unuazqn gsouíqopu nprd A 10x09 ge,,,ces,0.9786,1240.0,10,45,0.0,0,0,0,0,1,0.085,0.4062,0.7812,0.548,Noisy,False
-CTX192100040,10,10,noywqued noqnsoa es yasoq yuasvyo quqpzodo oqou onuauodo,,,ces,0.799,856.0,8,56,0.0,0,0,0,0,0,0.0,0.5714,0.9184,0.3999,Trash,False
+CTX192100040,10,7,mos( Ku>gaaKa q>toqo \p9sA,,,ces,0.75,968.0,4,26,0.1154,2,2,0,1,0,0.2875,0.4444,0.5556,0.3999,Trash,False
+CTX192100040,10,8,"os v).*"" ‘yasvmAa z vontso.d rorsaur A WPPQAz oz[ WI •%A",,,ces,0.75,8640.0,11,56,0.1071,3,1,1,0,2,0.15,0.4054,0.6757,0.4757,Noisy,False
+CTX192100040,10,9,qupgop ze unuazqn gsouíqopu nprd A 10x09 ge,,,ces,0.75,1984.0,8,43,0.0,0,0,0,0,1,0.0,0.4062,0.7812,0.593,Noisy,False
+CTX192100040,10,10,noywqued noqnsoa es yasoq yuasvyo quqpzodo oqou onuauodo,,,ces,0.799,828.0,8,56,0.0,0,0,0,0,0,0.0,0.5714,0.9184,0.3999,Trash,False
 CTX192100040,10,11,npoApo ( 1u9[oA Iíq no.94 uz ‘9>q091 n,,,ces,0.75,664.0,8,38,0.0789,2,2,0,0,1,0.125,0.5556,0.7778,0.5289,Noisy,False
 CTX192100040,10,12,vuqfqood qsougnsud yxsaouop II-oftooqo 97940]) 948 n TuutAod nosl,,,ces,0.75,776.0,9,65,0.0154,0,1,0,0,0,0.0111,0.4783,0.7609,0.6983,Noisy,False
-CTX192100040,10,13,nsvuud ymu2nnzapz os qu1zio aW94( yuutaod nozEVIHd,,,ces,0.75,1456.0,7,50,0.0,0,2,0,2,0,0.0714,0.4615,0.8205,0.646,Noisy,False
-CTX192100040,10,14,oueussd,,,ces,0.9163,4608.0,1,7,0.0,0,0,0,0,0,0.0,0.5714,1.0,0.6999,Noisy,False
+CTX192100040,10,13,nsvuud ymu2nnzapz os qulzio aW94( yuutaod nozEVIHd,,,ces,0.75,1456.0,7,50,0.0,0,2,0,1,0,0.05,0.45,0.8,0.6503,Noisy,False
+CTX192100040,10,14,oueussd,,,ces,0.9163,4352.0,1,7,0.0,0,0,0,0,0,0.0,0.5714,1.0,0.3999,Trash,False
 CTX192100040,10,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,16,Ju1z[9,,,ces,0.75,908.0,1,6,0.1667,1,0,0,1,0,0.55,0.3333,0.6667,0.2811,Trash,False
+CTX192100040,10,16,Julz[9,,,ces,0.9558,11072.0,1,6,0.1667,1,0,0,0,1,0.4,0.25,0.5,0.2927,Trash,False
 CTX192100040,10,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,10,18,os MpKq •py *0>qo m,,,ces,0.75,5216.0,5,19,0.1579,2,1,0,0,1,0.18,0.2727,0.9091,0.3999,Trash,False
 CTX192100040,10,19,noxer Avzuya,,,ces,0.75,9152.0,2,12,0.0,0,0,0,0,0,0.0,0.5455,0.7273,0.6999,Noisy,False
 CTX192100040,10,20,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,10,21,.) exsfoA z Oqzus ex qsoUdoqosU,,,ces,0.75,588.0,6,31,0.0,0,2,0,0,0,0.0333,0.4583,0.9167,0.3999,Trash,False
-CTX192100040,10,22,uxyueguoxn pejd 7opx,,,ces,0.75,1064.0,3,20,0.0,0,0,0,0,0,0.0,0.4706,0.8824,0.3999,Trash,False
-CTX192100040,10,23,"p ! „qezeuKA"" oqou „Kudouosu",,,ces,0.9278,1544.0,5,28,0.1071,2,1,0,0,0,0.18,0.6,0.85,0.3999,Trash,False
+CTX192100040,10,22,uxyueguoxn pejd 7opx,,,ces,0.75,1096.0,3,20,0.0,0,0,0,0,0,0.0,0.4706,0.8824,0.3999,Trash,False
+CTX192100040,10,23,"p ! „qezeuKA"" oqou „Kudouosu",,,ces,0.9278,1592.0,5,28,0.1071,2,1,0,0,0,0.18,0.6,0.85,0.3999,Trash,False
 CTX192100040,10,24,। ‘Apzuxf’ uepeApO [Rqeu J]S0U,,,ces,0.75,2048.0,5,30,0.1667,3,1,0,1,0,0.21,0.5,0.75,0.3999,Trash,False
-CTX192100040,10,25,u oad Kxyx ‘oouU.q ÄPzuy,,,ces,0.75,2896.0,5,24,0.0417,1,1,0,0,0,0.1,0.6111,0.8333,0.5673,Noisy,False
+CTX192100040,10,25,u oad Kxyx ‘oouU.q ÄPzuy,,,ces,0.75,2976.0,5,24,0.0417,1,1,0,0,0,0.1,0.6111,0.8333,0.3999,Trash,False
 CTX192100040,10,26,uuysod noxsuafoA noxuI,,,ces,0.75,1208.0,3,22,0.0,0,2,0,0,0,0.0667,0.6,0.8,0.6999,Noisy,False
 CTX192100040,10,27,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,28,"os ""IIDKq opy *9040 m",,,ces,0.75,2320.0,5,21,0.0952,1,1,0,0,0,0.08,0.4545,0.7273,0.506,Noisy,False
-CTX192100040,10,29,"nupoy yoysqu A n7o. ouPpze"" yuAoxw gsouutod nxyaya",,,ces,0.75,1864.0,8,50,0.02,0,2,0,1,0,0.0437,0.6,0.85,0.6583,Noisy,False
-CTX192100040,10,30,op ge uouod qsť Kuuyaod uoxsuofoA noxen Apzuy,,,ces,0.75,3376.0,8,45,0.0,0,1,0,0,0,0.0125,0.5789,0.8158,0.6675,Noisy,False
-CTX192100040,10,31,P(Kqon qqznys •x qsourqosudzu jo1nunpod •pUA y/p= uawgndoud [Äq,,,ces,0.75,2624.0,9,63,0.0635,3,1,0,1,0,0.1611,0.375,0.8542,0.3999,Trash,False
+CTX192100040,10,28,"os ""IIDKq opy *9040 m",,,ces,0.75,2320.0,5,21,0.0952,1,0,0,0,0,0.08,0.4545,0.7273,0.506,Noisy,False
+CTX192100040,10,29,"nupoy yoysqu A n7o. ouPpze"" yuAoxw gsouutod nxyaya",,,ces,0.75,1864.0,8,50,0.02,0,2,0,1,0,0.0437,0.6,0.85,0.3999,Trash,False
+CTX192100040,10,30,op ge uouod qsť Kuuyaod uoxsuofoA noxen Apzuy,,,ces,0.75,3600.0,8,45,0.0,0,1,0,0,0,0.0125,0.5789,0.8158,0.6675,Noisy,False
+CTX192100040,10,31,P(Kqon qqznys •x qsourqosudzu jolnunpod •pUA y/p= uawgndoud [Äq,,,ces,0.75,2624.0,9,63,0.0635,3,1,0,0,2,0.1444,0.3673,0.8367,0.3999,Trash,False
 CTX192100040,10,32,"nouqtuerspoau o.d oxsueľoA Kqzn[s uruequoxn pajď Yop"" SPzEX",,,ces,0.75,5920.0,8,59,0.0339,1,2,0,0,1,0.075,0.449,0.7959,0.6588,Noisy,False
-CTX192100040,10,33,"e[sp !,yezeOAA"" oqau „udou",,,ces,0.75,5920.0,4,26,0.1154,2,1,0,0,1,0.225,0.7222,0.8333,0.3999,Trash,False
+CTX192100040,10,33,"e[sp !,yezeOAA"" oqau „udou",,,ces,0.75,5568.0,4,26,0.1154,2,1,0,0,1,0.225,0.7222,0.8333,0.3999,Trash,False
 CTX192100040,10,34,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,35,:sof ueuyaod noxsuoľoA noxuI,,,ces,0.75,2464.0,4,28,0.0357,0,2,0,0,1,0.05,0.625,0.7917,0.6999,Noisy,False
+CTX192100040,10,35,:sof ueuyaod noxsuoľoA noxuI,,,ces,0.75,2544.0,4,28,0.0357,0,2,0,0,1,0.05,0.625,0.7917,0.6999,Noisy,False
 CTX192100040,10,36,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,37,0 Iu92n0A,,,,0.0,0.0,0,9,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+CTX192100040,10,37,0 Iu92n0A,,,ces,0.75,444.0,2,9,0.0,0,0,0,1,0,0.25,0.75,0.5,0.3999,Trash,False
 CTX192100040,10,38,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,10,39,oysuofos oxW • TSOUI[Aod 0 [uognoJ,,,ces,0.75,2800.0,6,34,0.0882,2,2,0,0,0,0.1417,0.56,0.76,0.538,Noisy,False
 CTX192100040,10,40,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,41,taxo vojenské.,,,ces,0.9191,209.0,2,14,0.0,0,0,0,0,0,0.0,0.4167,0.5833,0.8579,Clear,False
+CTX192100040,10,41,taxo vojenské.,,,ces,0.9191,203.0,2,14,0.0,0,0,0,0,0,0.0,0.4167,0.5833,0.8591,Clear,False
 CTX192100040,10,42,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,43,Pončeni o povinnosti ku taxo vojenské.,,,ces,0.8557,314.0,6,38,0.0,0,0,0,0,0,0.0,0.4375,0.6562,0.7699,Clear,False
+CTX192100040,10,43,Pončeniopovinnosti ku taxo vojenské.,,,ces,0.892,416.0,4,36,0.0,0,0,0,0,0,0.0,0.4375,0.6562,0.7722,Clear,False
 CTX192100040,10,44,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,45,obilost k službě s konečnou plat-,,,ces,0.9998,174.0,6,33,0.0,0,0,0,0,0,0.0,0.3704,0.5556,0.7921,Clear,False
-CTX192100040,10,46,rém byl vydán nález nku zbrani,,,ces,1.0,1064.0,6,30,0.0,0,0,0,0,0,0.0,0.36,0.6,0.73,Clear,False
+CTX192100040,10,45,obilostkslužběskonečnou plat-,,,ces,0.9685,472.0,2,29,0.0,0,0,0,0,0,0.0,0.3704,0.5556,0.6999,Noisy,False
+CTX192100040,10,46,rém byl vydán nález nku zbrani,,,ces,1.0,1128.0,6,30,0.0,0,0,0,0,0,0.0,0.36,0.6,0.73,Clear,False
 CTX192100040,10,47,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,48,í nezpůsobilost ke službě nebyla,,,ces,1.0,66.0,5,32,0.0,0,0,0,0,0,0.17,0.4286,0.6071,0.7648,Clear,False
+CTX192100040,10,48,í nezpůsobilost ke službě nebyla,,,ces,1.0,68.0,5,32,0.0,0,0,0,0,0,0.17,0.4286,0.6071,0.7644,Clear,False
 CTX192100040,10,49,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,10,50,povinný jest povinen až do,,,ces,0.7711,688.0,5,26,0.0,0,0,0,0,0,0.0,0.4091,0.6818,0.6684,Noisy,False
 CTX192100040,10,51,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,52,nebo písemné s použitím přede-,,,ces,1.0,203.0,5,30,0.0,0,0,0,0,0,0.0,0.44,0.72,0.8227,Clear,False
+CTX192100040,10,52,nebo písemnéspoužitím přede-,,,ces,1.0,356.0,3,28,0.0,0,0,0,0,0,0.0,0.44,0.72,0.8497,Clear,False
 CTX192100040,10,53,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,54,Taxon vojcuskou povinen jest:,,,ces,0.9047,11072.0,4,29,0.0345,0,0,0,0,0,0.0,0.4,0.68,0.6999,Noisy,False
-CTX192100040,10,55,"Každý branac, ktorýž pro nezpůsobilost k službě s konečnou platnosti",plat,,ces,0.9948,68.0,10,68,0.0,0,0,0,0,0,0.0,0.3621,0.5,0.8915,Clear,False
+CTX192100040,10,54,Taxon vojcuskou povinen jest:,,,ces,0.9047,10432.0,4,29,0.0345,0,0,0,0,0,0.0,0.4,0.68,0.6999,Noisy,False
+CTX192100040,10,55,"Každý branac, ktorýž pro nezpůsobilostkslužběskonečnou platnosti",plat,,ces,0.9497,185.0,6,64,0.0,0,0,0,0,0,0.0,0.3621,0.5,0.9239,Clear,False
 CTX192100040,10,56,"nebyl odveden, t.j. každý, o kterém byl vydán nález nku zbrani",,nosti,ces,1.0,66.0,11,62,0.0,0,0,0,0,0,0.0,0.375,0.6042,0.6999,Noisy,False
 CTX192100040,10,57,"neschopný11 nebo „vymazati"" ; dále",,,ces,0.9999,268.0,5,34,0.0882,1,0,0,0,0,0.08,0.44,0.64,0.6999,Noisy,False
 CTX192100040,10,58,"každý, kdož před ukončením služby vojenské pro neodstranitelnou",,,ces,0.9999,25.38,8,63,0.0,0,0,0,0,0,0.0,0.3818,0.6,0.9548,Clear,False
@@ -280,15 +280,15 @@ CTX192100040,10,60,"byl propuštěn, dyž vada podmiňující nezpůsobilost ke 
 CTX192100040,10,61,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,10,62,Maždý taxou vojenskou povinný jest povinen až do,,,ces,0.75,278.0,8,48,0.0,0,0,0,0,0,0.0,0.439,0.6585,0.8174,Clear,False
 CTX192100040,10,63,zániku povinnosti taxovní každého >,,,ces,0.9849,880.0,5,35,0.0286,1,0,0,0,0,0.0,0.4333,0.5333,0.6933,Noisy,False
-CTX192100040,10,64,"u obce, kde bydli, se hlásiti.-----------------",,,ces,0.9205,260.0,6,47,0.0,0,0,1,0,0,0.0583,0.4545,0.5455,0.6482,Noisy,False
+CTX192100040,10,64,"u obce, kde bydli, se hlásiti.-----------------",,,ces,0.9205,252.0,6,47,0.0,0,0,1,0,0,0.0583,0.4545,0.5455,0.6498,Noisy,False
 CTX192100040,10,65,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,66,li domovská příslušnost pochybna.,,,ces,0.9999,58.0,4,33,0.0,0,0,0,0,0,0.0,0.3448,0.5862,0.8403,Clear,False
+CTX192100040,10,66,li domovská příslušnost pochybna.,,,ces,0.9999,60.0,4,33,0.0,0,0,0,0,0,0.0,0.3448,0.5862,0.8399,Clear,False
 CTX192100040,10,67,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,10,68,eni - trestá so pokutou penéžitou,,,ces,0.75,624.0,6,33,0.0,0,0,0,0,0,0.0,0.5185,0.5926,0.7021,Clear,False
 CTX192100040,10,69,ězenim až do 5 dnů.,,,ces,0.9988,123.0,5,19,0.0,0,0,0,0,0,0.05,0.4615,0.6154,0.6939,Noisy,False
-CTX192100040,10,70,"prosinci z vyhlášck, kteréž vo",,,ces,1.0,588.0,5,30,0.0,0,0,0,0,0,0.0,0.32,0.4,0.6857,Noisy,False
+CTX192100040,10,70,"prosincizvyhlášck, kteréž vo",,,ces,1.0,804.0,3,28,0.0,0,0,0,0,0,0.0,0.32,0.4,0.6601,Noisy,False
 CTX192100040,10,71,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,10,72,Opomenulé nebo opozděné ohlášení trestú se pokutou peněžitou,,,ces,1.0,153.0,8,60,0.0,0,0,0,0,0,0.0,0.5094,0.6415,0.8919,Clear,False
+CTX192100040,10,72,Opomenulé nebo opozděné ohlášení trestú se pokutou peněžitou,,,ces,1.0,148.0,8,60,0.0,0,0,0,0,0,0.0,0.5094,0.6415,0.8929,Clear,False
 CTX192100040,10,73,. až 50 korun; v pádu nedobytnosti vězením až do 5 dnů.,,,ces,0.9814,209.0,12,55,0.0182,0,0,0,0,0,0.0208,0.4211,0.6579,0.7231,Clear,False
 CTX192100040,10,74,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,10,75,všech obcích vyvéšeny jsou.,,,ces,1.0,237.0,4,27,0.0,0,0,0,0,0,0.0,0.3913,0.5652,0.8722,Clear,False
@@ -311,11 +311,11 @@ CTX192100040,11,16,lo,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,Fals
 CTX192100040,11,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,11,18,C krwH wl,,,ces,0.9992,36352.0,3,9,0.0,0,1,0,0,1,0.3167,0.0,0.2857,0.3999,Trash,False
 CTX192100040,11,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,11,20,o ki < A U • ham AMK f%. 7,,,ces,0.75,2544.0,10,26,0.1154,2,0,0,0,0,0.025,0.5,0.3333,0.4502,Noisy,False
-CTX192100040,11,21,Za&Xu .. qi tvxírU',,,ces,0.75,4080.0,4,19,0.1053,1,2,0,0,0,0.15,0.4167,0.5833,0.3999,Trash,False
+CTX192100040,11,20,o ki < A U • ham AMK f%. 7,,,ces,0.75,2400.0,10,26,0.1154,2,0,0,0,0,0.025,0.5,0.3333,0.4502,Noisy,False
+CTX192100040,11,21,Za&Xu .. qi tvxírU',,,ces,0.75,4080.0,4,19,0.1053,1,1,0,0,0,0.15,0.4167,0.5833,0.3999,Trash,False
 CTX192100040,11,22,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,11,23,"! e., e-ťtAs o Y",,,ces,0.998,5920.0,5,16,0.0,0,1,0,0,0,0.19,0.625,0.625,0.388,Trash,False
-CTX192100040,11,24,ouni UM .,,,ces,0.8576,11776.0,3,9,0.0,0,0,0,0,0,0.0,0.6667,0.8333,0.4868,Noisy,False
+CTX192100040,11,24,ouni UM .,,,ces,0.8576,13376.0,3,9,0.0,0,0,0,0,0,0.0,0.6667,0.8333,0.3999,Trash,False
 CTX192100040,11,25,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,11,26,"/2,",,,,0.0,0.0,0,3,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,11,27,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
@@ -329,45 +329,45 @@ CTX192100040,13,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,13,4,č: 6694 /1920.,,,,0.0,0.0,0,14,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,13,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,13,6,P.T. .,,,ces,0.75,346.0,2,6,0.0,0,0,0,0,0,0.0,0.0,0.5,0.3999,Trash,True
-CTX192100040,13,7,Státní archaeologický ústav,,,ces,0.9997,19.5,3,27,0.0,0,0,0,0,0,0.0,0.44,0.28,0.9231,Clear,False
-CTX192100040,13,8,republiky československé,,,ces,0.9136,15.88,2,24,0.0,0,0,0,0,0,0.0,0.3913,0.6087,0.9208,Clear,False
+CTX192100040,13,7,Státní archaeologický ústav,,,ces,0.9997,19.12,3,27,0.0,0,0,0,0,0,0.0,0.44,0.28,0.9232,Clear,False
+CTX192100040,13,8,republiky československé,,,ces,0.9136,17.12,2,24,0.0,0,0,0,0,0,0.0,0.3913,0.6087,0.9206,Clear,False
 CTX192100040,13,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,13,10,v Praze IV.,,,ces,0.9014,4080.0,3,11,0.0,0,0,0,0,0,0.0,0.375,0.625,0.4928,Noisy,False
-CTX192100040,13,11,v klášteře Strahovském.,,,ces,1.0,115.5,3,23,0.0,0,0,0,0,0,0.0,0.3,0.4,0.7912,Clear,False
+CTX192100040,13,10,v Praze IV.,,,ces,0.9014,4352.0,3,11,0.0,0,0,0,0,0,0.0,0.375,0.625,0.4928,Noisy,False
+CTX192100040,13,11,v klášteře Strahovském.,,,ces,1.0,119.5,3,23,0.0,0,0,0,0,0,0.0,0.3,0.4,0.7904,Clear,False
 CTX192100040,13,12,"Klademe si za čest oznámiti, že jsme počátkem září t.r,",,,ces,1.0,79.5,10,55,0.0,0,0,0,0,0,0.0,0.3953,0.4884,0.6999,Noisy,False
 CTX192100040,13,13,"udělili Josefu C h o c o v i , účetnímu dolu v Chrustenicích jako",,,ces,1.0,324.0,15,65,0.0,0,0,0,0,0,0.17,0.44,0.44,0.6831,Noisy,False
-CTX192100040,13,14,"členu musea, na jeho žádost povolení k vykopávkam za účelem prozkoumání",prozkou,,ces,0.9997,46.75,11,71,0.0,0,0,0,0,0,0.0,0.45,0.6,0.877,Clear,False
-CTX192100040,13,15,krajiny kolem potoka K a č á k u ■ na lukách č.kat. 222 a 222a?,,mání,ces,0.9486,334.0,16,63,0.0159,1,0,1,0,0,0.1281,0.4474,0.2895,0.6516,Noisy,False
+CTX192100040,13,14,"členu musea, na jeho žádost povoleníkvykopávkam za účelem prozkoumání",prozkou,,ces,0.9994,93.0,9,69,0.0,0,0,0,0,0,0.0,0.45,0.6,0.8808,Clear,False
+CTX192100040,13,15,krajiny kolem potoka K a č á k u ■ na lukách č.kat. 222 a 222a?,,mání,ces,0.9486,346.0,16,63,0.0159,1,0,1,0,0,0.1281,0.4474,0.2895,0.6492,Noisy,False
 CTX192100040,13,16,"v obci chrustenické, náležejících velkostatku.",,,ces,0.9991,230.0,5,46,0.0,0,0,0,0,0,0.0,0.375,0.375,0.8313,Clear,False
 CTX192100040,13,17,Chrustenice ( pošta Loděnice u Berouna ) léží při trati,tra,,ces,1.0,368.0,10,55,0.0,0,0,0,0,0,0.0,0.4545,0.4091,0.7841,Clear,False
 CTX192100040,13,18,dráhy Dušniky - Beroun.-,,ti,ces,0.8577,1208.0,4,24,0.0,0,0,0,0,0,0.0,0.4444,0.6111,0.624,Noisy,False
 CTX192100040,13,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,13,20,"V Praze, dne 8. října 1920.",,,ces,0.9997,14.94,6,27,0.0,0,0,0,0,0,0.0,0.3571,0.5714,0.7518,Clear,False
+CTX192100040,13,20,"V Praze, dne 8. října 1920.",,,ces,0.9997,15.38,6,27,0.0,0,0,0,0,0,0.0,0.3571,0.5714,0.7517,Clear,False
 CTX192100040,13,21,Řiditel statků :,,,ces,1.0,732.0,3,16,0.0625,0,0,0,0,0,0.0,0.3846,0.2308,0.6571,Noisy,False
 CTX192100040,14,1,0420,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,14,2,434.,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,14,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,14,4,"JedMM 24’. y. AAtkki-^lo yitKÁVJl^L^ ""Uvw! -",,,ces,0.8578,776.0,7,44,0.1136,3,2,0,0,0,0.2,0.3846,0.4231,0.3999,Trash,False
+CTX192100040,14,4,"JedMM 24’. y. AAtkki-^lo yitKÁVJl^L^ ""Uvw! -",,,ces,0.8578,804.0,7,44,0.1136,3,2,0,0,0,0.2,0.3846,0.4231,0.3999,Trash,False
 CTX192100040,14,5,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,14,6,elara t na vo Us M wvonovKam Kolu,,,ces,0.75,4080.0,8,33,0.0,0,1,0,0,0,0.0125,0.4231,0.6154,0.543,Noisy,False
-CTX192100040,14,7,"A~ooKA Kaeo’Au, MA CuKAd e.u 222 < 123,",,,ces,0.75,588.0,8,39,0.0769,3,3,0,0,0,0.1375,0.7,0.5,0.5006,Noisy,False
+CTX192100040,14,6,elaratna vo Us M wvonovKam Kolu,,,ces,0.75,8640.0,6,31,0.0,0,1,0,0,0,0.0167,0.4231,0.6154,0.5777,Noisy,False
+CTX192100040,14,7,"A~ooKA Kaeo’Au, MA CuKAd e.u 222 < 123,",,,ces,0.75,588.0,8,39,0.0769,3,2,0,0,0,0.1375,0.7,0.5,0.5006,Noisy,False
 CTX192100040,14,8,~ cl e Ua rwa 4 n eď MAu tuw ÍAVk AulvCdhihc. •,,,ces,0.75,1544.0,13,47,0.0426,2,1,0,0,0,0.0923,0.4194,0.4194,0.5312,Noisy,False
 CTX192100040,14,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,14,10,V A‘lo vauzuoí kwl AAAAM ola4a,,,ces,0.75,2624.0,6,30,0.0333,1,0,1,1,0,0.15,0.6087,0.4348,0.5933,Noisy,False
+CTX192100040,14,10,V A‘lo vauzuoí kwl AAAAM ola4a,,,ces,0.75,2800.0,6,30,0.0333,1,0,1,1,0,0.15,0.6087,0.4348,0.5933,Noisy,False
 CTX192100040,14,11,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,14,12,"V Orau, 40- ,U/na 14 tú-",,,ces,0.9478,552.0,6,24,0.0,0,0,0,0,0,0.0,0.6,0.5,0.5719,Noisy,False
+CTX192100040,14,12,"V Orau, 40- ,U/na 14 tú-",,,ces,0.9478,568.0,6,24,0.0,0,0,0,0,0,0.0,0.6,0.5,0.5687,Noisy,False
 CTX192100040,15,1,C. 434 6 20,,,,0.0,0.0,0,11,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX192100040,15,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,15,3,imallo . /,,,ces,0.75,3376.0,3,10,0.0,0,0,0,0,0,0.0,0.5,0.3333,0.47,Noisy,False
+CTX192100040,15,3,imallo . /,,,ces,0.75,3824.0,3,10,0.0,0,0,0,0,0,0.0,0.5,0.3333,0.47,Noisy,False
 CTX192100040,15,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX192100040,15,5,vt P A 51“,,,ces,0.75,502.0,4,10,0.1,1,0,0,0,0,0.1,0.25,0.5,0.4696,Noisy,False
+CTX192100040,15,5,vt P A 51“,,,ces,0.75,472.0,4,10,0.1,1,0,0,0,0,0.1,0.25,0.5,0.4756,Noisy,False
 CTX192100040,15,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,15,7,Pozdější SIMa: 431,,,ces,1.0,87.0,3,18,0.0556,0,0,0,0,0,0.0,0.4167,0.5,0.7895,Clear,False
 CTX192100040,15,8,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,15,9,D ů uč v VI o z p a ‘uz •,,,ces,1.0,7136.0,11,25,0.08,2,0,0,0,0,0.1136,0.4615,0.6923,0.3863,Trash,False
 CTX192100040,15,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,15,11,v- Kladot.,,,ces,0.9867,3376.0,2,10,0.0,0,0,0,0,0,0.0,0.2857,0.4286,0.52,Noisy,False
-CTX192100040,16,1,"N.nadat. ,",,,ces,0.75,1544.0,2,10,0.0,0,0,0,0,0,0.0,0.3333,0.5,0.5,Noisy,False
+CTX192100040,16,1,"N.nadat. ,",,,ces,0.75,1648.0,2,10,0.0,0,0,0,0,0,0.0,0.3333,0.5,0.5,Noisy,False
 CTX192100040,16,2,1 4altn ayA—* Wvra WHrt (MAA lAA w 00,,,ces,0.75,804.0,9,37,0.0541,1,2,0,0,1,0.1889,0.4091,0.3182,0.5889,Noisy,False
 CTX192100040,16,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX192100040,16,4,"1/ Irauje"".Y/nAlh%o-",,,ces,0.75,4608.0,2,20,0.1,0,1,0,0,0,0.175,0.5833,0.4167,0.475,Noisy,False

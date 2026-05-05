@@ -15,14 +15,14 @@ CTX200603179,1,13,Katastrální území: Bítov u Koněprus,,,ces,0.9999,324.0,5
 CTX200603179,1,14,Lokalita:,,,ces,0.75,148.0,1,9,0.1111,0,0,0,0,0,0.0,0.5,0.125,0.6999,Noisy,False
 CTX200603179,1,15,Parcelní čislo: 18,,,ces,0.9998,115.5,3,18,0.0556,0,0,0,0,0,0.0,0.3846,0.3846,0.7838,Clear,False
 CTX200603179,1,16,Okres Beroun,,,ces,0.8835,8096.0,2,12,0.0,0,0,0,0,0,0.0,0.4545,0.7273,0.6999,Noisy,False
-CTX200603179,1,17,Lokalizace v mapě 1:10 000:,,,ces,1.0,21.38,5,27,0.0741,0,0,0,0,0,0.0,0.4667,0.4,0.7279,Clear,False
+CTX200603179,1,17,Lokalizacevmapě 1:10 000:,,,ces,0.9999,61.75,3,25,0.08,0,0,0,0,0,0.0,0.4667,0.4,0.6967,Noisy,False
 CTX200603179,1,18,Mapový list 12-41-17 okolo bodu 68/217 mm od Z a J sekční čáry,,,ces,0.9813,99.0,13,62,0.0,0,0,0,0,0,0.0,0.4167,0.5833,0.771,Clear,False
-CTX200603179,1,19,Název a druh akce: Stavba elektrické přípojky k RD čp. 10,,,ces,1.0,39.25,11,57,0.0175,0,0,0,0,0,0.0,0.3488,0.4186,0.8058,Clear,False
+CTX200603179,1,19,Názevadruh akce: Stavba elektrické přípojky k RD čp. 10,,,ces,0.9998,66.0,9,55,0.0182,0,0,0,0,0,0.0,0.3488,0.4186,0.8012,Clear,False
 CTX200603179,1,20,"Investor: Václav Kubík, Tyršova 75, 266 01 Beroun",,,ces,0.75,41.75,8,49,0.0204,0,0,0,0,0,0.0,0.4062,0.5312,0.8159,Clear,False
 CTX200603179,1,21,"Základní metoda archeologického výzkumu, dohled",,,ces,1.0,12.56,5,47,0.0,0,0,0,0,0,0.0,0.4286,0.4762,0.9402,Clear,False
 CTX200603179,1,22,Doba výzkumu: únor 2005,,,ces,0.9998,38.0,4,23,0.0435,0,0,0,0,0,0.0,0.4667,0.6667,0.8317,Clear,False
 CTX200603179,1,23,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX200603179,1,24,Okolnosti a cil \ýzkumu:,,,ces,0.9448,16128.0,4,24,0.0833,0,0,0,0,0,0.0,0.4737,0.4737,0.6323,Noisy,False
+CTX200603179,1,24,Okolnostiacil \ýzkumu:,,,ces,0.75,14208.0,2,22,0.0909,0,0,0,0,0,0.0,0.4737,0.4737,0.6999,Noisy,False
 CTX200603179,1,25,Byla provedena kontrola odkrytých výkopů.,,,ces,0.9998,168.0,5,41,0.0,0,0,0,0,0,0.0,0.4167,0.5,0.9025,Clear,False
 CTX200603179,1,26,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX200603179,1,27,Zaměřeni:,,,ces,1.0,148.0,1,9,0.1111,0,0,0,0,0,0.0,0.5,0.5,0.8572,Clear,False
@@ -41,7 +41,7 @@ CTX200603179,3,3,EXPERTNÍ LIST KE STAVBĚ,,,ces,1.0,2976.0,4,23,0.0,0,0,0,0,0,0
 CTX200603179,3,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX200603179,3,5,Dokument je určen pro investora stavby jako doklad realizovaného záchranného,,,ces,0.9909,139.0,10,76,0.0,0,0,0,0,0,0.0,0.4179,0.5224,0.9182,Clear,False
 CTX200603179,3,6,výzkumu. Je nedílnou součástí konkrétní stavební akce.,,,ces,1.0,27.5,7,54,0.0,0,0,0,0,0,0.0,0.4348,0.5435,0.8982,Clear,False
-CTX200603179,3,7,V souvislosti s jinou stavební aktivitou je neplatný.,,,ces,0.9996,87.0,8,53,0.0,0,0,0,0,0,0.0,0.4444,0.5556,0.8193,Clear,False
+CTX200603179,3,7,V souvislostisjinou stavební aktivitou je neplatný.,,,ces,0.9987,368.0,6,51,0.0,0,0,0,0,0,0.0,0.4444,0.5556,0.7735,Clear,False
 CTX200603179,3,8,"""* * —* L.A*t**? * """,,,,0.0,0.0,0,20,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX200603179,3,9,"LOKALITA: BÍTOV U KONĚPRUS,PCI8TT._ . .",,,ces,0.8483,940.0,6,39,0.0513,0,0,0,1,0,0.025,0.4074,0.4074,0.5652,Noisy,True
 CTX200603179,3,10,7--WE * ----- - ser- ■■ • -*-,,,,0.0,0.0,0,29,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
@@ -69,5 +69,5 @@ CTX200603179,3,31,ZDOKUMENTOVÁNO POUZE GEOLOGICKÉ PODLOŽÍ.,,,ces,0.9998,168.
 CTX200603179,3,32,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX200603179,3,33,"ÚZEMÍ ZASAŽENÉ STAVEBNÍ ČINNOSTÍ POSOUDIL: MGR. DANIEL STOLZ, .A.",,,ces,0.9896,131.0,9,65,0.0154,0,0,0,0,0,0.0,0.4231,0.5577,0.6999,Noisy,True
 CTX200603179,3,34,ewa esmafkOV e,,,ces,0.75,8640.0,3,14,0.0,0,1,0,0,0,0.3167,0.5,0.6667,0.3999,Trash,False
-CTX200603179,3,35,. LEACOVISTEKAAPApuc,,,ces,0.8534,4352.0,2,20,0.0,0,1,0,0,0,0.0,0.5,0.4444,0.56,Noisy,False
-CTX200603179,3,36,DATUM: 10.5. 2005 C.J. 119/2005 KL PODPIS: NoOL,,,ces,0.75,45.25,8,47,0.0426,0,1,0,0,0,0.0125,0.3158,0.5789,0.6999,Noisy,False
+CTX200603179,3,35,. LEACOVISTEKAAPApuc,,,ces,0.8534,4352.0,2,20,0.0,0,0,0,0,0,0.0,0.5,0.4444,0.56,Noisy,False
+CTX200603179,3,36,DATUM: 10.5. 2005 C.J. 119/2005 KL PODPIS: NoOL,,,ces,0.75,45.25,8,47,0.0426,0,1,0,0,0,0.0125,0.3158,0.5789,0.7182,Clear,False
