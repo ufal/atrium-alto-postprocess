@@ -33,7 +33,7 @@ CSV_HEADER = [
     "word_count", "char_count",
     "garbage_density",
     "symbol", "upper", "repeated",
-    "ldl_fuses", "gibberish",
+    "ldl_fuses", "fused_words", "gibberish",
     "word_weird", "vowel_ratio", "rot_ratio",
     "quality_score",
     "categ", "caps_header"
@@ -136,16 +136,26 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
 
         wc = len(text_content.split())
         cc = len(text_content)
+
+        # Single- and two-word texts produce unreliably high perplexity because the
+        # model has almost no left context.  Cap their effective perplexity at a value
+        # that keeps their quality_score in the Noisy band rather than forcing Trash/Non-text.
+        # The cap is deliberately set above CATEG_PPL_SHORT_MAX (700) so the existing
+        # short-text branch in categorize_line still fires for genuinely garbled tokens.
+        if wc <= 2 and ppl_val > SHORT_PPL_CAP:
+            ppl_val = SHORT_PPL_CAP
+
         g_density = compute_garbage_density(text_content)
 
         sym_count = detect_strange_symbols(text_content)
         upper_count = detect_mid_uppercase(text_content)
         rep_count = detect_repeated_chars(text_content)
         fuse_count = detect_letter_digit_letter(text_content)
+        fused_words = detect_fused_words(text_content)  # NEW
         gibb_count = detect_gibberish_words(text_content)
 
         vowel_ratio = compute_vowel_ratio(text_content)
-        rot_ratio = compute_rotatable_ratio(text_content) # <-- ADDED
+        rot_ratio = compute_rotatable_ratio(text_content)  # <-- ADDED
         caps_header = is_all_caps_line(text_content)
 
         word_scores = score_words_in_line(text_content)
@@ -164,13 +174,12 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
             ols=original_lang_score
         )
 
-        # <-- ADDED f"{rot_ratio:.4f}" below next to vowel_ratio
         row = [
             file_id, page_id, line_num, text_content,
             split_ws, split_we, langs[i], f"{scores[i]:.4f}", f"{ppl_val:.2f}",
             wc, cc, f"{g_density:.4f}",
             sym_count, upper_count, rep_count,
-            fuse_count, gibb_count,
+            fuse_count, fused_words, gibb_count,
             f"{weird_ratio:.4f}", f"{vowel_ratio:.4f}", f"{rot_ratio:.4f}",
             f"{q_score:.4f}", categ, caps_header
         ]
@@ -179,6 +188,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     results.sort(key=lambda x: x[0])
     for doc_id, group in groupby(results, key=lambda x: x[0]):
         write_rows_to_doc(out_dir, doc_id, list(group))
+
 
 def process_document(task):
     """
@@ -238,7 +248,7 @@ def process_document(task):
                     write_rows_to_doc(Path(output_dir), file_id, [[
                         file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
                         "N/A", "0.0000", "0.00", 0, len(clean_merged), "0.0000",
-                        0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", "0.0000", cat, False
+                        0, 0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", "0.0000", cat, False
                     ]])
                     continue
 

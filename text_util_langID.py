@@ -62,6 +62,7 @@ PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 
 
 CATEG_PPL_SHORT_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_SHORT_MAX", 700.0)
 CATEG_PPL_WEIRD_MAX = _get_float("TEXT_UTILS", "CATEG_PPL_WEIRD_MAX", 400.0)
+SHORT_PPL_CAP = _get_float("TEXT_UTILS", "SHORT_PPL_CAP", 850.0)
 
 LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
@@ -81,7 +82,7 @@ CATEG_GARBAGE_SHORT_WC = _config.getint("TEXT_UTILS", "CATEG_GARBAGE_SHORT_WC", 
 CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.40)
 CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.70)
 
-ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/_—–:%;?!/'))
+ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/—–:%;?!/'))
 _STRIP_CHARS: str = _get_str("TEXT_UTILS", "STRIP_CHARS", '.,;:!?()[]"\'/\\')
 
 RE_TRASH_MULTI_SYMBOL: re.Pattern = re.compile(r'[^\w\s]{2,}')
@@ -90,6 +91,11 @@ RE_NON_TEXT: re.Pattern = re.compile(r'^[\d\s\-\u2013\u2014/:.,()%]+$')
 RE_GARBAGE_CLUSTERS: re.Pattern = re.compile(r'[~=]|[\u00C0-\u017F]{2,}|[A-Z]=[A-Z]')
 RE_ROMAN_NUMERAL: re.Pattern = re.compile(r'^[IVXLCDMivxlcdm]+\.?$')
 RE_STAMP: re.Pattern = re.compile(r'^(?:[A-Za-z]+)?[\W_]*\d{2,4}\s*/\s*\d{2,4}[\W_]*$')
+
+# Alphanumeric archive/inventory codes: letter prefix + digits, e.g. A678/2015, A1737, AG802045
+RE_ARCHIVE_CODE: re.Pattern = re.compile(r'^[A-Za-z]{1,3}\d{3,}(?:/\d+)?$')
+# Mixed-case alphanumeric tokens with digits, or all-caps tokens with 'X' placeholders e.g. VX5P3SosAX, FAXAPOOXAXXXX
+RE_ALPHANUM_TOKEN: re.Pattern = re.compile(r'^[A-Za-z0-9]{5,}$')
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
     "ces": frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ"),
@@ -222,6 +228,39 @@ def is_all_caps_line(text: str) -> bool:
     return all(w.isupper() for w in alpha_words)
 
 
+# Czech vowel-consonant alternation limit — a run of 5+ consonants or 4+ vowels
+# in a row without a space is a reliable fused-word indicator.
+_RE_FUSED_CONSONANT_RUN: re.Pattern = re.compile(
+    r'[bcčdfghjklmnpqrřsštvwxzž]{5,}', re.IGNORECASE
+)
+_RE_FUSED_VOWEL_RUN: re.Pattern = re.compile(
+    r'[aeiouyáéíóúýěůäöü]{4,}', re.IGNORECASE
+)
+
+
+def detect_fused_words(text: str) -> int:
+    """
+    Count tokens that are likely two Czech words merged without a space.
+    Heuristics used:
+      1. Token length > 14 characters (very rare in clean Czech)
+      2. Consonant run of 5+ without a vowel interruption
+      3. Vowel run of 4+ (rarer indicator)
+    Returns the count of suspected fused tokens.
+    """
+    count = 0
+    for word in text.split():
+        core = word.strip(_STRIP_CHARS)
+        if not core or not any(c.isalpha() for c in core):
+            continue
+        if len(core) > 14:
+            count += 1
+        elif _RE_FUSED_CONSONANT_RUN.search(core):
+            count += 1
+        elif _RE_FUSED_VOWEL_RUN.search(core):
+            count += 1
+    return count
+
+
 # ---------------------------------------------------------------------------
 # Pre-filtering & Parsing
 # ---------------------------------------------------------------------------
@@ -239,7 +278,8 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     # and leading/mid digit 2 that forms a word-initial consonant → 'z'.
     # Only fires when the surrounding characters are alphabetic so we
     # don't corrupt genuine numbers.
-    clean_text = re.sub(r'(?<=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])1(?=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])', 'l', clean_text)
+    clean_text = re.sub(r'(?<=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])1(?=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])', 'l',
+                        clean_text)
     clean_text = re.sub(r'\b2(?=[a-záčďéěíňóřšťůúýž])', 'z', clean_text)
 
     # 1b. Prostrkávání / spaced-letter repair
@@ -248,15 +288,17 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     # Detection: 4+ consecutive single uppercase/diacritic letters each
     # separated by exactly one space.
     _RE_SPACED_CAPS = re.compile(
-        r'(?<!\S)'                          # preceded by whitespace or start
-        r'([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ] ){3,}'    # 3+ spaced caps
-        r'[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]'            # final cap (no trailing space)
-        r'(?!\S)'                           # followed by whitespace or end
+        r'(?<!\S)'  # preceded by whitespace or start
+        r'([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ] ){3,}'  # 3+ spaced caps
+        r'[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]'  # final cap (no trailing space)
+        r'(?!\S)'  # followed by whitespace or end
     )
+
     def _collapse_spaced_caps(m: re.Match) -> str:
         # Collapse spaces and title-case the run
         letters = m.group(0).replace(' ', '')
         return letters[0].upper() + letters[1:].lower()
+
     clean_text = _RE_SPACED_CAPS.sub(_collapse_spaced_caps, clean_text)
 
     # 1c. OCR word-split repair for lone inserted characters
@@ -290,6 +332,22 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     if is_non_text(clean_text): return "Non-text", clean_text
     if RE_ROMAN_NUMERAL.match(clean_text.strip()): return "Non-text", clean_text
     if RE_STAMP.search(clean_text) or "IVerc" in clean_text: return "Non-text", clean_text
+
+    # Detect isolated form-field labels — short headers from standardised
+    # archaeological record forms that should be inspected as Non-text identifiers,
+    # not treated as prose fragments.
+    _words = clean_text.split()
+    _wc = len(_words)
+    if _wc <= 2:
+        _ends_colon = clean_text.rstrip().endswith(':')
+        _all_caps_wds = all(w.isupper() for w in _words if any(c.isalpha() for c in w))
+        # Rule A: any 1-2 word line ending with a colon is a form label
+        if _ends_colon:
+            return "Non-text", clean_text
+        # Rule B: two all-caps words with no digits → column header (e.g. "ČÍSLO PARCELY")
+        if _wc == 2 and _all_caps_wds and not any(c.isdigit() for c in clean_text):
+            return "Non-text", clean_text
+
     if sum(c.isdigit() for c in clean_text) / n_chars > 0.4: return "Process", clean_text
 
     unique_symbols = set(c for c in clean_text if not c.isspace())
@@ -363,7 +421,17 @@ def score_word(word: str) -> float:
             elif ch.isupper() and lower_run >= 1:
                 has_uppercase = True
                 break
-    return min(1.0, 0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase)
+
+    # Detect leading all-caps OCR prefix on a mixed-case word (e.g. 'XXWžkumu' for 'výzkumu')
+    has_caps_prefix = False
+    if len(core) >= 4 and not core.isupper():
+        # Count consecutive uppercase letters at the start of the token
+        caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
+        if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
+            has_caps_prefix = True
+
+    return min(1.0,
+               0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase + 0.20 * has_caps_prefix)
 
 
 def score_words_in_line(text: str) -> list[tuple[str, float]]:
@@ -604,6 +672,17 @@ def is_non_text(text: str) -> bool:
     if re.match(r'^\d{3}\s\d{2}\s+[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]', text.strip()):
         return False
     if RE_NON_TEXT.match(text.strip()): return True
+
+    # Single-token identifiers: archive references and alphanumeric codes
+    stripped = text.strip()
+    if ' ' not in stripped:
+        if RE_ARCHIVE_CODE.match(stripped):
+            return True
+        if RE_ALPHANUM_TOKEN.match(stripped):
+            # Must contain a digit (e.g. VX5P3SosAX) OR be a weirdly long uppercase string with placeholders (e.g. FAXAPOOXAXXXX)
+            if any(c.isdigit() for c in stripped) or (stripped.isupper() and ('X' in stripped or len(stripped) >= 10)):
+                return True
+
     # Relaxed from 0.4 → 0.5: short lines with addresses or codes shouldn't
     # be caught by the digit ratio alone if they have real letters too.
     if len(text) < 15 and compute_digit_ratio(text) > 0.5: return True
