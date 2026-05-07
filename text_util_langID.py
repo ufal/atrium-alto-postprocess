@@ -67,12 +67,19 @@ SHORT_PPL_CAP = _get_float("TEXT_UTILS", "SHORT_PPL_CAP", 850.0)
 LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
-QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.3)
-QS_WEIGHT_SYMBOL = _get_float("TEXT_UTILS", "QS_WEIGHT_SYMBOL", 0.2)
-QS_WEIGHT_WEIRD = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD", 0.2)
-QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.2)
-QS_WEIGHT_LENGTH = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH", 0.1)
-QS_LENGTH_MAX = _get_float("TEXT_UTILS", "QS_LENGTH_MAX", 100.0)
+# Core signal weights — must sum to 1.0 across all ten components.
+QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.25)
+QS_WEIGHT_SYMBOL     = _get_float("TEXT_UTILS", "QS_WEIGHT_SYMBOL",     0.13)
+QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.13)
+QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.15)
+QS_WEIGHT_LENGTH     = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH",     0.05)
+# Extended signal weights (previously checked ad-hoc inside _determine_category)
+QS_WEIGHT_GARBAGE    = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE",    0.10)
+QS_WEIGHT_VOWEL      = _get_float("TEXT_UTILS", "QS_WEIGHT_VOWEL",      0.07)
+QS_WEIGHT_LANG       = _get_float("TEXT_UTILS", "QS_WEIGHT_LANG",       0.05)
+QS_WEIGHT_GIBBERISH  = _get_float("TEXT_UTILS", "QS_WEIGHT_GIBBERISH",  0.04)
+QS_WEIGHT_FUSED      = _get_float("TEXT_UTILS", "QS_WEIGHT_FUSED",      0.03)
+QS_LENGTH_MAX        = _get_float("TEXT_UTILS", "QS_LENGTH_MAX",        100.0)
 
 CATEG_GARBAGE_DENSITY_HIGH = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH", 0.35)
 CATEG_GARBAGE_DENSITY_SHORT = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_SHORT", 0.20)
@@ -98,6 +105,29 @@ RE_ARCHIVE_CODE: re.Pattern = re.compile(r'^[A-Za-z]{1,3}\d{3,}(?:/\d+)?$')
 RE_ALPHANUM_TOKEN: re.Pattern = re.compile(r'^[A-Za-z0-9]{5,}$')
 # Multi-token archive/inventory references with spaces, e.g. "ČP. 10", "BZU 1982-1983 4", "P2N7-", "z.6Z. 1369/0"
 RE_ARCHIVE_REF_SPACED: re.Pattern = re.compile(r'^[A-Za-záčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]{1,5}[\s.\-]+\d{1,}')
+
+# ---------------------------------------------------------------------------
+# Module-level regexes hoisted from inner functions for compile-once efficiency
+# ---------------------------------------------------------------------------
+
+# Prostrkávání / spaced-letter pattern: 4+ consecutive single uppercase letters
+# separated by exactly one space, e.g. "S K U H R O V" → "Skuhrov"
+_RE_SPACED_CAPS: re.Pattern = re.compile(
+    r'(?<!\S)'
+    r'([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ] ){3,}'
+    r'[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]'
+    r'(?!\S)'
+)
+
+
+def _collapse_spaced_caps(m: re.Match) -> str:
+    letters = m.group(0).replace(' ', '')
+    return letters[0].upper() + letters[1:].lower()
+
+
+# Mid-word capitalisation artifact: any lowercase immediately followed by uppercase
+# inside a word that is not all-caps.
+_RE_MID_UPPER: re.Pattern = re.compile(r'[a-záčďéěíňóřšťůúýžäöü][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽÄÖÜ]')
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
     "ces": frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ"),
@@ -213,7 +243,6 @@ def detect_mid_uppercase(text: str) -> int:
     # Strict regex: any lowercase letter immediately followed by an uppercase letter
     # inside a word body is a reliable OCR mid-capitalisation artifact.
     # The word must not be all-caps (e.g. acronyms) and must be at least 2 chars.
-    _RE_MID_UPPER = re.compile(r'[a-záčďéěíňóřšťůúýžäöü][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽÄÖÜ]')
     count = 0
     for word in text.split():
         core = word.strip('.,;:!?()[]"\'-/')
@@ -289,18 +318,6 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     #   "S K U H R O V N A D B Ě L O U"  →  "Skuhrov nad Bělou"
     # Detection: 4+ consecutive single uppercase/diacritic letters each
     # separated by exactly one space.
-    _RE_SPACED_CAPS = re.compile(
-        r'(?<!\S)'  # preceded by whitespace or start
-        r'([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ] ){3,}'  # 3+ spaced caps
-        r'[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]'  # final cap (no trailing space)
-        r'(?!\S)'  # followed by whitespace or end
-    )
-
-    def _collapse_spaced_caps(m: re.Match) -> str:
-        # Collapse spaces and title-case the run
-        letters = m.group(0).replace(' ', '')
-        return letters[0].upper() + letters[1:].lower()
-
     clean_text = _RE_SPACED_CAPS.sub(_collapse_spaced_caps, clean_text)
 
     # 1c. OCR word-split repair for lone inserted characters
@@ -470,155 +487,51 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 def categorize_line(
         qs: float,
         txt: str,
-        w: int,
-        wr: float,
-        vr: float,
-        prp: float,
-        ols: float | None = None,
-        gibb: int = 0,
-        fused: int = 0,
+        wc: int,
+        vowel_ratio: float,
+        perplexity: float,
 ) -> tuple[str, float]:
-    def _determine_category(
-            quality_score: float,
-            text_source: str,
-            wc: int,
-            weird_ratio: float,
-            vowel_ratio: float,
-            perplexity: float,
-            original_lang_score: float | None = None
-    ) -> str:
-        """Internal logic runner determining the conceptual category."""
-        if wc == 0 or not text_source.strip():
+    """
+    Assign a quality category to a processed line and return the (category, aligned_score) pair.
+
+    Category decision depends on a single parameter — the pre-computed quality score *qs*,
+    which already encodes every relevant signal (valid-word ratio, symbol density, weirdness,
+    perplexity, text length, garbage density, vowel quality, language confidence, gibberish
+    fraction, and fused-word fraction).
+
+    Only three absolute structural overrides bypass the score:
+      1. Empty / zero-word lines → "Empty"   (no meaningful score exists)
+      2. All-caps line with near-zero vowels → "Trash"  (definitively unreadable)
+      3. Ultra-low perplexity (< 50, wc ≥ 3) → "Clear"  (model is highly confident)
+
+    All other decisions are pure threshold routing:
+      qs < CATEG_TRASH_SCORE_MAX  → Trash
+      qs < CATEG_NOISY_SCORE_MAX  → Noisy
+      otherwise                   → Clear
+
+    After categorisation the score is aligned to lie strictly within the numerical
+    bounds of its category so downstream aggregation can rely on monotonic ordering.
+    """
+
+    def _determine_category(quality_score: float, text_source: str, word_count: int,
+                            vr: float, ppl: float) -> str:
+        # Override 1: empty line
+        if word_count == 0 or not text_source.strip():
             return "Empty"
-
-        # --- NEW INJECTION: Fragment Rescue ---
-        # If the line has multiple words and is overwhelmingly structurally valid,
-        # protect it from immediate Trash demotion.
-        valid_ratio = compute_valid_ratio(text_source)
-        is_legible_fragment = wc >= 3 and valid_ratio >= 0.70 and perplexity < 800.0
-
-        # ---- Soft caps derived from gibberish / fused-word signals ----
-        # These flags do NOT force Trash; they only prevent Clear promotion.
-        # They are checked right before the final "return Clear" below.
-        _gibberish_cap = gibb >= wc * 0.5 and wc >= 2   # majority of words are vowel-less
-        _fused_cap = fused > 0                            # at least one suspected fused token
-
-        g_density = compute_garbage_density(text_source)
-        if g_density > CATEG_GARBAGE_DENSITY_HIGH or (
-                wc <= CATEG_GARBAGE_SHORT_WC and g_density > CATEG_GARBAGE_DENSITY_SHORT):
-            # Bypass Trash demotion if it's a legible fragment
-            if not is_legible_fragment:
-                return "Trash"
-        # --------------------------------------
-
-        if is_all_caps_line(text_source) and vowel_ratio < 0.15:
+        # Override 2: all-caps with negligible vowels is definitively unreadable
+        if is_all_caps_line(text_source) and vr < 0.10:
             return "Trash"
-
-        # wc >= 1: even single-word reversed/mirrored fragments should be caught.
-        # Threshold lowered 0.85 → 0.80 to compensate for DistilGPT-2's weaker
-        # perplexity signal on this artifact type.
-        if wc >= 1:
-            rot_ratio = compute_rotatable_ratio(text_source)
-            has_cz_diacs = any(c in _LANG_DIACRITICS["ces"] for c in text_source)
-            if rot_ratio > 0.80 and not has_cz_diacs:
-                return "Trash"
-
-        if wc > 0:
-            hyphen_count = text_source.count('-')
-            dot_count = text_source.count('.')
-            if (hyphen_count / wc) > 0.4 or (dot_count / wc) > 0.5:
-                if quality_score < CATEG_TRASH_SCORE_MAX:
-                    return "Trash"
-                return "Noisy"
-
-        avg_word_len = sum(len(w.strip(_STRIP_CHARS)) for w in text_source.split()) / wc if wc > 0 else 0
-        if wc >= 5 and avg_word_len < 2.0 and weird_ratio > 0.1:
-            return "Trash"
-
-        if perplexity > CATEG_PPL_SHORT_MAX and wc < 5:
-            if not all(c in "IVXLCDMivxlcdm.-, " for c in text_source):
-                if g_density < 0.1 and weird_ratio < 0.20:
-                    return "Noisy"
-                return "Trash"
-
-        def _is_initial(w):
-            return len(w) == 2 and w[0].isupper() and w[1] == '.'
-
-        single_char_ratio = (
-            sum(1 for w in text_source.split() if len(w.strip(_STRIP_CHARS)) <= 1 and not _is_initial(w)) / wc
-            if wc > 0 else 0
-        )
-
-        if wc >= 3 and single_char_ratio >= 0.50 and weird_ratio > 0.15:
-            normal_word_count = sum(
-                1 for w in text_source.split()
-                if len(w.strip(_STRIP_CHARS)) >= 4
-            )
-            if normal_word_count >= 3:
-                return "Noisy"
-            return "Trash"
-
-        if len(text_source) > 5 and (vowel_ratio < 0.1 or vowel_ratio > 0.9):
-            return "Trash"
-
-        if weird_ratio >= 0.25:
-            if wc == 1 and len(text_source.strip()) > 25 and quality_score > CATEG_TRASH_SCORE_MAX:
-                pass
-            else:
-                return "Trash"
-
-        if weird_ratio > 0.15 and perplexity > CATEG_PPL_WEIRD_MAX:
-            valid_wr = compute_valid_ratio(text_source)
-            if valid_wr >= 0.5: return "Noisy"
-            return "Trash"
-
-        if weird_ratio > 0.08 and perplexity > 200.0 and quality_score < 0.85:
-            return "Noisy"
-
-        # --- Ultra-low perplexity bypass (Change 7) ---
-        # If the GPU model is nearly certain the text is valid Czech prose,
-        # trust it over structural nitpicking (isolated punctuation, heavy
-        # dashes, etc.).  Only fires for multi-word strings so single tokens
-        # with low perplexity (e.g. common abbreviations) aren't promoted.
-        if perplexity < 50.0 and wc >= 3:
+        # Override 3: language model is highly confident — trust it over heuristics
+        if ppl < 50.0 and word_count >= 3:
             return "Clear"
-        # -----------------------------------------------
-
-        if re.search(r'[.,!?][a-zA-Z]', text_source):
-            if quality_score >= CATEG_NOISY_SCORE_MAX:
-                return "Noisy"
-
+        # Pure score-based routing — all other signals live inside quality_score
         if quality_score < CATEG_TRASH_SCORE_MAX:
-            if wc >= 3 and compute_valid_ratio(text_source) >= 0.40:
-                return "Noisy"
             return "Trash"
-
         if quality_score < CATEG_NOISY_SCORE_MAX:
             return "Noisy"
-
-        if single_char_ratio >= 0.25 and wc >= 3 and weird_ratio > 0.05:
-            return "Noisy"
-
-        if original_lang_score is not None and original_lang_score < LANG_SCORE_ROUGH:
-            if infer_lang_from_diacritics(text_source, _EXPECTED_LANGS_BASES) is None:
-                return "Noisy"
-
-        if detect_strange_symbols(text_source) > 0:
-            return "Noisy"
-
-        # ---- Gibberish / fused-word Clear promotion caps ----
-        # These signals were computed before entering _determine_category.
-        # They never push a token *down* to Trash — only prevent Clear.
-        if _gibberish_cap or _fused_cap:
-            return "Noisy"
-
         return "Clear"
 
-    """
-    Evaluates the string to assign an OCR category and aligns the final
-    quality score to strictly match the mathematical bounds of that category.
-    """
-    categ = _determine_category(qs, txt, w, wr, vr, prp, ols)
+    categ = _determine_category(qs, txt, wc, vowel_ratio, perplexity)
 
     # Enforce interconnected boundaries without modifying the logical routing
     if categ == "Trash":
@@ -698,18 +611,71 @@ def is_non_text(text: str) -> bool:
     return False
 
 
-def compute_quality_score(valid_word_ratio: float, symbol_ratio: float, perplexity: float, text_length: int,
-                          weird_ratio: float, ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
-                          length_max: float = QS_LENGTH_MAX) -> float:
-    norm_symbol = min(symbol_ratio, 1.0)
-    norm_ppl = 1.0 - min(perplexity / ppl_max, 1.0)
-    norm_len = min(text_length / length_max, 1.0)
-    norm_weird = 1.0 - min(weird_ratio, 1.0)
+def compute_quality_score(
+        valid_word_ratio: float,
+        symbol_ratio: float,
+        perplexity: float,
+        text_length: int,
+        weird_ratio: float,
+        vowel_ratio: float = 0.40,
+        garbage_density: float = 0.0,
+        lang_score: float | None = None,
+        gibberish_ratio: float = 0.0,
+        fused_ratio: float = 0.0,
+        ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
+        length_max: float = QS_LENGTH_MAX,
+) -> float:
+    """
+    Compute a single quality score in [0, 1] that encodes every meaningful
+    signal available for an OCR text line.  This score is the *sole* input
+    to the category routing in categorize_line(); no raw signal is checked
+    there independently.
+
+    Components
+    ----------
+    valid_word_ratio  — fraction of words that look like real words
+    symbol_ratio      — fraction of non-alphanumeric, non-space characters
+    weird_ratio       — mean per-word weirdness score (OCR artefact indicator)
+    perplexity        — LM perplexity; low = confident valid text
+    text_length       — character count; longer lines carry more evidence
+    vowel_ratio       — fraction of alphabetic chars that are vowels;
+                        ideal range [0.20, 0.75], penalised outside that
+    garbage_density   — non-alnum density after removing leader dots;
+                        normalised against CATEG_GARBAGE_DENSITY_HIGH
+    lang_score        — FastText confidence for the detected language
+                        (defaults to 0.5 when unavailable)
+    gibberish_ratio   — fraction of words with no recognisable vowel pattern
+    fused_ratio       — fraction of tokens that appear to be fused words
+    """
+    norm_symbol  = 1.0 - min(symbol_ratio, 1.0)
+    norm_ppl     = 1.0 - min(perplexity / ppl_max, 1.0)
+    norm_len     = min(text_length / length_max, 1.0)
+    norm_weird   = 1.0 - min(weird_ratio, 1.0)
+    norm_garbage = 1.0 - min(garbage_density / max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9), 1.0)
+
+    # Vowel quality: score 1.0 inside the ideal range [0.20, 0.75],
+    # ramps down linearly to 0.0 at the extremes (0.0 and 1.0).
+    vr = vowel_ratio
+    if vr < 0.20:
+        norm_vowel = vr / 0.20
+    elif vr > 0.75:
+        norm_vowel = max(0.0, 1.0 - (vr - 0.75) / 0.25)
+    else:
+        norm_vowel = 1.0
+
+    norm_lang   = lang_score if lang_score is not None else 0.5
+    norm_gibb   = 1.0 - min(gibberish_ratio, 1.0)
+    norm_fused  = 1.0 - min(fused_ratio, 1.0)
 
     return (
             QS_WEIGHT_VALID_WORD * valid_word_ratio
-            + QS_WEIGHT_SYMBOL * (1.0 - norm_symbol)
-            + QS_WEIGHT_WEIRD * norm_weird
+            + QS_WEIGHT_SYMBOL   * norm_symbol
+            + QS_WEIGHT_WEIRD    * norm_weird
             + QS_WEIGHT_PERPLEXITY * norm_ppl
-            + QS_WEIGHT_LENGTH * norm_len
+            + QS_WEIGHT_LENGTH   * norm_len
+            + QS_WEIGHT_GARBAGE  * norm_garbage
+            + QS_WEIGHT_VOWEL    * norm_vowel
+            + QS_WEIGHT_LANG     * norm_lang
+            + QS_WEIGHT_GIBBERISH * norm_gibb
+            + QS_WEIGHT_FUSED    * norm_fused
     )

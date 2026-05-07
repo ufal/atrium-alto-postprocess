@@ -117,6 +117,9 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     langs = [l[0].replace("__label__", "") for l in labels]
     scores = [s[0] for s in scores]
 
+    # Build a frozenset once so the per-line membership test is O(1)
+    _known_langs: frozenset = frozenset((trusted_langs or []) + (expected_langs or []))
+
     while batch_id not in result_dict:
         time.sleep(0.01)
 
@@ -128,14 +131,14 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
 
         original_lang_score = scores[i]
 
-        if langs[i] not in trusted_langs + expected_langs:
+        wc = len(text_content.split())
+        cc = len(text_content)
+
+        if langs[i] not in _known_langs:
             langs[i] = expected_langs[0]
             scores[i] = max(scores[i], LANG_SCORE_CLEAR)
 
         ppl_val = ppls[i]
-
-        wc = len(text_content.split())
-        cc = len(text_content)
 
         # Single- and two-word texts produce unreliably high perplexity because the
         # model has almost no left context.  Cap their effective perplexity at a value
@@ -151,29 +154,33 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         upper_count = detect_mid_uppercase(text_content)
         rep_count = detect_repeated_chars(text_content)
         fuse_count = detect_letter_digit_letter(text_content)
-        fused_words = detect_fused_words(text_content)  # NEW
+        fused_words = detect_fused_words(text_content)
         gibb_count = detect_gibberish_words(text_content)
 
         vowel_ratio = compute_vowel_ratio(text_content)
-        rot_ratio = compute_rotatable_ratio(text_content)  # <-- ADDED
+        rot_ratio = compute_rotatable_ratio(text_content)
         caps_header = is_all_caps_line(text_content)
 
         word_scores = score_words_in_line(text_content)
         weird_ratio = compute_word_weird_ratio(word_scores)
 
+        # Compute the single quality score that encodes every signal.
+        # categorize_line() routes solely on this value (plus 3 absolute overrides).
         q_score = compute_quality_score(
             valid_word_ratio=compute_valid_ratio(text_content),
             symbol_ratio=compute_symbol_ratio(text_content),
             perplexity=ppl_val,
             text_length=cc,
-            weird_ratio=weird_ratio
+            weird_ratio=weird_ratio,
+            vowel_ratio=vowel_ratio,
+            garbage_density=g_density,
+            lang_score=original_lang_score,
+            gibberish_ratio=gibb_count / max(wc, 1),
+            fused_ratio=fused_words / max(wc, 1),
         )
 
         categ, q_score = categorize_line(
-            q_score, text_content, wc, weird_ratio, vowel_ratio, ppl_val,
-            ols=original_lang_score,
-            gibb=gibb_count,
-            fused=fused_words,
+            q_score, text_content, wc, vowel_ratio, ppl_val,
         )
 
         row = [
