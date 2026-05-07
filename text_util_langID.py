@@ -335,21 +335,6 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     if RE_ROMAN_NUMERAL.match(clean_text.strip()): return "Non-text", clean_text
     if RE_STAMP.search(clean_text) or "IVerc" in clean_text: return "Non-text", clean_text
 
-    # Detect isolated form-field labels — short headers from standardised
-    # archaeological record forms that should be inspected as Non-text identifiers,
-    # not treated as prose fragments.
-    _words = clean_text.split()
-    _wc = len(_words)
-    if _wc <= 2:
-        _ends_colon = clean_text.rstrip().endswith(':')
-        _all_caps_wds = all(w.isupper() for w in _words if any(c.isalpha() for c in w))
-        # Rule A: any 1-2 word line ending with a colon is a form label
-        if _ends_colon:
-            return "Non-text", clean_text
-        # Rule B: two all-caps words with no digits → column header (e.g. "ČÍSLO PARCELY")
-        if _wc == 2 and _all_caps_wds and not any(c.isdigit() for c in clean_text):
-            return "Non-text", clean_text
-
     if sum(c.isdigit() for c in clean_text) / n_chars > 0.4: return "Process", clean_text
 
     unique_symbols = set(c for c in clean_text if not c.isspace())
