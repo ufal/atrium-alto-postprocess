@@ -579,10 +579,6 @@ def categorize_line(
         if weird_ratio >= 0.25:
             if wc == 1 and len(text_source.strip()) > 25 and quality_score > CATEG_TRASH_SCORE_MAX:
                 pass
-            elif g_density < 0.10 and wc <= 2:
-                # Single/two-word token with OCR artifacts but no actual garbage characters
-                # (e.g. "b/eralowýřt_", "XXWžkumu") — correctable, not re-OCR territory
-                return "Noisy"
             else:
                 return "Trash"
 
@@ -623,15 +619,6 @@ def categorize_line(
                 return "Noisy"
 
         if detect_strange_symbols(text_source) > 0:
-            return "Noisy"
-
-        # ---- Suspicious-clean short-token guard ----
-        # A 1-2 word string with zero garbage, zero fused tokens, zero gibberish words
-        # and a very high quality score is statistically more likely to be an isolated
-        # form-field label (e.g. "Kultura", "Uložení", "Druh nálezu") than genuine prose.
-        # Cap it at Noisy so it stays human-reviewable rather than auto-accepted as Clear.
-        if (wc <= 2 and quality_score >= 0.70 and len(text_source.strip()) <= 15
-                and gibb == 0 and fused == 0 and g_density == 0.0 and weird_ratio == 0.0):
             return "Noisy"
 
         # ---- Gibberish / fused-word Clear promotion caps ----
