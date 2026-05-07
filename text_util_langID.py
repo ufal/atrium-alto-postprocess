@@ -96,6 +96,8 @@ RE_STAMP: re.Pattern = re.compile(r'^(?:[A-Za-z]+)?[\W_]*\d{2,4}\s*/\s*\d{2,4}[\
 RE_ARCHIVE_CODE: re.Pattern = re.compile(r'^[A-Za-z]{1,3}\d{3,}(?:/\d+)?$')
 # Mixed-case alphanumeric tokens with digits, or all-caps tokens with 'X' placeholders e.g. VX5P3SosAX, FAXAPOOXAXXXX
 RE_ALPHANUM_TOKEN: re.Pattern = re.compile(r'^[A-Za-z0-9]{5,}$')
+# Multi-token archive/inventory references with spaces, e.g. "ČP. 10", "BZU 1982-1983 4", "P2N7-", "z.6Z. 1369/0"
+RE_ARCHIVE_REF_SPACED: re.Pattern = re.compile(r'^[A-Za-záčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]{1,5}[\s.\-]+\d{1,}')
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
     "ces": frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ"),
@@ -487,7 +489,9 @@ def categorize_line(
         wr: float,
         vr: float,
         prp: float,
-        ols: float | None = None
+        ols: float | None = None,
+        gibb: int = 0,
+        fused: int = 0,
 ) -> tuple[str, float]:
     def _determine_category(
             quality_score: float,
@@ -507,6 +511,12 @@ def categorize_line(
         # protect it from immediate Trash demotion.
         valid_ratio = compute_valid_ratio(text_source)
         is_legible_fragment = wc >= 3 and valid_ratio >= 0.70 and perplexity < 800.0
+
+        # ---- Soft caps derived from gibberish / fused-word signals ----
+        # These flags do NOT force Trash; they only prevent Clear promotion.
+        # They are checked right before the final "return Clear" below.
+        _gibberish_cap = gibb >= wc * 0.5 and wc >= 2   # majority of words are vowel-less
+        _fused_cap = fused > 0                            # at least one suspected fused token
 
         g_density = compute_garbage_density(text_source)
         if g_density > CATEG_GARBAGE_DENSITY_HIGH or (
@@ -569,6 +579,10 @@ def categorize_line(
         if weird_ratio >= 0.25:
             if wc == 1 and len(text_source.strip()) > 25 and quality_score > CATEG_TRASH_SCORE_MAX:
                 pass
+            elif g_density < 0.10 and wc <= 2:
+                # Single/two-word token with OCR artifacts but no actual garbage characters
+                # (e.g. "b/eralowýřt_", "XXWžkumu") — correctable, not re-OCR territory
+                return "Noisy"
             else:
                 return "Trash"
 
@@ -609,6 +623,21 @@ def categorize_line(
                 return "Noisy"
 
         if detect_strange_symbols(text_source) > 0:
+            return "Noisy"
+
+        # ---- Suspicious-clean short-token guard ----
+        # A 1-2 word string with zero garbage, zero fused tokens, zero gibberish words
+        # and a very high quality score is statistically more likely to be an isolated
+        # form-field label (e.g. "Kultura", "Uložení", "Druh nálezu") than genuine prose.
+        # Cap it at Noisy so it stays human-reviewable rather than auto-accepted as Clear.
+        if (wc <= 2 and quality_score >= 0.70 and len(text_source.strip()) <= 15
+                and gibb == 0 and fused == 0 and g_density == 0.0 and weird_ratio == 0.0):
+            return "Noisy"
+
+        # ---- Gibberish / fused-word Clear promotion caps ----
+        # These signals were computed before entering _determine_category.
+        # They never push a token *down* to Trash — only prevent Clear.
+        if _gibberish_cap or _fused_cap:
             return "Noisy"
 
         return "Clear"
@@ -681,6 +710,14 @@ def is_non_text(text: str) -> bool:
         if RE_ALPHANUM_TOKEN.match(stripped):
             # Must contain a digit (e.g. VX5P3SosAX) OR be a weirdly long uppercase string with placeholders (e.g. FAXAPOOXAXXXX)
             if any(c.isdigit() for c in stripped) or (stripped.isupper() and ('X' in stripped or len(stripped) >= 10)):
+                return True
+    else:
+        # Multi-token archive/inventory references: letter prefix(es) + digits possibly separated
+        # by spaces, dots, hyphens — e.g. "ČP. 10", "BZU 1982-1983 4", "z.6Z. 1369/0", "P2N7-"
+        # Guard: must be short (≤ 20 chars) and contain at least one digit to avoid
+        # catching genuine two-word phrases that happen to start with a short word.
+        if len(stripped) <= 20 and any(c.isdigit() for c in stripped):
+            if RE_ARCHIVE_REF_SPACED.match(stripped):
                 return True
 
     # Relaxed from 0.4 → 0.5: short lines with addresses or codes shouldn't

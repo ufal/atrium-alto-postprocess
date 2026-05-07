@@ -171,7 +171,9 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
 
         categ, q_score = categorize_line(
             q_score, text_content, wc, weird_ratio, vowel_ratio, ppl_val,
-            ols=original_lang_score
+            ols=original_lang_score,
+            gibb=gibb_count,
+            fused=fused_words,
         )
 
         row = [
