@@ -230,11 +230,11 @@ As the script processes, it assigns each line one of five categories 🪧:
 
 |    Category     |                       Action                       | Description                                                                                                                                                                 |
 |:---------------:|:--------------------------------------------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|   ✅ **Clear**   |        Ready to be processed by further NLP        | Passes all structural checks; high composite quality score.                                                                                                                 |
-|  ⚠️ **Noisy**   | Corrections of generally readable words are needed | Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.                                     |
-|  🗑️ **Trash**  |     Should be re-processed by another OCR tool     | Severely corrupted: high garbage density or a composite quality score below the Trash threshold.                                                                            |
+|   ✅ **Clear** |        Ready to be processed by further NLP        | Passes all structural checks; high composite quality score.                                                                                                                 |
+|  ⚠️ **Noisy** | Corrections of generally readable words are needed | Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.                                     |
+|  🗑️ **Trash** |     Should be re-processed by another OCR tool     | Severely corrupted: high garbage density or a composite quality score below the Trash threshold.                                                                            |
 | 🔣 **Non-text** |   May be checked for identifiers of finds/sites    | Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation. |
-|  🫙 **Empty**   |                   Can be ignored                   | Line contains only whitespace (paragraphs separator)                                                                                                                        |
+|  🫙 **Empty** |                   Can be ignored                   | Line contains only whitespace (paragraphs separator)                                                                                                                        |
 
 > [!NOTE]
 > This script generates two primary output directories:
@@ -251,7 +251,7 @@ Parameters are organized into **three sections**: `[CLASSIFY]`, `[AGGREGATE]`, a
  
 ```ini
 [CLASSIFY]
-BATCH_SIZE = 32        # Batch size for processing lines
+BATCH_SIZE = 128        # Batch size for processing lines
 WORKERS_MAX = 32        # Max CPU workers for parallel tasks
 EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
@@ -259,26 +259,33 @@ MODEL_NAME = Qwen/Qwen2.5-0.5B  # Language model for perplexity scoring; English
 
 [TEXT_UTILS]
 
-PERPLEXITY_THRESHOLD_MAX = 1000.0       # Normalization ceiling for quality score (Qwen2.5-0.5B range)
+PERPLEXITY_THRESHOLD_MAX = 1000.0       # or 3000 Normalization ceiling for quality score (Qwen2.5-0.5B range)
+CATEG_PPL_SHORT_MAX = 700.0             # or 2000 Perplexity ceiling for short-line trap
+CATEG_PPL_WEIRD_MAX = 400.0             # or 1000 Perplexity ceiling for weird+high-ppl Trash catch
+SHORT_PPL_CAP = 850.0                   # or 2500 Effective perplexity cap for 1-2 word lines
+
 LANG_SCORE_ROUGH = 0.45     # Threshold for rough language confidence
 LANG_SCORE_CLEAR = 0.75     # Threshold for clear language confidence
 ALLOWED_INTERNAL = .-,+()"'_—–:%;?!/        # Allowed punctuation inside words
 STRIP_CHARS = .,;:!?()[]"'\/\       # Characters to strip from word edges
 
-QS_WEIGHT_VALID_WORD  = 0.3     # Weight for valid word ratio in QS
-QS_WEIGHT_SYMBOL      = 0.2     # Weight for symbol ratio in QS
-QS_WEIGHT_WEIRD       = 0.2     # Weight for weirdness ratio in QS
-QS_WEIGHT_PERPLEXITY  = 0.2     # Weight for perplexity in QS
-QS_WEIGHT_LENGTH      = 0.1     # Weight for length in QS
-QS_LENGTH_MAX         = 100     # Max length for normalization
+QS_WEIGHT_VALID_WORD  = 0.25    # Weight for valid word ratio in QS
+QS_WEIGHT_SYMBOL      = 0.13    # Weight for inverted non-alphanumeric density in QS
+QS_WEIGHT_WEIRD       = 0.13    # Weight for inverted word weirdness in QS
+QS_WEIGHT_PERPLEXITY  = 0.15    # Weight for inverted normalized perplexity in QS
+QS_WEIGHT_LENGTH      = 0.05    # Weight for length reward in QS
+QS_WEIGHT_GARBAGE     = 0.10    # Weight for inverted garbage density in QS
+QS_WEIGHT_VOWEL       = 0.07    # Weight for vowel quality in QS
+QS_WEIGHT_LANG        = 0.05    # Weight for language confidence in QS
+QS_WEIGHT_GIBBERISH   = 0.04    # Weight for inverted gibberish ratio in QS
+QS_WEIGHT_FUSED       = 0.03    # Weight for inverted fused word ratio in QS
+QS_LENGTH_MAX         = 100.0   # Max length for normalization
 
 CATEG_GARBAGE_DENSITY_HIGH  = 0.35      # High garbage density for Trash
 CATEG_GARBAGE_DENSITY_SHORT = 0.20      # Garbage density for short lines
-CATEG_GARBAGE_SHORT_WC      = 3     # Word count for short line checks
+CATEG_GARBAGE_SHORT_WC      = 3         # Word count for short line checks
 CATEG_TRASH_SCORE_MAX       = 0.40      # Max QS for Trash category
 CATEG_NOISY_SCORE_MAX       = 0.70      # Max QS for Noisy category
-CATEG_PPL_SHORT_MAX         = 700.0     # Perplexity ceiling for short-line trap (Qwen2.5-0.5B; was 2000.0 for distilgpt2)
-CATEG_PPL_WEIRD_MAX         = 400.0     # Perplexity ceiling for weird+high-ppl Trash catch (Qwen2.5-0.5B; was 1000.0)
 ```
 
 </details>
@@ -290,6 +297,17 @@ Parameters that depend on the perplexity model choice are tabulated below:
 | `PERPLEXITY_THRESHOLD_MAX` | 1000.0       | 3000.0     |
 | `CATEG_PPL_SHORT_MAX`      | 700.0        | 2000.0     |
 | `CATEG_PPL_WEIRD_MAX`      | 400.0        | 1000.0     |
+| `SHORT_PPL_CAP`            | 850.0        | 2500.0     |
+
+The `SHORT_PPL_CAP` parameter serves as an effective perplexity ceiling specifically designed to evaluate very 
+short text lines, typically those consisting of 1 to 2 words, within the OCR quality classification pipeline. Because 
+language models (like `Qwen2.5-0.5B` or `distilgpt2`) require sufficient surrounding context to confidently predict text, 
+they often assign artificially high perplexity scores to brief, isolated text fragments even if the words are completely
+valid and structurally sound. By capping the maximum perplexity penalty applied to these short lines (defaulting to 
+**850.0** for `Qwen2.5-0.5B` and **2500.0** for `distilgpt2`), this parameter prevents legitimate, context-poor text elements — such 
+as short form fields, archival codes, or isolated measurements— from being unfairly penalized by the scoring algorithm 
+and wrongly discarded as "**Trash**" or "**Noisy**" OCR errors.
+
 ---
 
 #### 4.1 Classify Lines (GPU Bound) 🚀
@@ -339,18 +357,16 @@ Predicted or computed features for each line:
 * `upper` — count of words with unexpected mid-word uppercase letters
 * `repeated` — count of words where a non-standard character makes up ≥ 40% of the word
 * `ldl_fuses` — count of words with a letter–digit–letter sandwich (e.g., `w0rd`)
+* `fused_words` — count of tokens that appear to be fused words
 * `gibberish` — count of words flagged as gibberish (all-caps, no vowels, or extreme vowel ratio)
 * `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol, repeated-symbol, LDL-fusion, 
 and mid-uppercase signals weighted per token (0 = fully clean). *Note: Random isolated letters receive a severe weirdness 
 penalty (0.85) to catch spaced-out OCR noise, while isolated numbers/measurements receive a lower, tolerable penalty (0.25).*
 * `vowel_ratio` — ratio of vowel characters to total alphabetic characters in the line
 * `rot_ratio` — the ratio of structurally ambiguous/rotatable characters (`pbqdnuwmoxszeyv`) to the total number of alphabetic characters in the line.
-* `quality_score` — composite quality score in [0, 1] based on valid-word ratio, symbol ratio, perplexity, 
-text length, and word weirdness; higher = cleaner 📈
+* `quality_score` — composite quality score in [0, 1] based on 10 combined signals; higher = cleaner 📈
 * `categ` — assigned category: **Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙
 * `caps_header` — boolean flag indicating whether all alphabetic words in the line are uppercase (typical of section headers)
-
-
 
 ##### CPU Pre-filter
 
@@ -375,7 +391,7 @@ Czech 🇨🇿 collections.
 
 ##### Structural Detectors
 
-Lines that pass the pre-filter are analysed by five structural detectors defined in `text_util_langID.py`:
+Lines that pass the pre-filter are analysed by structural detectors defined in `text_util_langID.py`:
 
 | Detector                     | What it counts                                                                                                                                                                         |
 |------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -385,71 +401,55 @@ Lines that pass the pre-filter are analysed by five structural detectors defined
 | `detect_repeated_chars`      | Words where a single character makes up ≥ 40% of the word and appears at least **3 times**. Explicitly ignores natural repetition of common Czech 🇨🇿 vowels (e.g., `a, e, i, o, u`). |
 | `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 15% or above 80%. Words that are **predominantly numeric** (≥ 60% digits and separators) are **excluded**.     |
 | `compute_rotatable_ratio`    | Measures the concentration of structurally ambiguous/rotatable letters (`pbqdnuwmoxszeyv`) to catch severe visual noise interpreting graphical textures as characters.                 |
-
-
+| `detect_fused_words`         | Count tokens that are likely two words merged without a space (e.g. token length > 14, consonant run of 5+, or vowel run of 4+).                                                       |
 
 ##### Composite Quality Score
 
 After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by 
-`compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of five normalised signals:
+`compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of ten normalised signals:
 ```text
 quality_score =
-    QS_WEIGHT_VALID_WORD (def: 0.3)  × valid_word_ratio                    # share of structurally clean words
-  + QS_WEIGHT_SYMBOL (def: 0.2)      × (1 − min(symbol_ratio, 1.0))       # inverted non-alphanumeric density
-  + QS_WEIGHT_WEIRD (def: 0.2)       × (1 − min(word_weird_ratio, 1.0))   # inverted mean per-word weirdness
-  + QS_WEIGHT_PERPLEXITY: (def 0.2)  × (1 − min(perplexity / PERPLEXITY_THRESHOLD_MAX, 1.0)) # inverted normalised perplexity
-  + QS_WEIGHT_LENGTH (def: 0.1)      × min(char_count / QS_LENGTH_MAX, 1.0)  # reward for longer lines
+    QS_WEIGHT_VALID_WORD (def: 0.25) × valid_word_ratio
+  + QS_WEIGHT_SYMBOL     (def: 0.13) × (1 − min(symbol_ratio, 1.0))
+  + QS_WEIGHT_WEIRD      (def: 0.13) × (1 − min(word_weird_ratio, 1.0))
+  + QS_WEIGHT_PERPLEXITY (def: 0.15) × (1 − min(perplexity / PERPLEXITY_THRESHOLD_MAX, 1.0))
+  + QS_WEIGHT_LENGTH     (def: 0.05) × min(char_count / QS_LENGTH_MAX, 1.0)
+  + QS_WEIGHT_GARBAGE    (def: 0.10) × (1 − min(garbage_density / CATEG_GARBAGE_DENSITY_HIGH, 1.0))
+  + QS_WEIGHT_VOWEL      (def: 0.07) × vowel_quality_score
+  + QS_WEIGHT_LANG       (def: 0.05) × lang_score
+  + QS_WEIGHT_GIBBERISH  (def: 0.04) × (1 − min(gibberish_ratio, 1.0))
+  + QS_WEIGHT_FUSED      (def: 0.03) × (1 − min(fused_ratio, 1.0))
 ```
 
-The two scale parameters that normalize unbounded signals before weighting in the quality score formula are
+The parameters that normalize unbounded signals before weighting in the quality score formula are
 `PERPLEXITY_THRESHOLD_MAX` (default **1000.0**), which caps raw perplexity to map it into [0, 1] assigning 0 to values at or above the threshold 
 (worst) and 1 to 0 (best), calibrated for **Qwen2.5-0.5B** on corrupted OCR text to penalize noisy lines more aggressively 
-when lowered or widen the scoring range when raised; and `QS_LENGTH_MAX` (default **100**), which sets the character-count 
+when lowered or widen the scoring range when raised; and `QS_LENGTH_MAX` (default **100.0**), which sets the character-count 
 ceiling for rewarding longer lines, granting the full `QS_WEIGHT_LENGTH` bonus to **lines at or above this length**.
-
-Default weights and scale parameters (all tunable in `[TEXT_UTILS]`):
 
 > [!NOTE]
 > Perplexity contributes only one weighted component of the quality score. Although `Qwen2.5-0.5B` is
 > multilingual and handles **Czech 🇨🇿**, **German 🇩🇪**, and **English 🇬🇧** natively (unlike the **English-only 🇬🇧** `distilgpt2` it
-> replaced), it is still intentionally diluted by the four other signals rather than used as a standalone
+> replaced), it is still intentionally diluted by the nine other signals rather than used as a standalone
 > threshold. This keeps the score robust against edge cases where even a strong model assigns unexpectedly
 > high perplexity to valid but atypical text (e.g., highly abbreviated archival labels or form-field lines).
 
 ##### Categorisation Logic
 
-`categorize_line()` classifies each line in two stages:
+`categorize_line()` classifies each line using strict overrides and boundary routing:
 
-**Immediate Trash overrides** (checked first, before the quality score):
+**Immediate Overrides** (checked first):
 
-* **Fragment Rescue**: Lines with ≥ 3 words, a structurally valid word ratio ≥ 70%, and a perplexity < 800.0 
-are protected from Garbage-Density Trash demotions.
-  * Garbage density > `CATEG_GARBAGE_DENSITY_HIGH` (default 0.35) → **Trash**
-  * Line has ≤ `CATEG_GARBAGE_SHORT_WC` words (default 3) **and** garbage density > `CATEG_GARBAGE_DENSITY_SHORT` (default 0.20) → **Trash**
-  * All-caps lines with a vowel ratio < 15% → **Trash**
-* **High Rotatable Ratio**: Lines with ≥ 3 words, > 85% rotatable characters, and no Czech 🇨🇿 diacritics → **Trash**
-* **Excessive Punctuation**: Lines where hyphens make up > 40% of the word count or dots > 50% → **Trash** (if 
-quality score < 0.40), otherwise **Noisy**.
-* **Severe fragmentation**: Line has ≥ 5 words, average stripped-word length < 2.0 characters, **and** `weird_ratio` > 0.1 → **Trash**.
-* **High perplexity on short lines**: Perplexity > `CATEG_PPL_SHORT_MAX` (default 700.0) and < 5 words → **Trash** 
-(unless composed of Roman numerals/separators; if garbage density < 0.1 and weird ratio < 0.20 it falls back to **Noisy**).
-* **Single-character fragmentation**: Line has ≥ 3 words, ≥ 50% of words are isolated characters, **and** 
-`weird_ratio` > 0.15 → **Trash** (unless there are ≥ 3 normal-length words, which falls back to **Noisy**).
-* **Extreme vowel ratio**: Line > 5 characters with vowel ratio < 10% or > 90% → **Trash**.
-* **High overall weirdness**: `weird_ratio` ≥ 0.25 → **Trash**.
-* **Moderate weirdness + high perplexity**: `weird_ratio` > 0.15 and perplexity > `CATEG_PPL_WEIRD_MAX` (default 
-400.0) → **Trash** (unless valid word ratio ≥ 50%, then **Noisy**).
+1. **Empty Line:** Line word count is 0 or text contains only whitespace → **Empty**
+2. **Unreadable Caps:** All-caps line with a vowel ratio < 10% → **Trash** (definitively unreadable)
+3. **High LM Confidence:** Perplexity < 50.0 and word count ≥ 3 → **Clear** (trust the language model over heuristics)
 
-**Quality score thresholds & Bypasses** (applied to lines that pass all overrides):
+**Quality score thresholds** (applied to lines that pass all overrides):
 ```text
-quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash (Unless valid_word_ratio ≥ 40% and words ≥ 3, then Noisy)
+quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash
 quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.70)  →  Noisy
-Original Language Score < 0.45 without CZ Diacritics → Noisy
-Strange Symbol Count > 0                            →  Noisy
 otherwise                                           →  Clear
 ```
-
-
 
 All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
 
@@ -537,8 +537,6 @@ This is the end of the text quality classification and filtering step. You can n
 identify files that need another round of OCR or manual correction based on the line type counts. Pages with the
 majority of clear lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of trash lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.
-
----
 
 ## Paradata logging
 
