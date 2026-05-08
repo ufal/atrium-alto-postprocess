@@ -502,6 +502,8 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 # Categorisation & Clamping
 # ---------------------------------------------------------------------------
 
+
+
 def categorize_line(
         qs: float,
         txt: str,
@@ -511,68 +513,36 @@ def categorize_line(
         rot_ratio: float = 0.0,
         weird_ratio: float = 0.0,
 ) -> tuple[str, float]:
-    """
-    Assign a quality category to a processed line and return the (category, aligned_score) pair.
-
-    Category decision depends on a single parameter — the pre-computed quality score *qs*,
-    which already encodes every relevant signal (valid-word ratio, symbol density, weirdness,
-    perplexity, text length, garbage density, vowel quality, language confidence, gibberish
-    fraction, and fused-word fraction).
-
-    Five structural overrides bypass or adjust the score routing:
-      1. Empty / zero-word lines → "Empty"   (no meaningful score exists)
-      2. All-caps line with near-zero vowels → "Trash"  (definitively unreadable)
-      3. Ultra-low perplexity (< 50, wc ≥ 3) → "Clear"  (model is highly confident)
-      4. High rot_ratio + high weird_ratio + poor PPL → "Trash"
-            Catches pages scanned 180° rotated: the QS score looks acceptable because
-            the OCR engine partially recognises individual glyphs, producing plausible
-            vowel ratios and diacritic densities from the reversed character shapes.
-      5. Near-boundary (CLEAN_PROSE_MIN_SCORE ≤ qs < CATEG_NOISY_SCORE_MAX) with
-            sufficient words, no weird tokens, and reasonable LM score → "Clear"
-            Promotes readable Czech archaeological prose (measurements, formal labels,
-            dig notes) that lands just below the Clear boundary due to short-text
-            perplexity variance or minor OCR artefacts.
-
-    Default score-based routing (when no override fires):
-      qs < CATEG_TRASH_SCORE_MAX                         → Trash
-      qs < CATEG_NOISY_SCORE_MAX (unless Override 5)     → Noisy
-      otherwise                                           → Clear
-
-    After categorisation the score is aligned to lie strictly within the numerical
-    bounds of its category so downstream aggregation can rely on monotonic ordering.
-    """
-
     def _determine_category(quality_score: float, text_source: str, word_count: int,
                             vr: float, ppl: float) -> str:
         # Override 1: empty line
         if word_count == 0 or not text_source.strip():
             return "Empty"
+
         # Override 2: all-caps with negligible vowels is definitively unreadable
         if is_all_caps_line(text_source) and vr < 0.10:
             return "Trash"
+
         # Override 3: language model is highly confident — trust it over heuristics
         if ppl < 50.0 and word_count >= 3:
             return "Clear"
+
         # Override 4: Inverted / 180°-rotated scan detection.
-        # The QS score alone cannot catch rotated-page OCR output because the vowel ratio
-        # and diacritic density remain superficially normal (rotated glyphs like u/n, p/d,
-        # b/q are partially recognised by the OCR engine).  A high share of rotationally-
-        # ambiguous characters combined with high per-word weirdness and poor LM confidence
-        # is the reliable discriminating fingerprint.
+        # Replaced the failing weird_ratio check with a reliable diacritics-absence check.
+        CZ_DIACS = frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ")
+        no_diacs = not any(c in CZ_DIACS for c in text_source)
+
         if (rot_ratio >= ROT_RATIO_INVERTED_MIN
-                and weird_ratio >= WEIRD_RATIO_INVERTED_MIN
+                and no_diacs
                 and word_count >= 3
                 and ppl >= PPL_INVERTED_MIN):
             return "Trash"
-        # Pure score-based routing — all other signals live inside quality_score
+
+        # Pure score-based routing
         if quality_score < CATEG_TRASH_SCORE_MAX:
             return "Trash"
         if quality_score < CATEG_NOISY_SCORE_MAX:
             # Override 5: Near-boundary readable Czech prose promotion.
-            # Archaeological notes and formal labels (e.g. "mazanice, váha 182,1g.",
-            # "Rukopisné poznámky str. 56, autora.") score 0.65–0.70 because short-text
-            # perplexity is noisy and minor OCR artefacts depress the score slightly.
-            # When every other signal agrees the text is clean, promote to Clear.
             if (quality_score >= CLEAN_PROSE_MIN_SCORE
                     and word_count >= CLEAN_PROSE_WC_MIN
                     and weird_ratio < CLEAN_PROSE_WEIRD_MAX
@@ -592,7 +562,7 @@ def categorize_line(
     elif categ == "Clear":
         aligned_score = max(qs, CATEG_NOISY_SCORE_MAX)
     else:
-        aligned_score = qs  # "Empty" or "Non-text"
+        aligned_score = qs
 
     return categ, aligned_score
 
@@ -611,7 +581,6 @@ def compute_digit_ratio(text: str) -> float:
     if not text: return 0.0
     return sum(c.isdigit() for c in text) / len(text)
 
-
 def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
     words = text.split()
     if not words: return 0.0
@@ -626,8 +595,7 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
             has_strange = any(not c.isalnum() and c not in ALLOWED_INTERNAL for c in core)
             if len(core) >= 3 and alpha / len(core) >= 0.70 and not has_strange:
                 # Reject tokens with a leading all-caps OCR prefix followed by lowercase
-                # (e.g. 'AAMMNAbSSOAO', 'XAterenta', 'SeverW').  These are garbled
-                # corruptions of a real word, not valid vocabulary items.
+                # (e.g. 'AAMMNAbSSOAO', 'XAterenta')
                 caps_run = 0
                 for ch in core:
                     if ch.isupper():
@@ -636,6 +604,12 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
                         break
                 if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
                     continue
+
+                # Reject mid-word/trailing uppercase OCR garble (e.g., 'SeverW', 'dalSÍ')
+                # This catches the single-cap prefixes/suffixes safely without rejecting Titlecased words.
+                if not core.isupper() and _RE_MID_UPPER.search(core):
+                    continue
+
                 valid += 1
     return valid / len(words)
 

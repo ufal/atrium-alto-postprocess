@@ -1,55 +1,55 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
-CTX197402444,1,1,o P ATOVICEn.Le,,,ces,0.75,23424.0,3,15,0.0,0,0,0,0,0,0,0.1,0.5,0.5833,0.4817,Noisy,False
-CTX197402444,1,2,Kat. obec:,,,ces,0.75,850.0,2,10,0.1,0,0,0,0,0,0,0.0,0.4286,0.4286,0.3999,Trash,False
-CTX197402444,1,3,Osada:,,,ces,0.9951,828.0,1,6,0.1667,0,0,0,0,0,0,0.0,0.6,0.6,0.3999,Trash,False
-CTX197402444,1,4,Trať: Pardubice,,,ces,0.75,197.0,2,15,0.0667,0,0,0,0,0,0,0.0,0.3846,0.3846,0.8623,Clear,False
-CTX197402444,1,5,Okres:,,,ces,0.75,804.0,1,6,0.1667,0,0,0,0,0,0,0.0,0.4,0.6,0.3999,Trash,False
+CTX197402444,1,1,o P ATOVICEn.Le,,,ces,0.75,23424.0,3,15,0.0,0,0,0,0,0,0,0.1,0.5,0.5833,0.5872,Noisy,False
+CTX197402444,1,2,Kat. obec:,,,ces,0.75,850.0,2,10,0.1,0,0,0,0,0,0,0.0,0.4286,0.4286,0.7499,Clear,False
+CTX197402444,1,3,Osada:,,,ces,0.9951,850.0,1,6,0.1667,0,0,0,0,0,0,0.0,0.6,0.6,0.756,Clear,False
+CTX197402444,1,4,Trať: Pardubice,,,ces,0.75,197.0,2,15,0.0667,0,0,0,0,0,0,0.0,0.3846,0.3846,0.8706,Clear,False
+CTX197402444,1,5,Okres:,,,ces,0.75,804.0,1,6,0.1667,0,0,0,0,0,0,0.0,0.4,0.6,0.7493,Clear,False
 CTX197402444,1,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,7,Druhakultura:,,,ces,0.9938,304.0,1,13,0.0769,0,0,0,0,0,0,0.0,0.4167,0.3333,0.8368,Clear,False
-CTX197402444,1,8,Lužické sídliště,,,ces,1.0,82.0,2,16,0.0,0,0,0,0,0,0,0.0,0.4,0.2,0.8996,Clear,False
-CTX197402444,1,9,Zpráva,,,ces,1.0,90.0,1,6,0.0,0,0,0,0,0,0,0.0,0.3333,0.5,0.888,Clear,False
+CTX197402444,1,7,Druhakultura:,,,ces,0.9938,304.0,1,13,0.0769,0,0,0,0,0,0,0.0,0.4167,0.3333,0.8786,Clear,False
+CTX197402444,1,8,Lužické sídliště,,,ces,1.0,82.0,2,16,0.0,0,0,0,0,0,0,0.0,0.4,0.2,0.9457,Clear,False
+CTX197402444,1,9,Zpráva,,,ces,1.0,87.0,1,6,0.0,0,0,0,0,0,0,0.0,0.3333,0.5,0.94,Clear,False
 CTX197402444,1,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,11,XXWžkumu,,,ces,0.8246,850.0,1,8,0.0,0,0,0,0,1,0,0.2,0.25,0.75,0.3999,Trash,False
-CTX197402444,1,12,XAterenta,,,ces,0.75,850.0,1,9,0.0,0,0,0,0,0,0,0.2,0.4444,0.4444,0.3999,Trash,False
-CTX197402444,1,13,kmixxxx,,,ces,0.9954,850.0,1,7,0.0,0,0,1,0,0,1,0.35,0.1429,0.7143,0.3999,Trash,False
-CTX197402444,1,14,ved. oddělení,,,ces,1.0,850.0,2,13,0.0,0,0,0,0,0,0,0.0,0.4545,0.7273,0.6999,Noisy,False
+CTX197402444,1,11,XXWžkumu,,,ces,0.8246,850.0,1,8,0.0,0,0,0,0,1,0,0.2,0.25,0.75,0.7617,Clear,False
+CTX197402444,1,12,XAterenta,,,ces,0.75,850.0,1,9,0.0,0,0,0,0,0,0,0.2,0.4444,0.4444,0.779,Clear,False
+CTX197402444,1,13,kmixxxx,,,ces,0.9954,850.0,1,7,0.0,0,0,1,0,0,1,0.35,0.1429,0.7143,0.7203,Clear,False
+CTX197402444,1,14,ved. oddělení,,,ces,1.0,804.0,2,13,0.0,0,0,0,0,0,0,0.0,0.4545,0.7273,0.8259,Clear,False
 CTX197402444,1,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,16,za období:,,,ces,0.9609,664.0,2,10,0.1,0,0,0,0,0,0,0.0,0.5,0.75,0.6072,Noisy,False
+CTX197402444,1,16,za období:,,,ces,0.9609,624.0,2,10,0.1,0,0,0,0,0,0,0.0,0.5,0.75,0.6929,Noisy,False
 CTX197402444,1,17,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX197402444,1,18,19.111.1974,,,,0.0,0.0,0,11,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX197402444,1,19,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,20,Dne 19.III.1974 jsije navštívili pískovnu JZD,,,ces,0.9896,82.0,6,45,0.0,0,0,1,0,0,0,0.0583,0.4062,0.5,0.6999,Noisy,False
-CTX197402444,1,21,"v Opatovicích n.L., známouzvelkého záchraného výzkumu AŮ ČSAV",,,ces,0.9999,286.0,8,61,0.0,0,0,0,0,0,0,0.0125,0.4118,0.4902,0.6999,Noisy,False
-CTX197402444,1,22,v Prazevletech 1956-1959. Tehdy prácevpískovně byla zastavena,,,ces,1.0,68.0,7,61,0.0,0,0,0,0,0,0,0.0,0.3778,0.5556,0.8551,Clear,False
-CTX197402444,1,23,a proto výzkum byl přerušen.,,,ces,1.0,115.5,5,28,0.0,0,0,0,0,0,0,0.0,0.3913,0.6087,0.8378,Clear,False
-CTX197402444,1,24,"Zjistili jsme, že prácevpískovně byly obnoveny,",,,ces,1.0,82.0,6,47,0.0,0,0,0,0,0,0,0.0,0.4,0.625,0.8721,Clear,False
-CTX197402444,1,25,rozsah pískovny se zvětšiliza hranice záchranného výzkumu. Na,,,ces,0.9999,31.12,8,61,0.0,0,0,0,0,0,0,0.0,0.3962,0.4906,0.8765,Clear,False
-CTX197402444,1,26,"bagrem skryté ploše jsou znatelné 3—4 hlubší objekty, skrývka",,,ces,0.9999,87.0,9,61,0.0164,0,0,0,0,0,0,0.0,0.3673,0.4694,0.9037,Clear,False
-CTX197402444,1,27,"však šla velmi hluboko, takže mad± mělčí objekty byly zcela",,,ces,1.0,93.0,10,59,0.0169,1,0,0,0,0,0,0.04,0.3958,0.4375,0.6999,Noisy,False
-CTX197402444,1,28,zničeny,,,ces,0.9685,850.0,1,7,0.0,0,0,0,0,0,0,0.0,0.4286,0.7143,0.6999,Noisy,False
-CTX197402444,1,29,Podle teréního pozorování,,,ces,1.0,153.0,3,25,0.0,0,0,0,0,0,0,0.0,0.4783,0.6087,0.8944,Clear,False
+CTX197402444,1,20,Dne 19.III.1974 jsije navštívili pískovnu JZD,,,ces,0.9896,84.5,6,45,0.0,0,0,1,0,0,0,0.0583,0.4062,0.5,0.9043,Clear,False
+CTX197402444,1,21,"v Opatovicích n.L., známouzvelkého záchraného výzkumu AŮ ČSAV",,,ces,0.9999,286.0,8,61,0.0,0,0,0,0,0,0,0.0125,0.4118,0.4902,0.8358,Clear,False
+CTX197402444,1,22,v Prazevletech 1956-1959. Tehdy prácevpískovně byla zastavena,,,ces,1.0,66.0,7,61,0.0,0,0,0,0,0,0,0.0,0.3778,0.5556,0.8949,Clear,False
+CTX197402444,1,23,a proto výzkum byl přerušen.,,,ces,1.0,115.5,5,28,0.0,0,0,0,0,0,0,0.0,0.3913,0.6087,0.892,Clear,False
+CTX197402444,1,24,"Zjistili jsme, že prácevpískovně byly obnoveny,",,,ces,1.0,82.0,6,47,0.0,0,0,0,0,0,0,0.0,0.4,0.625,0.914,Clear,False
+CTX197402444,1,25,rozsah pískovny se zvětšiliza hranice záchranného výzkumu. Na,,,ces,0.9999,31.62,8,61,0.0,0,0,0,0,0,0,0.0,0.3962,0.4906,0.9111,Clear,False
+CTX197402444,1,26,"bagrem skryté ploše jsou znatelné 3—4 hlubší objekty, skrývka",,,ces,0.9999,84.5,9,61,0.0164,0,0,0,0,0,0,0.0,0.3673,0.4694,0.9311,Clear,False
+CTX197402444,1,27,"však šla velmi hluboko, takže mad± mělčí objekty byly zcela",,,ces,1.0,93.0,10,59,0.0169,1,0,0,0,0,0,0.04,0.3958,0.4375,0.9261,Clear,False
+CTX197402444,1,28,zničeny,,,ces,0.9685,850.0,1,7,0.0,0,0,0,0,0,0,0.0,0.4286,0.7143,0.8244,Clear,False
+CTX197402444,1,29,Podle teréního pozorování,,,ces,1.0,163.0,3,25,0.0,0,0,0,0,0,0,0.0,0.4783,0.6087,0.9381,Clear,False
 CTX197402444,1,30,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,31,je ještě část sídliště,,,ces,1.0,144.0,4,22,0.0,0,0,0,0,0,0,0.0,0.3684,0.2632,0.8182,Clear,False
-CTX197402444,1,32,"zachována na parc.č. 1503, kde jsme sběrem",,,ces,1.0,112.0,7,42,0.0,0,0,0,0,0,1,0.0,0.3448,0.5172,0.8196,Clear,False
+CTX197402444,1,31,je ještě část sídliště,,,ces,1.0,148.0,4,22,0.0,0,0,0,0,0,0,0.0,0.3684,0.2632,0.8763,Clear,False
+CTX197402444,1,32,"zachována na parc.č. 1503, kde jsme sběrem",,,ces,1.0,112.0,7,42,0.0,0,0,0,0,0,1,0.0,0.3448,0.5172,0.8678,Clear,False
 CTX197402444,1,33,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,34,získali lžickou kera-,,,ces,0.9651,444.0,3,21,0.0,0,0,0,0,0,0,0.0,0.4444,0.2778,0.8227,Clear,False
-CTX197402444,1,35,"miku. Další střepy jsme našli na parc.č. 1510, scvernt od pískovny",,,ces,0.9997,127.0,11,66,0.0,0,0,0,0,0,2,0.0,0.3333,0.5208,0.8467,Clear,False
-CTX197402444,1,36,Ty však mohou pocházetzrozrušených žárových hrobů.,,,ces,0.992,197.0,6,50,0.0,0,0,0,0,1,0,0.0,0.3864,0.4545,0.6999,Noisy,False
-CTX197402444,1,37,"Domnáváme se, že AÚ ČSAV v Praze by měl dokončit",,,ces,1.0,40.0,10,48,0.0,0,0,0,0,0,0,0.0,0.4211,0.6053,0.7858,Clear,False
-CTX197402444,1,38,"Výzkum tohoto důležitého lužického sídliště, aby tak byl ukázán",,,ces,1.0,30.62,9,63,0.0,0,0,0,0,0,0,0.0,0.4444,0.3889,0.9537,Clear,False
-CTX197402444,1,39,poprvé celý půdorys pravěké vesnice i s pohřebištěm,,,ces,1.0,108.5,8,51,0.0,0,0,0,0,0,0,0.0,0.4091,0.5227,0.8543,Clear,False
-CTX197402444,1,40,"V Hradci Králové, 27.111.1974",,,ces,0.9143,34.25,4,29,0.0,0,0,1,0,0,0,0.0875,0.3571,0.2857,0.734,Clear,False
+CTX197402444,1,34,získali lžickou kera-,,,ces,0.9651,444.0,3,21,0.0,0,0,0,0,0,0,0.0,0.4444,0.2778,0.886,Clear,False
+CTX197402444,1,35,"miku. Další střepy jsme našli na parc.č. 1510, scvernt od pískovny",,,ces,0.9997,123.0,11,66,0.0,0,0,0,0,0,2,0.0,0.3333,0.5208,0.8812,Clear,False
+CTX197402444,1,36,Ty však mohou pocházetzrozrušených žárových hrobů.,,,ces,0.992,191.0,6,50,0.0,0,0,0,0,1,0,0.0,0.3864,0.4545,0.8967,Clear,False
+CTX197402444,1,37,"Domnáváme se, že AÚ ČSAV v Praze by měl dokončit",,,ces,1.0,38.75,10,48,0.0,0,0,0,0,0,0,0.0,0.4211,0.6053,0.8405,Clear,False
+CTX197402444,1,38,"Výzkum tohoto důležitého lužického sídliště, aby tak byl ukázán",,,ces,1.0,30.12,9,63,0.0,0,0,0,0,0,0,0.0,0.4444,0.3889,0.9749,Clear,False
+CTX197402444,1,39,poprvé celý půdorys pravěké vesnice i s pohřebištěm,,,ces,1.0,105.0,8,51,0.0,0,0,0,0,0,0,0.0,0.4091,0.5227,0.8973,Clear,False
+CTX197402444,1,40,"V Hradci Králové, 27.111.1974",,,ces,0.9143,34.75,4,29,0.0,0,0,1,0,0,0,0.0875,0.3571,0.2857,0.8052,Clear,False
 CTX197402444,1,41,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,42,.předejte prosím Dr.J.Ratajo,,,ces,0.9993,908.0,3,28,0.0,0,0,0,0,0,0,0.0333,0.3478,0.4783,0.6999,Noisy,False
-CTX197402444,1,43,"| ver,výzkumu v Opatovicích.",,,ces,0.9907,1984.0,4,28,0.0357,1,0,0,0,0,0,0.0,0.4091,0.5455,0.5566,Noisy,False
-CTX197402444,1,44,"Domnívám se, že druhý vedoucfvýzkumu v Opatovicích na sídlišti,Dr",,,ces,0.997,191.0,9,65,0.0,0,0,0,0,0,0,0.0111,0.4,0.5455,0.6999,Noisy,False
-CTX197402444,1,45,V.Vokolek by mohl-vzhledemkblízkosti svého pracoviště zahájit jednání,,,ces,1.0,237.0,7,69,0.0,0,0,0,0,1,0,0.0,0.3607,0.4918,0.6999,Noisy,False
-CTX197402444,1,46,"s ústavemodalší výzkum na sídlišti . Doporučuji, aby tento výzkum",,,ces,0.9993,40.0,10,65,0.0,0,0,0,0,0,0,0.0,0.4259,0.537,0.8608,Clear,False
-CTX197402444,1,47,mu byl svěřen.,,,ces,1.0,644.0,3,14,0.0,0,0,0,0,0,0,0.0,0.3636,0.7273,0.6709,Noisy,False
-CTX197402444,1,48,ov Praze dne 7.5.1974. R_,,,ces,0.777,70.0,5,25,0.04,1,0,0,0,0,0,0.08,0.3636,0.7273,0.683,Noisy,False
-CTX197402444,1,49,Poznámka: Pište pokud možno strojem. Na konci uveďte datum odesláníačitelný podpis. Zprávy koreferenta komisí,,,ces,0.9659,74.5,14,109,0.0092,0,0,0,0,1,0,0.0,0.4194,0.5699,0.6999,Noisy,False
-CTX197402444,1,50,7) vyhotovte dvojmo. ;,,,ces,0.9717,880.0,4,22,0.0455,0,0,0,0,0,0,0.0625,0.4,0.7333,0.5562,Noisy,False
-CTX197402444,1,51,v^UlíLa uq (AAuu Aud. AnMlut,,,ces,0.7617,13376.0,5,28,0.0357,1,2,0,0,1,1,0.16,0.5714,0.5238,0.5546,Noisy,False
-CTX197402444,1,52,V r Wrr (ia 7 TcedLir). 2 {,,,ces,0.75,1000.0,8,27,0.037,1,1,0,0,0,0,0.075,0.2857,0.2857,0.4574,Noisy,False
+CTX197402444,1,42,.předejte prosím Dr.J.Ratajo,,,ces,0.9993,908.0,3,28,0.0,0,0,0,0,0,0,0.0333,0.3478,0.4783,0.8095,Clear,False
+CTX197402444,1,43,"| ver,výzkumu v Opatovicích.",,,ces,0.9907,1864.0,4,28,0.0357,1,0,0,0,0,0,0.0,0.4091,0.5455,0.6644,Noisy,False
+CTX197402444,1,44,"Domnívám se, že druhý vedoucfvýzkumu v Opatovicích na sídlišti,Dr",,,ces,0.997,191.0,9,65,0.0,0,0,0,0,0,0,0.0111,0.4,0.5455,0.8371,Clear,False
+CTX197402444,1,45,V.Vokolek by mohl-vzhledemkblízkosti svého pracoviště zahájit jednání,,,ces,1.0,237.0,7,69,0.0,0,0,0,0,1,0,0.0,0.3607,0.4918,0.9052,Clear,False
+CTX197402444,1,46,"s ústavemodalší výzkum na sídlišti . Doporučuji, aby tento výzkum",,,ces,0.9993,40.0,10,65,0.0,0,0,0,0,0,0,0.0,0.4259,0.537,0.8975,Clear,False
+CTX197402444,1,47,mu byl svěřen.,,,ces,1.0,644.0,3,14,0.0,0,0,0,0,0,0,0.0,0.3636,0.7273,0.7678,Clear,False
+CTX197402444,1,48,ov Praze dne 7.5.1974. R_,,,ces,0.777,70.0,5,25,0.04,1,0,0,0,0,0,0.08,0.3636,0.7273,0.7482,Clear,False
+CTX197402444,1,49,Poznámka: Pište pokud možno strojem. Na konci uveďte datum odesláníačitelný podpis. Zprávy koreferenta komisí,,,ces,0.9659,74.5,14,109,0.0092,0,0,0,0,1,0,0.0,0.4194,0.5699,0.9609,Clear,False
+CTX197402444,1,50,7) vyhotovte dvojmo. ;,,,ces,0.9717,828.0,4,22,0.0455,0,0,0,0,0,0,0.0625,0.4,0.7333,0.6715,Noisy,False
+CTX197402444,1,51,v^UlíLa uq (AAuu Aud. AnMlut,,,ces,0.7617,14208.0,5,28,0.0357,1,2,0,0,1,1,0.16,0.5714,0.5238,0.6432,Noisy,False
+CTX197402444,1,52,V r Wrr (ia 7 TcedLir). 2 {,,,ces,0.75,1000.0,8,27,0.037,1,1,0,0,0,0,0.075,0.2857,0.2857,0.5573,Noisy,False
 CTX197402444,1,53,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX197402444,1,54,y.,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False

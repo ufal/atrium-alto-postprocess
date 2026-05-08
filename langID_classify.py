@@ -314,8 +314,6 @@ def process_document(task):
                     df.loc[surrounded_by_trash, "categ"] = "Trash"
 
                 # Fix 5: Page-level inverted-scan sweep.
-                # If a contiguous run of 4+ non-Empty/Non-text lines on one page all lack Czech diacritics
-                # and have a rough lang_score, mark the whole run as Trash.
                 CZ_DIACS = set("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ")
                 MIN_RUN = 4
 
@@ -329,14 +327,13 @@ def process_document(task):
 
                     no_diacs = ~candidates["text"].apply(_has_cz_diacs)
                     low_lang = candidates["lang_score"].astype(float) < LANG_SCORE_ROUGH
-                    # Inverted-scan pages may still carry Czech diacritics: the OCR engine
-                    # partially recognises individual upside-down glyphs (u→n, p→d, etc.),
-                    # so the diacritic-absence check alone misses them.  Add a second arm
-                    # that fires on high rotatable-char ratio + high per-word weirdness.
-                    high_rot   = candidates["rot_ratio"].astype(float) >= ROT_RATIO_INVERTED_MIN
-                    high_weird = candidates["word_weird"].astype(float) >= WEIRD_RATIO_INVERTED_MIN
 
-                    suspicious = (no_diacs & low_lang) | (high_rot & high_weird)
+                    # Inverted-scan pages may still carry Czech diacritics hallucinated by OCR.
+                    # Swapped `high_weird` out for `high_ppl` to reliably flag inverted text.
+                    high_rot = candidates["rot_ratio"].astype(float) >= ROT_RATIO_INVERTED_MIN
+                    high_ppl = candidates["perplex"].astype(float) >= PPL_INVERTED_MIN
+
+                    suspicious = (no_diacs & low_lang) | (high_rot & high_ppl)
 
                     # Find contiguous runs of suspicious lines
                     run_len = 0
