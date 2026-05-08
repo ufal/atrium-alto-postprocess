@@ -181,6 +181,8 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
 
         categ, q_score = categorize_line(
             q_score, text_content, wc, vowel_ratio, ppl_val,
+            rot_ratio=rot_ratio,
+            weird_ratio=weird_ratio,
         )
 
         row = [
@@ -327,8 +329,14 @@ def process_document(task):
 
                     no_diacs = ~candidates["text"].apply(_has_cz_diacs)
                     low_lang = candidates["lang_score"].astype(float) < LANG_SCORE_ROUGH
+                    # Inverted-scan pages may still carry Czech diacritics: the OCR engine
+                    # partially recognises individual upside-down glyphs (u→n, p→d, etc.),
+                    # so the diacritic-absence check alone misses them.  Add a second arm
+                    # that fires on high rotatable-char ratio + high per-word weirdness.
+                    high_rot   = candidates["rot_ratio"].astype(float) >= ROT_RATIO_INVERTED_MIN
+                    high_weird = candidates["word_weird"].astype(float) >= WEIRD_RATIO_INVERTED_MIN
 
-                    suspicious = no_diacs & low_lang
+                    suspicious = (no_diacs & low_lang) | (high_rot & high_weird)
 
                     # Find contiguous runs of suspicious lines
                     run_len = 0

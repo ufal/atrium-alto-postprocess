@@ -214,7 +214,6 @@ PAGE_TXT_LLM/
 ```
 
 ---
-
 ### ▶️ Step 4: Classify Page Text Quality & Language 🗂️
 
 This is a key ⌛ time-consuming step that analyzes the text quality of each page line-by-line,
@@ -230,11 +229,11 @@ As the script processes, it assigns each line one of five categories 🪧:
 
 |    Category     |                       Action                       | Description                                                                                                                                                                 |
 |:---------------:|:--------------------------------------------------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|   ✅ **Clear** |        Ready to be processed by further NLP        | Passes all structural checks; high composite quality score.                                                                                                                 |
-|  ⚠️ **Noisy** | Corrections of generally readable words are needed | Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.                                     |
-|  🗑️ **Trash** |     Should be re-processed by another OCR tool     | Severely corrupted: high garbage density or a composite quality score below the Trash threshold.                                                                            |
+|   ✅ **Clear**   |        Ready to be processed by further NLP        | Passes all structural checks; high composite quality score.                                                                                                                 |
+|  ⚠️ **Noisy**   | Corrections of generally readable words are needed | Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.                                     |
+|  🗑️ **Trash**  |     Should be re-processed by another OCR tool     | Severely corrupted: high garbage density or a composite quality score below the Trash threshold.                                                                            |
 | 🔣 **Non-text** |   May be checked for identifiers of finds/sites    | Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation. |
-|  🫙 **Empty** |                   Can be ignored                   | Line contains only whitespace (paragraphs separator)                                                                                                                        |
+|  🫙 **Empty**   |                   Can be ignored                   | Line contains only whitespace (paragraphs separator)                                                                                                                        |
 
 > [!NOTE]
 > This script generates two primary output directories:
@@ -286,6 +285,17 @@ CATEG_GARBAGE_DENSITY_SHORT = 0.20      # Garbage density for short lines
 CATEG_GARBAGE_SHORT_WC      = 3         # Word count for short line checks
 CATEG_TRASH_SCORE_MAX       = 0.40      # Max QS for Trash category
 CATEG_NOISY_SCORE_MAX       = 0.70      # Max QS for Noisy category
+
+# --- Inverted / 180°-rotated scan detection (Override 4) ---
+ROT_RATIO_INVERTED_MIN      = 0.55      # Min rotatable-char ratio to suspect inverted scan
+WEIRD_RATIO_INVERTED_MIN    = 0.35      # Min word-weirdness ratio to confirm inverted scan
+PPL_INVERTED_MIN            = 200.0     # or 500 Min perplexity (LM must also be uncertain)
+
+# --- Near-boundary clean prose promotion (Override 5) ---
+CLEAN_PROSE_MIN_SCORE       = 0.65      # Lower bound of the promotable Noisy band
+CLEAN_PROSE_WEIRD_MAX       = 0.08      # Max word-weirdness for promotion to Clear
+CLEAN_PROSE_PPL_MAX         = 400.0     # or 1000 Max perplexity for promotion to Clear
+CLEAN_PROSE_WC_MIN          = 4         # Min word count for promotion to Clear
 ```
 
 </details>
@@ -293,11 +303,17 @@ CATEG_NOISY_SCORE_MAX       = 0.70      # Max QS for Noisy category
 Parameters that depend on the perplexity model choice are tabulated below:
 
 | Parameter                  | Qwen2.5-0.5B | distilgpt2 |
-|----------------------------|--------------|------------|
+|----------------------------|:------------:|:----------:|
 | `PERPLEXITY_THRESHOLD_MAX` | 1000.0       | 3000.0     |
 | `CATEG_PPL_SHORT_MAX`      | 700.0        | 2000.0     |
 | `CATEG_PPL_WEIRD_MAX`      | 400.0        | 1000.0     |
 | `SHORT_PPL_CAP`            | 850.0        | 2500.0     |
+| `PPL_INVERTED_MIN`         | 200.0        | 500.0      |
+| `CLEAN_PROSE_PPL_MAX`      | 400.0        | 1000.0     |
+
+The remaining new parameters (`ROT_RATIO_INVERTED_MIN`, `WEIRD_RATIO_INVERTED_MIN`, `CLEAN_PROSE_MIN_SCORE`,
+`CLEAN_PROSE_WEIRD_MAX`, `CLEAN_PROSE_WC_MIN`) are character-ratio or score thresholds that do not depend
+on the perplexity model's absolute output range and keep their default values with either model.
 
 The `SHORT_PPL_CAP` parameter serves as an effective perplexity ceiling specifically designed to evaluate very 
 short text lines, typically those consisting of 1 to 2 words, within the OCR quality classification pipeline. Because 
@@ -305,7 +321,7 @@ language models (like `Qwen2.5-0.5B` or `distilgpt2`) require sufficient surroun
 they often assign artificially high perplexity scores to brief, isolated text fragments even if the words are completely
 valid and structurally sound. By capping the maximum perplexity penalty applied to these short lines (defaulting to 
 **850.0** for `Qwen2.5-0.5B` and **2500.0** for `distilgpt2`), this parameter prevents legitimate, context-poor text elements — such 
-as short form fields, archival codes, or isolated measurements— from being unfairly penalized by the scoring algorithm 
+as short form fields, archival codes, or isolated measurements — from being unfairly penalized by the scoring algorithm 
 and wrongly discarded as "**Trash**" or "**Noisy**" OCR errors.
 
 ---
@@ -421,6 +437,12 @@ quality_score =
   + QS_WEIGHT_FUSED      (def: 0.03) × (1 − min(fused_ratio, 1.0))
 ```
 
+`valid_word_ratio` counts tokens that are alphabetically dominant (≥ 70% alpha chars), contain no disallowed
+internal symbols, and are **not** a leading all-caps OCR prefix followed by lowercase letters. This last guard
+prevents garbled tokens such as `AAMMNAbSSOAO`, `XAterenta`, or `SeverW` — where the OCR engine has prepended
+a run of spurious uppercase characters to a recognisable word fragment — from inflating the valid-word signal
+and pushing the overall quality score into the Clear band.
+
 The parameters that normalize unbounded signals before weighting in the quality score formula are
 `PERPLEXITY_THRESHOLD_MAX` (default **1000.0**), which caps raw perplexity to map it into [0, 1] assigning 0 to values at or above the threshold 
 (worst) and 1 to 0 (best), calibrated for **Qwen2.5-0.5B** on corrupted OCR text to penalize noisy lines more aggressively 
@@ -438,18 +460,25 @@ ceiling for rewarding longer lines, granting the full `QS_WEIGHT_LENGTH` bonus t
 
 `categorize_line()` classifies each line using strict overrides and boundary routing:
 
-**Immediate Overrides** (checked first):
+**Immediate Overrides** (checked in order; first match wins):
 
 1. **Empty Line:** Line word count is 0 or text contains only whitespace → **Empty**
 2. **Unreadable Caps:** All-caps line with a vowel ratio < 10% → **Trash** (definitively unreadable)
 3. **High LM Confidence:** Perplexity < 50.0 and word count ≥ 3 → **Clear** (trust the language model over heuristics)
+4. **Inverted / 180°-Rotated Scan:** `rot_ratio ≥ ROT_RATIO_INVERTED_MIN` **and** `word_weird ≥ WEIRD_RATIO_INVERTED_MIN` **and** word count ≥ 3 **and** `perplexity ≥ PPL_INVERTED_MIN` → **Trash**
+
+   Pages scanned upside-down produce OCR output that looks superficially healthy to the quality score: the OCR engine partially recognises individual inverted glyphs (u↔n, p↔d, b↔q, m↔w), which yields plausible vowel ratios and diacritic densities. The combination of a high concentration of rotationally-ambiguous characters, high per-word weirdness, and poor LM confidence is the reliable discriminating fingerprint and is checked here before the score thresholds are applied.
 
 **Quality score thresholds** (applied to lines that pass all overrides):
 ```text
 quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.40)  →  Trash
-quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.70)  →  Noisy
+quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.70)  →  Noisy  (unless Override 5 fires)
 otherwise                                           →  Clear
 ```
+
+5. **Near-Boundary Clean Prose Promotion** (applied inside the Noisy band): if `quality_score ≥ CLEAN_PROSE_MIN_SCORE` **and** word count ≥ `CLEAN_PROSE_WC_MIN` **and** `word_weird < CLEAN_PROSE_WEIRD_MAX` **and** `perplexity < CLEAN_PROSE_PPL_MAX` → **Clear**
+
+   Readable Czech archaeological prose — measurements, dig notes, formal letter phrases — can score just below `CATEG_NOISY_SCORE_MAX` because short-text perplexity is noisy and minor OCR artefacts (period-abbreviations, merged words) depress the score slightly. When word count is sufficient, no token is weird, and the language model is reasonably confident, the line is promoted to Clear rather than held at Noisy.
 
 All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
 
@@ -462,8 +491,12 @@ is finalized to prevent unnatural categorization anomalies:
 times across a document, all instances are harmonized to share the statistical mode (most frequent) category assigned to that string.
 2. **Context Smoothing (Rolling Window)** — Applies a 5-line rolling window. If a **Noisy** line is sandwiched 
 between *two* consecutive **Trash** lines on *each* side, and its quality score is < 0.55 (Trash Max + 0.15), it is downgraded to **Trash**.
-3. **Page-level Inverted-Scan Sweep** — If a contiguous run of 4+ non-Empty/Non-text lines on a single page all lack 
-Czech 🇨🇿 diacritics and have a rough language score (< 0.45), the entire sequence is downgraded to **Trash**.
+3. **Page-level Inverted-Scan Sweep** — If a contiguous run of 4+ non-Empty/Non-text lines on a single page meets
+either of the following conditions, the entire sequence is downgraded to **Trash**:
+   - *Original arm:* all lines lack Czech 🇨🇿 diacritics **and** have a rough language score (< `LANG_SCORE_ROUGH`).
+   - *Rotation arm:* all lines have `rot_ratio ≥ ROT_RATIO_INVERTED_MIN` **and** `word_weird ≥ WEIRD_RATIO_INVERTED_MIN`.
+
+   The rotation arm is necessary because inverted-scan pages can still carry Czech diacritics: the OCR engine partially recognises upside-down glyphs as plausible Latin characters, so the diacritic-absence check alone fails to detect them.
 
 
 Example of per-document CSV files: [DOC_LINE_QWEN_CATEG](data_samples/DOC_LINE_QWEN_CATEG) 📁 by Qwen2.5-0.5B 

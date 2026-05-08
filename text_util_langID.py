@@ -89,6 +89,24 @@ CATEG_GARBAGE_SHORT_WC = _config.getint("TEXT_UTILS", "CATEG_GARBAGE_SHORT_WC", 
 CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.40)
 CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.70)
 
+# Inverted / 180°-rotated scan detection (Override 4 in categorize_line)
+# A high fraction of rotationally-symmetric chars (p↔d, b↔q, n↔u, m↔w, o, s, z, …)
+# combined with high per-word weirdness and poor LM confidence is a reliable fingerprint
+# of a page scanned upside-down.  The QS vowel and diacritic signals look superficially
+# normal on such text because the OCR engine partially recognises individual glyphs.
+ROT_RATIO_INVERTED_MIN   = _get_float("TEXT_UTILS", "ROT_RATIO_INVERTED_MIN",   0.55)
+WEIRD_RATIO_INVERTED_MIN = _get_float("TEXT_UTILS", "WEIRD_RATIO_INVERTED_MIN", 0.35)
+PPL_INVERTED_MIN         = _get_float("TEXT_UTILS", "PPL_INVERTED_MIN",         200.0)
+
+# Near-boundary promotion (Override 5 in categorize_line)
+# Readable Czech archaeological prose (measurements, letters, dig notes) can land just
+# below CATEG_NOISY_SCORE_MAX due to short-text perplexity noise or minor OCR artefacts
+# even when every word is clean.  Promote to Clear when signals agree it is readable.
+CLEAN_PROSE_MIN_SCORE = _get_float("TEXT_UTILS", "CLEAN_PROSE_MIN_SCORE", 0.65)
+CLEAN_PROSE_WEIRD_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_WEIRD_MAX", 0.08)
+CLEAN_PROSE_PPL_MAX   = _get_float("TEXT_UTILS", "CLEAN_PROSE_PPL_MAX",   400.0)
+CLEAN_PROSE_WC_MIN    = _config.getint("TEXT_UTILS", "CLEAN_PROSE_WC_MIN", fallback=4)
+
 ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/—–:%;?!/'))
 _STRIP_CHARS: str = _get_str("TEXT_UTILS", "STRIP_CHARS", '.,;:!?()[]"\'/\\')
 
@@ -490,6 +508,8 @@ def categorize_line(
         wc: int,
         vowel_ratio: float,
         perplexity: float,
+        rot_ratio: float = 0.0,
+        weird_ratio: float = 0.0,
 ) -> tuple[str, float]:
     """
     Assign a quality category to a processed line and return the (category, aligned_score) pair.
@@ -499,15 +519,24 @@ def categorize_line(
     perplexity, text length, garbage density, vowel quality, language confidence, gibberish
     fraction, and fused-word fraction).
 
-    Only three absolute structural overrides bypass the score:
+    Five structural overrides bypass or adjust the score routing:
       1. Empty / zero-word lines → "Empty"   (no meaningful score exists)
       2. All-caps line with near-zero vowels → "Trash"  (definitively unreadable)
       3. Ultra-low perplexity (< 50, wc ≥ 3) → "Clear"  (model is highly confident)
+      4. High rot_ratio + high weird_ratio + poor PPL → "Trash"
+            Catches pages scanned 180° rotated: the QS score looks acceptable because
+            the OCR engine partially recognises individual glyphs, producing plausible
+            vowel ratios and diacritic densities from the reversed character shapes.
+      5. Near-boundary (CLEAN_PROSE_MIN_SCORE ≤ qs < CATEG_NOISY_SCORE_MAX) with
+            sufficient words, no weird tokens, and reasonable LM score → "Clear"
+            Promotes readable Czech archaeological prose (measurements, formal labels,
+            dig notes) that lands just below the Clear boundary due to short-text
+            perplexity variance or minor OCR artefacts.
 
-    All other decisions are pure threshold routing:
-      qs < CATEG_TRASH_SCORE_MAX  → Trash
-      qs < CATEG_NOISY_SCORE_MAX  → Noisy
-      otherwise                   → Clear
+    Default score-based routing (when no override fires):
+      qs < CATEG_TRASH_SCORE_MAX                         → Trash
+      qs < CATEG_NOISY_SCORE_MAX (unless Override 5)     → Noisy
+      otherwise                                           → Clear
 
     After categorisation the score is aligned to lie strictly within the numerical
     bounds of its category so downstream aggregation can rely on monotonic ordering.
@@ -524,10 +553,31 @@ def categorize_line(
         # Override 3: language model is highly confident — trust it over heuristics
         if ppl < 50.0 and word_count >= 3:
             return "Clear"
+        # Override 4: Inverted / 180°-rotated scan detection.
+        # The QS score alone cannot catch rotated-page OCR output because the vowel ratio
+        # and diacritic density remain superficially normal (rotated glyphs like u/n, p/d,
+        # b/q are partially recognised by the OCR engine).  A high share of rotationally-
+        # ambiguous characters combined with high per-word weirdness and poor LM confidence
+        # is the reliable discriminating fingerprint.
+        if (rot_ratio >= ROT_RATIO_INVERTED_MIN
+                and weird_ratio >= WEIRD_RATIO_INVERTED_MIN
+                and word_count >= 3
+                and ppl >= PPL_INVERTED_MIN):
+            return "Trash"
         # Pure score-based routing — all other signals live inside quality_score
         if quality_score < CATEG_TRASH_SCORE_MAX:
             return "Trash"
         if quality_score < CATEG_NOISY_SCORE_MAX:
+            # Override 5: Near-boundary readable Czech prose promotion.
+            # Archaeological notes and formal labels (e.g. "mazanice, váha 182,1g.",
+            # "Rukopisné poznámky str. 56, autora.") score 0.65–0.70 because short-text
+            # perplexity is noisy and minor OCR artefacts depress the score slightly.
+            # When every other signal agrees the text is clean, promote to Clear.
+            if (quality_score >= CLEAN_PROSE_MIN_SCORE
+                    and word_count >= CLEAN_PROSE_WC_MIN
+                    and weird_ratio < CLEAN_PROSE_WEIRD_MAX
+                    and ppl < CLEAN_PROSE_PPL_MAX):
+                return "Clear"
             return "Noisy"
         return "Clear"
 
@@ -575,6 +625,17 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
             alpha = sum(c.isalpha() for c in core)
             has_strange = any(not c.isalnum() and c not in ALLOWED_INTERNAL for c in core)
             if len(core) >= 3 and alpha / len(core) >= 0.70 and not has_strange:
+                # Reject tokens with a leading all-caps OCR prefix followed by lowercase
+                # (e.g. 'AAMMNAbSSOAO', 'XAterenta', 'SeverW').  These are garbled
+                # corruptions of a real word, not valid vocabulary items.
+                caps_run = 0
+                for ch in core:
+                    if ch.isupper():
+                        caps_run += 1
+                    else:
+                        break
+                if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
+                    continue
                 valid += 1
     return valid / len(words)
 
