@@ -1,16 +1,16 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
-CTX197402444,1,1,o P ATOVICEn.Le,,,ces,0.75,6780.8,3,15,0.0,0,0,0,0,0,0,0.1,0.5,0.5833,0.5872,Noisy,False
+CTX197402444,1,1,o P ATOVICEn.Le,,,ces,0.75,6780.83,3,15,0.0,0,0,0,0,0,0,0.1,0.5,0.5833,0.3999,Trash,False
 CTX197402444,1,2,Kat. obec:,,,ces,0.75,850.0,2,10,0.1,0,0,0,0,0,0,0.0,0.4286,0.4286,0.7499,Clear,False
 CTX197402444,1,3,Osada:,,,ces,0.9951,850.0,1,6,0.1667,0,0,0,0,0,0,0.0,0.6,0.6,0.756,Clear,False
-CTX197402444,1,4,Trať: Pardubice,,,ces,0.75,722.07,2,15,0.0667,0,0,0,0,0,0,0.0,0.3846,0.3846,0.7918,Clear,False
+CTX197402444,1,4,Trať: Pardubice,,,ces,0.75,722.06,2,15,0.0667,0,0,0,0,0,0,0.0,0.3846,0.3846,0.7918,Clear,False
 CTX197402444,1,5,Okres:,,,ces,0.75,850.0,1,6,0.1667,0,0,0,0,0,0,0.0,0.4,0.6,0.7424,Clear,False
 CTX197402444,1,6,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX197402444,1,7,Druhakultura:,,,ces,0.9938,850.0,1,13,0.0769,0,0,0,0,0,0,0.0,0.4167,0.3333,0.7967,Clear,False
 CTX197402444,1,8,Lužické sídliště,,,ces,1.0,168.17,2,16,0.0,0,0,0,0,0,0,0.0,0.4,0.2,0.9328,Clear,False
 CTX197402444,1,9,Zpráva,,,ces,1.0,850.0,1,6,0.0,0,0,0,0,0,0,0.0,0.3333,0.5,0.8255,Clear,False
 CTX197402444,1,10,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX197402444,1,11,XXWžkumu,,,ces,0.8246,673.4,1,8,0.0,0,0,0,0,1,0,0.2,0.25,0.75,0.7882,Clear,False
-CTX197402444,1,12,XAterenta,,,ces,0.75,850.0,1,9,0.0,0,0,0,0,0,0,0.2,0.4444,0.4444,0.779,Clear,False
+CTX197402444,1,11,XXWžkumu,,,ces,0.8246,673.4,1,8,0.0,0,0,0,0,1,0,0.2,0.25,0.75,0.5382,Noisy,False
+CTX197402444,1,12,XAterenta,,,ces,0.75,850.0,1,9,0.0,0,0,0,0,0,0,0.2,0.4444,0.4444,0.529,Noisy,False
 CTX197402444,1,13,kmixxxx,,,ces,0.9954,850.0,1,7,0.0,0,0,1,0,0,1,0.35,0.1429,0.7143,0.7203,Clear,False
 CTX197402444,1,14,ved. oddělení,,,ces,1.0,850.0,2,13,0.0,0,0,0,0,0,0,0.0,0.4545,0.7273,0.819,Clear,False
 CTX197402444,1,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
@@ -22,7 +22,7 @@ CTX197402444,1,20,Dne 19.III.1974 jsije navštívili pískovnu JZD,,,ces,0.9896,
 CTX197402444,1,21,"v Opatovicích n.L., známouzvelkého záchraného výzkumu AŮ ČSAV",,,ces,0.9999,388.87,8,61,0.0,0,0,0,0,0,0,0.0125,0.4118,0.4902,0.8204,Clear,False
 CTX197402444,1,22,v Prazevletech 1956-1959. Tehdy prácevpískovně byla zastavena,,,ces,1.0,804.68,7,61,0.0,0,0,0,0,0,0,0.0,0.3778,0.5556,0.7841,Clear,False
 CTX197402444,1,23,a proto výzkum byl přerušen.,,,ces,1.0,438.9,5,28,0.0,0,0,0,0,0,0,0.0,0.3913,0.6087,0.8435,Clear,False
-CTX197402444,1,24,"Zjistili jsme, že prácevpískovně byly obnoveny,",,,ces,1.0,523.14,6,47,0.0,0,0,0,0,0,0,0.0,0.4,0.625,0.8478,Clear,False
+CTX197402444,1,24,"Zjistili jsme, že prácevpískovně byly obnoveny,",,,ces,1.0,523.13,6,47,0.0,0,0,0,0,0,0,0.0,0.4,0.625,0.8478,Clear,False
 CTX197402444,1,25,rozsah pískovny se zvětšiliza hranice záchranného výzkumu. Na,,,ces,0.9999,272.43,8,61,0.0,0,0,0,0,0,0,0.0,0.3962,0.4906,0.875,Clear,False
 CTX197402444,1,26,"bagrem skryté ploše jsou znatelné 3—4 hlubší objekty, skrývka",,,ces,0.9999,449.33,9,61,0.0164,0,0,0,0,0,0,0.0,0.3673,0.4694,0.8764,Clear,False
 CTX197402444,1,27,"však šla velmi hluboko, takže mad± mělčí objekty byly zcela",,,ces,1.0,418.25,10,59,0.0169,1,0,0,0,0,0,0.04,0.3958,0.4375,0.8773,Clear,False
@@ -42,14 +42,14 @@ CTX197402444,1,40,"V Hradci Králové, 27.111.1974",,,ces,0.9143,1101.0,4,29,0.0
 CTX197402444,1,41,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX197402444,1,42,.předejte prosím Dr.J.Ratajo,,,ces,0.9993,871.61,3,28,0.0,0,0,0,0,0,0,0.0333,0.3478,0.4783,0.815,Clear,False
 CTX197402444,1,43,"| ver,výzkumu v Opatovicích.",,,ces,0.9907,1114.27,4,28,0.0357,1,0,0,0,0,0,0.0,0.4091,0.5455,0.6644,Noisy,False
-CTX197402444,1,44,"Domnívám se, že druhý vedoucfvýzkumu v Opatovicích na sídlišti,Dr",,,ces,0.997,229.4,9,65,0.0,0,0,0,0,0,0,0.0111,0.4,0.5455,0.8314,Clear,False
+CTX197402444,1,44,"Domnívám se, že druhý vedoucfvýzkumu v Opatovicích na sídlišti,Dr",,,ces,0.997,229.41,9,65,0.0,0,0,0,0,0,0,0.0111,0.4,0.5455,0.8314,Clear,False
 CTX197402444,1,45,V.Vokolek by mohl-vzhledemkblízkosti svého pracoviště zahájit jednání,,,ces,1.0,543.99,7,69,0.0,0,0,0,0,1,0,0.0,0.3607,0.4918,0.8591,Clear,False
 CTX197402444,1,46,"s ústavemodalší výzkum na sídlišti . Doporučuji, aby tento výzkum",,,ces,0.9993,173.15,10,65,0.0,0,0,0,0,0,0,0.0,0.4259,0.537,0.8775,Clear,False
-CTX197402444,1,47,mu byl svěřen.,,,ces,1.0,708.63,3,14,0.0,0,0,0,0,0,0,0.0,0.3636,0.7273,0.7581,Clear,False
-CTX197402444,1,48,ov Praze dne 7.5.1974. R_,,,ces,0.777,638.38,5,25,0.04,1,0,0,0,0,0,0.08,0.3636,0.7273,0.663,Noisy,False
-CTX197402444,1,49,Poznámka: Pište pokud možno strojem. Na konci uveďte datum odesláníačitelný podpis. Zprávy koreferenta komisí,,,ces,0.9659,341.84,14,109,0.0092,0,0,0,0,1,0,0.0,0.4194,0.5699,0.9208,Clear,False
-CTX197402444,1,50,7) vyhotovte dvojmo. ;,,,ces,0.9717,1684.31,4,22,0.0455,0,0,0,0,0,0,0.0625,0.4,0.7333,0.6457,Noisy,False
-CTX197402444,1,51,v^UlíLa uq (AAuu Aud. AnMlut,,,ces,0.7617,3967.41,5,28,0.0357,1,2,0,0,1,1,0.16,0.5714,0.5238,0.6432,Noisy,False
-CTX197402444,1,52,V r Wrr (ia 7 TcedLir). 2 {,,,ces,0.75,4034.94,8,27,0.037,1,1,0,0,0,0,0.075,0.2857,0.2857,0.5573,Noisy,False
+CTX197402444,1,47,mu byl svěřen.,,,ces,1.0,708.63,3,14,0.0,0,0,0,0,0,0,0.0,0.3636,0.7273,0.7581,Trash,False
+CTX197402444,1,48,ov Praze dne 7.5.1974. R_,,,ces,0.777,638.38,5,25,0.04,1,0,0,0,0,0,0.08,0.3636,0.7273,0.3999,Trash,False
+CTX197402444,1,49,Poznámka: Pište pokud možno strojem. Na konci uveďte datum odesláníačitelný podpis. Zprávy koreferenta komisí,,,ces,0.9659,341.84,14,109,0.0092,0,0,0,0,1,0,0.0,0.4194,0.5699,0.9208,Trash,False
+CTX197402444,1,50,7) vyhotovte dvojmo. ;,,,ces,0.9717,1684.32,4,22,0.0455,0,0,0,0,0,0,0.0625,0.4,0.7333,0.3999,Trash,False
+CTX197402444,1,51,v^UlíLa uq (AAuu Aud. AnMlut,,,ces,0.7617,3967.42,5,28,0.0357,1,2,0,0,1,1,0.16,0.5714,0.5238,0.5432,Noisy,False
+CTX197402444,1,52,V r Wrr (ia 7 TcedLir). 2 {,,,ces,0.75,4034.93,8,27,0.037,1,1,0,0,0,0,0.075,0.2857,0.2857,0.526,Noisy,False
 CTX197402444,1,53,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX197402444,1,54,y.,,,,0.0,0.0,0,2,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False

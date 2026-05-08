@@ -1,16 +1,16 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
-CTX201405311,1,1,Č. akce 45938,,,ces,0.9998,2378.37,3,13,0.0,0,0,0,0,0,0,0.0,0.4,0.2,0.6298,Noisy,False
+CTX201405311,1,1,Č. akce 45938,,,ces,0.9998,2378.36,3,13,0.0,0,0,0,0,0,0,0.0,0.4,0.2,0.6298,Noisy,False
 CTX201405311,1,2,"ARCHEOLOGICKÝ ÚSTAV AKADEMIE VĚD ČR, Praha, v.v.i.",,,ces,0.9942,323.9,7,50,0.0,0,0,0,0,0,0,0.0,0.4359,0.359,0.8417,Clear,False
 CTX201405311,1,3,"118 01 Praha 1 - Malá Strana, Letenská 4",,,ces,0.8718,1514.69,9,40,0.0,0,0,0,0,0,0,0.0556,0.3913,0.3478,0.661,Noisy,False
 CTX201405311,1,4,"Pracoviště Kutná Hora, Hloušecká 609, 284 01 Kutná Hora",,,ces,0.9996,253.76,9,55,0.0,0,0,0,0,0,0,0.0,0.4324,0.3243,0.8514,Clear,False
-CTX201405311,1,5,"tel.: 327 511 730, e-mail: archeologiekh@seznam.cz",,,ces,0.75,211.09,6,50,0.06,1,0,0,0,1,0,0.0667,0.4138,0.4483,0.6903,Noisy,False
+CTX201405311,1,5,"tel.: 327 511 730, e-mail: archeologiekh@seznam.cz",,,ces,0.75,211.09,6,50,0.06,1,0,0,0,1,0,0.0667,0.4138,0.4483,0.7,Clear,False
 CTX201405311,1,6,V Kutné Hoře 1.7.2014,,,ces,1.0,321.73,4,21,0.0,0,0,0,0,0,0,0.0,0.4,0.5,0.7749,Clear,False
 CTX201405311,1,7,Ing. Jan Přibyl,,,ces,1.0,1198.87,3,15,0.0,0,0,0,0,0,0,0.0,0.3333,0.4167,0.7988,Clear,False
 CTX201405311,1,8,Mgr. Jana Přibylová,,,ces,1.0,463.09,3,19,0.0,0,0,0,0,0,0,0.0,0.375,0.4375,0.8832,Clear,False
-CTX201405311,1,9,Spodní 682,,,ces,1.0,850.0,2,10,0.0,0,0,0,0,0,0,0.0,0.3333,0.8333,0.7025,Clear,False
-CTX201405311,1,10,Spodní 682,,,ces,1.0,850.0,2,10,0.0,0,0,0,0,0,0,0.0,0.3333,0.8333,0.7025,Clear,False
-CTX201405311,1,11,625 00 Brno,,,ces,0.8475,12394.47,3,11,0.0,0,0,0,0,0,0,0.0,0.25,0.75,0.6312,Noisy,False
-CTX201405311,1,12,625 00 Brno,,,ces,0.8475,12394.47,3,11,0.0,0,0,0,0,0,0,0.0,0.25,0.75,0.6312,Noisy,False
+CTX201405311,1,9,Spodní 682,,,ces,1.0,850.0,2,10,0.0,0,0,0,0,0,0,0.0,0.3333,0.8333,0.7025,Trash,False
+CTX201405311,1,10,Spodní 682,,,ces,1.0,850.0,2,10,0.0,0,0,0,0,0,0,0.0,0.3333,0.8333,0.7025,Trash,False
+CTX201405311,1,11,625 00 Brno,,,ces,0.8475,12394.47,3,11,0.0,0,0,0,0,0,0,0.0,0.25,0.75,0.3999,Trash,False
+CTX201405311,1,12,625 00 Brno,,,ces,0.8475,12394.47,3,11,0.0,0,0,0,0,0,0,0.0,0.25,0.75,0.3999,Trash,False
 CTX201405311,1,13,VĚC: zprávaoprovedení záchranného archeologického výzkumu při akci - Čáslav - novostavba,,,ces,1.0,352.53,11,88,0.0114,0,0,0,0,2,0,0.0,0.4133,0.4667,0.8825,Clear,False
 CTX201405311,1,14,"rodinného domu na ppč. 1642/17,18 v k.ú. Čáslav.",,,ces,0.9762,844.96,8,48,0.0,0,0,0,0,0,0,0.0,0.3704,0.5556,0.7048,Clear,False
 CTX201405311,1,15,V souladu se zněním zákona č.20/87 Sb. v platném znění byl na základě ohlášení zahájení výkopových prací,,,ces,1.0,155.25,17,104,0.0,0,0,0,0,0,0,0.0,0.4074,0.5062,0.8847,Clear,False
@@ -31,6 +31,6 @@ CTX201405311,1,29,Kutná Hora.,,,ces,0.9509,850.0,2,11,0.0,0,0,0,0,0,0,0.0,0.444
 CTX201405311,1,30,"Závěrem je možno konstatovat, že byla dodržena všechna zákonná ustanoveníoochraně",,,ces,1.0,233.05,10,81,0.0,0,0,0,0,1,0,0.0,0.4225,0.5493,0.9009,Clear,False
 CTX201405311,1,31,archeologických památek.,,,ces,0.9879,850.0,2,24,0.0,0,0,0,0,1,0,0.0,0.4091,0.2727,0.8135,Clear,False
 CTX201405311,1,32,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX201405311,1,33,"PhDr. Radka Šumberová, Ph.D.",,,ces,0.75,119.13,4,28,0.0,0,1,0,0,0,2,0.05,0.2857,0.5238,0.8708,Clear,False
+CTX201405311,1,33,"PhDr. Radka Šumberová, Ph.D.",,,ces,0.75,119.13,4,28,0.0,0,1,0,0,0,2,0.05,0.2857,0.5238,0.8083,Clear,False
 CTX201405311,1,34,Vedoucí pracoviště Kutná Hora,,,ces,1.0,719.62,4,29,0.0,0,0,0,0,0,0,0.0,0.4615,0.4231,0.8566,Clear,False
 CTX201405311,1,35,"Zpracoval: Mgr. Filip Velímský, Ph.D.",,,ces,0.9929,189.31,5,37,0.027,0,0,0,0,0,1,0.02,0.2857,0.4286,0.9039,Clear,False
