@@ -422,20 +422,33 @@ Lines that pass the pre-filter are analysed by structural detectors defined in `
 ##### Composite Quality Score
 
 After structural detection, each line receives a single floating-point `quality_score` in [0, 1] computed by 
-`compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of ten normalised signals:
+`compute_quality_score()` in `text_util_langID.py`. The score is a weighted sum of ten normalised signals, **dynamically
+divided by the total sum of weights** to strictly bound the maximum score to 1.0 (preventing score inflation):
+
 ```text
-quality_score =
+base_score =
     QS_WEIGHT_VALID_WORD (def: 0.25) × valid_word_ratio
   + QS_WEIGHT_SYMBOL     (def: 0.13) × (1 − min(symbol_ratio, 1.0))
   + QS_WEIGHT_WEIRD      (def: 0.13) × (1 − min(word_weird_ratio, 1.0))
   + QS_WEIGHT_PERPLEXITY (def: 0.15) × (1 − min(perplexity / PERPLEXITY_THRESHOLD_MAX, 1.0))
   + QS_WEIGHT_LENGTH     (def: 0.05) × min(char_count / QS_LENGTH_MAX, 1.0)
-  + QS_WEIGHT_GARBAGE    (def: 0.10) × (1 − min(garbage_density / CATEG_GARBAGE_DENSITY_HIGH, 1.0))
+  + active_garbage_wt    (def: 0.20) × (1 − min(garbage_density / CATEG_GARBAGE_DENSITY_HIGH, 1.0))
   + QS_WEIGHT_VOWEL      (def: 0.07) × vowel_quality_score
   + QS_WEIGHT_LANG       (def: 0.05) × lang_score
   + QS_WEIGHT_GIBBERISH  (def: 0.04) × (1 − min(gibberish_ratio, 1.0))
   + QS_WEIGHT_FUSED      (def: 0.03) × (1 − min(fused_ratio, 1.0))
+
+quality_score = (base_score / total_weight) - rot_penalty
 ```
+
+**Dynamic Adjustments in the Formula:**
+* **Garbage Penalty Guard:** If a text line is short (`≤ 12` characters) and completely clean structurally 
+(`word_weird == 0.0`), the garbage weight (`active_garbage_wt`) is reduced by `50%`. This prevents over-penalising short 
+but perfectly legible archival tags (like `Lokalita:`).
+* **Conditional Rotation Penalty Gate:** A rotation penalty (`rot_penalty`) is calculated for strings with a high 
+`rot_ratio` (`>0.55`). To protect perfectly readable Czech sentences with naturally high occurrences of ambiguous 
+characters (e.g., `p`, `d`, `b`, `q`), this penalty is reduced by `50%` if the LM is highly confident the text is 
+legible (`lang_score >= 0.90`).
 
 `valid_word_ratio` counts tokens that are alphabetically dominant (≥ 70% alpha chars), contain no disallowed
 internal symbols, and are **not** a leading all-caps OCR prefix followed by lowercase letters. This last guard
