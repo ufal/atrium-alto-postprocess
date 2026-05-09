@@ -652,34 +652,28 @@ def compute_quality_score(
 ) -> float:
     """
     Compute a single quality score in [0, 1] that encodes every meaningful
-    signal available for an OCR text line.  This score is the *sole* input
-    to the category routing in categorize_line(); no raw signal is checked
-    there independently.
-
-    Components
-    ----------
-    valid_word_ratio  — fraction of words that look like real words
-    symbol_ratio      — fraction of non-alphanumeric, non-space characters
-    weird_ratio       — mean per-word weirdness score (OCR artefact indicator)
-    perplexity        — LM perplexity; low = confident valid text
-    text_length       — character count; longer lines carry more evidence
-    vowel_ratio       — fraction of alphabetic chars that are vowels;
-                        ideal range [0.20, 0.75], penalised outside that
-    garbage_density   — non-alnum density after removing leader dots;
-                        normalised against CATEG_GARBAGE_DENSITY_HIGH
-    lang_score        — FastText confidence for the detected language
-                        (defaults to 0.5 when unavailable)
-    gibberish_ratio   — fraction of words with no recognisable vowel pattern
-    fused_ratio       — fraction of tokens that appear to be fused words
+    signal available for an OCR text line.
     """
+    # 1. Dynamically calculate the maximum possible weight sum to prevent inflation
+    total_weight = (
+            QS_WEIGHT_VALID_WORD
+            + QS_WEIGHT_SYMBOL
+            + QS_WEIGHT_WEIRD
+            + QS_WEIGHT_PERPLEXITY
+            + QS_WEIGHT_LENGTH
+            + QS_WEIGHT_GARBAGE
+            + QS_WEIGHT_VOWEL
+            + QS_WEIGHT_LANG
+            + QS_WEIGHT_GIBBERISH
+            + QS_WEIGHT_FUSED
+    )
+
     norm_symbol = 1.0 - min(symbol_ratio, 1.0)
     norm_ppl = 1.0 - min(perplexity / ppl_max, 1.0)
     norm_len = min(text_length / length_max, 1.0)
     norm_weird = 1.0 - min(weird_ratio, 1.0)
 
-    # --- Change 3: Dynamic Garbage Penalty Guard ---
-    # Halve the garbage penalty if the string is short and has zero weirdness
-    # to protect clean administrative labels (e.g., "Okres:", "Osada:")
+    # Dynamic Garbage Penalty Guard
     active_garbage_weight = QS_WEIGHT_GARBAGE
     if text_length <= 12 and weird_ratio == 0.0:
         active_garbage_weight = active_garbage_weight / 2.0
@@ -705,27 +699,32 @@ def compute_quality_score(
             + QS_WEIGHT_WEIRD * norm_weird
             + QS_WEIGHT_PERPLEXITY * norm_ppl
             + QS_WEIGHT_LENGTH * norm_len
-            + active_garbage_weight * norm_garbage  # <-- MODIFIED
+            + active_garbage_weight * norm_garbage
             + QS_WEIGHT_VOWEL * norm_vowel
             + QS_WEIGHT_LANG * norm_lang
             + QS_WEIGHT_GIBBERISH * norm_gibb
             + QS_WEIGHT_FUSED * norm_fused
     )
 
-    # Re-normalize if garbage weight was reduced so maximum possible score remains 1.0
+    # Re-normalize if garbage weight was reduced so maximum possible score remains intact
     if active_garbage_weight != QS_WEIGHT_GARBAGE:
         base_score += (QS_WEIGHT_GARBAGE - active_garbage_weight)
 
-    # --- Change 1: Conditional Rotation Penalty ---
-    # Only penalize rotation if the text exhibits structural weirdness or LM confusion
+    # 2. OVERRIDE INFLATION: Divide by the actual total_weight
+    # This guarantees the score strictly bounds to 1.0 regardless of config experimentation.
+    base_score = base_score / total_weight
+
+    # 3. Conditional Rotation Penalty
     rot_penalty = 0.0
     if rot_ratio >= ROT_RATIO_INVERTED_MIN:
         if weird_ratio >= WEIRD_RATIO_INVERTED_MIN:
-            # Heavy penalty scaled by how weird the words are
             rot_penalty = (rot_ratio * weird_ratio) * 2.0
         elif perplexity >= PPL_INVERTED_MIN:
-            # Moderate flat penalty if the LM is confused
             rot_penalty = 0.40
+
+        # 4. SAFETY GATE: Protect highly confident readable Czech texts from false trashing
+        if lang_score is not None and lang_score >= 0.90:
+            rot_penalty *= 0.5
 
     final_score = max(0.0, base_score - rot_penalty)
     return min(1.0, final_score)
