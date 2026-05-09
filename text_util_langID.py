@@ -527,17 +527,6 @@ def categorize_line(
         if ppl < 50.0 and word_count >= 3:
             return "Clear"
 
-        # Override 4: Inverted / 180°-rotated scan detection.
-        # Replaced the failing weird_ratio check with a reliable diacritics-absence check.
-        CZ_DIACS = frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ")
-        no_diacs = not any(c in CZ_DIACS for c in text_source)
-
-        if (rot_ratio >= ROT_RATIO_INVERTED_MIN
-                and no_diacs
-                and word_count >= 3
-                and ppl >= PPL_INVERTED_MIN):
-            return "Trash"
-
         # Pure score-based routing
         if quality_score < CATEG_TRASH_SCORE_MAX:
             return "Trash"
@@ -659,6 +648,7 @@ def compute_quality_score(
         fused_ratio: float = 0.0,
         ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
         length_max: float = QS_LENGTH_MAX,
+        rot_ratio: float = 0.0,
 ) -> float:
     """
     Compute a single quality score in [0, 1] that encodes every meaningful
@@ -682,14 +672,21 @@ def compute_quality_score(
     gibberish_ratio   — fraction of words with no recognisable vowel pattern
     fused_ratio       — fraction of tokens that appear to be fused words
     """
-    norm_symbol  = 1.0 - min(symbol_ratio, 1.0)
-    norm_ppl     = 1.0 - min(perplexity / ppl_max, 1.0)
-    norm_len     = min(text_length / length_max, 1.0)
-    norm_weird   = 1.0 - min(weird_ratio, 1.0)
+    norm_symbol = 1.0 - min(symbol_ratio, 1.0)
+    norm_ppl = 1.0 - min(perplexity / ppl_max, 1.0)
+    norm_len = min(text_length / length_max, 1.0)
+    norm_weird = 1.0 - min(weird_ratio, 1.0)
+
+    # --- Change 3: Dynamic Garbage Penalty Guard ---
+    # Halve the garbage penalty if the string is short and has zero weirdness
+    # to protect clean administrative labels (e.g., "Okres:", "Osada:")
+    active_garbage_weight = QS_WEIGHT_GARBAGE
+    if text_length <= 12 and weird_ratio == 0.0:
+        active_garbage_weight = active_garbage_weight / 2.0
+
     norm_garbage = 1.0 - min(garbage_density / max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9), 1.0)
 
-    # Vowel quality: score 1.0 inside the ideal range [0.20, 0.75],
-    # ramps down linearly to 0.0 at the extremes (0.0 and 1.0).
+    # Vowel quality
     vr = vowel_ratio
     if vr < 0.20:
         norm_vowel = vr / 0.20
@@ -698,19 +695,37 @@ def compute_quality_score(
     else:
         norm_vowel = 1.0
 
-    norm_lang   = lang_score if lang_score is not None else 0.5
-    norm_gibb   = 1.0 - min(gibberish_ratio, 1.0)
-    norm_fused  = 1.0 - min(fused_ratio, 1.0)
+    norm_lang = lang_score if lang_score is not None else 0.5
+    norm_gibb = 1.0 - min(gibberish_ratio, 1.0)
+    norm_fused = 1.0 - min(fused_ratio, 1.0)
 
-    return (
+    base_score = (
             QS_WEIGHT_VALID_WORD * valid_word_ratio
-            + QS_WEIGHT_SYMBOL   * norm_symbol
-            + QS_WEIGHT_WEIRD    * norm_weird
+            + QS_WEIGHT_SYMBOL * norm_symbol
+            + QS_WEIGHT_WEIRD * norm_weird
             + QS_WEIGHT_PERPLEXITY * norm_ppl
-            + QS_WEIGHT_LENGTH   * norm_len
-            + QS_WEIGHT_GARBAGE  * norm_garbage
-            + QS_WEIGHT_VOWEL    * norm_vowel
-            + QS_WEIGHT_LANG     * norm_lang
+            + QS_WEIGHT_LENGTH * norm_len
+            + active_garbage_weight * norm_garbage  # <-- MODIFIED
+            + QS_WEIGHT_VOWEL * norm_vowel
+            + QS_WEIGHT_LANG * norm_lang
             + QS_WEIGHT_GIBBERISH * norm_gibb
-            + QS_WEIGHT_FUSED    * norm_fused
+            + QS_WEIGHT_FUSED * norm_fused
     )
+
+    # Re-normalize if garbage weight was reduced so maximum possible score remains 1.0
+    if active_garbage_weight != QS_WEIGHT_GARBAGE:
+        base_score += (QS_WEIGHT_GARBAGE - active_garbage_weight)
+
+    # --- Change 1: Conditional Rotation Penalty ---
+    # Only penalize rotation if the text exhibits structural weirdness or LM confusion
+    rot_penalty = 0.0
+    if rot_ratio >= ROT_RATIO_INVERTED_MIN:
+        if weird_ratio >= WEIRD_RATIO_INVERTED_MIN:
+            # Heavy penalty scaled by how weird the words are
+            rot_penalty = (rot_ratio * weird_ratio) * 2.0
+        elif perplexity >= PPL_INVERTED_MIN:
+            # Moderate flat penalty if the LM is confused
+            rot_penalty = 0.40
+
+    final_score = max(0.0, base_score - rot_penalty)
+    return min(1.0, final_score)
