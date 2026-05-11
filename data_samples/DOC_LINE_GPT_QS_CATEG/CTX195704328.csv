@@ -1,51 +1,51 @@
 file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
-CTX195704328,1,1,Kat- obec: C H 0 D O UNY,,,ces,0.75,1639.73,8,24,0.0417,0,0,0,0,0,0,0.2437,0.4286,0.5714,0.3352,Trash,False
-CTX195704328,1,2,Osada:,,,ces,0.9951,1675.94,1,6,0.1667,0,0,0,0,0,0,0.0,0.6,0.6,0.4997,Noisy,False
-CTX195704328,1,3,Trať: Čmejlova pískovna,,,ces,0.9887,388.6,3,23,0.0435,0,0,0,0,0,0,0.0,0.35,0.45,1.0,Clear,False
+CTX195704328,1,1,Kat- obec: C H 0 D O UNY,,,ces,0.75,1639.74,8,24,0.0417,0,0,0,0,0,0,0.2437,0.4286,0.5714,0.2684,Trash,False
+CTX195704328,1,2,Osada:,,,ces,0.9951,1675.95,1,6,0.1667,0,0,0,0,0,0,0.0,0.6,0.6,0.6179,Noisy,False
+CTX195704328,1,3,Trať: Čmejlova pískovna,,,ces,0.9887,388.6,3,23,0.0435,0,0,0,0,0,0,0.0,0.35,0.45,0.9191,Clear,False
 CTX195704328,1,4,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX195704328,1,5,tou;,,,ces,0.75,2013.39,1,4,0.25,0,0,0,0,0,0,0.0,0.6667,0.6667,0.4249,Trash,False
-CTX195704328,1,6,Okres: Roudnice n. Labem,,,ces,0.7671,2581.08,4,24,0.0417,0,0,0,0,0,0,0.0,0.4211,0.6316,0.4242,Trash,False
+CTX195704328,1,5,tou;,,,ces,0.75,2013.38,1,4,0.25,0,0,0,0,0,0,0.0,0.6667,0.6667,0.3499,Trash,False
+CTX195704328,1,6,Okres: Roudnice n. Labem,,,ces,0.7671,2581.08,4,24,0.0417,0,0,0,0,0,0,0.0,0.4211,0.6316,0.3492,Trash,False
 CTX195704328,1,7,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
 CTX195704328,1,8,4 - 1957,,,,0.0,0.0,0,8,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
 CTX195704328,1,9,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX195704328,1,10,T>r«l.. a k«Uurn: ojedinělý - únětická,,,ces,1.0,534.92,6,38,0.1053,2,0,0,0,0,1,0.15,0.4615,0.3077,0.7653,Clear,False
-CTX195704328,1,11,pohřebiště - lužická,,,ces,1.0,143.69,3,20,0.0,0,0,0,0,0,0,0.0,0.4118,0.2941,0.963,Clear,False
-CTX195704328,1,12,ved. výzkurnu,,,ces,0.9964,626.38,2,13,0.0,0,0,0,0,0,0,0.0,0.3636,0.7273,0.615,Noisy,False
-CTX195704328,1,13,Zdráva / za obdobi,,,ces,0.9585,1326.81,4,18,0.0,0,0,0,0,0,0,0.0,0.4286,0.6429,0.4584,Noisy,False
-CTX195704328,1,14,veý. oddélcni,,,ces,0.75,2500.0,2,13,0.0,0,0,0,0,0,0,0.0,0.4545,0.5455,0.8953,Clear,False
+CTX195704328,1,10,T>r«l.. a k«Uurn: ojedinělý - únětická,,,ces,1.0,534.92,6,38,0.1053,2,0,0,0,0,1,0.15,0.4615,0.3077,0.6957,Noisy,False
+CTX195704328,1,11,pohřebiště - lužická,,,ces,1.0,143.69,3,20,0.0,0,0,0,0,0,0,0.0,0.4118,0.2941,0.8754,Clear,False
+CTX195704328,1,12,ved. výzkurnu,,,ces,0.9964,626.38,2,13,0.0,0,0,0,0,0,0,0.0,0.3636,0.7273,0.7227,Clear,False
+CTX195704328,1,13,Zdráva / za obdobi,,,ces,0.9585,1326.81,4,18,0.0,0,0,0,0,0,0,0.0,0.4286,0.6429,0.5803,Noisy,False
+CTX195704328,1,14,veý. oddélcni,,,ces,0.75,2500.0,2,13,0.0,0,0,0,0,0,0,0.0,0.4545,0.5455,0.8139,Clear,False
 CTX195704328,1,15,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX195704328,1,16,"Dne 26.1X.1957 jsem zajel do Chodoun, abych zjistil možnosti",,,ces,0.9995,556.59,9,60,0.0,0,0,0,0,0,0,0.0,0.3571,0.5952,0.5901,Noisy,False
-CTX195704328,1,17,"výzkumu lužického žárového pohřebiště, plánovaného na srpen 1958# Naleziště",Na,,ces,1.0,243.85,9,75,0.0133,1,0,0,0,0,0,0.0444,0.4262,0.459,1.0,Clear,False
-CTX195704328,1,18,"je asi 1 km vých. od obcevmalé pískovně, kde místní občané",,leziště,ces,0.9997,433.67,11,58,0.0,0,0,0,0,0,0,0.0227,0.4,0.5333,0.959,Clear,False
-CTX195704328,1,19,těží dle potřeby písek. Přilehlé pole je oseto vojtěškou. Majitel obou,,,ces,1.0,292.77,11,70,0.0,0,0,0,0,0,0,0.0,0.4655,0.5172,1.0,Clear,False
-CTX195704328,1,20,pozemků neměl námitek proti provedení výzkumu.,,,ces,1.0,363.91,6,46,0.0,0,0,0,0,0,0,0.0,0.425,0.625,1.0,Clear,False
-CTX195704328,1,21,"V těchto místech byl koncem r.1954 rozrušen 1 žárový hrob, obložený",ob,,ces,1.0,348.6,11,67,0.0,0,0,0,0,0,0,0.0227,0.36,0.5,0.9911,Clear,False
-CTX195704328,1,22,opukovými deskami a s keramikoushladce vymezenými prsovitý-,,ložený,ces,0.9971,757.62,7,59,0.0,0,0,0,0,1,0,0.0,0.4615,0.5769,0.5636,Noisy,False
-CTX195704328,1,23,mi vypnulinami (převzal tehdy referentvzastoupení KM Teplice).,,,ces,1.0,2006.52,7,62,0.0,0,0,0,0,1,0,0.0,0.3962,0.5849,0.4987,Noisy,False
-CTX195704328,1,24,V r.1955 získalo odtud museum v Budyni n.Ohří další rozrušený hrob,,,ces,0.9979,713.54,11,66,0.0,0,0,0,0,0,0,0.0091,0.4,0.6,0.5739,Noisy,False
-CTX195704328,1,25,"(velký okřínazlomky dalších asi 5 nádob; další nález, okolnosti neznámy).",ne,,ces,0.9931,312.62,10,73,0.0137,0,0,0,0,0,0,0.025,0.4138,0.5,1.0,Clear,False
+CTX195704328,1,16,"Dne 26.1X.1957 jsem zajel do Chodoun, abych zjistil možnosti",,,ces,0.9995,556.59,9,60,0.0,0,0,0,0,0,0,0.0,0.3571,0.5952,0.7001,Clear,False
+CTX195704328,1,17,"výzkumu lužického žárového pohřebiště, plánovaného na srpen 1958# Naleziště",Na,,ces,1.0,243.85,9,75,0.0133,1,0,0,0,0,0,0.0444,0.4262,0.459,0.9117,Clear,False
+CTX195704328,1,18,"je asi 1 km vých. od obcevmalé pískovně, kde místní občané",,leziště,ces,0.9997,433.67,11,58,0.0,0,0,0,0,0,0,0.0227,0.4,0.5333,0.8718,Clear,False
+CTX195704328,1,19,těží dle potřeby písek. Přilehlé pole je oseto vojtěškou. Majitel obou,,,ces,1.0,292.77,11,70,0.0,0,0,0,0,0,0,0.0,0.4655,0.5172,0.949,Clear,False
+CTX195704328,1,20,pozemků neměl námitek proti provedení výzkumu.,,,ces,1.0,363.92,6,46,0.0,0,0,0,0,0,0,0.0,0.425,0.625,0.9563,Clear,False
+CTX195704328,1,21,"V těchto místech byl koncem r.1954 rozrušen 1 žárový hrob, obložený",ob,,ces,1.0,348.6,11,67,0.0,0,0,0,0,0,0,0.0227,0.36,0.5,0.901,Clear,False
+CTX195704328,1,22,opukovými deskami a s keramikoushladce vymezenými prsovitý-,,ložený,ces,0.9971,757.62,7,59,0.0,0,0,0,0,1,0,0.0,0.4615,0.5769,0.7,Clear,False
+CTX195704328,1,23,mi vypnulinami (převzal tehdy referentvzastoupení KM Teplice).,,,ces,1.0,2006.52,7,62,0.0,0,0,0,0,1,0,0.0,0.3962,0.5849,0.617,Noisy,False
+CTX195704328,1,24,V r.1955 získalo odtud museum v Budyni n.Ohří další rozrušený hrob,,,ces,0.9979,713.54,11,66,0.0,0,0,0,0,0,0,0.0091,0.4,0.6,0.7,Clear,False
+CTX195704328,1,25,"(velký okřínazlomky dalších asi 5 nádob; další nález, okolnosti neznámy).",ne,,ces,0.9931,312.62,10,73,0.0137,0,0,0,0,0,0,0.025,0.4138,0.5,0.9323,Clear,False
 CTX195704328,1,26,,,známy).,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX195704328,1,27,"Při své poslední návštěvě 26.IX. jsem zjistil, že těžební",,,ces,1.0,159.57,9,57,0.0,0,0,0,0,0,0,0.0,0.3636,0.5,1.0,Clear,False
-CTX195704328,1,28,plocha se proti roku 1955 zvětšila cca 5 krát. Odkryvem byl rozrušen,rozru,,ces,1.0,547.47,12,68,0.0,0,0,0,0,0,0,0.0208,0.3725,0.451,0.9895,Clear,False
-CTX195704328,1,29,"další, v pořadí již třetí hrob, z jehož obložení se zachovaly",,šen,ces,1.0,147.89,11,61,0.0,0,0,0,0,0,0,0.0,0.4082,0.449,1.0,Clear,False
-CTX195704328,1,30,opět opukové desky. Dále byly nalezenyvpřehozeném materiálu zlomky,zlom,,ces,1.0,921.07,8,66,0.0,0,0,0,0,1,0,0.0,0.4655,0.6379,0.6312,Noisy,False
-CTX195704328,1,31,"z několika nádob (osudí, miskaačást spodku nádoby blíže neur-",,ky,ces,0.9999,256.72,9,61,0.0,0,0,0,0,0,0,0.0,0.44,0.58,1.0,Clear,False
-CTX195704328,1,32,citelného tvarusmřížkovým rýhováním). Poloha všech tří hrobů ukazuje,uka,,ces,1.0,364.4,8,68,0.0,0,0,0,0,1,0,0.0,0.4068,0.4237,1.0,Clear,False
-CTX195704328,1,33,"zároveň směr, kam asi další hroby pokračují, totiž na mírnou",,zuje,ces,1.0,223.96,10,60,0.0,0,0,0,0,0,0,0.0,0.4286,0.4286,1.0,Clear,False
-CTX195704328,1,34,"vyvýšeninu, zasahujícízčásti již do pole. Při povrchovém sběru",,,ces,1.0,190.13,8,62,0.0,0,0,0,0,1,0,0.0,0.4151,0.5094,1.0,Clear,False
-CTX195704328,1,35,byl dále nalezen kamenný únětický mlat se žlábkovým sedlem (délka,(dél,,ces,1.0,293.56,10,65,0.0,0,0,0,0,0,0,0.0,0.4,0.4909,1.0,Clear,False
+CTX195704328,1,27,"Při své poslední návštěvě 26.IX. jsem zjistil, že těžební",,,ces,1.0,159.57,9,57,0.0,0,0,0,0,0,0,0.0,0.3636,0.5,0.9165,Clear,False
+CTX195704328,1,28,plocha se proti roku 1955 zvětšila cca 5 krát. Odkryvem byl rozrušen,rozru,,ces,1.0,547.47,12,68,0.0,0,0,0,0,0,0,0.0208,0.3725,0.451,0.8996,Clear,False
+CTX195704328,1,29,"další, v pořadí již třetí hrob, z jehož obložení se zachovaly",,šen,ces,1.0,147.89,11,61,0.0,0,0,0,0,0,0,0.0,0.4082,0.449,0.9097,Clear,False
+CTX195704328,1,30,opět opukové desky. Dále byly nalezenyvpřehozeném materiálu zlomky,zlom,,ces,1.0,921.07,8,66,0.0,0,0,0,0,1,0,0.0,0.4655,0.6379,0.7375,Clear,False
+CTX195704328,1,31,"z několika nádob (osudí, miskaačást spodku nádoby blíže neur-",,ky,ces,0.9999,256.72,9,61,0.0,0,0,0,0,0,0,0.0,0.44,0.58,0.9395,Clear,False
+CTX195704328,1,32,citelného tvarusmřížkovým rýhováním). Poloha všech tří hrobů ukazuje,uka,,ces,1.0,364.4,8,68,0.0,0,0,0,0,1,0,0.0,0.4068,0.4237,0.962,Clear,False
+CTX195704328,1,33,"zároveň směr, kam asi další hroby pokračují, totiž na mírnou",,zuje,ces,1.0,223.96,10,60,0.0,0,0,0,0,0,0,0.0,0.4286,0.4286,0.945,Clear,False
+CTX195704328,1,34,"vyvýšeninu, zasahujícízčásti již do pole. Při povrchovém sběru",,,ces,1.0,190.13,8,62,0.0,0,0,0,0,1,0,0.0,0.4151,0.5094,0.9385,Clear,False
+CTX195704328,1,35,byl dále nalezen kamenný únětický mlat se žlábkovým sedlem (délka,(dél,,ces,1.0,293.56,10,65,0.0,0,0,0,0,0,0,0.0,0.4,0.4909,0.9462,Clear,False
 CTX195704328,1,36,167 mm). 1——,,ka,,0.0,0.0,0,12,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX195704328,1,37,"Navrhuji, aby výzkumvpříštím roce byl proveden několika",,,ces,1.0,454.97,7,55,0.0,0,0,0,0,0,0,0.0,0.3958,0.5208,1.0,Clear,False
-CTX195704328,1,38,"příčnými sondami, jimiž by byl praeoex zachycen rozsah pohřebiště,",,,ces,1.0,310.17,9,66,0.0,0,0,0,0,1,0,0.0,0.4107,0.5179,1.0,Clear,False
-CTX195704328,1,39,"zejména pak prozkoumat nej bližší okolí pískovnyvtěch místech, kde",,,ces,1.0,236.5,9,66,0.0,0,0,0,0,0,0,0.0,0.3684,0.4912,1.0,Clear,False
-CTX195704328,1,40,bude pravděpodobně těžení pokračovat. Vzhledemkmalé mocnosti or-,,,ces,1.0,213.68,7,64,0.0,0,0,0,0,0,0,0.0,0.3929,0.5714,1.0,Clear,False
+CTX195704328,1,37,"Navrhuji, aby výzkumvpříštím roce byl proveden několika",,,ces,1.0,454.97,7,55,0.0,0,0,0,0,0,0,0.0,0.3958,0.5208,0.9567,Clear,False
+CTX195704328,1,38,"příčnými sondami, jimiž by byl praeoex zachycen rozsah pohřebiště,",,,ces,1.0,310.17,9,66,0.0,0,0,0,0,1,0,0.0,0.4107,0.5179,0.9386,Clear,False
+CTX195704328,1,39,"zejména pak prozkoumat nej bližší okolí pískovnyvtěch místech, kde",,,ces,1.0,236.5,9,66,0.0,0,0,0,0,0,0,0.0,0.3684,0.4912,0.972,Clear,False
+CTX195704328,1,40,bude pravděpodobně těžení pokračovat. Vzhledemkmalé mocnosti or-,,,ces,1.0,213.68,7,64,0.0,0,0,0,0,0,0,0.0,0.3929,0.5714,0.9378,Clear,False
 CTX195704328,1,41,o,,,,0.0,0.0,0,1,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
-CTX195704328,1,42,"nice na nalezištiapoměrně malé ploše návršíčka (cca 300 m ), kde",,,ces,0.9999,498.11,11,64,0.0,0,0,0,0,1,0,0.0,0.4167,0.3958,0.9574,Clear,False
-CTX195704328,1,43,"pohřebiště předpokládám, věřím, že by pohřebiště mohlo býtzvětší",,,ces,1.0,52.49,8,64,0.0,0,0,0,0,0,0,0.0,0.3818,0.4727,1.0,Clear,False
-CTX195704328,1,44,Poznámka: Pikte pokud možno strojern. Nn konci uvedte datum odosláníačitelný podpis. Zprávy koreferentúakomisi,,,ces,0.9072,655.15,13,110,0.0091,0,0,0,0,2,0,0.0,0.4105,0.5789,0.63,Noisy,False
-CTX195704328,1,45,vyhotovto dvojmo.,,,ces,0.9645,2365.91,2,17,0.0,0,0,0,0,0,0,0.0,0.4,0.7333,0.5308,Noisy,False
-CTX195704328,1,46,/ PT -14332:55,,,ces,0.75,4233.42,3,14,0.0714,0,0,0,0,0,0,0.0,0.0,0.5,0.4499,Trash,True
-CTX195704328,2,1,části prozkoumánovplánované doběvpříštím roce,,,ces,1.0,346.42,4,45,0.0,0,0,0,0,1,0,0.0,0.4048,0.5476,1.0,Clear,False
+CTX195704328,1,42,"nice na nalezištiapoměrně malé ploše návršíčka (cca 300 m ), kde",,,ces,0.9999,498.11,11,64,0.0,0,0,0,0,1,0,0.0,0.4167,0.3958,0.8703,Clear,False
+CTX195704328,1,43,"pohřebiště předpokládám, věřím, že by pohřebiště mohlo býtzvětší",,,ces,1.0,52.49,8,64,0.0,0,0,0,0,0,0,0.0,0.3818,0.4727,0.9207,Clear,False
+CTX195704328,1,44,Poznámka: Pikte pokud možno strojern. Nn konci uvedte datum odosláníačitelný podpis. Zprávy koreferentúakomisi,,,ces,0.9072,655.15,13,110,0.0091,0,0,0,0,2,0,0.0,0.4105,0.5789,0.7364,Clear,False
+CTX195704328,1,45,vyhotovto dvojmo.,,,ces,0.9645,2365.9,2,17,0.0,0,0,0,0,0,0,0.0,0.4,0.7333,0.6462,Noisy,False
+CTX195704328,1,46,/ PT -14332:55,,,ces,0.75,4233.4,3,14,0.0714,0,0,0,0,0,0,0.0,0.0,0.5,0.4425,Trash,True
+CTX195704328,2,1,části prozkoumánovplánované doběvpříštím roce,,,ces,1.0,346.42,4,45,0.0,0,0,0,0,1,0,0.0,0.4048,0.5476,0.9524,Clear,False
 CTX195704328,2,2,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
-CTX195704328,2,3,V Praze 1. října 1957.,,,ces,1.0,961.88,5,22,0.0,0,0,0,0,0,0,0.0,0.3636,0.4545,0.8511,Clear,False
-CTX195704328,2,4,J. Hrala,,,ces,0.9996,1122.71,2,8,0.0,0,0,0,0,0,0,0.0,0.3333,0.0,0.8566,Clear,False
+CTX195704328,2,3,V Praze 1. října 1957.,,,ces,1.0,961.87,5,22,0.0,0,0,0,0,0,0,0.0,0.3636,0.4545,0.7737,Clear,False
+CTX195704328,2,4,J. Hrala,,,ces,0.9996,1122.7,2,8,0.0,0,0,0,0,0,0,0.0,0.3333,0.0,0.7787,Clear,False
