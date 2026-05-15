@@ -32,14 +32,11 @@ _config_path = Path("config_langID.txt")
 if _config_path.exists():
     _config.read(_config_path)
 
-
 def _get_float(section, key, default):
     return _config.getfloat(section, key, fallback=default) if _config.has_section(section) else default
 
-
 def _get_str(section, key, default):
     return _config.get(section, key, fallback=default) if _config.has_section(section) else default
-
 
 COMMON_LANGS = ["ces", "deu", "eng"]
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
@@ -51,10 +48,8 @@ _TRUSTED_FOREIGN_LANG_BASES: frozenset = frozenset(
     if lang.strip()
 )
 
-
 def _lang_base(lang_code: str) -> str:
     return lang_code.split("_")[0]
-
 
 _EXPECTED_LANGS_BASES: frozenset = frozenset(_lang_base(l) for l in COMMON_LANGS)
 
@@ -73,7 +68,7 @@ QS_WEIGHT_SYMBOL     = _get_float("TEXT_UTILS", "QS_WEIGHT_SYMBOL",     0.13)
 QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.13)
 QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.15)
 QS_WEIGHT_LENGTH     = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH",     0.05)
-# Extended signal weights (previously checked ad-hoc inside _determine_category)
+# Extended signal weights
 QS_WEIGHT_GARBAGE    = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE",    0.10)
 QS_WEIGHT_VOWEL      = _get_float("TEXT_UTILS", "QS_WEIGHT_VOWEL",      0.07)
 QS_WEIGHT_LANG       = _get_float("TEXT_UTILS", "QS_WEIGHT_LANG",       0.05)
@@ -86,22 +81,15 @@ CATEG_GARBAGE_DENSITY_SHORT = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_SH
 CATEG_GARBAGE_SHORT_WC = _config.getint("TEXT_UTILS", "CATEG_GARBAGE_SHORT_WC", fallback=3)
 
 # Boundary Thresholds
-CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.40)
-CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.70)
+CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.50)
+CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.90)
 
-# Inverted / 180°-rotated scan detection (Override 4 in categorize_line)
-# A high fraction of rotationally-symmetric chars (p↔d, b↔q, n↔u, m↔w, o, s, z, …)
-# combined with high per-word weirdness and poor LM confidence is a reliable fingerprint
-# of a page scanned upside-down.  The QS vowel and diacritic signals look superficially
-# normal on such text because the OCR engine partially recognises individual glyphs.
+# Inverted / 180°-rotated scan detection
 ROT_RATIO_INVERTED_MIN   = _get_float("TEXT_UTILS", "ROT_RATIO_INVERTED_MIN",   0.55)
 WEIRD_RATIO_INVERTED_MIN = _get_float("TEXT_UTILS", "WEIRD_RATIO_INVERTED_MIN", 0.35)
 PPL_INVERTED_MIN         = _get_float("TEXT_UTILS", "PPL_INVERTED_MIN",         200.0)
 
-# Near-boundary promotion (Override 5 in categorize_line)
-# Readable Czech archaeological prose (measurements, letters, dig notes) can land just
-# below CATEG_NOISY_SCORE_MAX due to short-text perplexity noise or minor OCR artefacts
-# even when every word is clean.  Promote to Clear when signals agree it is readable.
+# Near-boundary promotion
 CLEAN_PROSE_MIN_SCORE = _get_float("TEXT_UTILS", "CLEAN_PROSE_MIN_SCORE", 0.65)
 CLEAN_PROSE_WEIRD_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_WEIRD_MAX", 0.08)
 CLEAN_PROSE_PPL_MAX   = _get_float("TEXT_UTILS", "CLEAN_PROSE_PPL_MAX",   400.0)
@@ -117,19 +105,15 @@ RE_GARBAGE_CLUSTERS: re.Pattern = re.compile(r'[~=]|[\u00C0-\u017F]{2,}|[A-Z]=[A
 RE_ROMAN_NUMERAL: re.Pattern = re.compile(r'^[IVXLCDMivxlcdm]+\.?$')
 RE_STAMP: re.Pattern = re.compile(r'^(?:[A-Za-z]+)?[\W_]*\d{2,4}\s*/\s*\d{2,4}[\W_]*$')
 
-# Alphanumeric archive/inventory codes: letter prefix + digits, e.g. A678/2015, A1737, AG802045
+# Alphanumeric archive/inventory codes
 RE_ARCHIVE_CODE: re.Pattern = re.compile(r'^[A-Za-z]{1,3}\d{3,}(?:/\d+)?$')
-# Mixed-case alphanumeric tokens with digits, or all-caps tokens with 'X' placeholders e.g. VX5P3SosAX, FAXAPOOXAXXXX
 RE_ALPHANUM_TOKEN: re.Pattern = re.compile(r'^[A-Za-z0-9]{5,}$')
-# Multi-token archive/inventory references with spaces, e.g. "ČP. 10", "BZU 1982-1983 4", "P2N7-", "z.6Z. 1369/0"
 RE_ARCHIVE_REF_SPACED: re.Pattern = re.compile(r'^[A-Za-záčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]{1,5}[\s.\-]+\d{1,}')
 
 # ---------------------------------------------------------------------------
-# Module-level regexes hoisted from inner functions for compile-once efficiency
+# Module-level regexes hoisted from inner functions
 # ---------------------------------------------------------------------------
 
-# Prostrkávání / spaced-letter pattern: 4+ consecutive single uppercase letters
-# separated by exactly one space, e.g. "S K U H R O V" → "Skuhrov"
 _RE_SPACED_CAPS: re.Pattern = re.compile(
     r'(?<!\S)'
     r'([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ] ){3,}'
@@ -137,14 +121,11 @@ _RE_SPACED_CAPS: re.Pattern = re.compile(
     r'(?!\S)'
 )
 
-
 def _collapse_spaced_caps(m: re.Match) -> str:
+    """Collapses spaced out capital letters into a standard capitalized word."""
     letters = m.group(0).replace(' ', '')
     return letters[0].upper() + letters[1:].lower()
 
-
-# Mid-word capitalisation artifact: any lowercase immediately followed by uppercase
-# inside a word that is not all-caps.
 _RE_MID_UPPER: re.Pattern = re.compile(r'[a-záčďéěíňóřšťůúýžäöü][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽÄÖÜ]')
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
@@ -152,12 +133,12 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
     "deu": frozenset("äöüßÄÖÜ"),
 }
 
-
 # ---------------------------------------------------------------------------
 # Structural Text-Quality Detectors
 # ---------------------------------------------------------------------------
 
 def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: float = 0.07) -> str | None:
+    """Attempts to infer the language of a text string purely based on diacritic density."""
     alpha = [c for c in text if c.isalpha()]
     if not alpha: return None
     for lang_code, diacs in _LANG_DIACRITICS.items():
@@ -166,29 +147,24 @@ def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: 
         if ratio >= threshold: return lang_code
     return None
 
-
 def compute_garbage_density(text: str) -> float:
+    """Calculates the ratio of non-alphanumeric (garbage) characters in the text."""
     if not text: return 0.0
-
-    # Pre-clean: Remove leader dots and ellipses (3 or more consecutive periods)
-    # as these are structural formatting, not OCR noise.
     clean_text = re.sub(r'\.{3,}', '', text)
     if not clean_text: return 0.0
-
-    # Calculate noise against the cleaned text length
     noise_chars = sum(1 for c in clean_text if not c.isalnum() and c not in ' ,.?!()/-')
     return noise_chars / len(clean_text)
 
-
 def compute_rotatable_ratio(text: str) -> float:
+    """Calculates the ratio of rotationally-symmetric characters to detect inverted scans."""
     alpha_chars = [c.lower() for c in text if c.isalpha()]
     if not alpha_chars: return 0.0
     rotatable_set = frozenset("pbqdnuwmoxszeyv")
     rotatable_count = sum(1 for c in alpha_chars if c in rotatable_set)
     return rotatable_count / len(alpha_chars)
 
-
 def detect_strange_symbols(text: str) -> int:
+    """Counts the occurrences of non-standard internal symbols within words."""
     count = 0
     for word in text.split():
         core = word.strip(_STRIP_CHARS)
@@ -199,32 +175,33 @@ def detect_strange_symbols(text: str) -> int:
                 break
     return count
 
-
 def detect_repeated_chars(text: str) -> int:
+    """Counts words containing suspiciously repeated characters indicative of OCR stutters."""
     count = 0
     for word in text.split():
         core = word.strip(_STRIP_CHARS)
         if len(core) < 4: continue
         for ch in set(core):
-            # Flag 1: True OCR stutter (3 consecutive identical chars, e.g., 'hrobbb')
             if ch * 3 in core:
                 count += 1
                 break
-            # Flag 2: Abnormal distribution, explicitly ignoring common Czech vowels
-            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.40) and core.count(ch) >= 3:
+            if ch * 2 in core and core.count(ch) >= 3 and ch not in "aeiouyáéíóúýěůäöü":
+                count += 1
+                break
+            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.30) and core.count(ch) >= 3:
                 count += 1
                 break
     return count
 
-
 def compute_vowel_ratio(text: str) -> float:
+    """Calculates the ratio of vowels among alphabetical characters."""
     alpha_chars = [c for c in text if c.isalpha()]
     if not alpha_chars: return 0.0
     vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
     return sum(1 for c in alpha_chars if c in vowels) / len(alpha_chars)
 
-
 def detect_gibberish_words(text: str) -> int:
+    """Counts words that lack vowels or have highly abnormal vowel-to-consonant ratios."""
     words = text.split()
     if not words: return 0
     count = 0
@@ -244,8 +221,8 @@ def detect_gibberish_words(text: str) -> int:
             count += 1
     return count
 
-
 def detect_letter_digit_letter(text: str) -> int:
+    """Detects occurrences of numbers erroneously fused directly inside words."""
     count = 0
     for word in text.split():
         prev2, prev1 = None, None
@@ -256,11 +233,8 @@ def detect_letter_digit_letter(text: str) -> int:
             prev2, prev1 = prev1, ch
     return count
 
-
 def detect_mid_uppercase(text: str) -> int:
-    # Strict regex: any lowercase letter immediately followed by an uppercase letter
-    # inside a word body is a reliable OCR mid-capitalisation artifact.
-    # The word must not be all-caps (e.g. acronyms) and must be at least 2 chars.
+    """Counts words containing abnormal mid-word capitalizations (e.g., lowercase followed directly by uppercase)."""
     count = 0
     for word in text.split():
         core = word.strip('.,;:!?()[]"\'-/')
@@ -270,15 +244,12 @@ def detect_mid_uppercase(text: str) -> int:
             count += 1
     return count
 
-
 def is_all_caps_line(text: str) -> bool:
+    """Determines if all alphabetical words in the line are completely uppercase."""
     alpha_words = [w for w in text.split() if any(c.isalpha() for c in w)]
     if not alpha_words: return False
     return all(w.isupper() for w in alpha_words)
 
-
-# Czech vowel-consonant alternation limit — a run of 5+ consonants or 4+ vowels
-# in a row without a space is a reliable fused-word indicator.
 _RE_FUSED_CONSONANT_RUN: re.Pattern = re.compile(
     r'[bcčdfghjklmnpqrřsštvwxzž]{5,}', re.IGNORECASE
 )
@@ -286,16 +257,8 @@ _RE_FUSED_VOWEL_RUN: re.Pattern = re.compile(
     r'[aeiouyáéíóúýěůäöü]{4,}', re.IGNORECASE
 )
 
-
 def detect_fused_words(text: str) -> int:
-    """
-    Count tokens that are likely two Czech words merged without a space.
-    Heuristics used:
-      1. Token length > 14 characters (very rare in clean Czech)
-      2. Consonant run of 5+ without a vowel interruption
-      3. Vowel run of 4+ (rarer indicator)
-    Returns the count of suspected fused tokens.
-    """
+    """Counts tokens that are likely two or more Czech words merged without a space."""
     count = 0
     for word in text.split():
         core = word.strip(_STRIP_CHARS)
@@ -309,47 +272,25 @@ def detect_fused_words(text: str) -> int:
             count += 1
     return count
 
-
 # ---------------------------------------------------------------------------
 # Pre-filtering & Parsing
 # ---------------------------------------------------------------------------
 
 def pre_filter_line(line: str) -> tuple[str, str]:
+    """
+    Cleans up common minor OCR flaws and evaluates if the line contains enough
+    substantive text to merit processing, or if it should be immediately sidelined.
+    """
     clean_text = line.strip()
     if not clean_text: return "Empty", ""
 
-    # ------------------------------------------------------------------
-    # Phase 1 – OCR Normalisation (applied before any quality routing)
-    # ------------------------------------------------------------------
-
     # 1a. Digit-letter substitution repair
-    # Classic Type-1 OCR swap: isolated digit 1 inside a word → 'l',
-    # and leading/mid digit 2 that forms a word-initial consonant → 'z'.
-    # Only fires when the surrounding characters are alphabetic so we
-    # don't corrupt genuine numbers.
     clean_text = re.sub(r'(?<=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])1(?=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])', 'l',
                         clean_text)
     clean_text = re.sub(r'\b2(?=[a-záčďéěíňóřšťůúýž])', 'z', clean_text)
 
     # 1b. Prostrkávání / spaced-letter repair
-    # Headers OCR'd with one space between every letter, e.g.:
-    #   "S K U H R O V N A D B Ě L O U"  →  "Skuhrov nad Bělou"
-    # Detection: 4+ consecutive single uppercase/diacritic letters each
-    # separated by exactly one space.
     clean_text = _RE_SPACED_CAPS.sub(_collapse_spaced_caps, clean_text)
-
-    # 1c. OCR word-split repair for lone inserted characters
-    # Handles cases like "Fotogra f ie" → "Fotografie" where OCR places a
-    # single letter as its own token inside a word.  Conservative: only
-    # collapses a lone single character that is flanked by word-body fragments
-    # of at least 3 letters each on both sides.
-    clean_text = re.sub(
-        r'([a-záčďéěíňóřšťůúýž]{3,})\s([a-záčďéěíňóřšťůúýž])\s(?=[a-záčďéěíňóřšťůúýž]{2,})',
-        lambda m: m.group(1) + m.group(2),
-        clean_text,
-    )
-
-    # ------------------------------------------------------------------
 
     metadata_markers = [
         "Tb.", "č.neg", "neg.", "obr.", "obr ", "neg ", "Tb ", "č. neg",
@@ -380,8 +321,8 @@ def pre_filter_line(line: str) -> tuple[str, str]:
 
     return "Process", clean_text
 
-
 def parse_line_splits(line_text: str) -> tuple[str, str, str]:
+    """Reassembles words split across line breaks using hyphens."""
     clean_line = line_text.strip()
     pattern = r"(\S+)(?:-|­|\xad)\s*\{([^}]+)\}"
     matches = list(re.finditer(pattern, clean_line))
@@ -400,12 +341,12 @@ def parse_line_splits(line_text: str) -> tuple[str, str, str]:
     merged_text = re.sub(pattern, replace_match, clean_line)
     return merged_text, last_prefix, last_suffix
 
-
 # ---------------------------------------------------------------------------
 # Per-Word Weirdness Scoring
 # ---------------------------------------------------------------------------
 
 def score_word(word: str) -> float:
+    """Calculates a localized corruption ('weirdness') score for a single word token."""
     core = word.strip(_STRIP_CHARS)
     if len(core) == 1:
         if core in "aAiIoOuUvVzZkKsSpPbBjJdDrRnNmMtT" or '.' in word: return 0.0
@@ -418,12 +359,13 @@ def score_word(word: str) -> float:
     has_rep = False
     if len(core) >= 4:
         for ch in set(core):
-            # Flag 1: True OCR stutter (3 consecutive identical chars, e.g., 'hrobbb')
             if ch * 3 in core:
                 has_rep = True
                 break
-            # Flag 2: Abnormal distribution, explicitly ignoring common Czech vowels
-            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.40) and core.count(ch) >= 3:
+            if ch * 2 in core and core.count(ch) >= 3 and ch not in "aeiouyáéíóúýěůäöü":
+                has_rep = True
+                break
+            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.30) and core.count(ch) >= 3:
                 has_rep = True
                 break
 
@@ -444,10 +386,8 @@ def score_word(word: str) -> float:
                 has_uppercase = True
                 break
 
-    # Detect leading all-caps OCR prefix on a mixed-case word (e.g. 'XXWžkumu' for 'výzkumu')
     has_caps_prefix = False
     if len(core) >= 4 and not core.isupper():
-        # Count consecutive uppercase letters at the start of the token
         caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
             has_caps_prefix = True
@@ -455,21 +395,21 @@ def score_word(word: str) -> float:
     return min(1.0,
                0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase + 0.20 * has_caps_prefix)
 
-
 def score_words_in_line(text: str) -> list[tuple[str, float]]:
+    """Applies word weirdness scoring over an entire line of text."""
     return [(w, score_word(w)) for w in text.split()]
 
-
 def compute_word_weird_ratio(word_scores: list[tuple[str, float]]) -> float:
+    """Calculates the average weirdness ratio across all words in a line."""
     if not word_scores: return 0.0
     return sum(s for _, s in word_scores) / len(word_scores)
-
 
 # ---------------------------------------------------------------------------
 # Perplexity (GPU batch)
 # ---------------------------------------------------------------------------
 
 def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> list[float]:
+    """Submits text batches to a causal Language Model to evaluate naturalness/perplexity."""
     if not texts: return []
     try:
         max_length = getattr(model.config, "max_position_embeddings", getattr(model.config, "n_positions", 1024))
@@ -497,12 +437,9 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
         print(f"[Error] Batch PPL: {e}", file=sys.stderr)
         return [0.0] * len(texts)
 
-
 # ---------------------------------------------------------------------------
 # Categorisation & Clamping
 # ---------------------------------------------------------------------------
-
-
 
 def categorize_line(
         qs: float,
@@ -513,25 +450,19 @@ def categorize_line(
         rot_ratio: float = 0.0,
         weird_ratio: float = 0.0,
 ) -> tuple[str, float]:
+    """Routes the line to its final categorization label based on its quality signals."""
     def _determine_category(quality_score: float, text_source: str, word_count: int,
                             vr: float, ppl: float) -> str:
-        # Override 1: empty line
         if word_count == 0 or not text_source.strip():
             return "Empty"
-
-        # Override 2: all-caps with negligible vowels is definitively unreadable
         if is_all_caps_line(text_source) and vr < 0.10:
             return "Trash"
-
-        # Override 3: language model is highly confident — trust it over heuristics
         if ppl < 50.0 and word_count >= 3:
             return "Clear"
 
-        # Pure score-based routing
         if quality_score < CATEG_TRASH_SCORE_MAX:
             return "Trash"
         if quality_score < CATEG_NOISY_SCORE_MAX:
-            # Override 5: Near-boundary readable Czech prose promotion.
             if (quality_score >= CLEAN_PROSE_MIN_SCORE
                     and word_count >= CLEAN_PROSE_WC_MIN
                     and weird_ratio < CLEAN_PROSE_WEIRD_MAX
@@ -542,7 +473,6 @@ def categorize_line(
 
     categ = _determine_category(qs, txt, wc, vowel_ratio, perplexity)
 
-    # Enforce interconnected boundaries without modifying the logical routing
     if categ == "Trash":
         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
     elif categ == "Noisy":
@@ -555,22 +485,23 @@ def categorize_line(
 
     return categ, aligned_score
 
-
 # ---------------------------------------------------------------------------
 # Simple Ratio & General Helpers
 # ---------------------------------------------------------------------------
 
 def compute_symbol_ratio(text: str) -> float:
+    """Calculates the density of non-alphanumeric symbols within the line."""
     if not text: return 0.0
     non_alnum = sum(1 for c in text if not c.isalnum() and not c.isspace())
     return non_alnum / len(text)
 
-
 def compute_digit_ratio(text: str) -> float:
+    """Calculates the proportion of digit characters to text length."""
     if not text: return 0.0
     return sum(c.isdigit() for c in text) / len(text)
 
 def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
+    """Determines the proportion of tokens in a line that structurally resemble valid words."""
     words = text.split()
     if not words: return 0.0
     valid = 0
@@ -583,8 +514,6 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
             alpha = sum(c.isalpha() for c in core)
             has_strange = any(not c.isalnum() and c not in ALLOWED_INTERNAL for c in core)
             if len(core) >= 3 and alpha / len(core) >= 0.70 and not has_strange:
-                # Reject tokens with a leading all-caps OCR prefix followed by lowercase
-                # (e.g. 'AAMMNAbSSOAO', 'XAterenta')
                 caps_run = 0
                 for ch in core:
                     if ch.isupper():
@@ -594,46 +523,33 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
                 if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
                     continue
 
-                # Reject mid-word/trailing uppercase OCR garble (e.g., 'SeverW', 'dalSÍ')
-                # This catches the single-cap prefixes/suffixes safely without rejecting Titlecased words.
                 if not core.isupper() and _RE_MID_UPPER.search(core):
                     continue
 
                 valid += 1
     return valid / len(words)
 
-
 def is_non_text(text: str) -> bool:
+    """Heuristically identifies functional strings like IDs, zip codes, and archive stamps."""
     if not text: return False
-    # Czech postal code + city: e.g. "625 00 Brno" or "118 01 Praha 1 – Malá Strana"
-    # These are readable geographic metadata and must not be discarded.
     if re.match(r'^\d{3}\s\d{2}\s+[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]', text.strip()):
         return False
     if RE_NON_TEXT.match(text.strip()): return True
 
-    # Single-token identifiers: archive references and alphanumeric codes
     stripped = text.strip()
     if ' ' not in stripped:
         if RE_ARCHIVE_CODE.match(stripped):
             return True
         if RE_ALPHANUM_TOKEN.match(stripped):
-            # Must contain a digit (e.g. VX5P3SosAX) OR be a weirdly long uppercase string with placeholders (e.g. FAXAPOOXAXXXX)
             if any(c.isdigit() for c in stripped) or (stripped.isupper() and ('X' in stripped or len(stripped) >= 10)):
                 return True
     else:
-        # Multi-token archive/inventory references: letter prefix(es) + digits possibly separated
-        # by spaces, dots, hyphens — e.g. "ČP. 10", "BZU 1982-1983 4", "z.6Z. 1369/0", "P2N7-"
-        # Guard: must be short (≤ 20 chars) and contain at least one digit to avoid
-        # catching genuine two-word phrases that happen to start with a short word.
         if len(stripped) <= 20 and any(c.isdigit() for c in stripped):
             if RE_ARCHIVE_REF_SPACED.match(stripped):
                 return True
 
-    # Relaxed from 0.4 → 0.5: short lines with addresses or codes shouldn't
-    # be caught by the digit ratio alone if they have real letters too.
     if len(text) < 15 and compute_digit_ratio(text) > 0.5: return True
     return False
-
 
 def compute_quality_score(
         valid_word_ratio: float,
@@ -654,7 +570,6 @@ def compute_quality_score(
     Compute a single quality score in [0, 1] that encodes every meaningful
     signal available for an OCR text line.
     """
-    # 1. Dynamically calculate the maximum possible weight sum to prevent inflation
     total_weight = (
             QS_WEIGHT_VALID_WORD
             + QS_WEIGHT_SYMBOL
@@ -673,14 +588,12 @@ def compute_quality_score(
     norm_len = min(text_length / length_max, 1.0)
     norm_weird = 1.0 - min(weird_ratio, 1.0)
 
-    # Dynamic Garbage Penalty Guard
     active_garbage_weight = QS_WEIGHT_GARBAGE
     if text_length <= 12 and weird_ratio == 0.0:
         active_garbage_weight = active_garbage_weight / 2.0
 
     norm_garbage = 1.0 - min(garbage_density / max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9), 1.0)
 
-    # Vowel quality
     vr = vowel_ratio
     if vr < 0.20:
         norm_vowel = vr / 0.20
@@ -706,23 +619,18 @@ def compute_quality_score(
             + QS_WEIGHT_FUSED * norm_fused
     )
 
-    # Re-normalize if garbage weight was reduced so maximum possible score remains intact
     if active_garbage_weight != QS_WEIGHT_GARBAGE:
         base_score += (QS_WEIGHT_GARBAGE - active_garbage_weight)
 
-    # 2. OVERRIDE INFLATION: Divide by the actual total_weight
-    # This guarantees the score strictly bounds to 1.0 regardless of config experimentation.
     base_score = base_score / total_weight
 
-    # 3. Conditional Rotation Penalty
     rot_penalty = 0.0
     if rot_ratio >= ROT_RATIO_INVERTED_MIN:
         if weird_ratio >= WEIRD_RATIO_INVERTED_MIN:
             rot_penalty = (rot_ratio * weird_ratio) * 2.0
-        elif perplexity >= PPL_INVERTED_MIN:
-            rot_penalty = 0.40
+        elif perplexity >= PPL_INVERTED_MIN and weird_ratio > 0.0:
+            rot_penalty = 0.40 * min(weird_ratio / WEIRD_RATIO_INVERTED_MIN, 1.0)
 
-        # 4. SAFETY GATE: Protect highly confident readable Czech texts from false trashing
         if lang_score is not None and lang_score >= 0.90:
             rot_penalty *= 0.5
 

@@ -40,8 +40,8 @@ from atrium_paradata import ParadataLogger
 STANDARD_COLS = ["Clear", "Noisy", "Trash", "Non-text", "Empty"]
 DEFAULT_CONFIG = "config_langID.txt"
 
-
 def load_config(config_path):
+    """Loads configuration fields mapped to required system paths."""
     config = configparser.ConfigParser()
     if not Path(config_path).exists():
         print(f"Warning: Configuration file {config_path} not found. Using defaults.")
@@ -58,10 +58,10 @@ def load_config(config_path):
         "output_stats": config.get("AGGREGATE", "OUTPUT_STATS", fallback="AGGREGATED_PAGE_STATS.csv"),
     }
 
-
 def _sum_metrics(df):
     """
-    Groups line data by page and aggregates the statistics.
+    Groups line data by page and aggregates the statistics, appending counts
+    and structural mean values.
     """
     if df.empty:
         return pd.DataFrame()
@@ -77,21 +77,26 @@ def _sum_metrics(df):
         stats = df[['file', 'page_num']].drop_duplicates().copy()
         for col in ['total_word_count', 'total_char_count']:
             stats[col] = 0
-        # <-- ADDED 'avg_rot_ratio' to the list below
         for col in ['avg_quality_score', 'avg_word_weird', 'avg_lang_score',
                     'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'avg_rot_ratio', 'ch_ratio']:
             stats[col] = float('nan')
         stats['main_lang'] = "None"
 
         final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
-        return final_page_df
+        final_page_df['num_lines'] = final_page_df[STANDARD_COLS].sum(axis=1)
+        ordered_cols = ['file', 'page_num', 'num_lines',
+                        'Clear', 'Noisy', 'Trash', 'Non-text', 'Empty',
+                        'total_word_count', 'total_char_count',
+                        'avg_quality_score', 'avg_word_weird', 'avg_lang_score',
+                        'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'avg_rot_ratio',
+                        'ch_ratio', 'main_lang']
+        return final_page_df[ordered_cols]
 
     if 'caps_header' in valid_lines.columns:
         valid_lines['caps_header'] = valid_lines['caps_header'].map(
             {'True': 1.0, 'False': 0.0, True: 1.0, False: 0.0}
         ).astype(float)
 
-    # <-- ADDED avg_rot_ratio to the agg function below
     stats = valid_lines.groupby(['file', 'page_num']).agg(
         total_word_count=('word_count', 'sum'),
         total_char_count=('char_count', 'sum'),
@@ -125,7 +130,16 @@ def _sum_metrics(df):
         if count_col in final_page_df.columns:
             final_page_df[count_col] = final_page_df[count_col].fillna(0).astype(int)
 
-    return final_page_df
+    # Insert total num_lines mapping requested formats
+    final_page_df['num_lines'] = final_page_df[STANDARD_COLS].sum(axis=1)
+
+    ordered_cols = ['file', 'page_num', 'num_lines',
+                    'Clear', 'Noisy', 'Trash', 'Non-text', 'Empty',
+                    'total_word_count', 'total_char_count',
+                    'avg_quality_score', 'avg_word_weird', 'avg_lang_score',
+                    'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'avg_rot_ratio',
+                    'ch_ratio', 'main_lang']
+    return final_page_df[ordered_cols]
 
 def process_csv_file(file_path):
     """
@@ -145,7 +159,7 @@ def process_csv_file(file_path):
             'garbage_density': 'float64',
             'symbol': 'float64',
             'vowel_ratio': 'float64',
-            'rot_ratio': 'float64', # <-- ADDED
+            'rot_ratio': 'float64',
         }
 
         df = pd.read_csv(file_path, dtype=dtype_map, on_bad_lines='skip')
@@ -163,6 +177,7 @@ def process_csv_file(file_path):
         return exc
 
 def main():
+    """Execution bounds that map config parameters and process logs across concurrent pools."""
     parser = argparse.ArgumentParser(description="Aggregate post-classification line metrics into page stats.")
     parser.add_argument("--config", type=str, default=DEFAULT_CONFIG, help="Path to config file.")
     args = parser.parse_args()
@@ -184,7 +199,6 @@ def main():
         print("No CSV files found.")
         sys.exit(0)
 
-    # Initialize Paradata Logger
     logger = ParadataLogger(
         program="langID-aggregate",
         config=vars(args),
@@ -195,7 +209,6 @@ def main():
     print(f"Aggregating {len(csv_files)} documents using Multiprocessing...")
     all_page_stats = []
 
-    # Aggregation is CPU-light; max out thread count safely.
     max_cores = min(multiprocessing.cpu_count(), 12)
 
     try:
@@ -212,7 +225,6 @@ def main():
                         logger.log_skip(original_file.name, f"Processing Error: {result}")
                     elif result is not None and not result.empty:
                         all_page_stats.append(result)
-                        # Write per-document stats CSV (stats_<docname>.csv in output_dir)
                         doc_out = output_dir / f"stats_{original_file.stem}.csv"
                         result.to_csv(doc_out, index=False)
                         logger.log_success("csv")
@@ -235,9 +247,7 @@ def main():
             print("No valid page stats could be aggregated.")
 
     finally:
-        # Finalize paradata logging regardless of crashes
         logger.finalize(input_total=len(csv_files))
-
 
 if __name__ == "__main__":
     main()
