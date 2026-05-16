@@ -564,7 +564,7 @@ For each page, the aggregation computes features outputted in the following stri
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
 
-* *Examples*: [arub_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎
+* *Examples*: [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv), [arub_page_stats_SHORT.csv](arub_page_stats_SHORT.csv) 📎
 
 Example of per-document aggregate CSV files: [DOC_LINE_STATS](data_samples/DOC_LINE_STATS) 📁 by Qwen2.5-0.5B
 and [DOC_LINE_STATS_gpt](data_samples/DOC_LINE_STATS_gpt) 📁 by distilgpt2:
