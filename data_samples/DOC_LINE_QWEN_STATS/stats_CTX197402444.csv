@@ -1,2 +1,0 @@
-file,page_num,Clear,Empty,Noisy,Non-text,Trash,total_word_count,total_char_count,avg_quality_score,avg_word_weird,avg_lang_score,avg_perplex,avg_symbol,avg_vowel_ratio,avg_rot_ratio,ch_ratio,main_lang
-CTX197402444,1,19,9,18,2,6,210,1415,0.7510459459459459,0.019464864864864862,0.9593567567567568,1300.013243243243,0.13513513513513514,0.40266486486486486,0.512972972972973,0.0,ces

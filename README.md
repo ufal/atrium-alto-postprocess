@@ -231,7 +231,7 @@ As the script processes, it assigns each line one of five categories 🪧:
 |-----------------|----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | ✅ **Clear**     | Ready to be processed by further NLP               | Passes all structural checks; high composite quality score.                                                                                                                 |
 | ⚠️ **Noisy**    | Corrections of generally readable words are needed | Partially degraded: moderate quality score indicating isolated symbol issues, fused tokens, mid-word uppercase, or elevated perplexity.                                     |
-| 🗑️ **Trash**   | Should be re-processed by another OCR tool         | Severely corrupted: high garbage density or a composite quality score below the Trash threshold.                                                                            |
+| 🗑️ **Trash**   | Should be re-processed by another OCR tool         | Severely corrupted: composite quality score below the Trash threshold, or routed here by an override (unreadable all-caps line, inverted-scan page block).                  |
 | 🔣 **Non-text** | May be checked for identifiers of finds/sites      | Filtered by the CPU pre-filter: line is too short, has too few unique symbols, contains fewer than 30% alphabetic characters, or consists mostly of digits and punctuation. |
 | 🫙 **Empty**    | Can be ignored                                     | Line contains only whitespace (paragraphs separator)                                                                                                                        |
 
@@ -247,15 +247,13 @@ Parameters are organized into **three sections**: `[CLASSIFY]`, `[AGGREGATE]`, a
 [CLASSIFY]
 BATCH_SIZE = 128        # Batch size for processing lines
 WORKERS_MAX = 32        # Max CPU workers for parallel tasks
-EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); 1st is default — re-order to put primary language 1st
+EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
 MODEL_NAME = Qwen/Qwen2.5-0.5B  # Language model for perplexity scoring; English-only collections: distilgpt2 
 
 [TEXT_UTILS]
 
 PERPLEXITY_THRESHOLD_MAX = 1000.0       # or 3000 Normalization ceiling for quality score (Qwen2.5-0.5B range)
-CATEG_PPL_SHORT_MAX = 700.0             # or 2000 Perplexity ceiling for short-line trap
-CATEG_PPL_WEIRD_MAX = 400.0             # or 1000 Perplexity ceiling for weird+high-ppl Trash catch
 SHORT_PPL_CAP = 850.0                   # or 2500 Effective perplexity cap for 1-2 word lines
 
 LANG_SCORE_ROUGH = 0.45     # Threshold for rough language confidence
@@ -275,40 +273,27 @@ QS_WEIGHT_GIBBERISH   = 0.04    # Weight for inverted gibberish ratio in QS
 QS_WEIGHT_FUSED       = 0.03    # Weight for inverted fused word ratio in QS
 QS_LENGTH_MAX         = 100.0   # Max length for normalization
 
-CATEG_GARBAGE_DENSITY_HIGH  = 0.35      # High garbage density for Trash
-CATEG_GARBAGE_DENSITY_SHORT = 0.20      # Garbage density for short lines
-CATEG_GARBAGE_SHORT_WC      = 3         # Word count for short line checks
+CATEG_GARBAGE_DENSITY_HIGH  = 0.35      # High garbage density used to normalize the garbage-density signal in QS
 CATEG_TRASH_SCORE_MAX       = 0.50      # Max QS for Trash category
 CATEG_NOISY_SCORE_MAX       = 0.90      # Max QS for Noisy category
 
-# --- Inverted / 180°-rotated scan detection (Override 4) ---
+# --- Inverted / 180°-rotated scan detection (rot_penalty inside QS + page-level post-processing sweep) ---
 ROT_RATIO_INVERTED_MIN      = 0.55      # Min rotatable-char ratio to suspect inverted scan
 WEIRD_RATIO_INVERTED_MIN    = 0.35      # Min word-weirdness ratio to confirm inverted scan
 PPL_INVERTED_MIN            = 200.0     # or 500 Min perplexity (LM must also be uncertain)
 
-# --- Near-boundary clean prose promotion (Override 5) ---
+# --- Near-boundary clean prose promotion (Override 4) ---
 CLEAN_PROSE_MIN_SCORE       = 0.65      # Lower bound of the promotable Noisy band
 CLEAN_PROSE_WEIRD_MAX       = 0.08      # Max word-weirdness for promotion to Clear
 CLEAN_PROSE_PPL_MAX         = 400.0     # or 1000 Max perplexity for promotion to Clear
 CLEAN_PROSE_WC_MIN          = 4         # Min word count for promotion to Clear
 ```
 
-> [!NOTE]
-> `QS_WEIGHT_VOWEL` (default `0.07`) is read by the code but is not present in the shipped
-> `config_langID.txt`; it falls back to the in-code default. Three threshold parameters —
-> `CATEG_PPL_SHORT_MAX`, `CATEG_PPL_WEIRD_MAX`, `CATEG_GARBAGE_DENSITY_SHORT`, and
-> `CATEG_GARBAGE_SHORT_WC` — are kept in the config for forward-compatibility but are
-> **not currently consulted** by the categorisation routine. Routing depends solely on
-> `CATEG_TRASH_SCORE_MAX` and `CATEG_NOISY_SCORE_MAX` together with the five overrides
-> listed in the Categorisation Logic section.
-
 Parameters that depend on the perplexity model choice are tabulated below:
 
 | Parameter                  | Qwen2.5-0.5B | distilgpt2 |
 |----------------------------|--------------|------------|
 | `PERPLEXITY_THRESHOLD_MAX` | 1000.0       | 3000.0     |
-| `CATEG_PPL_SHORT_MAX`      | 700.0        | 2000.0     |
-| `CATEG_PPL_WEIRD_MAX`      | 400.0        | 1000.0     |
 | `SHORT_PPL_CAP`            | 850.0        | 2500.0     |
 | `PPL_INVERTED_MIN`         | 200.0        | 500.0      |
 | `CLEAN_PROSE_PPL_MAX`      | 400.0        | 1000.0     |
@@ -322,9 +307,9 @@ short text lines, typically those consisting of 1 to 2 words, within the OCR qua
 language models (like `Qwen2.5-0.5B` or `distilgpt2`) require sufficient surrounding context to confidently predict text,
 they often assign artificially high perplexity scores to brief, isolated text fragments even if the words are completely
 valid and structurally sound. By capping the maximum perplexity penalty applied to these short lines (defaulting to
-**850.0** for `Qwen2.5-0.5B` and **2500.0** for `distilgpt2`), this parameter prevents legitimate, context-poor text elements — such
-as short form fields, archival codes, or isolated measurements — from being unfairly penalized by the scoring algorithm
-and wrongly discarded as "**Trash**" or "**Noisy**" OCR errors.
+**850.0** for `Qwen2.5-0.5B` and **2500.0** for `distilgpt2`), this parameter prevents legitimate, context-poor 
+text elements — such as short form fields, archival codes, or isolated measurements — from being unfairly 
+penalized by the scoring algorithm and wrongly discarded as "**Trash**" or "**Noisy**" OCR errors.
 
 ---
 
@@ -349,7 +334,7 @@ python3 langID_classify.py
 
 * **Input 1 📥:** `../PAGE_TXT/` from Step 3
 * **Input 2 📥:** `output.csv` from Step 2
-* **Output 📤:** `DOC_LINE_LANG_CLASS/` containing per-document CSVs (e.g., [DOC_LINE_QWEN_CATEG](data_samples/DOC_LINE_QWEN_CATEG) 📁)
+* **Output 📤:** `DOC_LINE_LANG_CLASS/` containing per-document CSVs (e.g., [DOC_LINE_CATEG](data_samples/DOC_LINE_CATEG) 📁)
 
 > [!TIP]
 > This script is resume-capable. If interrupted, run it again and already-present output files will be skipped.
@@ -388,30 +373,15 @@ penalty (0.85) to catch spaced-out OCR noise, while isolated numbers/measurement
 
 ##### CPU Pre-filter
 
-Before any GPU or model inference, `pre_filter_line()` first runs a small **text-normalisation
-pass** and then applies a fast CPU-side classification check, assigning `Empty` or `Non-text`
-directly and bypassing the ML pipeline entirely:
-
-**Text normalisation (applied to every line before classification):**
-
-1. **Digit-letter substitution** — isolated mid-word `1` is mapped to `l`, and word-initial `2` immediately preceding 
-a Czech consonant is mapped to `z`. Guards check the surrounding characters so genuine numbers are never corrupted.
-2. **Spaced-letter / prostrkávání collapse** — 4+ consecutive single uppercase letters separated by single spaces are 
-collapsed into a titlecased word (e.g. `S K U H R O V` → `Skuhrov`).
-3. **OCR word-split repair** — a lone single lowercase letter flanked by 3+ and 2+ letter fragments is re-attached 
-to the preceding fragment (e.g. `Fotogra f ie` → `Fotografie`). This pass **skips** Czech single-letter 
-prepositions/conjunctions (`k, s, v, u, z, a, i, o`) so valid text like `obilost k službě s konečnou` is preserved 
-verbatim rather than collapsed into `obilostkslužběskonečnou`.
-
-**Classification checks (first match wins):**
+Before any GPU or model inference, `pre_filter_line()` applies a fast CPU-side check and assigns `Empty` or `Non-text`
+directly, bypassing the ML pipeline entirely:
 
 * Line is blank → **Empty**
 * Matches the all-digits/symbols regex pattern, Roman numerals, or stamp regexes → **Non-text**
-* Single- or multi-token archive codes (e.g. `A678/2015`, `BZU 1982-1983 4`, `ČP. 10`) → **Non-text**
 * Fewer than 4 characters, or fewer than 3 unique non-whitespace symbols → **Non-text**
 * Letter ratio below 30% of total characters → **Non-text**
-* **Bypass Exceptions**: Lines containing specific metadata markers (e.g., `Tb.`, `č.neg`, `str.`, `Datum`) or 
-composed of > 40% digits are explicitly forwarded as **Process** to preserve measurement/archival data.
+* **Bypass Exceptions**: Lines containing specific metadata markers (e.g., `Tb.`, `č.neg`) or composed of > 40% digits
+are explicitly forwarded as **Process** to preserve measurement/archival data.
 * Otherwise → forwarded for ML classification as **Process**
 
 ##### Language Handling
@@ -428,11 +398,11 @@ Lines that pass the pre-filter are analysed by structural detectors defined in `
 
 | Detector                     | What it counts                                                                                                                                                                                    |
 |------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the **allowed** set `{ . - , + ( ) " ' / _ — – : % ; ? ! }`. Edge punctuation is stripped before inspection.                   |
+| `detect_strange_symbols`     | Words containing any character that is not alphanumeric and not in the **allowed** set `{ . - , + ( ) " ' — – : % ; ? ! / }`. Edge punctuation is stripped before inspection.                     |
 | `detect_letter_digit_letter` | Words with a **letter–digit–letter sandwich** — the fingerprint of OCR digit insertions mid-word (e.g., `vyt1ačená`). **Legitimate** patterns like `90,9g` do not trigger.                        |
 | `detect_mid_uppercase`       | Words with unexpected uppercase mid-word (`dalSÍ`). All-caps words and specific capitalized sequences are **excluded**.                                                                           |
 | `detect_repeated_chars`      | Words where a single character makes up ≥ 30% of the word and appears at least 3 times, or contains unnatural consecutive doubles. Explicitly ignores common Czech 🇨🇿 vowels (`a, e, i, o, u`). |
-| `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 20% or above 80%. Words that are **predominantly numeric** (≥ 60% digits and separators) are **excluded**.                |
+| `detect_gibberish_words`     | Words of length ≥ 4 that contain no vowels, or have a vowel ratio below 15% or above 80%. Words that are **predominantly numeric** (≥ 60% digits and separators) are **excluded**.                |
 | `compute_rotatable_ratio`    | Measures the concentration of structurally ambiguous/rotatable letters (`pbqdnuwmoxszeyv`) to catch severe visual noise interpreting graphical textures as characters.                            |
 | `detect_fused_words`         | Counts tokens that are likely multiple words merged without a space (e.g. token length > 14, unnatural consonant run of 5+, or vowel run of 4+).                                                  |
 
@@ -463,19 +433,11 @@ quality_score = (base_score / total_weight) - rot_penalty
 * **Garbage Penalty Guard:** If a text line is short (`≤ 12` characters) and completely clean structurally
 (`word_weird == 0.0`), the garbage weight (`active_garbage_wt`) is reduced by `50%`. This prevents over-penalising short
 but perfectly legible archival tags (like `Lokalita:`).
-* **Conditional Rotation Penalty Gate:** A rotation penalty (`rot_penalty`) is applied when 
-`rot_ratio ≥ ROT_RATIO_INVERTED_MIN` (default `0.55`) via a two-arm rule:
-  * **Confirmed-inverted arm** — when `word_weird ≥ WEIRD_RATIO_INVERTED_MIN` (default `0.35`), the penalty is steep 
-  and multiplicative: `rot_penalty = 2 · rot_ratio · word_weird`.
-  * **LM-uncertain arm** — when the line has elevated perplexity (`perplexity ≥ PPL_INVERTED_MIN`, default `200`) 
-  **and** at least some structural weirdness (`word_weird > 0.0`), the penalty is proportional: 
-  `rot_penalty = 0.40 · min(word_weird / WEIRD_RATIO_INVERTED_MIN, 1.0)`.
-
-  The `word_weird > 0.0` gate on the LM-uncertain arm is critical: short clean Czech labels like `Okres:` or `Uloženi` 
-have high `rot_ratio` (because most Czech letters are in the rotatable set) and high perplexity (because 1–2-word lines hit `SHORT_PPL_CAP`), but their `word_weird` is exactly zero — so they receive no penalty and are not falsely trashed.
-
-  In both arms, the final penalty is **halved when `lang_score ≥ 0.90`** to protect highly confident Czech prose with 
-naturally high rotatable-character density.
+* **Conditional Rotation Penalty Gate:** A rotation penalty (`rot_penalty`) is calculated for strings with a high
+`rot_ratio` (`>0.55`), *but only if the line also exhibits internal OCR weirdness* (`word_weird > 0.0`). This safely
+prevents perfectly readable short Czech sentences with naturally high occurrences of ambiguous characters (like 
+`p`, `d`, `b`, `q`) from being unfairly penalized. Furthermore, this penalty is reduced by `50%` if the LM is highly 
+confident the text is legible (`lang_score >= 0.90`).
 
 `valid_word_ratio` counts tokens that are alphabetically dominant (≥ 70% alpha chars), contain no disallowed
 internal symbols, and are **not** a leading all-caps OCR prefix followed by lowercase letters. This last guard
@@ -498,13 +460,20 @@ ceiling for rewarding longer lines, granting the full `QS_WEIGHT_LENGTH` bonus t
 
 ##### Categorisation Logic
 
-`categorize_line()` classifies each line using strict overrides followed by quality-score routing:
+`categorize_line()` classifies each line using strict overrides and boundary routing:
 
 **Immediate Overrides** (checked in order; first match wins):
 
 1. **Empty Line:** Line word count is 0 or text contains only whitespace → **Empty**
 2. **Unreadable Caps:** All-caps line with a vowel ratio < 10% → **Trash** (definitively unreadable)
 3. **High LM Confidence:** Perplexity < 50.0 and word count ≥ 3 → **Clear** (trust the language model over heuristics)
+
+> [!NOTE]
+> Inverted/180°-rotated scans are handled outside the per-line categoriser: their fingerprint (high rotatable-character 
+> density combined with internal weirdness or LM uncertainty) is applied as a `rot_penalty` directly inside 
+> `compute_quality_score`, depressing the QS so the standard thresholds route the line to Trash. A second, page-level 
+> pass (see *Post-Processing Smoothing* below) catches contiguous runs of rotated lines that may have individually 
+> escaped the per-line penalty.
 
 **Quality score thresholds** (applied to lines that pass all overrides):
 
@@ -515,24 +484,11 @@ otherwise                                           →  Clear
 ```
 
 4. **Near-Boundary Clean Prose Promotion** (applied inside the Noisy band): if `quality_score ≥ CLEAN_PROSE_MIN_SCORE` 
-**and** word count ≥ `CLEAN_PROSE_WC_MIN` **and** `word_weird < CLEAN_PROSE_WEIRD_MAX` **and** `perplexity < CLEAN_PROSE_PPL_MAX` → **Clear**
-
-   Readable Czech archaeological prose — measurements, dig notes, formal letter phrases — can score just below 
-`CATEG_NOISY_SCORE_MAX` because short-text perplexity is noisy and minor OCR artefacts (period-abbreviations, merged 
-words) depress the score slightly. When word count is sufficient, no token is weird, and the language model is reasonably
-confident, the line is promoted to Clear rather than held at Noisy.
-
-After category assignment, the score is **clamped to its category's band** (`Trash` < `CATEG_TRASH_SCORE_MAX`, `Noisy` 
-∈ [`CATEG_TRASH_SCORE_MAX`, `CATEG_NOISY_SCORE_MAX`), `Clear` ≥ `CATEG_NOISY_SCORE_MAX`) so that sorting the per-line 
-CSV by `quality_score` reproduces `categ` exactly.
-
-> [!NOTE]
-> **Inverted / 180°-rotated scans** are *not* handled as a categorize_line override.
-> They are detected at two other stages:
-> * **`compute_quality_score`** applies a `rot_penalty` (see *Conditional Rotation Penalty Gate* below) that drives 
-> the score of genuinely inverted lines into the Trash band.
-> * **Post-processing smoothing** in `langID_classify.py` runs a page-level sweep that flips contiguous runs of 4+ 
-> suspicious lines to Trash (rotation arm: `rot_ratio ≥ ROT_RATIO_INVERTED_MIN` **and** `perplexity ≥ PPL_INVERTED_MIN`).
+**and** word count ≥ `CLEAN_PROSE_WC_MIN` **and** `word_weird < CLEAN_PROSE_WEIRD_MAX` **and** `perplexity < 
+CLEAN_PROSE_PPL_MAX` → **Clear** Readable Czech archaeological prose — measurements, dig notes, formal letter phrases — 
+can score just below `CATEG_NOISY_SCORE_MAX` because short-text perplexity is noisy and minor OCR artefacts (period-abbreviations, 
+merged words) depress the score slightly. When word count is sufficient, no token is weird, and the language model is 
+reasonably confident, the line is promoted to Clear rather than held at Noisy.
 
 All threshold values are configurable in the `[TEXT_UTILS]` section of `config_langID.txt`.
 
@@ -553,8 +509,8 @@ either of the following conditions, the entire sequence is downgraded to **Trash
 The rotation arm is necessary because inverted-scan pages can still carry Czech diacritics: the OCR engine partially 
 recognises upside-down glyphs as plausible Latin characters, so the diacritic-absence check alone fails to detect them.
 
-Example of per-document CSV files: [DOC_LINE_QWEN_CATEG](data_samples/DOC_LINE_QWEN_CATEG) 📁 by Qwen2.5-0.5B
-and [DOC_LINE_GPT_CATEG](data_samples/DOC_LINE_GPT_CATEG) 📁 by distilgpt2.
+Example of per-document CSV files: [DOC_LINE_CATEG](data_samples/DOC_LINE_CATEG) 📁 by Qwen2.5-0.5B
+and [DOC_LINE_CATEG_gpt](data_samples/DOC_LINE_CATEG_gpt) 📁 by distilgpt2.
 
 ```
 DOC_LINE_LANG_CLASS/
@@ -575,8 +531,8 @@ python3 langID_aggregate_STAT.py
 ```
 
 * **Input 📥:** `DOC_LINE_LANG_CLASS/` (directory with CSV files from the previous step)
-* **Output 1 📤:** `final_page_stats.csv` — global page-level summary across all documents (filename driven by `OUTPUT_STATS` in `[AGGREGATE]`)
-* **Output 2 📤:** `DOC_LINE_STAT/` — per-document CSVs with the same schema
+* **Output 1 📤:** `final_page_stats.csv` (configurable via `OUTPUT_STATS`) — global page-level summary across all documents
+* **Output 2 📤:** `DOC_LINE_STAT/` (configurable via `OUTPUT_DOC_DIR`) — per-document CSVs with the same schema
 
 For each page, the aggregation computes features outputted in the following strict schema order:
 
@@ -606,12 +562,12 @@ For each page, the aggregation computes features outputted in the following stri
 > `avg_*` columns and `main_lang` will be `NaN` / `None` for pages whose only lines are
 > Empty or Non-text (i.e., pages with no scoreable text content).
 
-All numeric averages are emitted at their native pandas precision; totals are stored as integers.
+All numeric averages are rounded to 4 decimal places; totals are stored as integers.
 
-* *Example*: [final_page_stats.csv](final_page_stats.csv) 📎
+* *Examples*: [arub_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎
 
-Example of per-document aggregate CSV files: [DOC_LINE_QWEN_STATS](data_samples/DOC_LINE_QWEN_STATS) 📁 by Qwen2.5-0.5B
-and [DOC_LINE_GPT_STATS](data_samples/DOC_LINE_GPT_STATS) 📁 by distilgpt2:
+Example of per-document aggregate CSV files: [DOC_LINE_STATS](data_samples/DOC_LINE_STATS) 📁 by Qwen2.5-0.5B
+and [DOC_LINE_STATS_gpt](data_samples/DOC_LINE_STATS_gpt) 📁 by distilgpt2:
 
 ```
 DOC_LINE_STAT/
@@ -620,7 +576,7 @@ DOC_LINE_STAT/
 └── ...
 ```
 
-This is the end of the text quality classification and filtering step. You can now use `final_page_stats.csv` to
+This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎 to
 identify files that need another round of OCR or manual correction based on the line type counts. Pages with the
 majority of clear lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of trash lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.
