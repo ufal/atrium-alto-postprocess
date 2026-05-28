@@ -416,7 +416,7 @@ Firstly, two fixes correct the most common systematic **OCR** 🔍 substitution 
 the text that is passed forward but do not on their own affect what category a line receives.
 
 <details>
-    <summary><strong>Step 1 -  Minor **OCR** 🔍 repairs (applied first, to every line): 👀</strong></summary>
+    <summary><strong>Step 1 -  Minor OCR 🔍 repairs (applied first, to every line): 👀</strong></summary>
 
 * **Digit-for-letter substitution:** A `1` surrounded by alphabetic characters on both sides is replaced with `l`
 (e.g., `poh1ed` → `pohled`); a `2` at the start of a token followed immediately by a lowercase letter is replaced
