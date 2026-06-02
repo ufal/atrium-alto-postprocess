@@ -371,6 +371,149 @@ def merge_paradata_files(
     return out_path
 
 
+
+def merge_run_paradata(
+    json_paths: List[str],
+    out_path: str,
+    pipeline: Optional[str] = None,
+    method: Optional[str] = None,
+) -> str:
+    """
+    Merge the per-stage paradata JSONs of ONE end-to-end pipeline run into a
+    single summary record describing every processing stage and the
+    intermediate file formats produced.
+
+    This is the run-centric sibling of merge_paradata_files(): instead of
+    "one input file through several repos", it captures "one run through several
+    sequential stages of THIS repo". The effective license is re-derived from
+    the UNION of all components used across the stages, so the end-to-end
+    most-restrictive rule holds (e.g. a run that used LayoutReader is
+    CC BY-NC-SA 4.0 overall even if individual stages were less restrictive).
+
+    Parameters
+    ----------
+    json_paths : ordered list of per-stage paradata JSON paths (execution order)
+    out_path   : where to write the merged summary JSON
+    pipeline   : optional human label for the pipeline (e.g. "alto-postprocess")
+    method     : optional text-extraction method actually used
+                 ("alto-tools" | "layoutreader" | "glm")
+    """
+    stages: List[Dict[str, Any]] = []
+    license_blocks: List[Dict[str, Any]] = []
+    formats: "Dict[str, int]" = {}
+    total_duration = 0.0
+    total_inputs = 0
+    total_processed = 0
+    total_skipped = 0
+    all_skips: List[Dict[str, Any]] = []
+    repo = ""
+    tool_version = ""
+    earliest: Optional[str] = None
+    latest: Optional[str] = None
+
+    for order, p in enumerate(json_paths, 1):
+        with open(p, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+
+        repo = repo or data.get("repository", "")
+        tool_version = tool_version or data.get("tool_version", "")
+
+        cfg = data.get("config", {}) or {}
+        stats = data.get("statistics", {}) or {}
+        out_counts = stats.get("output_counts_by_type", {}) or {}
+
+        # accumulate intermediate output formats across stages
+        for ftype, cnt in out_counts.items():
+            formats[ftype] = formats.get(ftype, 0) + int(cnt or 0)
+
+        total_duration += float(data.get("duration_seconds") or 0.0)
+        total_inputs += int(stats.get("input_files_total") or 0)
+        total_processed += int(stats.get("successfully_processed") or 0)
+        total_skipped += int(stats.get("skipped_files") or 0)
+        all_skips.extend(data.get("skipped_files_detail", []) or [])
+
+        st = data.get("start_time")
+        en = data.get("end_time")
+        if st and (earliest is None or st < earliest):
+            earliest = st
+        if en and (latest is None or en > latest):
+            latest = en
+
+        stages.append({
+            "order":            order,
+            "program":          data.get("program"),
+            "script":           cfg.get("script"),
+            "method":           cfg.get("method"),
+            "run_id":           data.get("run_id"),
+            "input_dir":        cfg.get("input_dir"),
+            "input_csv":        cfg.get("input_csv"),
+            "output_dir":       cfg.get("output_dir") or cfg.get("output_csv"),
+            "output_formats":   out_counts,
+            "duration_seconds": data.get("duration_seconds"),
+            "license":          data.get("license"),
+            "input_files_total":      stats.get("input_files_total"),
+            "successfully_processed": stats.get("successfully_processed"),
+            "skipped_files":          stats.get("skipped_files"),
+        })
+
+        if data.get("license_detail"):
+            license_blocks.append(data["license_detail"])
+
+    if merge_effective_licenses is not None and license_blocks:
+        merged_lic = merge_effective_licenses(license_blocks)
+        # Deduplicate the component catalogue for readability: the union across
+        # stages repeats always-on components (alto_tools, fasttext) once per
+        # stage. Collapse to unique (name, license) pairs — this is cosmetic and
+        # does not change the already-computed effective license.
+        seen = set()
+        unique_components = []
+        for comp in merged_lic.get("components", []):
+            key = (comp.get("name"), comp.get("license"))
+            if key not in seen:
+                seen.add(key)
+                unique_components.append(comp)
+        merged_lic["components"] = unique_components
+    else:
+        merged_lic = {
+            "effective_license": "CC BY-NC 4.0",
+            "effective_license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+            "notes": "License helper unavailable; defaulted to CC BY-NC 4.0.",
+        }
+
+    payload = {
+        "schema_version":  "2.0",
+        "record_type":     "pipeline-run-merged",
+        "pipeline":        pipeline or "",
+        "method":          method or "",
+        "repository":      repo,
+        "tool_version":    tool_version,
+        "run_id":          datetime.now(tz=timezone.utc).strftime("%y%m%d-%H%M%S"),
+        "stage_count":     len(stages),
+        "pipeline_stages": stages,
+        "intermediate_formats": formats,
+        "license":         merged_lic["effective_license"],
+        "license_url":     merged_lic["effective_license_url"],
+        "license_detail":  merged_lic,
+        "start_time":      earliest or "",
+        "end_time":        latest or "",
+        "total_duration_seconds": round(total_duration, 3),
+        "statistics": {
+            "stages_total":            len(stages),
+            "input_files_total":       total_inputs,
+            "successfully_processed":  total_processed,
+            "skipped_files":           total_skipped,
+        },
+        "skipped_files_detail": all_skips,
+        "merged_at":       datetime.now(tz=timezone.utc).isoformat(),
+    }
+
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, ensure_ascii=False, indent=2)
+    print(f"[paradata] Merged pipeline-run log \u2192 {out_path}", flush=True)
+    return out_path
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────

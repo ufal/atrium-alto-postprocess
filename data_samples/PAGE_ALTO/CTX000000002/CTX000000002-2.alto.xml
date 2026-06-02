@@ -1,15 +1,13 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd">
-<Description>
+<?xml version='1.0' encoding='UTF-8'?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd"><Description>
 <MeasurementUnit>pixel</MeasurementUnit>
 <sourceImageInformation><fileName>CTX000000002.pdf</fileName></sourceImageInformation>
 <OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-06-02</processingDateTime><processingSoftware><softwareCreator>DemoScanner</softwareCreator><softwareName>DemoScanner Pro</softwareName><softwareVersion>1.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
 </Description>
 <Styles>
-<ParagraphStyle ID="StyleId-DEMO0002-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0"/>
+<ParagraphStyle ID="StyleId-DEMO0002-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0" />
 </Styles>
-<Layout>
-<Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="2339" WIDTH="1654">
+<Layout><Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="2339" WIDTH="1654">
 <PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
 <TextBlock ID="P2_B1" HEIGHT="200" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0002-0001">
 <TextLine HEIGHT="40" WIDTH="1000" VPOS="160" HPOS="220"><String CONTENT="Eva" HEIGHT="34" WIDTH="70" VPOS="160" HPOS="220" /><SP WIDTH="20" VPOS="160" HPOS="290" /><String CONTENT="Procházková" HEIGHT="34" WIDTH="240" VPOS="160" HPOS="310" /><SP WIDTH="20" VPOS="160" HPOS="550" /><String CONTENT="dokumentovala" HEIGHT="34" WIDTH="280" VPOS="160" HPOS="570" /><SP WIDTH="20" VPOS="160" HPOS="850" /><String CONTENT="nálezy." HEIGHT="34" WIDTH="150" VPOS="160" HPOS="870" /></TextLine>
@@ -18,6 +16,4 @@
 </TextBlock>
 </PrintSpace>
 </Page>
-
-</Layout>
-</alto>
+</Layout></alto>

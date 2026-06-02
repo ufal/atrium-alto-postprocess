@@ -1,0 +1,157 @@
+{
+  "schema_version": "2.0",
+  "record_type": "pipeline-run-merged",
+  "pipeline": "alto-postprocess",
+  "method": "layoutreader",
+  "repository": "https://github.com/ufal/atrium-alto-postprocess",
+  "tool_version": "v0.15.5",
+  "run_id": "260602-145151",
+  "stage_count": 5,
+  "pipeline_stages": [
+    {
+      "order": 1,
+      "program": "alto-postprocess",
+      "script": "page_split",
+      "method": null,
+      "run_id": "260602-145040",
+      "input_dir": "data_samples/ALTO",
+      "input_csv": null,
+      "output_dir": "data_samples/PAGE_ALTO",
+      "output_formats": {
+        "xml": 7
+      },
+      "duration_seconds": 0.006,
+      "license": "CC BY-NC 4.0",
+      "input_files_total": 3,
+      "successfully_processed": 7,
+      "skipped_files": 0
+    },
+    {
+      "order": 2,
+      "program": "alto-postprocess",
+      "script": "alto_stats_create",
+      "method": null,
+      "run_id": "260602-145042",
+      "input_dir": "data_samples/PAGE_ALTO",
+      "input_csv": null,
+      "output_dir": "./data_samples/test_alto_stats.csv",
+      "output_formats": {
+        "csv": 7
+      },
+      "duration_seconds": 0.14,
+      "license": "CC BY-NC 4.0",
+      "input_files_total": 7,
+      "successfully_processed": 7,
+      "skipped_files": 0
+    },
+    {
+      "order": 3,
+      "program": "alto-postprocess",
+      "script": "extract_LytRdr_ALTO_2_TXT",
+      "method": "layoutreader",
+      "run_id": "260602-145054",
+      "input_dir": "data_samples/PAGE_ALTO/CTX000000002",
+      "input_csv": "./data_samples/test_alto_stats.csv",
+      "output_dir": "./data_samples/PAGE_TXT_LR",
+      "output_formats": {
+        "txt": 7
+      },
+      "duration_seconds": 3.488,
+      "license": "CC BY-NC-SA 4.0",
+      "input_files_total": 7,
+      "successfully_processed": 7,
+      "skipped_files": 0
+    },
+    {
+      "order": 4,
+      "program": "langID-classify",
+      "script": null,
+      "method": null,
+      "run_id": "260602-145110",
+      "input_dir": null,
+      "input_csv": null,
+      "output_dir": "data_samples/DOC_LINE_CATEG",
+      "output_formats": {
+        "csv": 0
+      },
+      "duration_seconds": 27.753,
+      "license": "CC BY-NC 4.0",
+      "input_files_total": 3,
+      "successfully_processed": 0,
+      "skipped_files": 0
+    },
+    {
+      "order": 5,
+      "program": "langID-aggregate",
+      "script": null,
+      "method": null,
+      "run_id": "260602-145150",
+      "input_dir": null,
+      "input_csv": null,
+      "output_dir": null,
+      "output_formats": {
+        "csv": 3
+      },
+      "duration_seconds": 0.129,
+      "license": "CC BY-NC 4.0",
+      "input_files_total": 3,
+      "successfully_processed": 3,
+      "skipped_files": 0
+    }
+  ],
+  "intermediate_formats": {
+    "xml": 7,
+    "csv": 10,
+    "txt": 7
+  },
+  "license": "CC BY-NC-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "license_detail": {
+    "effective_license": "CC BY-NC-SA 4.0",
+    "effective_license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "is_non_commercial": true,
+    "is_share_alike": true,
+    "determined_by": [
+      "layoutlmv3"
+    ],
+    "components": [
+      {
+        "name": "alto_tools",
+        "license": "Apache-2.0",
+        "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+        "rank": 1
+      },
+      {
+        "name": "fasttext",
+        "license": "CC BY-NC 4.0",
+        "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "rank": 5
+      },
+      {
+        "name": "layoutlmv3",
+        "license": "CC BY-NC-SA 4.0",
+        "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+        "rank": 6
+      },
+      {
+        "name": "qwen2.5_0.5b",
+        "license": "Apache-2.0",
+        "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+        "rank": 1
+      }
+    ],
+    "unknown_licenses": [],
+    "notes": "Effective output license is CC BY-NC-SA 4.0, the most restrictive among 12 component(s) used. Outputs are NON-COMMERCIAL: downstream commercial use is not permitted while this component is in the pipeline. SHARE-ALIKE applies: derivatives must be licensed under the same terms."
+  },
+  "start_time": "2026-06-02T14:50:40.057194+00:00",
+  "end_time": "2026-06-02T14:51:51.102929+00:00",
+  "total_duration_seconds": 31.516,
+  "statistics": {
+    "stages_total": 5,
+    "input_files_total": 23,
+    "successfully_processed": 24,
+    "skipped_files": 0
+  },
+  "skipped_files_detail": [],
+  "merged_at": "2026-06-02T14:51:51.243127+00:00"
+}

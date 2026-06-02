@@ -76,3 +76,15 @@ WEIRD_RATIO_INVERTED_MIN    = 0.35
 CLEAN_PROSE_MIN_SCORE       = 0.65
 CLEAN_PROSE_WEIRD_MAX       = 0.08
 CLEAN_PROSE_WC_MIN          = 4
+
+[PIPELINE]
+METHOD        = layoutreader
+# default extraction backend: alto-tools | layoutreader | glm
+INPUT_DIR     = data_samples/ALTO
+# document-level ALTO XMLs (stage 1 input)
+PAGE_ALTO_DIR = data_samples/PAGE_ALTO
+# per-page ALTO dir (stage 1 output / stage 2 input)
+SKIP_SPLIT    = false
+# set true when PAGE_ALTO is already populated
+PARADATA_DIR  = paradata
+# where stages write paradata JSON and the merged summary lands

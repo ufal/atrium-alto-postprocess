@@ -1,15 +1,13 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd">
-<Description>
+<?xml version='1.0' encoding='UTF-8'?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd"><Description>
 <MeasurementUnit>pixel</MeasurementUnit>
 <sourceImageInformation><fileName>CTX000000001.pdf</fileName></sourceImageInformation>
 <OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-06-01</processingDateTime><processingSoftware><softwareCreator>DemoScanner</softwareCreator><softwareName>DemoScanner Pro</softwareName><softwareVersion>1.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
 </Description>
 <Styles>
-<ParagraphStyle ID="StyleId-DEMO0001-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0"/>
+<ParagraphStyle ID="StyleId-DEMO0001-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0" />
 </Styles>
-<Layout>
-<Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="2339" WIDTH="1654">
+<Layout><Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="2339" WIDTH="1654">
 <TopMargin HEIGHT="150" WIDTH="1654" VPOS="0" HPOS="0" />
 <PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
 <TextBlock ID="P2_Block1" HEIGHT="120" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0001-0001">
@@ -18,6 +16,4 @@
 </TextBlock>
 </PrintSpace>
 </Page>
-
-</Layout>
-</alto>
+</Layout></alto>
