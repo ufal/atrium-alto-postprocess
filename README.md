@@ -933,7 +933,7 @@ For each page, the aggregation computes features outputted in the following stri
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
 
-* *Examples*: [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📊, [arub_page_stats_SHORT.csv](arub_page_stats_SHORT.csv) 📊
+* *Examples*: [arup_page_stats_SHORT.csv](data_samples/arup_page_stats_SHORT.csv) 📊, [arub_page_stats_SHORT.csv](data_samples/arub_page_stats_SHORT.csv) 📊
 
 Example of per-document aggregate **CSV** 📊 files: [DOC_LINE_STATS](data_samples/DOC_LINE_STATS) 📁 by **Qwen2.5-0.5B** 🤖
 and [DOC_LINE_STATS_gpt](data_samples/DOC_LINE_STATS_gpt) 📁 by **distilgpt2** 🤖:
@@ -945,7 +945,7 @@ DOC_LINE_STAT/
 └── ...
 ```
 
-This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎 to
+This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](data_samples/arup_page_stats_SHORT.csv) 📎 to
 identify files that need another round of **OCR** 🔍 or manual correction based on the line type counts. Pages with the
 majority of **Clear** ✅ lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of **Trash** 🗑️ lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.
