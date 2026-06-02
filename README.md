@@ -120,8 +120,8 @@ foundational **CSV** 📊 statistics file.
 This script writes a **CSV** 📊 file line-by-line, capturing metadata for each page:
 
     file, page, textlines, illustrations, graphics, strings, path
-    CTX200205348, 1, 33, 1, 10, 163, /lnet/.../A-PAGE/CTX200205348/CTX200205348-1.alto.xml
-    CTX200205348, 2, 0, 1, 12, 0, /lnet/.../A-PAGE/CTX200205348/CTX200205348-2.alto.xml
+    CTX000000001, 1, 2, 0, 0, 17, ../A-PAGE/CTX000000001/CTX000000001-1.alto.xml
+    CTX000000001, 2, 2, 0, 0, 12, ../A-PAGE/CTX000000001/CTX000000001-2.alto.xml
     ...
 
 The extraction is powered by the **alto-tools** 🔧 framework [^1].
@@ -131,7 +131,7 @@ The extraction is powered by the **alto-tools** 🔧 framework [^1].
 
 > [!IMPORTANT]
 > This statistics table is the basis for subsequent processing steps.
-> Example: [test_alto_stats.csv](test_alto_stats.csv) 📎.
+> Example: [test_alto_stats.csv](data_samples/test_alto_stats.csv) 📎.
 
 ---
 
@@ -434,7 +434,7 @@ repair, spaced words fail the letter-ratio check and would be discarded as `Non-
 2. Line consists entirely of digits, arithmetic/date separators, and punctuation with no letters → `Non-text` (e.g. `1998`, `5.3.`, `- 14 -`)
 3. Line is a Roman numeral, optionally followed by a period → `Non-text` (e.g. `XIV.`, `iii`)
 4. Line is a standalone alphanumeric archive or inventory code — a short letter prefix of up to 3 characters
-   followed by 3 or more digits, with an optional slash-separated suffix → `Non-text` (e.g. `A1739`, `CTX200205348`, `A679/2015`)
+   followed by 3 or more digits, with an optional slash-separated suffix → `Non-text` (e.g. `A1739`, `CTX000000001`, `A679/2015`)
 5. Line matches a stamp-like ratio pattern — a short alphanumeric string, optional non-alphanumeric characters,
    two 2-to-4 digit numbers separated by a `/`, and optional trailing non-alphanumeric characters → `Non-text`
    (e.g., `123/456`, `1998/01`, `NZ1998/01`)
@@ -932,7 +932,7 @@ For each page, the aggregation computes features outputted in the following stri
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
 
-* *Examples*: [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📊, [arub_page_stats_SHORT.csv](arub_page_stats_SHORT.csv) 📊
+* *Examples*: [arup_page_stats_SHORT.csv](data_samples/arup_page_stats_SHORT.csv) 📊, [arub_page_stats_SHORT.csv](data_samples/arub_page_stats_SHORT.csv) 📊
 
 Example of per-document aggregate **CSV** 📊 files: [DOC_LINE_STATS](data_samples/DOC_LINE_STATS) 📁 by **Qwen2.5-0.5B** 🤖
 and [DOC_LINE_STATS_gpt](data_samples/DOC_LINE_STATS_gpt) 📁 by **distilgpt2** 🤖:
@@ -944,7 +944,7 @@ DOC_LINE_STAT/
 └── ...
 ```
 
-This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎 to
+This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](data_samples/arup_page_stats_SHORT.csv) 📎 to
 identify files that need another round of **OCR** 🔍 or manual correction based on the line type counts. Pages with the
 majority of **Clear** ✅ lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of **Trash** 🗑️ lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.
