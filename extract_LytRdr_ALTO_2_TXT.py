@@ -11,6 +11,7 @@ import pandas as pd
 import concurrent.futures
 import os
 import sys
+import configparser
 from pathlib import Path
 from tqdm import tqdm
 import xml.etree.ElementTree as ET
@@ -39,10 +40,43 @@ except ImportError:
         print("Ensure the 'v3' folder from the LayoutReader repository is in your python path.")
         sys.exit(1)
 
-# --- Configuration ---
-INPUT_CSV = "test_alto_stats.csv"
-OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT_LR"
-MAX_WORKERS = 1  # Set to 1 for GPU, higher for CPU
+# --- Configuration (read from config_langID.txt [EXTRACT]) ---
+CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
+
+
+def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
+    """Read LayoutReader extraction parameters from the [EXTRACT] section.
+
+    Falls back to the previous hardcoded defaults when the file or a key is
+    missing so the script still runs without a config file.
+    """
+    cfg = configparser.ConfigParser()
+    cfg.read(config_path, encoding="utf-8")
+    has = cfg.has_section("EXTRACT")
+
+    def get(key, default):
+        return cfg.get("EXTRACT", key, fallback=default) if has else default
+
+    def getint(key, default):
+        return cfg.getint("EXTRACT", key, fallback=default) if has else default
+
+    return {
+        "input_csv": get("INPUT_CSV", "test_alto_stats.csv"),
+        "output_text_dir": get("OUTPUT_TXT_LR", "./data_samples/PAGE_TXT_LR"),
+        "max_workers": getint("WORKERS_MAX_LR", 1),
+        "lr_model": get("LR_MODEL", "hantian/layoutreader"),
+        "chunk_size": getint("LR_CHUNK_SIZE", 350),
+        "min_chunk_size": getint("LR_MIN_CHUNK_SIZE", 50),
+    }
+
+
+_CFG = _load_extract_config()
+INPUT_CSV = _CFG["input_csv"]
+OUTPUT_TEXT_DIR = _CFG["output_text_dir"]
+MAX_WORKERS = _CFG["max_workers"]  # 1 for GPU, higher for CPU
+LR_MODEL = _CFG["lr_model"]
+LR_CHUNK_SIZE = _CFG["chunk_size"]
+LR_MIN_CHUNK_SIZE = _CFG["min_chunk_size"]
 
 # Global variables
 model = None
@@ -59,7 +93,7 @@ def init_worker():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     os.environ["transformers_verbosity"] = "error"
     try:
-        model = LayoutLMv3ForTokenClassification.from_pretrained("hantian/layoutreader")
+        model = LayoutLMv3ForTokenClassification.from_pretrained(LR_MODEL)
         model.to(device)
         model.eval()
     except Exception as e:
@@ -270,8 +304,8 @@ def extract_single_page(args):
         # one go since we are passing lines (not words).  On CUDA OOM the size
         # is halved and the failing chunk is retried; this repeats until either
         # the chunk succeeds or the size falls below the minimum safe threshold.
-        CHUNK_SIZE = 350
-        MIN_CHUNK_SIZE = 50
+        CHUNK_SIZE = LR_CHUNK_SIZE
+        MIN_CHUNK_SIZE = LR_MIN_CHUNK_SIZE
 
         i = 0
         while i < len(lines):
@@ -363,16 +397,14 @@ def main():
 
     _logger = ParadataLogger(
         program="alto-postprocess",
-        config={
-            "script": _SCRIPT_NAME,
-            "input_csv": str(INPUT_CSV),  # output.csv from alto_stats_create
-            "input_dir": str(page_alto_dir),
-            "output_dir": str(OUTPUT_TEXT_DIR),
-            "n_workers": int(MAX_WORKERS),  # if multiprocessing is used
-        },
+        config={"script": "extract_LytRdr_ALTO_2_TXT", "method": "layoutreader",
+                "input_csv": str(INPUT_CSV),
+                "input_dir": str(page_alto_dir), "output_dir": str(OUTPUT_TEXT_DIR),
+                "lr_model": str(LR_MODEL), "n_workers": MAX_WORKERS},
         paradata_dir="paradata",
         output_types=["txt"],
     )
+    _logger.log_component("layoutlmv3")  # CC BY-NC-SA 4.0 attaches to LR outputs
     _total_inputs = len(tasks)
 
     try:

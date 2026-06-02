@@ -403,11 +403,19 @@ def main():
             "batch_size": BATCH_SIZE,
             "max_workers": WORKERS_MAX,
             "text_dir": TEXT_DIR,
-            "output_dir": OUTPUT_DIR
+            "output_dir": OUTPUT_DIR,
+            "model_name": MODEL_NAME,
         },
         paradata_dir="paradata",
-        output_types=["csv"]
+        output_types=["csv"],
     )
+
+    # ── paradata: record the licensed components this step exercises ──────────
+    # FastText LID is loaded unconditionally by every classify run.
+    logger.log_component("fasttext")
+    # Perplexity model is selectable; map the HF id to the config component name.
+    _ppl_component = "distilgpt2" if "distilgpt2" in MODEL_NAME.lower() else "qwen2.5_0.5b"
+    logger.log_component(_ppl_component)
 
     max_cores = min(mp.cpu_count(), WORKERS_MAX)
     print(f"Starting {max_cores} CPU Document Processors...")

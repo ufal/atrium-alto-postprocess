@@ -1,7 +1,37 @@
+[EXTRACT]
+# Common
+INPUT_CSV          = ./data_samples/test_alto_stats.csv
+# page-stats CSV from Step 2 (alto_stats_create.py)
+
+# alto-tools method (extract_ALTO_2_TXT.py)
+OUTPUT_TXT         = ./data_samples/PAGE_TXT
+WORKERS_MAX        = 16
+# CPU workers; env MAX_WORKERS still overrides
+
+# LayoutReader method (extract_LytRdr_ALTO_2_TXT.py)
+OUTPUT_TXT_LR      = ./data_samples/PAGE_TXT_LR
+WORKERS_MAX_LR     = 1
+# 1 for GPU; raise for CPU parallelism
+LR_MODEL           = hantian/layoutreader
+LR_CHUNK_SIZE      = 350
+# initial lines/chunk; halved on CUDA OOM
+LR_MIN_CHUNK_SIZE  = 50
+# give up on a page below this chunk size
+
+# GLM method (extract_LLM_ALTO_2_TXT.py)
+OUTPUT_TXT_LLM     = ./data_samples/PAGE_TXT_LLM
+WORKERS_MAX_LLM    = 1
+LLM_MODEL          = THUDM/glm-4v-9b
+LLM_MAX_RESOLUTION = 1344
+# longest-side cap (px) before inference
+LLM_MAX_NEW_TOKENS = 4096
+LLM_PROMPT         = OCR: Transcribe all text on this page exactly as it appears.
+
+
 [CLASSIFY]
-INPUT_CSV = alto_statistics.csv
+INPUT_CSV = data_samples/test_alto_stats.csv
 TEXT_DIR = data_samples/PAGE_TXT_LR
-OUTPUT_LINES_LOG = data_samples/DOC_LINE_LANG_CLASS
+OUTPUT_LINES_LOG = data_samples/DOC_LINE_CATEG
 BATCH_SIZE = 128
 WORKERS_MAX = 32
 EXPECTED_LANGS = eng,deu,ces
@@ -9,9 +39,9 @@ TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita
 MODEL_NAME = Qwen/Qwen2.5-0.5B
 
 [AGGREGATE]
-RAW_LINES_CSV = data_samples/DOC_LINE_LANG_CLASS
-OUTPUT_STATS = final_page_stats.csv
-OUTPUT_DOC_DIR = data_samples/DOC_LINE_STAT
+RAW_LINES_CSV = data_samples/DOC_LINE_CATEG
+OUTPUT_STATS = samples_page_stats.csv
+OUTPUT_DOC_DIR = data_samples/DOC_LINE_STATS
 
 [TEXT_UTILS]
 LANG_SCORE_ROUGH = 0.45

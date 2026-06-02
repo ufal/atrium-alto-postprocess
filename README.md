@@ -41,6 +41,7 @@ and categorize noisy or unreliable **OCR** 🔍 output.
       - [Post-Processing Smoothing](#post-processing-smoothing)
     - [4.2 Aggregate Statistics (Memory Bound) 🧠](#42-aggregate-statistics-memory-bound-)
   - [Paradata logging 🗒️](#paradata-logging)
+    - [Output licensing ⚖️](#output-licensing-)
 - [Acknowledgements 🙏](#acknowledgements-)
 
 ---
@@ -120,8 +121,8 @@ foundational **CSV** 📊 statistics file.
 This script writes a **CSV** 📊 file line-by-line, capturing metadata for each page:
 
     file, page, textlines, illustrations, graphics, strings, path
-    CTX000000001, 1, 2, 0, 0, 17, ../A-PAGE/CTX000000001/CTX000000001-1.alto.xml
-    CTX000000001, 2, 2, 0, 0, 12, ../A-PAGE/CTX000000001/CTX000000001-2.alto.xml
+    CTX200205348, 1, 33, 1, 10, 163, /lnet/.../A-PAGE/CTX200205348/CTX200205348-1.alto.xml
+    CTX200205348, 2, 0, 1, 12, 0, /lnet/.../A-PAGE/CTX200205348/CTX200205348-2.alto.xml
     ...
 
 The extraction is powered by the **alto-tools** 🔧 framework [^1].
@@ -131,7 +132,7 @@ The extraction is powered by the **alto-tools** 🔧 framework [^1].
 
 > [!IMPORTANT]
 > This statistics table is the basis for subsequent processing steps.
-> Example: [test_alto_stats.csv](data_samples/test_alto_stats.csv) 📎.
+> Example: [test_alto_stats.csv](test_alto_stats.csv) 📎.
 
 ---
 
@@ -434,7 +435,7 @@ repair, spaced words fail the letter-ratio check and would be discarded as `Non-
 2. Line consists entirely of digits, arithmetic/date separators, and punctuation with no letters → `Non-text` (e.g. `1998`, `5.3.`, `- 14 -`)
 3. Line is a Roman numeral, optionally followed by a period → `Non-text` (e.g. `XIV.`, `iii`)
 4. Line is a standalone alphanumeric archive or inventory code — a short letter prefix of up to 3 characters
-   followed by 3 or more digits, with an optional slash-separated suffix → `Non-text` (e.g. `A1739`, `CTX000000001`, `A679/2015`)
+   followed by 3 or more digits, with an optional slash-separated suffix → `Non-text` (e.g. `A1739`, `CTX200205348`, `A679/2015`)
 5. Line matches a stamp-like ratio pattern — a short alphanumeric string, optional non-alphanumeric characters,
    two 2-to-4 digit numbers separated by a `/`, and optional trailing non-alphanumeric characters → `Non-text`
    (e.g., `123/456`, `1998/01`, `NZ1998/01`)
@@ -932,7 +933,7 @@ For each page, the aggregation computes features outputted in the following stri
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
 
-* *Examples*: [arup_page_stats_SHORT.csv](data_samples/arup_page_stats_SHORT.csv) 📊, [arub_page_stats_SHORT.csv](data_samples/arub_page_stats_SHORT.csv) 📊
+* *Examples*: [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📊, [arub_page_stats_SHORT.csv](arub_page_stats_SHORT.csv) 📊
 
 Example of per-document aggregate **CSV** 📊 files: [DOC_LINE_STATS](data_samples/DOC_LINE_STATS) 📁 by **Qwen2.5-0.5B** 🤖
 and [DOC_LINE_STATS_gpt](data_samples/DOC_LINE_STATS_gpt) 📁 by **distilgpt2** 🤖:
@@ -944,7 +945,7 @@ DOC_LINE_STAT/
 └── ...
 ```
 
-This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](data_samples/arup_page_stats_SHORT.csv) 📎 to
+This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](arup_page_stats_SHORT.csv) 📎 to
 identify files that need another round of **OCR** 🔍 or manual correction based on the line type counts. Pages with the
 majority of **Clear** ✅ lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of **Trash** 🗑️ lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.
@@ -957,7 +958,15 @@ structured **JSON** 📄 format.
 
 **What gets logged?**
 
-* **Provenance 🏛️:** Captures the tool name, repository URL, **Python** 🐍 version, and assigns a unique `run_id` to each execution.
+* **Provenance 🏛️:** Captures the tool name, a tool **version** 🏷️ tag, the repository/runner reference, the running
+container image (when set), the **Python** 🐍 version, and assigns a unique `run_id` to each execution. The repository
+reference is resolved **dynamically** — environment overrides (`ATRIUM_RUNNER_REPO`, `ATRIUM_RUNNER_REF`,
+`ATRIUM_RUNNER_IMAGE`) take precedence over the static fallback in [para_config.txt](para_config.txt) 📎 — so the log
+points at the image actually executing rather than a fixed fork.
+* **Output license ⚖️:** Computes the **effective output license** 📜 of the run from the licensed components it actually
+exercised, and records it as `license` / `license_url` plus a detailed `license_detail` block (per-component licenses,
+which component(s) `determined_by` the result, `is_non_commercial` / `is_share_alike` flags, and any unknown licenses).
+See [Output licensing](#output-licensing-) below.
 * **Configuration ⚙️:** Stores a complete snapshot of the runtime configuration ⚙️, including script names, input/output
 paths, and specific model choices.
 * **Timing ⏱️:** Records precise UTC start times, end times, and the total duration of the run in seconds.
@@ -966,10 +975,45 @@ throughput (e.g., output files generated per minute).
 * **Error Tracking 🐛:** Maintains a `skipped_files_detail` list that logs the exact filename and specific error reason
 if a file fails to process.
 
-**Log Location & Licensing**
+**Log Location**
 
 By default, **JSON** 📄 logs are written to the [paradata](paradata) 📁 directory following the naming convention
-`<YYMMDD-HHmmss>_<program>.json`. All generated **paradata** 🗒️ log files are distributed under the **CC BY-NC 4.0** license.
+`<YYMMDD-HHmmss>_<program>.json`. Paradata is intended to live alongside the **outputs** 📤 (not committed to the
+repository); the **paradata** 🗒️ JSON files themselves are distributed under the **CC BY-NC 4.0** license.
+
+---
+
+### Output licensing ⚖️
+
+> [!IMPORTANT]
+> The license of the files a run **produces** is **not fixed** — it is computed per run as the **most restrictive**
+> license among the components (models, data, APIs) that the run actually used. The mechanism is data-driven via
+> [para_config.txt](para_config.txt) 📎 (component → license) and [para_licenses.py](para_licenses.py) 📎
+> (restrictiveness ranking + share-alike / non-commercial rules), so the licensing owner can adjust it without touching
+> the logger.
+
+Each repository ships a [para_config.txt](para_config.txt) 📎 listing its components. Components flagged `always` count
+toward every run (the worst-case baseline); components flagged `conditional` are only counted when the script that uses
+them records it. For this repository the components and their effect on the **effective output license** 📜 are:
+
+| Component                | License         | Counted     | Used by                                                        |
+|--------------------------|-----------------|-------------|----------------------------------------------------------------|
+| **alto-tools** 🔧 [^1]   | Apache-2.0      | always      | page split, statistics, alto-tools text extraction             |
+| **FastText** 🌐 [^2]     | CC BY-NC 4.0    | always      | language identification (`langID_classify.py`)                 |
+| **Qwen2.5-0.5B** 🤖 [^6] | Apache-2.0      | conditional | **perplexity** 📉 scoring (default, `langID_classify.py`)      |
+| **distilgpt2** 🤖        | Apache-2.0      | conditional | **perplexity** 📉 scoring (English-only alternative)           |
+| **LayoutLMv3** 📐 [^9]   | CC BY-NC-SA 4.0 | conditional | LayoutReader text extraction (`extract_LytRdr_ALTO_2_TXT.py`)  |
+| **GLM-4v-9b** 🤖 [^10]   | glm-4           | conditional | generative **OCR** 🔍 extraction (`extract_LLM_ALTO_2_TXT.py`) |
+
+Because the always-on **FastText** 🌐 weights are **CC BY-NC 4.0**, the baseline effective output license for this
+repository is **CC BY-NC 4.0** (non-commercial). Runs that additionally use the **LayoutReader** 📐 method escalate to
+**CC BY-NC-SA 4.0** (non-commercial **and** share-alike), the most restrictive option here. A run that exercised only
+permissive components would resolve to **Apache-2.0**.
+
+> [!NOTE]
+> The restrictiveness ordering encoded in [para_licenses.py](para_licenses.py) 📎 is a mechanical engineering
+> approximation, **not legal advice**; unrecognised licenses are treated conservatively as maximally restrictive so a
+> missing entry can never silently relax the recorded output license.
 
 ---
 

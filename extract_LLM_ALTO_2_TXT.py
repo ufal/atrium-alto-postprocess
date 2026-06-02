@@ -7,6 +7,7 @@ Refactored to fix ChatGLMConfig errors and input formatting.
 """
 
 import os
+import configparser
 import pandas as pd
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
@@ -17,15 +18,49 @@ from atrium_paradata import ParadataLogger
 
 _SCRIPT_NAME = "extract_llm"
 
-# --- Configuration ---
-INPUT_CSV = "test_alto_stats.csv"
-OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT_LLM"
-MODEL_PATH = "THUDM/glm-4v-9b"
+# --- Configuration (read from config_langID.txt [EXTRACT]) ---
+CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
+
+
+def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
+    """Read GLM extraction parameters from the [EXTRACT] section.
+
+    Falls back to the previous hardcoded defaults when the file or a key is
+    missing so the script still runs without a config file.
+    """
+    cfg = configparser.ConfigParser()
+    cfg.read(config_path, encoding="utf-8")
+    has = cfg.has_section("EXTRACT")
+
+    def get(key, default):
+        return cfg.get("EXTRACT", key, fallback=default) if has else default
+
+    def getint(key, default):
+        return cfg.getint("EXTRACT", key, fallback=default) if has else default
+
+    return {
+        "input_csv": get("INPUT_CSV", "test_alto_stats.csv"),
+        "output_text_dir": get("OUTPUT_TXT_LLM", "./data_samples/PAGE_TXT_LLM"),
+        "model_path": get("LLM_MODEL", "THUDM/glm-4v-9b"),
+        "max_workers": getint("WORKERS_MAX_LLM", 1),
+        "max_resolution": getint("LLM_MAX_RESOLUTION", 1344),
+        "max_new_tokens": getint("LLM_MAX_NEW_TOKENS", 4096),
+        "prompt": get("LLM_PROMPT",
+                      "OCR: Transcribe all text on this page exactly as it appears."),
+    }
+
+
+_CFG = _load_extract_config()
+INPUT_CSV = _CFG["input_csv"]
+OUTPUT_TEXT_DIR = _CFG["output_text_dir"]
+MODEL_PATH = _CFG["model_path"]
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MAX_WORKERS = 1  # Module-level constant; referenced by the paradata logger config
+MAX_WORKERS = _CFG["max_workers"]  # referenced by the paradata logger config
+MAX_NEW_TOKENS = _CFG["max_new_tokens"]
+LLM_PROMPT = _CFG["prompt"]
 
 # Image settings
-MAX_RESOLUTION = 1344
+MAX_RESOLUTION = _CFG["max_resolution"]
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 Image.MAX_IMAGE_PIXELS = None
 
@@ -117,7 +152,7 @@ def extract_single_page_glm(tokenizer, model, image_path):
             {
                 "role": "user",
                 "image": image,
-                "content": "OCR: Transcribe all text on this page exactly as it appears."
+                "content": LLM_PROMPT
             }
         ]
 
@@ -134,7 +169,7 @@ def extract_single_page_glm(tokenizer, model, image_path):
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=4096,
+                max_new_tokens=MAX_NEW_TOKENS,
                 do_sample=False,  # Deterministic (Greedy Search)
                 pad_token_id=tokenizer.eos_token_id,
                 eos_token_id=tokenizer.eos_token_id,
@@ -172,16 +207,14 @@ def main():
 
     _logger = ParadataLogger(
         program="alto-postprocess",
-        config={
-            "script": _SCRIPT_NAME,
-            "input_csv": str(INPUT_CSV),  # output.csv from alto_stats_create
-            "input_dir": str(page_alto_dir),
-            "output_dir": str(OUTPUT_TEXT_DIR),
-            "n_workers": int(MAX_WORKERS),
-        },
+        config={"script": "extract_LLM_ALTO_2_TXT", "method": "glm",
+                "input_csv": str(INPUT_CSV),
+                "input_dir": str(page_alto_dir), "output_dir": str(OUTPUT_TEXT_DIR),
+                "llm_model": str(MODEL_PATH), "n_workers": MAX_WORKERS},
         paradata_dir="paradata",
         output_types=["txt"],
     )
+    _logger.log_component("glm4v_9b")  # glm-4 (non-commercial) attaches to GLM outputs
     # _total_inputs is the total number of pages in the CSV; pages that are
     # already on disk are logged as skips rather than successes.
     _total_inputs = len(df)

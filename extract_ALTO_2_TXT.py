@@ -16,9 +16,34 @@ from atrium_paradata import ParadataLogger
 
 _SCRIPT_NAME = "extract_alto2txt"
 
-INPUT_CSV = "test_alto_stats.csv"
-OUTPUT_TEXT_DIR = "./data_samples/PAGE_TXT"
-MAX_WORKERS = int(os.getenv("MAX_WORKERS", 16))
+CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
+
+
+def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
+    """Read extraction parameters from the [EXTRACT] section of the config.
+
+    Falls back to the previous hardcoded defaults when the file or a key is
+    missing, so the script keeps working without a config present.
+    MAX_WORKERS keeps honouring the MAX_WORKERS env var as the final override.
+    """
+    cfg = configparser.ConfigParser()
+    cfg.read(config_path, encoding="utf-8")
+
+    def get(key, default):
+        return cfg.get("EXTRACT", key, fallback=default) if cfg.has_section("EXTRACT") else default
+
+    workers_default = cfg.getint("EXTRACT", "WORKERS_MAX", fallback=16) if cfg.has_section("EXTRACT") else 16
+    return {
+        "input_csv": get("INPUT_CSV", "test_alto_stats.csv"),
+        "output_text_dir": get("OUTPUT_TXT", "./data_samples/PAGE_TXT"),
+        "max_workers": int(os.getenv("MAX_WORKERS", workers_default)),
+    }
+
+
+_CFG = _load_extract_config()
+INPUT_CSV = _CFG["input_csv"]
+OUTPUT_TEXT_DIR = _CFG["output_text_dir"]
+MAX_WORKERS = _CFG["max_workers"]
 
 
 def extract_single_page(args: tuple) -> bool:
