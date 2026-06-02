@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd">
+<Description>
+<MeasurementUnit>pixel</MeasurementUnit>
+<sourceImageInformation><fileName>CTX000000001.pdf</fileName></sourceImageInformation>
+<OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-06-01</processingDateTime><processingSoftware><softwareCreator>DemoScanner</softwareCreator><softwareName>DemoScanner Pro</softwareName><softwareVersion>1.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
+</Description>
+<Styles>
+<ParagraphStyle ID="StyleId-DEMO0001-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0"/>
+</Styles>
+<Layout>
+<Page ID="Page1" PHYSICAL_IMG_NR="1" HEIGHT="2339" WIDTH="1654">
+<TopMargin HEIGHT="150" WIDTH="1654" VPOS="0" HPOS="0"></TopMargin>
+<LeftMargin HEIGHT="2039" WIDTH="200" VPOS="150" HPOS="0"></LeftMargin>
+<RightMargin HEIGHT="2039" WIDTH="200" VPOS="150" HPOS="1454"></RightMargin>
+<BottomMargin HEIGHT="150" WIDTH="1654" VPOS="2189" HPOS="0"></BottomMargin>
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P1_Block1" HEIGHT="120" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0001-0001">
+<TextLine HEIGHT="40" WIDTH="1100" VPOS="160" HPOS="220"><String CONTENT="Výzkumná" HEIGHT="34" WIDTH="200" VPOS="160" HPOS="220"/><SP WIDTH="20" VPOS="160" HPOS="420"/><String CONTENT="zpráva" HEIGHT="34" WIDTH="150" VPOS="160" HPOS="440"/><SP WIDTH="20" VPOS="160" HPOS="590"/><String CONTENT="č." HEIGHT="34" WIDTH="40" VPOS="160" HPOS="610"/><SP WIDTH="15" VPOS="160" HPOS="650"/><String CONTENT="1/2024" HEIGHT="34" WIDTH="130" VPOS="160" HPOS="665"/><SP WIDTH="20" VPOS="160" HPOS="795"/><String CONTENT="—" HEIGHT="34" WIDTH="30" VPOS="160" HPOS="815"/><SP WIDTH="20" VPOS="160" HPOS="845"/><String CONTENT="Hradiště" HEIGHT="34" WIDTH="180" VPOS="160" HPOS="865"/><SP WIDTH="20" VPOS="160" HPOS="1045"/><String CONTENT="u" HEIGHT="34" WIDTH="25" VPOS="160" HPOS="1065"/><SP WIDTH="15" VPOS="160" HPOS="1090"/><String CONTENT="Horní" HEIGHT="34" WIDTH="120" VPOS="160" HPOS="1105"/><SP WIDTH="20" VPOS="160" HPOS="1225"/><String CONTENT="Mezí" HEIGHT="34" WIDTH="100" VPOS="160" HPOS="1245"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="1000" VPOS="210" HPOS="220"><String CONTENT="Terénní" HEIGHT="34" WIDTH="160" VPOS="210" HPOS="220"/><SP WIDTH="20" VPOS="210" HPOS="380"/><String CONTENT="výzkum" HEIGHT="34" WIDTH="160" VPOS="210" HPOS="400"/><SP WIDTH="20" VPOS="210" HPOS="560"/><String CONTENT="provedl" HEIGHT="34" WIDTH="160" VPOS="210" HPOS="580"/><SP WIDTH="20" VPOS="210" HPOS="740"/><String CONTENT="Jan" HEIGHT="34" WIDTH="80" VPOS="210" HPOS="760"/><SP WIDTH="20" VPOS="210" HPOS="840"/><String CONTENT="Novotný" HEIGHT="34" WIDTH="170" VPOS="210" HPOS="860"/><SP WIDTH="20" VPOS="210" HPOS="1030"/><String CONTENT="v" HEIGHT="34" WIDTH="25" VPOS="210" HPOS="1050"/><SP WIDTH="15" VPOS="210" HPOS="1075"/><String CONTENT="červnu" HEIGHT="34" WIDTH="140" VPOS="210" HPOS="1090"/><SP WIDTH="20" VPOS="210" HPOS="1230"/><String CONTENT="2024." HEIGHT="34" WIDTH="110" VPOS="210" HPOS="1250"/></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+<Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="2339" WIDTH="1654">
+<TopMargin HEIGHT="150" WIDTH="1654" VPOS="0" HPOS="0"></TopMargin>
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P2_Block1" HEIGHT="120" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0001-0001">
+<TextLine HEIGHT="40" WIDTH="1100" VPOS="160" HPOS="220"><String CONTENT="Nalezená" HEIGHT="34" WIDTH="180" VPOS="160" HPOS="220"/><SP WIDTH="20" VPOS="160" HPOS="400"/><String CONTENT="keramika" HEIGHT="34" WIDTH="180" VPOS="160" HPOS="420"/><SP WIDTH="20" VPOS="160" HPOS="600"/><String CONTENT="pochází" HEIGHT="34" WIDTH="160" VPOS="160" HPOS="620"/><SP WIDTH="20" VPOS="160" HPOS="780"/><String CONTENT="z" HEIGHT="34" WIDTH="25" VPOS="160" HPOS="800"/><SP WIDTH="15" VPOS="160" HPOS="825"/><String CONTENT="raného" HEIGHT="34" WIDTH="140" VPOS="160" HPOS="840"/><SP WIDTH="20" VPOS="160" HPOS="980"/><String CONTENT="středověku." HEIGHT="34" WIDTH="240" VPOS="160" HPOS="1000"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="900" VPOS="210" HPOS="220"><String CONTENT="Výzkum" HEIGHT="34" WIDTH="160" VPOS="210" HPOS="220"/><SP WIDTH="20" VPOS="210" HPOS="380"/><String CONTENT="byl" HEIGHT="34" WIDTH="70" VPOS="210" HPOS="400"/><SP WIDTH="20" VPOS="210" HPOS="470"/><String CONTENT="financován" HEIGHT="34" WIDTH="220" VPOS="210" HPOS="490"/><SP WIDTH="20" VPOS="210" HPOS="710"/><String CONTENT="z" HEIGHT="34" WIDTH="25" VPOS="210" HPOS="730"/><SP WIDTH="15" VPOS="210" HPOS="755"/><String CONTENT="projektu" HEIGHT="34" WIDTH="170" VPOS="210" HPOS="770"/><SP WIDTH="20" VPOS="210" HPOS="940"/><String CONTENT="DEMO." HEIGHT="34" WIDTH="120" VPOS="210" HPOS="960"/></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+</Layout>
+</alto>

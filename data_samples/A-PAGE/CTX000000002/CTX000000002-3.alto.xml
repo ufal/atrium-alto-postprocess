@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd">
+<Description>
+<MeasurementUnit>pixel</MeasurementUnit>
+<sourceImageInformation><fileName>CTX000000002.pdf</fileName></sourceImageInformation>
+<OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-06-02</processingDateTime><processingSoftware><softwareCreator>DemoScanner</softwareCreator><softwareName>DemoScanner Pro</softwareName><softwareVersion>1.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
+</Description>
+<Styles>
+<ParagraphStyle ID="StyleId-DEMO0002-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0"/>
+</Styles>
+<Layout>
+<Page ID="Page3" PHYSICAL_IMG_NR="3" HEIGHT="2339" WIDTH="1654">
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P3_B1" HEIGHT="200" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0002-0001">
+<TextLine HEIGHT="40" WIDTH="900" VPOS="160" HPOS="220"><String CONTENT="Mocnost" HEIGHT="34" WIDTH="160" VPOS="160" HPOS="220" /><SP WIDTH="20" VPOS="160" HPOS="380" /><String CONTENT="kulturní" HEIGHT="34" WIDTH="170" VPOS="160" HPOS="400" /><SP WIDTH="20" VPOS="160" HPOS="570" /><String CONTENT="vrstvy" HEIGHT="34" WIDTH="130" VPOS="160" HPOS="590" /><SP WIDTH="20" VPOS="160" HPOS="720" /><String CONTENT="činila" HEIGHT="34" WIDTH="120" VPOS="160" HPOS="740" /><SP WIDTH="20" VPOS="160" HPOS="860" /><String CONTENT="40" HEIGHT="34" WIDTH="50" VPOS="160" HPOS="880" /><SP WIDTH="15" VPOS="160" HPOS="930" /><String CONTENT="cm." HEIGHT="34" WIDTH="70" VPOS="160" HPOS="945" /></TextLine>
+<TextLine HEIGHT="40" WIDTH="500" VPOS="210" HPOS="220"><String CONTENT="qpqb" HEIGHT="34" WIDTH="90" VPOS="210" HPOS="220" /><SP WIDTH="20" VPOS="210" HPOS="310" /><String CONTENT="dbqp" HEIGHT="34" WIDTH="90" VPOS="210" HPOS="330" /><SP WIDTH="20" VPOS="210" HPOS="420" /><String CONTENT="uunn" HEIGHT="34" WIDTH="90" VPOS="210" HPOS="440" /></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+
+</Layout>
+</alto>

@@ -1,0 +1,11 @@
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
+CTX000000002,1,1,HRADIŠTĚ U HORNÍ MEZÍ,,,ces,0.9998,210.0,4,21,0.0,0,0,0,0,0,0,0.0,0.4118,0.4118,0.9012,Clear,True
+CTX000000002,1,2,Lokalita: okr. Horní Mezi,,,ces,0.9985,180.0,4,25,0.04,0,0,0,0,0,0,0.0,0.381,0.5238,0.9,Clear,False
+CTX000000002,1,3,Sonda II odkryla část valového tělesa.,,,ces,1.0,64.0,7,38,0.0,0,0,0,0,0,0,0.0,0.3667,0.5333,0.9156,Clear,False
+CTX000000002,2,1,Eva Procházková dokumentovala nálezy.,,,ces,0.9994,72.0,4,37,0.0,0,0,0,0,0,0,0.0,0.4138,0.5172,0.9101,Clear,False
+CTX000000002,2,2,rnn1 ww0rd vv_~~,,,ces,0.4102,1450.0,3,16,0.1875,1,0,1,1,0,2,0.6333,0.0833,0.5833,0.3214,Trash,False
+CTX000000002,2,3,,,,,0.0,0.0,0,0,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Empty,False
+CTX000000002,3,1,Mocnost kulturní vrstvy činila 40 cm.,,,ces,1.0,88.0,7,37,0.0,0,0,0,0,0,0,0.0,0.4138,0.4828,0.9,Clear,False
+CTX000000002,3,2,qpqb dbqp uunn,,,ces,0.3201,980.0,3,14,0.0,0,0,0,0,0,3,0.85,0.0,1.0,0.2055,Trash,False
+CTX000000002,4,1,Soubor nálezů byl uložen v depozitáři.,,,ces,1.0,69.0,7,38,0.0,0,0,0,0,0,0,0.0,0.4194,0.4839,0.9143,Clear,False
+CTX000000002,4,2,A123/2024,,,,0.0,0.0,0,9,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False

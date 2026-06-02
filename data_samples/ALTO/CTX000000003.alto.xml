@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd">
+<Description>
+<MeasurementUnit>pixel</MeasurementUnit>
+<sourceImageInformation><fileName>CTX000000003.pdf</fileName></sourceImageInformation>
+<OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-06-03</processingDateTime><processingSoftware><softwareCreator>DemoScanner</softwareCreator><softwareName>DemoScanner Pro</softwareName><softwareVersion>1.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
+</Description>
+<Styles>
+<ParagraphStyle ID="StyleId-DEMO0003-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0"/>
+</Styles>
+<Layout>
+<Page ID="Page1" PHYSICAL_IMG_NR="1" HEIGHT="2339" WIDTH="1654">
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P1_B1" HEIGHT="120" WIDTH="600" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0003-0001">
+<TextLine HEIGHT="40" WIDTH="300" VPOS="160" HPOS="220"><String CONTENT="Náčrt" HEIGHT="34" WIDTH="120" VPOS="160" HPOS="220"/><SP WIDTH="20" VPOS="160" HPOS="340"/><String CONTENT="sondy." HEIGHT="34" WIDTH="130" VPOS="160" HPOS="360"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="100" VPOS="210" HPOS="220"><String CONTENT="1998" HEIGHT="34" WIDTH="100" VPOS="210" HPOS="220"/></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+</Layout>
+</alto>

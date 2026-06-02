@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v3# http://www.loc.gov/alto/v3/alto-3-1.xsd">
+<Description>
+<MeasurementUnit>pixel</MeasurementUnit>
+<sourceImageInformation><fileName>CTX000000002.pdf</fileName></sourceImageInformation>
+<OCRProcessing ID="IdOcr"><ocrProcessingStep><processingDateTime>2024-06-02</processingDateTime><processingSoftware><softwareCreator>DemoScanner</softwareCreator><softwareName>DemoScanner Pro</softwareName><softwareVersion>1.0</softwareVersion></processingSoftware></ocrProcessingStep></OCRProcessing>
+</Description>
+<Styles>
+<ParagraphStyle ID="StyleId-DEMO0002-0001" ALIGN="Left" LEFT="0." RIGHT="0." FIRSTLINE="0." LINESPACE="18.0"/>
+</Styles>
+<Layout>
+<Page ID="Page1" PHYSICAL_IMG_NR="1" HEIGHT="2339" WIDTH="1654">
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P1_B1" HEIGHT="200" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0002-0001">
+<TextLine HEIGHT="40" WIDTH="900" VPOS="160" HPOS="220"><String CONTENT="HRADIŠTĚ" HEIGHT="34" WIDTH="200" VPOS="160" HPOS="220"/><SP WIDTH="20" VPOS="160" HPOS="420"/><String CONTENT="U" HEIGHT="34" WIDTH="30" VPOS="160" HPOS="440"/><SP WIDTH="15" VPOS="160" HPOS="470"/><String CONTENT="HORNÍ" HEIGHT="34" WIDTH="140" VPOS="160" HPOS="485"/><SP WIDTH="20" VPOS="160" HPOS="625"/><String CONTENT="MEZÍ" HEIGHT="34" WIDTH="120" VPOS="160" HPOS="645"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="800" VPOS="210" HPOS="220"><String CONTENT="Lokalita:" HEIGHT="34" WIDTH="180" VPOS="210" HPOS="220"/><SP WIDTH="20" VPOS="210" HPOS="400"/><String CONTENT="okr." HEIGHT="34" WIDTH="80" VPOS="210" HPOS="420"/><SP WIDTH="15" VPOS="210" HPOS="500"/><String CONTENT="Horní" HEIGHT="34" WIDTH="120" VPOS="210" HPOS="515"/><SP WIDTH="20" VPOS="210" HPOS="635"/><String CONTENT="Mezi" HEIGHT="34" WIDTH="100" VPOS="210" HPOS="655"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="1000" VPOS="260" HPOS="220"><String CONTENT="Sonda" HEIGHT="34" WIDTH="120" VPOS="260" HPOS="220"/><SP WIDTH="20" VPOS="260" HPOS="340"/><String CONTENT="II" HEIGHT="34" WIDTH="40" VPOS="260" HPOS="360"/><SP WIDTH="15" VPOS="260" HPOS="400"/><String CONTENT="odkryla" HEIGHT="34" WIDTH="150" VPOS="260" HPOS="415"/><SP WIDTH="20" VPOS="260" HPOS="565"/><String CONTENT="část" HEIGHT="34" WIDTH="90" VPOS="260" HPOS="585"/><SP WIDTH="20" VPOS="260" HPOS="675"/><String CONTENT="valového" HEIGHT="34" WIDTH="180" VPOS="260" HPOS="695"/><SP WIDTH="20" VPOS="260" HPOS="875"/><String CONTENT="tělesa." HEIGHT="34" WIDTH="150" VPOS="260" HPOS="895"/></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+<Page ID="Page2" PHYSICAL_IMG_NR="2" HEIGHT="2339" WIDTH="1654">
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P2_B1" HEIGHT="200" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0002-0001">
+<TextLine HEIGHT="40" WIDTH="1000" VPOS="160" HPOS="220"><String CONTENT="Eva" HEIGHT="34" WIDTH="70" VPOS="160" HPOS="220"/><SP WIDTH="20" VPOS="160" HPOS="290"/><String CONTENT="Procházková" HEIGHT="34" WIDTH="240" VPOS="160" HPOS="310"/><SP WIDTH="20" VPOS="160" HPOS="550"/><String CONTENT="dokumentovala" HEIGHT="34" WIDTH="280" VPOS="160" HPOS="570"/><SP WIDTH="20" VPOS="160" HPOS="850"/><String CONTENT="nálezy." HEIGHT="34" WIDTH="150" VPOS="160" HPOS="870"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="600" VPOS="210" HPOS="220"><String CONTENT="rnn1" HEIGHT="34" WIDTH="80" VPOS="210" HPOS="220"/><SP WIDTH="20" VPOS="210" HPOS="300"/><String CONTENT="ww0rd" HEIGHT="34" WIDTH="120" VPOS="210" HPOS="320"/><SP WIDTH="20" VPOS="210" HPOS="440"/><String CONTENT="vv_~~" HEIGHT="34" WIDTH="100" VPOS="210" HPOS="460"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="200" VPOS="260" HPOS="220"><String CONTENT="" HEIGHT="34" WIDTH="40" VPOS="260" HPOS="220"/><SP WIDTH="20" VPOS="260" HPOS="260"/><String CONTENT="" HEIGHT="34" WIDTH="40" VPOS="260" HPOS="280"/></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+<Page ID="Page3" PHYSICAL_IMG_NR="3" HEIGHT="2339" WIDTH="1654">
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P3_B1" HEIGHT="200" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0002-0001">
+<TextLine HEIGHT="40" WIDTH="900" VPOS="160" HPOS="220"><String CONTENT="Mocnost" HEIGHT="34" WIDTH="160" VPOS="160" HPOS="220"/><SP WIDTH="20" VPOS="160" HPOS="380"/><String CONTENT="kulturní" HEIGHT="34" WIDTH="170" VPOS="160" HPOS="400"/><SP WIDTH="20" VPOS="160" HPOS="570"/><String CONTENT="vrstvy" HEIGHT="34" WIDTH="130" VPOS="160" HPOS="590"/><SP WIDTH="20" VPOS="160" HPOS="720"/><String CONTENT="činila" HEIGHT="34" WIDTH="120" VPOS="160" HPOS="740"/><SP WIDTH="20" VPOS="160" HPOS="860"/><String CONTENT="40" HEIGHT="34" WIDTH="50" VPOS="160" HPOS="880"/><SP WIDTH="15" VPOS="160" HPOS="930"/><String CONTENT="cm." HEIGHT="34" WIDTH="70" VPOS="160" HPOS="945"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="500" VPOS="210" HPOS="220"><String CONTENT="qpqb" HEIGHT="34" WIDTH="90" VPOS="210" HPOS="220"/><SP WIDTH="20" VPOS="210" HPOS="310"/><String CONTENT="dbqp" HEIGHT="34" WIDTH="90" VPOS="210" HPOS="330"/><SP WIDTH="20" VPOS="210" HPOS="420"/><String CONTENT="uunn" HEIGHT="34" WIDTH="90" VPOS="210" HPOS="440"/></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+<Page ID="Page4" PHYSICAL_IMG_NR="4" HEIGHT="2339" WIDTH="1654">
+<PrintSpace HEIGHT="2039" WIDTH="1254" VPOS="150" HPOS="200">
+<TextBlock ID="P4_B1" HEIGHT="120" WIDTH="1200" VPOS="160" HPOS="220" LANG="cs" STYLEREFS="StyleId-DEMO0002-0001">
+<TextLine HEIGHT="40" WIDTH="1000" VPOS="160" HPOS="220"><String CONTENT="Soubor" HEIGHT="34" WIDTH="140" VPOS="160" HPOS="220"/><SP WIDTH="20" VPOS="160" HPOS="360"/><String CONTENT="nálezů" HEIGHT="34" WIDTH="140" VPOS="160" HPOS="380"/><SP WIDTH="20" VPOS="160" HPOS="520"/><String CONTENT="byl" HEIGHT="34" WIDTH="70" VPOS="160" HPOS="540"/><SP WIDTH="20" VPOS="160" HPOS="610"/><String CONTENT="uložen" HEIGHT="34" WIDTH="140" VPOS="160" HPOS="630"/><SP WIDTH="20" VPOS="160" HPOS="770"/><String CONTENT="v" HEIGHT="34" WIDTH="25" VPOS="160" HPOS="790"/><SP WIDTH="15" VPOS="160" HPOS="815"/><String CONTENT="depozitáři." HEIGHT="34" WIDTH="230" VPOS="160" HPOS="830"/></TextLine>
+<TextLine HEIGHT="40" WIDTH="200" VPOS="210" HPOS="220"><String CONTENT="A123/2024" HEIGHT="34" WIDTH="200" VPOS="210" HPOS="220"/></TextLine>
+</TextBlock>
+</PrintSpace>
+</Page>
+</Layout>
+</alto>

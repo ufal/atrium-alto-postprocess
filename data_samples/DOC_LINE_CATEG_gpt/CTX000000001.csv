@@ -1,0 +1,5 @@
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
+CTX000000001,1,1,Výzkumná zpráva č. 1/2024 — Hradiště u Horní Mezí,,,ces,1.0,174.0,9,49,0.0,0,0,0,0,0,0,0.0,0.3953,0.4651,0.9101,Clear,False
+CTX000000001,1,2,Terénní výzkum provedl Jan Novotný v červnu 2024.,,,ces,1.0,128.0,8,49,0.0,0,0,0,0,0,0,0.0,0.3947,0.5263,0.9187,Clear,False
+CTX000000001,2,1,Nalezená keramika pochází z raného středověku.,,,ces,1.0,153.0,6,46,0.0,0,0,0,0,0,0,0.0,0.4615,0.5128,0.9154,Clear,False
+CTX000000001,2,2,Výzkum byl financován z projektu DEMO.,,,ces,0.9991,288.0,6,38,0.0,0,0,0,0,0,0,0.0,0.3438,0.4375,0.8943,Noisy,False
