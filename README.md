@@ -25,6 +25,7 @@ and categorize noisy or unreliable **OCR** 🔍 output.
 
 - [⚙️ Setup](#-setup)
 - [🛤️ Workflow Stages](#-workflow-stages)
+  - [🚀 Run the whole pipeline at once](#-run-the-whole-pipeline-at-once)
   - [Step 1: Split Document-Specific ALTOs into Pages ✂️](#-step-1-split-document-specific-altos-into-pages-)
   - [Step 2: Create Page Statistics Table 📈](#-step-2-create-page-statistics-table-)
   - [Step 3: Extract text from ALTO XML ⛏️](#-step-3-extract-text-from-alto-xml-)
@@ -81,6 +82,46 @@ You are now ready to start the workflow.
 
 The process is divided into sequential steps, starting from raw **ALTO** 📄 files and ending
 with extracted linguistic and statistic data 📊.
+
+You can run the **entire pipeline end-to-end** with a single command (see below), or run each
+stage individually as described in Steps 1–4.
+
+---
+
+### 🚀 Run the whole pipeline at once
+
+The [run_pipeline.py](run_pipeline.py) 🐍 orchestrator runs every stage sequentially
+(**split → statistics → text extraction → classification → aggregation**) and, at the end,
+**merges all per-stage paradata** 🗒️ logs into a single run summary describing every stage, the
+intermediate file formats produced, and the **effective end-to-end output license** ⚖️ (see
+[Paradata logging](#paradata-logging)).
+
+```bash
+python3 run_pipeline.py                      # all settings from config_langID.txt
+python3 run_pipeline.py --method glm         # override just the extraction backend
+python3 run_pipeline.py --skip-split         # PAGE_ALTO already populated
+python3 run_pipeline.py --dry-run            # print the resolved plan, run nothing
+```
+
+* **Configuration ⚙️:** every setting is read from [config_langID.txt](config_langID.txt) 📎
+  (section `[PIPELINE]`, with `INPUT_CSV` taken from `[EXTRACT]`). Precedence is
+  **CLI flag > config value > built-in default**. Point at a different config with `--config`
+  or the `LANGID_CONFIG` environment variable.
+* **Extraction method 🔀:** `[PIPELINE] METHOD` selects the **Step 3** backend —
+  `alto-tools`, `layoutreader` (**default**), or `glm`. The choice flows through to the merged
+  license: a **LayoutReader** 📐 run resolves to **CC BY-NC-SA 4.0**, an **alto-tools** 🧰 run to
+  **CC BY-NC 4.0**.
+* **Output 📤:** a merged `<YYMMDD-HHmmss>_pipeline-run.json` in the [paradata](paradata) 📁
+  directory, alongside the individual per-stage logs.
+
+> [!NOTE]
+> `page_split.py` (Step 1) does not emit paradata of its own, so a full run typically merges
+> **four** logged stages (Steps 2–4 plus aggregation). The merged license is re-derived from the
+> **union** of components used across all stages, so the end-to-end most-restrictive rule holds.
+
+> [!TIP]
+> Prefer to inspect or re-run a single stage? The individual scripts below remain fully usable on
+> their own — the orchestrator simply calls them in order.
 
 ---
 
