@@ -347,9 +347,23 @@ def score_word(word: str) -> float:
     if len(core) == 1:
         if core in "aAiIoOuUvVzZkKsSpPbBjJdDrRnNmMtT" or '.' in word: return 0.0
         if core.isdigit(): return 0.25
-        if not core.isalpha(): return 0.0
+        if not core.isalpha():
+            # Single non-alphabetic token. Standard/allowed punctuation (hyphen,
+            # comma, etc.) is benign; any other glyph (e.g. ■ • * §) is OCR noise
+            # — score it like isolated-letter noise so symbol-dominated lines are
+            # not treated as structurally clean (weird_ratio == 0.0).
+            if core in ALLOWED_INTERNAL: return 0.0
+            return 0.85
         return 0.85
     if len(core) < 2: return 0.0
+
+    # Multi-character token whose core is entirely non-alphanumeric (e.g. "■■",
+    # "•••", "==") is a run of OCR garbage glyphs, not a word. The structural
+    # detectors below only fire on alphabetic/word-like tokens, so without this
+    # guard such runs would score 0.0 and hide genuine corruption.
+    if not any(c.isalnum() for c in core):
+        if all(c in ALLOWED_INTERNAL for c in core): return 0.0
+        return 0.85
 
     has_strange = any(not ch.isalnum() and ch not in ALLOWED_INTERNAL for ch in core)
     has_rep = False

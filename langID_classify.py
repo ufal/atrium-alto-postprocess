@@ -24,6 +24,9 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
 from text_util_langID import *
+# `from ... import *` skips underscore-prefixed names, so _lang_base (used by the
+# language-remapping logic below) must be imported explicitly.
+from text_util_langID import _lang_base
 from atrium_paradata import ParadataLogger
 
 CSV_HEADER = [
@@ -121,7 +124,14 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     langs = [l[0].replace("__label__", "") for l in labels]
     scores = [s[0] for s in scores]
 
-    _known_langs: frozenset = frozenset((trusted_langs or []) + (expected_langs or []))
+    # FastText (facebook/fasttext-language-identification) returns ISO 639-3 codes
+    # with a script suffix, e.g. "deu_Latn", "ces_Latn". The expected/trusted lists
+    # in the config are bare base codes ("deu", "ces", ...). Compare on the BASE code
+    # only, otherwise every suffixed prediction (including legitimate German/English)
+    # fails the membership test and gets force-remapped to the default language.
+    _known_lang_bases: frozenset = frozenset(
+        _lang_base(l) for l in ((trusted_langs or []) + (expected_langs or []))
+    )
 
     while batch_id not in result_dict:
         time.sleep(0.01)
@@ -137,8 +147,11 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         wc = len(text_content.split())
         cc = len(text_content)
 
-        if langs[i] not in _known_langs:
-            langs[i] = expected_langs[0]
+        if _lang_base(langs[i]) not in _known_lang_bases:
+            # Remap to the collection default, but PRESERVE any script suffix
+            # (e.g. "_Latn", "_Cyrl") from the original FastText prediction.
+            suffix = langs[i][len(_lang_base(langs[i])):]
+            langs[i] = expected_langs[0] + suffix
             scores[i] = max(scores[i], LANG_SCORE_CLEAR)
 
         ppl_val = ppls[i]
