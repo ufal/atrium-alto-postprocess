@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+/venv-alto/
+# setup_api_server.sh / Docker build artifacts (fetched, not source)
+v3/
+models/
+lid.176.bin
+# caches & local env
+.pytest_cache/
+.coverage
+.cache/
+*.log
+.env
