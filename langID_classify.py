@@ -4,12 +4,25 @@ langID_classify.py
 
 Step 2: Read TXT files → Merge Split Words → Batch classify.
 
-Architecture (Solution B - CPU/GPU Split Queue):
-1. ONE dedicated GPU Worker loops continuously, holding the only Qwen2.5-0.5B instance to prevent VRAM OOM errors.
-2. MULTIPLE CPU Workers read files, run Regex/FastText, and place texts into a multiprocessing Task Queue.
-3. CPU Workers poll a Result Dictionary until the GPU returns their Perplexity scores.
+Architecture (CPU/GPU Split Queue):
+1. ONE dedicated GPU Worker loops continuously, holding the only perplexity-model
+   instance to prevent VRAM OOM errors.
+2. MULTIPLE CPU Workers read files, run Regex/FastText, and place texts into a
+   multiprocessing Task Queue.
+3. CPU Workers poll a Result Dictionary until the GPU returns their Perplexity
+   scores.
+
+Robustness (#6): if the GPU worker dies (e.g. model load failure or crash), it
+raises a shared `gpu_dead` event. CPU workers detect that — and a hard wall-clock
+timeout — instead of spinning forever, so a dead GPU worker fails the run loudly
+rather than hanging it.
+
+Input directory (#4): the text source defaults to [CLASSIFY] TEXT_DIR but is
+overridden by the LANGID_TEXT_DIR env var, which run_pipeline.py sets to the
+selected extraction method's output directory.
 """
 
+import os
 import pandas as pd
 import torch
 from pathlib import Path
@@ -29,6 +42,11 @@ from text_util_langID import *
 from text_util_langID import _lang_base
 from atrium_paradata import ParadataLogger
 
+# Hard ceiling on how long a CPU worker waits for a batch's perplexity before
+# declaring the GPU worker unresponsive (#6). Generous so legitimate large
+# batches are never killed, but finite so a crash cannot hang the pipeline.
+GPU_WAIT_TIMEOUT = 600.0  # seconds
+
 CSV_HEADER = [
     "file", "page_num", "line_num", "text",
     "split_ws", "split_we",
@@ -43,10 +61,13 @@ CSV_HEADER = [
 ]
 
 
-def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: str):
+def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: str, gpu_dead=None):
     """
     Standalone background loop that consumes line batches and generates Perplexity
     scores from the Language Model running on a unified GPU instance.
+
+    On fatal model-load failure it sets `gpu_dead` so waiting CPU workers can
+    abort instead of polling an empty result dictionary forever.
     """
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -66,6 +87,8 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
         print(f"[GPU Engine] {model_name} ready. Waiting for text batches...")
     except Exception as e:
         print(f"[GPU Engine] Failed to load model: {e}")
+        if gpu_dead is not None:
+            gpu_dead.set()   # (#6) signal CPU workers so they don't hang
         return
 
     while True:
@@ -111,9 +134,9 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
         writer.writerows(rows)
 
 
-def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tuple], out_dir: Path,
-                                task_queue: mp.Queue, result_dict: dict, expected_langs: list[str] = None,
-                                trusted_langs: list[str] = None):
+def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir: Path,
+                                task_queue: mp.Queue, result_dict: dict, expected_langs: list = None,
+                                trusted_langs: list = None, gpu_dead=None):
     """Evaluates heuristical bounds, queries FastText, and fetches PPL to finalize scores."""
     ft = worker_models['ft']
 
@@ -124,17 +147,26 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
     langs = [l[0].replace("__label__", "") for l in labels]
     scores = [s[0] for s in scores]
 
-    # FastText (facebook/fasttext-language-identification) returns ISO 639-3 codes
-    # with a script suffix, e.g. "deu_Latn", "ces_Latn". The expected/trusted lists
-    # in the config are bare base codes ("deu", "ces", ...). Compare on the BASE code
-    # only, otherwise every suffixed prediction (including legitimate German/English)
-    # fails the membership test and gets force-remapped to the default language.
-    _known_lang_bases: frozenset = frozenset(
+    # FastText returns ISO 639-3 codes with a script suffix (e.g. "deu_Latn").
+    # The expected/trusted lists are bare base codes — compare on base only.
+    _known_lang_bases = frozenset(
         _lang_base(l) for l in ((trusted_langs or []) + (expected_langs or []))
     )
 
+    # (#6) Bounded wait: abort if the GPU worker died or never answers.
+    waited = 0.0
     while batch_id not in result_dict:
+        if gpu_dead is not None and gpu_dead.is_set():
+            raise RuntimeError(
+                f"GPU inference worker is down; cannot score batch {batch_id}"
+            )
         time.sleep(0.01)
+        waited += 0.01
+        if waited >= GPU_WAIT_TIMEOUT:
+            raise RuntimeError(
+                f"Timed out after {GPU_WAIT_TIMEOUT:.0f}s waiting for perplexity "
+                f"of batch {batch_id}; GPU worker unresponsive."
+            )
 
     ppls = result_dict.pop(batch_id)
 
@@ -148,8 +180,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list[str], meta: list[tupl
         cc = len(text_content)
 
         if _lang_base(langs[i]) not in _known_lang_bases:
-            # Remap to the collection default, but PRESERVE any script suffix
-            # (e.g. "_Latn", "_Cyrl") from the original FastText prediction.
+            # Remap to the collection default, but PRESERVE any script suffix.
             suffix = langs[i][len(_lang_base(langs[i])):]
             langs[i] = expected_langs[0] + suffix
             scores[i] = max(scores[i], LANG_SCORE_CLEAR)
@@ -216,7 +247,8 @@ def process_document(task):
     Worker function executed by CPU pool.
     Processes a single document's groups, handles split words, queues to GPU, and saves CSV.
     """
-    file_id, group, text_dir, output_dir, batch_size, task_queue, result_dict, expected_langs, trusted_bases = task
+    (file_id, group, text_dir, output_dir, batch_size, task_queue, result_dict,
+     expected_langs, trusted_bases, gpu_dead) = task
 
     try:
         out_path = Path(output_dir) / f"{file_id}.csv"
@@ -225,7 +257,7 @@ def process_document(task):
                 "status": "skipped",
                 "file_id": file_id,
                 "lines": 0,
-                "reason": "output already exists",
+                "reason": "output already exists (resume)",
             }
 
         batch_lines = []
@@ -277,7 +309,7 @@ def process_document(task):
                     b_id = f"{file_id}_{batch_counter}"
                     process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue,
                                                 result_dict,
-                                                expected_langs, trusted_bases)
+                                                expected_langs, trusted_bases, gpu_dead=gpu_dead)
                     batch_lines.clear()
                     batch_meta.clear()
                     batch_counter += 1
@@ -285,7 +317,7 @@ def process_document(task):
         if batch_lines:
             b_id = f"{file_id}_{batch_counter}"
             process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue, result_dict,
-                                        expected_langs, trusted_bases)
+                                        expected_langs, trusted_bases, gpu_dead=gpu_dead)
 
         if out_path.exists():
             df = pd.read_csv(out_path, dtype={
@@ -367,11 +399,14 @@ def process_document(task):
 
 def main():
     """Initializes queue managers, sets up models, and maps CPU document tasks."""
+    config_path = os.getenv("LANGID_CONFIG", "config_langID.txt")
     config = configparser.ConfigParser()
-    config.read("config_langID.txt")
+    config.read(config_path)
 
     INPUT_CSV = config.get("CLASSIFY", "INPUT_CSV")
-    TEXT_DIR = config.get("CLASSIFY", "TEXT_DIR")
+    # (#4) LANGID_TEXT_DIR (set by run_pipeline for the chosen extraction method)
+    # takes precedence over the config default.
+    TEXT_DIR = os.getenv("LANGID_TEXT_DIR") or config.get("CLASSIFY", "TEXT_DIR")
     OUTPUT_DIR = config.get("CLASSIFY", "OUTPUT_LINES_LOG")
     BATCH_SIZE = config.getint("CLASSIFY", "BATCH_SIZE")
     WORKERS_MAX = config.getint("CLASSIFY", "WORKERS_MAX", fallback=32)
@@ -387,6 +422,8 @@ def main():
     out_dir = Path(OUTPUT_DIR)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    print(f"[Main] Classifying text from: {TEXT_DIR}")
+
     df = pd.read_csv(INPUT_CSV)
     sort_cols = (["file", "page", "line_order"] if "line_order" in df.columns else ["file", "page"])
     df = df.sort_values(by=sort_cols)
@@ -394,6 +431,7 @@ def main():
     manager = mp.Manager()
     task_queue = manager.Queue()
     result_dict = manager.dict()
+    gpu_dead = manager.Event()   # (#6) shared liveness signal for the GPU worker
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
     print(f"[Main] Ensuring {MODEL_NAME} is cached...")
@@ -401,14 +439,15 @@ def main():
     AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype="auto")
     print(f"[Main] Cache OK.")
 
-    gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict, MODEL_NAME))
+    gpu_process = mp.Process(target=gpu_inference_worker,
+                             args=(task_queue, result_dict, MODEL_NAME, gpu_dead))
     gpu_process.start()
 
     grouped_tasks = []
     for file_id, group in df.groupby("file"):
         grouped_tasks.append(
             (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS,
-             _TRUSTED_FOREIGN_LANG_BASES))
+             _TRUSTED_FOREIGN_LANG_BASES, gpu_dead))
 
     logger = ParadataLogger(
         program="langID-classify",
@@ -424,9 +463,7 @@ def main():
     )
 
     # ── paradata: record the licensed components this step exercises ──────────
-    # FastText LID is loaded unconditionally by every classify run.
     logger.log_component("fasttext")
-    # Perplexity model is selectable; map the HF id to the config component name.
     _ppl_component = "distilgpt2" if "distilgpt2" in MODEL_NAME.lower() else "qwen2.5_0.5b"
     logger.log_component(_ppl_component)
 
@@ -456,6 +493,9 @@ def main():
                         total_processed += result["lines"]
                         logger.log_success("csv")
                     elif status == "skipped":
+                        # (#11) record resume-skips so paradata reflects real work
+                        logger.log_skip(result["file_id"],
+                                        result.get("reason", "output already exists (resume)"))
                         tqdm.write(f"Skipped (already exists): {result['file_id']}")
                     else:
                         logger.log_skip(result["file_id"], result["reason"])

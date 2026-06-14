@@ -12,13 +12,13 @@ and compiles final page-level stats, including:
   - 'avg_quality_score' - Mean composite quality score for relevant lines
   - 'avg_word_weird'    - Mean per-word weirdness ratio for relevant lines
   - 'avg_lang_score'    - Mean FastText confidence score
-  - 'avg_perplex'       - Mean DistilGPT2 perplexity score
+  - 'avg_perplex'       - Mean perplexity score
   - 'avg_symbol'        - Mean structural strange symbol count
   - 'main_lang'         - The statistical mode (most frequent) language per page.
   - 'avg_vowel_ratio'   - Mean vowel ratio
   - 'ch_ratio'          - The ratio of caps_header lines to valid lines
 
-This process is parallelized using concurrent.futures to handle massive directories quickly.
+This process is parallelized using concurrent.futures.
 """
 
 import argparse
@@ -40,29 +40,33 @@ from atrium_paradata import ParadataLogger
 STANDARD_COLS = ["Clear", "Noisy", "Trash", "Non-text", "Empty"]
 DEFAULT_CONFIG = "config_langID.txt"
 
+
 def load_config(config_path):
-    """Loads configuration fields mapped to required system paths."""
+    """Loads configuration fields mapped to required system paths.
+
+    (#14) Defaults are aligned with the documented artifact names
+    (DOC_LINE_CATEG / DOC_LINE_STATS) and the shipped config so a missing
+    config file does not silently introduce a different directory layout.
+    """
     config = configparser.ConfigParser()
     if not Path(config_path).exists():
         print(f"Warning: Configuration file {config_path} not found. Using defaults.")
         return {
-            "input_dir": "data_samples/DOC_LINE_LANG_CLASS",
-            "output_dir": "data_samples/DOC_PAGE_STAT",
-            "output_stats": "AGGREGATED_PAGE_STATS.csv",
+            "input_dir": "data_samples/DOC_LINE_CATEG",
+            "output_dir": "data_samples/DOC_LINE_STATS",
+            "output_stats": "samples_page_stats.csv",
         }
     config.read(config_path)
 
     return {
-        "input_dir": config.get("AGGREGATE", "RAW_LINES_CSV", fallback="data_samples/DOC_LINE_LANG_CLASS"),
-        "output_dir": config.get("AGGREGATE", "OUTPUT_DOC_DIR", fallback="data_samples/DOC_PAGE_STAT"),
-        "output_stats": config.get("AGGREGATE", "OUTPUT_STATS", fallback="AGGREGATED_PAGE_STATS.csv"),
+        "input_dir": config.get("AGGREGATE", "RAW_LINES_CSV", fallback="data_samples/DOC_LINE_CATEG"),
+        "output_dir": config.get("AGGREGATE", "OUTPUT_DOC_DIR", fallback="data_samples/DOC_LINE_STATS"),
+        "output_stats": config.get("AGGREGATE", "OUTPUT_STATS", fallback="samples_page_stats.csv"),
     }
 
+
 def _sum_metrics(df):
-    """
-    Groups line data by page and aggregates the statistics, appending counts
-    and structural mean values.
-    """
+    """Groups line data by page and aggregates the statistics."""
     if df.empty:
         return pd.DataFrame()
 
@@ -130,7 +134,6 @@ def _sum_metrics(df):
         if count_col in final_page_df.columns:
             final_page_df[count_col] = final_page_df[count_col].fillna(0).astype(int)
 
-    # Insert total num_lines mapping requested formats
     final_page_df['num_lines'] = final_page_df[STANDARD_COLS].sum(axis=1)
 
     ordered_cols = ['file', 'page_num', 'num_lines',
@@ -141,11 +144,9 @@ def _sum_metrics(df):
                     'ch_ratio', 'main_lang']
     return final_page_df[ordered_cols]
 
+
 def process_csv_file(file_path):
-    """
-    Reads a single CSV file, defines proper data types to prevent edge-case
-    inferences, and returns aggregated page metrics.
-    """
+    """Reads a single CSV file and returns aggregated page metrics."""
     try:
         dtype_map = {
             'split_ws': str,
@@ -176,8 +177,8 @@ def process_csv_file(file_path):
     except Exception as exc:
         return exc
 
+
 def main():
-    """Execution bounds that map config parameters and process logs across concurrent pools."""
     parser = argparse.ArgumentParser(description="Aggregate post-classification line metrics into page stats.")
     parser.add_argument("--config", type=str, default=DEFAULT_CONFIG, help="Path to config file.")
     args = parser.parse_args()
@@ -248,6 +249,7 @@ def main():
 
     finally:
         logger.finalize(input_total=len(csv_files))
+
 
 if __name__ == "__main__":
     main()

@@ -19,9 +19,8 @@ Resolves ATRIUM issue #9:
 Backward compatibility
 -----------------------
 The constructor and log_success/log_skip/finalize/context-manager API are
-unchanged, so existing call sites (run.py, main.py) keep working.  New
-behaviour is opt-in via para_config.txt and the components_used / version /
-docker_image keyword arguments.
+unchanged for existing callers.  finalize() gains an OPTIONAL processed_total
+keyword (default None preserves the previous max(output_counts) behaviour).
 """
 
 from __future__ import annotations
@@ -51,22 +50,13 @@ _REPO_URLS: Dict[str, str] = {
     "translator":          "https://github.com/ufal/atrium-translator",
 }
 
-# Environment variables a container sets so the logged reference points at the
-# ACTUAL running image/runner rather than a static fork URL.
-_ENV_RUNNER_IMAGE = "ATRIUM_RUNNER_IMAGE"      # e.g. ghcr.io/ufal/atrium-translator:v0.5.2
-_ENV_RUNNER_REPO  = "ATRIUM_RUNNER_REPO"       # e.g. https://github.com/ufal/atrium-translator
-_ENV_RUNNER_REF   = "ATRIUM_RUNNER_REF"        # e.g. git sha / tag the container was built from
+_ENV_RUNNER_IMAGE = "ATRIUM_RUNNER_IMAGE"
+_ENV_RUNNER_REPO  = "ATRIUM_RUNNER_REPO"
+_ENV_RUNNER_REF   = "ATRIUM_RUNNER_REF"
 
 
 def _load_para_config(start_dir: str = ".") -> Dict[str, Any]:
-    """
-    Load repository-specific para_config.txt if present.
-
-    Returns a dict:
-        { "program": str, "version": str, "repository_fallback": str,
-          "components": [ {name, license, loaded, role}, ... ] }
-    Empty/missing file -> minimal dict so callers can fall back to kwargs.
-    """
+    """Load repository-specific para_config.txt if present."""
     path = os.path.join(start_dir, "para_config.txt")
     out: Dict[str, Any] = {"components": []}
     if not os.path.exists(path):
@@ -82,7 +72,6 @@ def _load_para_config(start_dir: str = ".") -> Dict[str, Any]:
 
     if cfg.has_section("components"):
         for name, spec in cfg.items("components"):
-            # spec form: "<license> ; <always|conditional> ; <role>"
             fields = [s.strip() for s in spec.split(";")]
             lic = fields[0] if len(fields) > 0 else ""
             loaded = fields[1] if len(fields) > 1 else "always"
@@ -101,19 +90,7 @@ def _load_para_config(start_dir: str = ".") -> Dict[str, Any]:
 # ──────────────────────────────────────────────────────────────────────────────
 
 class ParadataLogger:
-    """
-    Context-manager-friendly paradata recorder.
-
-    New parameters (all optional, all backward compatible)
-    ------------------------------------------------------
-    version : str
-        Tool version tag.  Falls back to para_config.txt [tool] version.
-    docker_image : str
-        Running container image reference.  Falls back to env ATRIUM_RUNNER_IMAGE,
-        else "" (placeholder kept in output so the field always exists).
-    config_dir : str
-        Where to find para_config.txt (default: current dir).
-    """
+    """Context-manager-friendly paradata recorder."""
 
     def __init__(
         self,
@@ -130,27 +107,22 @@ class ParadataLogger:
         self._start_dt    = datetime.now(tz=timezone.utc)
         self._run_id      = self._start_dt.strftime("%y%m%d-%H%M%S")
 
-        # repo-specific static facts
         self._para_cfg = _load_para_config(config_dir)
 
-        # version: kwarg > para_config > "unknown"
         self.version = (
             version
             or self._para_cfg.get("version")
             or "unknown"
         )
 
-        # docker image: kwarg > env > "" (placeholder retained)
         self.docker_image = (
             docker_image
             or os.environ.get(_ENV_RUNNER_IMAGE)
             or ""
         )
 
-        # sanitise config so it stays JSON-serialisable
         self.config = _sanitise(config)
 
-        # counters
         self._output_counts: Dict[str, int] = {}
         if output_types:
             for t in output_types:
@@ -160,9 +132,7 @@ class ParadataLogger:
         self._input_total: int = 0
         self._finalised: bool  = False
 
-        # components actually exercised this run: {name: license}
         self._components_used: Dict[str, str] = {}
-        # auto-seed with components flagged "always" in para_config
         for comp in self._para_cfg.get("components", []):
             if comp.get("loaded") == "always":
                 self._components_used[comp["name"]] = comp["license"]
@@ -184,14 +154,7 @@ class ParadataLogger:
         )
 
     def log_component(self, name: str, license: Optional[str] = None) -> None:
-        """
-        Record that a licensed component was ACTUALLY exercised this run.
-
-        If *license* is omitted it is looked up from para_config.txt.  Call this
-        the first time a conditional component is invoked (e.g. when a
-        vocabulary is loaded, or the translation API is first hit) so the
-        effective output license reflects real usage rather than worst case.
-        """
+        """Record that a licensed component was ACTUALLY exercised this run."""
         if license is None:
             for comp in self._para_cfg.get("components", []):
                 if comp["name"] == name:
@@ -213,7 +176,6 @@ class ParadataLogger:
         comps = list(self._components_used.items())
         if resolve_effective_license is not None and comps:
             return resolve_effective_license(comps)
-        # Fallback if helper missing or no components recorded: stay safe.
         return {
             "effective_license": "CC BY-NC 4.0",
             "effective_license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
@@ -226,7 +188,24 @@ class ParadataLogger:
                      "defaulted conservatively to CC BY-NC 4.0.",
         }
 
-    def finalize(self, input_total: Optional[int] = None) -> str:
+    def finalize(
+        self,
+        input_total: Optional[int] = None,
+        processed_total: Optional[int] = None,
+    ) -> str:
+        """Write the paradata JSON.
+
+        Parameters
+        ----------
+        input_total : number of input units (e.g. source documents). If None it
+            is inferred as processed + skipped.
+        processed_total : (#10) explicit count of successfully processed input
+            units. When given it is used verbatim for `successfully_processed`,
+            decoupling it from output-file counts so the figure can never exceed
+            input_total for stages that fan one input out to many outputs
+            (e.g. page_split: 1 document -> N pages). When None, the previous
+            behaviour (max of output counts) is kept for backward compatibility.
+        """
         if self._finalised:
             raise RuntimeError("finalize() has already been called.")
 
@@ -235,7 +214,10 @@ class ParadataLogger:
         duration_min = duration_sec / 60.0 if duration_sec > 0 else 0.0
 
         skipped_count  = len(self._skipped)
-        processed_docs = max(self._output_counts.values()) if self._output_counts else 0
+        if processed_total is not None:
+            processed_docs = processed_total
+        else:
+            processed_docs = max(self._output_counts.values()) if self._output_counts else 0
         if input_total is None:
             input_total = processed_docs + skipped_count
 
@@ -246,30 +228,25 @@ class ParadataLogger:
         lic = self._license_block()
 
         payload = {
-            # ── provenance ──────────────────────────────────────────────────
             "schema_version":      "2.0",
             "program":             self.program,
             "tool_version":        self.version,
             "repository":          self._resolve_repository(),
             "runner_ref":          os.environ.get(_ENV_RUNNER_REF, ""),
-            "docker_image":        self.docker_image,   # placeholder if unset
+            "docker_image":        self.docker_image,
             "python_version":      sys.version,
             "run_id":              self._run_id,
 
-            # ── license (computed from components actually used) ─────────────
             "license":             lic["effective_license"],
             "license_url":         lic["effective_license_url"],
             "license_detail":      lic,
 
-            # ── timing ──────────────────────────────────────────────────────
             "start_time":          self._start_dt.isoformat(),
             "end_time":            end_dt.isoformat(),
             "duration_seconds":    round(duration_sec, 3),
 
-            # ── configuration snapshot ───────────────────────────────────────
             "config":              self.config,
 
-            # ── statistics ───────────────────────────────────────────────────
             "statistics": {
                 "input_files_total":      input_total,
                 "successfully_processed": processed_docs,
@@ -314,13 +291,7 @@ def merge_paradata_files(
     input_file: str,
     out_path: str,
 ) -> str:
-    """
-    Merge several per-tool paradata JSONs (one input file passed through several
-    tools/repos) into a single provenance record covering exactly that file.
-
-    The merged license is re-derived from the UNION of all components used, so
-    the end-to-end most-restrictive rule holds.
-    """
+    """Merge several per-tool paradata JSONs into a single per-file record."""
     steps: List[Dict[str, Any]] = []
     license_blocks: List[Dict[str, Any]] = []
     total_duration = 0.0
@@ -371,32 +342,18 @@ def merge_paradata_files(
     return out_path
 
 
-
 def merge_run_paradata(
     json_paths: List[str],
     out_path: str,
     pipeline: Optional[str] = None,
     method: Optional[str] = None,
 ) -> str:
-    """
-    Merge the per-stage paradata JSONs of ONE end-to-end pipeline run into a
-    single summary record describing every processing stage and the
-    intermediate file formats produced.
+    """Merge per-stage paradata JSONs of ONE end-to-end run into one summary.
 
-    This is the run-centric sibling of merge_paradata_files(): instead of
-    "one input file through several repos", it captures "one run through several
-    sequential stages of THIS repo". The effective license is re-derived from
-    the UNION of all components used across the stages, so the end-to-end
-    most-restrictive rule holds (e.g. a run that used LayoutReader is
-    CC BY-NC-SA 4.0 overall even if individual stages were less restrictive).
-
-    Parameters
-    ----------
-    json_paths : ordered list of per-stage paradata JSON paths (execution order)
-    out_path   : where to write the merged summary JSON
-    pipeline   : optional human label for the pipeline (e.g. "alto-postprocess")
-    method     : optional text-extraction method actually used
-                 ("alto-tools" | "layoutreader" | "glm")
+    The effective license is re-derived from the UNION of all components used
+    across stages. merge_effective_licenses() now deduplicates the union before
+    resolving (#12), so the component catalogue and the "N component(s)" note
+    reflect the unique set rather than repeating always-on components per stage.
     """
     stages: List[Dict[str, Any]] = []
     license_blocks: List[Dict[str, Any]] = []
@@ -422,7 +379,6 @@ def merge_run_paradata(
         stats = data.get("statistics", {}) or {}
         out_counts = stats.get("output_counts_by_type", {}) or {}
 
-        # accumulate intermediate output formats across stages
         for ftype, cnt in out_counts.items():
             formats[ftype] = formats.get(ftype, 0) + int(cnt or 0)
 
@@ -460,19 +416,9 @@ def merge_run_paradata(
             license_blocks.append(data["license_detail"])
 
     if merge_effective_licenses is not None and license_blocks:
+        # merge_effective_licenses dedups the union internally (#12), so no
+        # post-hoc component collapse is needed here.
         merged_lic = merge_effective_licenses(license_blocks)
-        # Deduplicate the component catalogue for readability: the union across
-        # stages repeats always-on components (alto_tools, fasttext) once per
-        # stage. Collapse to unique (name, license) pairs — this is cosmetic and
-        # does not change the already-computed effective license.
-        seen = set()
-        unique_components = []
-        for comp in merged_lic.get("components", []):
-            key = (comp.get("name"), comp.get("license"))
-            if key not in seen:
-                seen.add(key)
-                unique_components.append(comp)
-        merged_lic["components"] = unique_components
     else:
         merged_lic = {
             "effective_license": "CC BY-NC 4.0",
@@ -528,7 +474,3 @@ def _sanitise(obj: Any, _depth: int = 0) -> Any:
     if isinstance(obj, (str, int, float, bool)) or obj is None:
         return obj
     return str(obj)
-
-
-# (the start/skip/success/finish CLI shim is unchanged from the original and
-#  omitted here for brevity – keep the existing _cli() if Bash drives the logger)

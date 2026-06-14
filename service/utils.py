@@ -1,5 +1,5 @@
 """
-text_util.py
+service/utils.py
 Helper functions for ALTO parsing, box normalization, and text reconstruction.
 """
 import re
@@ -22,13 +22,32 @@ PERPLEXITY_THRESHOLD_MIN = 1500
 LANG_SCORE_ROUGH = 0.45
 LANG_SCORE_CLEAR = 0.75
 
+# (#5) Hardened parser for UNTRUSTED ALTO uploaded via the FastAPI /process
+# endpoint. The default lxml parser resolves entities and may hit the network,
+# which exposes XXE and entity-expansion ("billion laughs") attacks. We disable
+# all of that: no entity resolution, no external DTD loading, no network, and
+# huge_tree stays off so pathological documents are rejected rather than
+# expanded. resolve_entities=False keeps any internal entity references inert.
+_SAFE_PARSER = ET.XMLParser(
+    resolve_entities=False,
+    no_network=True,
+    load_dtd=False,
+    dtd_validation=False,
+    huge_tree=False,
+)
+
+
 def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int, int]]:
     """
     Parses ALTO XML from a file path using fast lxml bindings.
     Returns: words (list), boxes (list), (width, height)
+
+    Parsing is performed with a hardened parser (no entity resolution, no
+    external DTDs, no network) so hostile uploads cannot trigger XXE or
+    entity-expansion attacks.
     """
     try:
-        tree = ET.parse(xml_path)
+        tree = ET.parse(xml_path, parser=_SAFE_PARSER)
         root = tree.getroot()
     except Exception as e:
         logger.error(f"XML Parse Error in {xml_path}: {e}")
@@ -95,8 +114,34 @@ def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int
 
     return words, boxes, (page_w, page_h)
 
+
+def normalize_boxes(boxes: List[List[int]], width: int, height: int) -> List[List[int]]:
+    """Normalise pixel boxes to the 0-1000 scale LayoutLMv3 expects.
+
+    Mirrors extract_LytRdr_ALTO_2_TXT.normalize_boxes so the service and the
+    batch pipeline feed the layout model identical inputs (#8).
+    """
+    if not boxes or width == 0 or height == 0:
+        return [[0, 0, 0, 0] for _ in boxes]
+    x_scale = 1000.0 / width
+    y_scale = 1000.0 / height
+    out: List[List[int]] = []
+    for x1, y1, x2, y2 in boxes:
+        out.append([
+            max(0, min(1000, int(round(x1 * x_scale)))),
+            max(0, min(1000, int(round(y1 * y_scale)))),
+            max(0, min(1000, int(round(x2 * x_scale)))),
+            max(0, min(1000, int(round(y2 * y_scale)))),
+        ])
+    return out
+
+
 def categorize_line(lang_code: str, score: float, ppl: float, text: str, weird_ratio: float = 0.0) -> str:
-    """Classifies line as Clear, Noisy, or Trash."""
+    """Legacy fallback classifier (Clear / Noisy / Trash).
+
+    Only used by service/text_inference.py when text_util_langID cannot be
+    imported. The primary path uses text_util_langID.categorize_line.
+    """
     is_common = any(lang_code.startswith(cl) for cl in COMMON_LANGS)
 
     # Hard override matching the new logic

@@ -4,8 +4,7 @@ run_pipeline.py — end-to-end ALTO XML postprocessing orchestrator.
 
 Runs the repository's processing scripts sequentially on a directory of
 document-level ALTO XMLs and, at the end, merges every per-stage paradata log
-into ONE summary JSON describing all stages, the intermediate file formats
-produced, and the effective end-to-end output license.
+into ONE summary JSON.
 
 Pipeline stages
 ---------------
@@ -18,23 +17,14 @@ Pipeline stages
   4. langID_classify.py       PAGE_TXT*/       -> DOC_LINE_CATEG/   (line classify)     [paradata]
   5. langID_aggregate_STAT.py DOC_LINE_CATEG/  -> DOC_LINE_STATS/   (page aggregate)    [paradata]
 
-page_split.py emits no paradata of its own, so the merged run typically contains
-four logged stages (steps 2-5). The merge re-derives the license from the UNION
-of all components used, so a run that selected the LayoutReader method is
-CC BY-NC-SA 4.0 end-to-end while an alto-tools run is CC BY-NC 4.0.
+(#4) The classify stage reads its text input from the LANGID_TEXT_DIR env var,
+which this orchestrator sets to the SELECTED method's output directory. Without
+this, langID_classify always read the LayoutReader dir and silently ignored
+alto-tools / glm output.
 
 Configuration
 -------------
-Every setting is read from config_langID.txt (section [PIPELINE], with INPUT_CSV
-taken from [EXTRACT]). Precedence: CLI flag > config value > in-code default.
-Point at a different config with --config or the LANGID_CONFIG env var.
-
-Usage
------
-  python3 run_pipeline.py                         # all settings from config ([PIPELINE].METHOD)
-  python3 run_pipeline.py --method glm            # override just the extraction backend
-  python3 run_pipeline.py --skip-split            # PAGE_ALTO already populated
-  python3 run_pipeline.py --dry-run               # print the resolved plan, run nothing
+Every setting is read from config_langID.txt. Precedence: CLI flag > config > default.
 """
 
 from __future__ import annotations
@@ -60,7 +50,6 @@ EXTRACT_METHODS = {
     "glm":          ("extract_LLM_ALTO_2_TXT.py",    "OUTPUT_TXT_LLM", "./data_samples/PAGE_TXT_LLM"),
 }
 
-# In-code defaults (lowest precedence). LayoutReader is the default method.
 _DEFAULTS = {
     "method":        "layoutreader",
     "input_dir":     "data_samples/ALTO",
@@ -77,28 +66,29 @@ def _load_config(config_path: str) -> configparser.ConfigParser:
     return cfg
 
 
-def _cfg_get(cfg: configparser.ConfigParser, section: str, key: str,
-             default: Optional[str]) -> Optional[str]:
+def _cfg_get(cfg, section, key, default):
     if cfg.has_section(section):
         return cfg.get(section, key, fallback=default)
     return default
 
 
-def _cfg_getbool(cfg: configparser.ConfigParser, section: str, key: str,
-                 default: bool) -> bool:
+def _cfg_getbool(cfg, section, key, default):
     if cfg.has_section(section) and cfg.has_option(section, key):
         return cfg.getboolean(section, key)
     return default
 
 
+def _resolve_extract_outdir(method: str, cfg: configparser.ConfigParser) -> str:
+    """The text-output directory the chosen extraction method writes to.
+
+    Used to point the classify stage at the right text source (#4).
+    """
+    _script, key, default = EXTRACT_METHODS[method]
+    return (_cfg_get(cfg, "EXTRACT", key, default) or default).strip()
+
+
 def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
-    """
-    Merge settings with precedence: CLI flag > [PIPELINE] config > in-code default.
-    INPUT_CSV is sourced from [EXTRACT] so it stays consistent with the stage
-    scripts that read the same key.
-    """
-    method = (args.method
-              or _cfg_get(cfg, "PIPELINE", "METHOD", _DEFAULTS["method"]))
+    method = (args.method or _cfg_get(cfg, "PIPELINE", "METHOD", _DEFAULTS["method"]))
     method = method.strip()
     if method not in EXTRACT_METHODS:
         raise SystemExit(
@@ -112,13 +102,10 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
                  or _cfg_get(cfg, "PIPELINE", "PAGE_ALTO_DIR", _DEFAULTS["page_alto_dir"]))
     paradata_dir = (args.paradata_dir
                     or _cfg_get(cfg, "PIPELINE", "PARADATA_DIR", _DEFAULTS["paradata_dir"]))
-    # INPUT_CSV: CLI > [EXTRACT] > in-code default
     input_csv = (args.input_csv
                  or _cfg_get(cfg, "EXTRACT", "INPUT_CSV", _DEFAULTS["input_csv"]))
-
-    # skip_split: CLI flag (store_true) wins only when given; otherwise config
     skip_split = args.skip_split or _cfg_getbool(cfg, "PIPELINE", "SKIP_SPLIT",
-                                                  _DEFAULTS["skip_split"])
+                                                 _DEFAULTS["skip_split"])
 
     return {
         "method": method,
@@ -127,26 +114,22 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         "paradata_dir": paradata_dir.strip(),
         "input_csv": input_csv.strip(),
         "skip_split": skip_split,
+        "text_dir": _resolve_extract_outdir(method, cfg),
     }
 
 
 def _snapshot(paradata_dir: Path) -> set:
-    """Return the set of *.json filenames currently in the paradata dir."""
     if not paradata_dir.exists():
         return set()
     return {p.name for p in paradata_dir.glob("*.json")}
 
 
 def _run_stage(name: str, cmd: List[str], paradata_dir: Path) -> List[str]:
-    """
-    Run one stage as a subprocess and return the list of NEW paradata JSON
-    paths it produced (by diffing the paradata dir before/after).
-    """
+    """Run one stage as a subprocess; return NEW paradata JSON paths it produced."""
     print(f"\n{'='*78}\n> STAGE: {name}\n  $ {' '.join(cmd)}\n{'='*78}", flush=True)
 
     before = _snapshot(paradata_dir)
-    # run_id has 1-second resolution; nudge so consecutive stages don't collide
-    time.sleep(1.1)
+    time.sleep(1.1)  # run_id has 1-second resolution; avoid collisions
     result = subprocess.run(cmd)
     if result.returncode != 0:
         raise RuntimeError(f"Stage '{name}' failed with exit code {result.returncode}")
@@ -160,7 +143,6 @@ def _run_stage(name: str, cmd: List[str], paradata_dir: Path) -> List[str]:
 
 
 def build_plan(settings: Dict, config_path: str) -> List[Dict]:
-    """Resolve the ordered list of stages to execute, with their commands."""
     py = sys.executable or "python3"
     extract_script = EXTRACT_METHODS[settings["method"]][0]
 
@@ -178,7 +160,7 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
         "logged": True,
     })
     plan.append({
-        "name": f"3. extract text [{settings['method']}] (stats.csv -> PAGE_TXT*)",
+        "name": f"3. extract text [{settings['method']}] (stats.csv -> {settings['text_dir']})",
         "cmd": [py, extract_script],
         "logged": True,
     })
@@ -200,8 +182,6 @@ def main() -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    # All flags default to None so "not given" is distinguishable from a value;
-    # resolve_settings() then applies config-then-default for anything unset.
     ap.add_argument("--config", default=CONFIG_PATH,
                     help=f"Config file to read settings from (default: {CONFIG_PATH}).")
     ap.add_argument("--method", choices=list(EXTRACT_METHODS), default=None,
@@ -230,6 +210,12 @@ def main() -> int:
     paradata_dir = Path(settings["paradata_dir"])
     plan = build_plan(settings, config_path)
 
+    # (#4) Propagate config + the SELECTED method's text dir to every child stage.
+    # extract_* and langID_classify read LANGID_CONFIG; langID_classify reads
+    # LANGID_TEXT_DIR for its input text directory. Subprocesses inherit os.environ.
+    os.environ["LANGID_CONFIG"] = config_path
+    os.environ["LANGID_TEXT_DIR"] = settings["text_dir"]
+
     cfg_note = config_path if Path(config_path).exists() else f"{config_path} (missing - using defaults)"
     print(f"Config: {cfg_note}")
     print(f"Pipeline plan ({len(plan)} stages, extraction method='{settings['method']}'):")
@@ -238,6 +224,7 @@ def main() -> int:
         print(f"  {tag} {stage['name']}")
     print(f"Resolved settings: input_dir={settings['input_dir']} "
           f"page_alto_dir={settings['page_alto_dir']} input_csv={settings['input_csv']} "
+          f"text_dir={settings['text_dir']} "
           f"skip_split={settings['skip_split']} paradata_dir={settings['paradata_dir']}")
 
     if args.dry_run:

@@ -30,11 +30,17 @@ LLM_PROMPT         = OCR: Transcribe all text on this page exactly as it appears
 
 [CLASSIFY]
 INPUT_CSV = data_samples/test_alto_stats.csv
+# TEXT_DIR is the DEFAULT text source for a standalone `python langID_classify.py`
+# run. When launched via run_pipeline.py it is overridden per extraction method
+# through the LANGID_TEXT_DIR env var (#4), so alto-tools -> PAGE_TXT,
+# layoutreader -> PAGE_TXT_LR, glm -> PAGE_TXT_LLM are each consumed correctly.
 TEXT_DIR = data_samples/PAGE_TXT_LR
 OUTPUT_LINES_LOG = data_samples/DOC_LINE_CATEG
 BATCH_SIZE = 128
 WORKERS_MAX = 32
-EXPECTED_LANGS = eng,deu,ces
+# (#7) Most-expected language MUST be first: it is the force-remap default for
+# ambiguous FastText predictions. This corpus is Czech, so `ces` leads.
+EXPECTED_LANGS = ces,deu,eng
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita
 MODEL_NAME = Qwen/Qwen2.5-0.5B
 

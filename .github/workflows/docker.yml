@@ -2,7 +2,9 @@ name: docker
 on:
   pull_request:
   push:
-    branches: ["claude/exciting-sagan-jykrag", main]
+    # (#21) Trigger on the project's real integration branches (CONTRIBUTING.md
+    # uses test/master) plus main; the stray per-feature claude/* branch was removed.
+    branches: ["main", "master", "test"]
     tags: ["v*"]
   release:
     types: [published]
