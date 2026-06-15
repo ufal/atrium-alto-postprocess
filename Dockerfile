@@ -44,9 +44,27 @@ RUN git clone --filter=blob:none --no-checkout --depth 1 \
 
 # 3) FastText LID weights -> $MODEL_DIR/lid.176.bin, symlinked to the bare CWD path
 #    the batch pipeline (langID_classify.py:99) loads.
+#
+#    The previous bare `wget -q ... model.bin` exited 8 ("server issued an error
+#    response") in CI: Hugging Face / Cloudflare intermittently answers datacenter
+#    (Azure-hosted runner) IPs with 403/429/5xx, and with no retries a single
+#    transient blip failed the whole `docker build`. This hardened fetch:
+#      * follows the canonical ?download=true redirect to the LFS CDN,
+#      * sends a non-empty User-Agent (Cloudflare rejects some empty-UA bots),
+#      * retries transient HTTP errors and connection drops with backoff,
+#      * resumes (--continue) the ~2 GB download instead of restarting it,
+#      * verifies the result is a non-empty file so a truncated body or an HTML
+#        error page fails the build here, loudly, rather than producing a broken
+#        model that only blows up at runtime.
+#    `-nv` keeps the log readable while still surfacing errors (unlike `-q`).
 RUN mkdir -p "$MODEL_DIR" \
-    && wget -q "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" \
+    && wget -nv --tries=5 --continue --timeout=60 \
+            --retry-connrefused --waitretry=10 \
+            --retry-on-http-error=403,408,429,500,502,503,504 \
+            --header="User-Agent: atrium-alto-postprocess-docker-build/1.0" \
+            "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin?download=true" \
             -O "$MODEL_DIR/lid.176.bin" \
+    && test -s "$MODEL_DIR/lid.176.bin" \
     && ln -s "$MODEL_DIR/lid.176.bin" /app/lid.176.bin
 
 # 4) source
