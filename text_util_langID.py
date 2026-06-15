@@ -166,7 +166,6 @@ def detect_strange_symbols(text: str) -> int:
         for ch in core:
             if not ch.isalnum() and ch not in ALLOWED_INTERNAL:
                 count += 1
-                break
     return count
 
 def detect_repeated_chars(text: str) -> int:
@@ -437,6 +436,27 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 # Categorisation & Clamping
 # ---------------------------------------------------------------------------
 
+def determine_category(quality_score: float, text_source: str, word_count: int,
+                       vr: float, ppl: float, weird_ratio: float = 0.0) -> tuple[str, str]:
+    """Evaluates categorization rules and returns (category, reason_tag)."""
+    if word_count == 0 or not text_source.strip():
+        return "Empty", "empty"
+    if is_all_caps_line(text_source) and vr < 0.10:
+        return "Trash", "allcaps_novowel"
+    if ppl < 50.0 and word_count >= 3:
+        return "Clear", "lowppl_clear"
+
+    if quality_score < CATEG_TRASH_SCORE_MAX:
+        return "Trash", "trash_threshold"
+    if quality_score < CATEG_NOISY_SCORE_MAX:
+        if (quality_score >= CLEAN_PROSE_MIN_SCORE
+                and word_count >= CLEAN_PROSE_WC_MIN
+                and weird_ratio < CLEAN_PROSE_WEIRD_MAX
+                and ppl < CLEAN_PROSE_PPL_MAX):
+            return "Clear", "cleanprose_clear"
+        return "Noisy", "noisy_threshold"
+    return "Clear", "clear_threshold"
+
 def categorize_line(
         qs: float,
         txt: str,
@@ -445,29 +465,10 @@ def categorize_line(
         perplexity: float,
         rot_ratio: float = 0.0,
         weird_ratio: float = 0.0,
-) -> tuple[str, float]:
+        return_reason: bool = False,
+) -> tuple[str, float] | tuple[str, float, str]:
     """Routes the line to its final categorization label based on its quality signals."""
-    def _determine_category(quality_score: float, text_source: str, word_count: int,
-                            vr: float, ppl: float) -> str:
-        if word_count == 0 or not text_source.strip():
-            return "Empty"
-        if is_all_caps_line(text_source) and vr < 0.10:
-            return "Trash"
-        if ppl < 50.0 and word_count >= 3:
-            return "Clear"
-
-        if quality_score < CATEG_TRASH_SCORE_MAX:
-            return "Trash"
-        if quality_score < CATEG_NOISY_SCORE_MAX:
-            if (quality_score >= CLEAN_PROSE_MIN_SCORE
-                    and word_count >= CLEAN_PROSE_WC_MIN
-                    and weird_ratio < CLEAN_PROSE_WEIRD_MAX
-                    and ppl < CLEAN_PROSE_PPL_MAX):
-                return "Clear"
-            return "Noisy"
-        return "Clear"
-
-    categ = _determine_category(qs, txt, wc, vowel_ratio, perplexity)
+    categ, reason = determine_category(qs, txt, wc, vowel_ratio, perplexity, weird_ratio)
 
     if categ == "Trash":
         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
@@ -479,6 +480,8 @@ def categorize_line(
     else:
         aligned_score = qs
 
+    if return_reason:
+        return categ, aligned_score, reason
     return categ, aligned_score
 
 # ---------------------------------------------------------------------------

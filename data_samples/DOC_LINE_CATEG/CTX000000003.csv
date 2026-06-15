@@ -1,3 +1,3 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
-CTX000000003,1,1,Náčrt sondy.,,,ces,0.9876,310.0,2,12,0.0,0,0,0,0,0,0,0.0,0.4444,0.4444,0.8472,Noisy,False
-CTX000000003,1,2,1998,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header,allcaps_novowel,lowppl_clear,cleanprose_clear,trash_threshold,noisy_threshold,clear_threshold,pp_dedup,pp_surrounded_trash,pp_inverted_run
+CTX000000003,1,1,Náčrt sondy.,,,ces_Latn,0.9858,604.0,2,12,0.0,0,0,0,0,0,0,0.0,0.3,0.6,0.8671,Noisy,False,False,False,False,False,True,False,False,False,False
+CTX000000003,1,2,1998,,,,0.0,0.0,0,4,0.0,0,0,0,0,0,0,0.0,0.0,0.0,0.0,Non-text,False,False,False,False,False,False,False,False,False,False

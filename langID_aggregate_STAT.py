@@ -19,6 +19,11 @@ and compiles final page-level stats, including:
   - 'ch_ratio'          - The ratio of caps_header lines to valid lines
 
 This process is parallelized using concurrent.futures.
+
+(#3) The per-document line CSVs now carry nine extra diagnostic boolean columns
+after `caps_header` (six categoriser-rule flags + three post-pass flags). This
+aggregation ignores them — page stats are unchanged — but a future revision could
+emit per-page rule-frequency sums from them.
 """
 
 import argparse

@@ -1,5 +1,5 @@
-file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header
-CTX000000001,1,1,Výzkumná zpráva č. 1/2024 — Hradiště u Horní Mezí,,,ces,1.0,58.0,9,49,0.0,0,0,0,0,0,0,0.0,0.3953,0.4651,0.9215,Clear,False
-CTX000000001,1,2,Terénní výzkum provedl Jan Novotný v červnu 2024.,,,ces,1.0,42.5,8,49,0.0,0,0,0,0,0,0,0.0,0.3947,0.5263,0.9302,Clear,False
-CTX000000001,2,1,Nalezená keramika pochází z raného středověku.,,,ces,1.0,51.0,6,46,0.0,0,0,0,0,0,0,0.0,0.4615,0.5128,0.9268,Clear,False
-CTX000000001,2,2,Výzkum byl financován z projektu DEMO.,,,ces,0.9991,96.0,6,38,0.0,0,0,0,0,0,0,0.0,0.3438,0.4375,0.9087,Clear,False
+file,page_num,line_num,text,split_ws,split_we,lang,lang_score,perplex,word_count,char_count,garbage_density,symbol,upper,repeated,ldl_fuses,fused_words,gibberish,word_weird,vowel_ratio,rot_ratio,quality_score,categ,caps_header,allcaps_novowel,lowppl_clear,cleanprose_clear,trash_threshold,noisy_threshold,clear_threshold,pp_dedup,pp_surrounded_trash,pp_inverted_run
+CTX000000001,1,1,Výzkumná zpráva č. 1/2024 — Hradiště u Horní Mezí,,,ces_Latn,1.0,30.62,9,49,0.0204,0,0,0,0,0,0,0.0,0.3939,0.4545,0.9,Clear,False,False,True,False,False,False,False,False,False,False
+CTX000000001,1,2,Terénní výzkum provedl Jan Novotný v červnu 2024.,,,ces_Latn,0.9996,42.5,8,49,0.0,0,0,0,0,0,0,0.0,0.3514,0.6216,0.9118,Clear,False,False,True,False,False,False,False,False,False,False
+CTX000000001,2,1,Nalezená keramika pochází z raného středověku.,,,ces_Latn,1.0,36.25,6,46,0.0,0,0,0,0,0,0,0.0,0.45,0.475,0.9301,Clear,False,False,True,False,False,False,False,False,False,False
+CTX000000001,2,2,Výzkum byl financován z projektu DEMO.,,,ces_Latn,1.0,34.75,6,38,0.0,0,0,1,0,0,0,0.0583,0.375,0.625,0.9192,Clear,False,False,True,False,False,False,False,False,False,False

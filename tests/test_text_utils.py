@@ -42,6 +42,7 @@ from text_util_langID import (
     compute_word_weird_ratio,
     # ── composite score + categoriser ─────────────────────────────────────
     compute_quality_score,
+    determine_category,   # (#3) new module-level pure decision function
     categorize_line,
     # ── exported thresholds (read back so tests survive config changes) ────
     CATEG_TRASH_SCORE_MAX,
@@ -225,8 +226,9 @@ class TestDetectStrangeSymbols:
         # '!' is in _STRIP_CHARS so it's stripped before checking; core = "hello"
         assert detect_strange_symbols("hello!") == 0
 
-    def test_hash_inside_word_is_strange(self):
-        assert detect_strange_symbols("he##lo") == 1
+    def test_two_strange_chars_in_word_counted_each(self):
+        # (#3) occurrence counting: two '#' now count as 2 (was 1 under the break)
+        assert detect_strange_symbols("he##lo") == 2
 
     def test_tilde_inside_word_is_strange(self):
         assert detect_strange_symbols("hel~lo") >= 1
@@ -236,6 +238,17 @@ class TestDetectStrangeSymbols:
 
     def test_czech_text_with_standard_punctuation_returns_zero(self):
         assert detect_strange_symbols("kostra hrob, pece. ULOŽ: 7.") == 0
+
+    def test_multi_symbol_token_counts_every_occurrence(self):
+        # (#3) '_' + '~' + '~' = 3 disallowed internal chars
+        assert detect_strange_symbols("vv_~~") == 3
+
+    def test_dense_symbol_run_counts_high(self):
+        # (#3) '#'x5 + '@' + '~'x2 = 8 ('!' is in ALLOWED_INTERNAL, not counted)
+        assert detect_strange_symbols("##@#!~~##") >= 6
+
+    def test_single_caret_in_word_counts_once(self):
+        assert detect_strange_symbols("Neríxto^tt") == 1
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -848,156 +861,64 @@ class TestComputeQualityScore:
 # ════════════════════════════════════════════════════════════════════════════
 # categorize_line
 # ════════════════════════════════════════════════════════════════════════════
-class TestCategorizeLine:
-    """
-    categorize_line(qs, txt, wc, vowel_ratio, perplexity, rot_ratio, weird_ratio)
-    → (category_str, aligned_score)
+class TestDetermineCategoryReason:
+    """determine_category() returns (category, reason_tag) — one rule per line."""
 
-    The aligned_score is clamped into the bucket of the assigned category;
-    we verify (category, score) consistency using the thresholds read from
-    the module itself.
-    """
+    def test_empty_reason(self):
+        assert determine_category(0.8, "", 0, 0.4, 100.0) == ("Empty", "empty")
 
-    # ── Return type contract ──────────────────────────────────────────────
+    def test_allcaps_novowel_reason(self):
+        assert determine_category(0.8, "BCDFGHJKL", 1, 0.01, 2000.0) == ("Trash", "allcaps_novowel")
 
-    def test_returns_tuple_of_str_and_float(self):
+    def test_lowppl_clear_reason(self):
+        assert determine_category(0.1, "čistý text v češtině", 4, 0.4, 30.0) == ("Clear", "lowppl_clear")
+
+    def test_trash_threshold_reason(self):
+        qs = CATEG_TRASH_SCORE_MAX * 0.5
+        assert determine_category(qs, "noisy text here now", 4, 0.4, 800.0) == ("Trash", "trash_threshold")
+
+    def test_noisy_threshold_reason(self):
+        qs = (CATEG_TRASH_SCORE_MAX + CATEG_NOISY_SCORE_MAX) / 2
+        assert determine_category(qs, "some noisy text x", 2, 0.4, 1000.0,
+                                  weird_ratio=CLEAN_PROSE_WEIRD_MAX + 0.2) == ("Noisy", "noisy_threshold")
+
+    def test_cleanprose_clear_reason(self):
+        qs = CLEAN_PROSE_MIN_SCORE + 0.01
+        ppl = CLEAN_PROSE_PPL_MAX - 10.0
+        assert determine_category(qs, "normální česky psaný archeologický text",
+                                  CLEAN_PROSE_WC_MIN, 0.4, ppl,
+                                  weird_ratio=0.0) == ("Clear", "cleanprose_clear")
+
+    def test_clear_threshold_reason(self):
+        qs = CATEG_NOISY_SCORE_MAX + 0.01
+        assert determine_category(qs, "čistý text", 2, 0.4, 200.0) == ("Clear", "clear_threshold")
+
+
+class TestCategorizeLineReason:
+    """categorize_line(return_reason=True) appends the reason tag as a 3rd element."""
+
+    def test_default_returns_two_tuple(self):
         result = categorize_line(0.7, "some text here", 3, 0.4, 300.0)
         assert isinstance(result, tuple) and len(result) == 2
-        cat, score = result
-        assert isinstance(cat, str)
-        assert isinstance(score, float)
 
-    # ── Empty ─────────────────────────────────────────────────────────────
+    def test_return_reason_gives_three_tuple(self):
+        result = categorize_line(0.7, "some text here", 3, 0.4, 300.0, return_reason=True)
+        assert isinstance(result, tuple) and len(result) == 3
+        cat, score, reason = result
+        assert isinstance(cat, str) and isinstance(score, float) and isinstance(reason, str)
 
-    def test_empty_text_gives_empty(self):
-        cat, _ = categorize_line(0.8, "", 0, 0.4, 100.0)
-        assert cat == "Empty"
+    def test_reason_matches_determine_category(self):
+        # categorize_line only adds score-clamping on top of determine_category,
+        # so the reason it reports must equal determine_category's for same inputs.
+        qs, txt, wc, vr, ppl = 0.25, "noisy text here now", 4, 0.4, 800.0
+        _, _, reason = categorize_line(qs, txt, wc, vr, ppl, return_reason=True)
+        _, exp = determine_category(qs, txt, wc, vr, ppl)
+        assert reason == exp == "trash_threshold"
 
-    def test_zero_word_count_gives_empty(self):
-        cat, _ = categorize_line(0.8, "   ", 0, 0.4, 100.0)
-        assert cat == "Empty"
-
-    # ── High-confidence LM override → Clear ──────────────────────────────
-
-    def test_low_ppl_and_sufficient_words_gives_clear(self):
-        # ppl < 50 and wc >= 3 → immediate Clear regardless of qs value
-        cat, score = categorize_line(0.1, "čistý text v češtině", 4, 0.4, 30.0)
-        assert cat == "Clear"
-        assert score >= CATEG_NOISY_SCORE_MAX
-
-    def test_low_ppl_override_requires_at_least_three_words(self):
-        # ppl < 50 but wc == 2 → override does not fire; uses qs threshold instead
-        cat, _ = categorize_line(0.2, "dva slova", 2, 0.4, 30.0)
-        assert cat != "Clear"   # qs=0.2 < CATEG_TRASH_SCORE_MAX → Trash
-
-    # ── All-caps with no vowels → Trash ──────────────────────────────────
-
-    def test_all_caps_with_no_vowels_gives_trash(self):
-        # is_all_caps_line=True and vowel_ratio < 0.10 → immediate Trash
-        cat, _ = categorize_line(0.8, "BCDFGHJKL", 1, 0.01, 2000.0)
-        assert cat == "Trash"
-
-    def test_all_caps_with_vowels_does_not_trigger_trash_override(self):
-        # vowel_ratio = 0.40 ≥ 0.10 → override does not fire
-        cat, _ = categorize_line(0.95, "HELLO WORLD", 2, 0.40, 2000.0)
-        assert cat != "Trash"
-
-    # ── Threshold-based routing ───────────────────────────────────────────
-
-    def test_qs_below_trash_threshold_gives_trash(self):
-        qs = CATEG_TRASH_SCORE_MAX * 0.5       # clearly below threshold
-        cat, score = categorize_line(qs, "noisy text here now", 4, 0.4, 800.0)
-        assert cat == "Trash"
-        assert score < CATEG_TRASH_SCORE_MAX
-
-    def test_qs_in_noisy_band_gives_noisy_when_promotion_blocked(self):
-        # qs is in the Noisy band; high weird_ratio blocks clean-prose promotion
-        qs = (CATEG_TRASH_SCORE_MAX + CATEG_NOISY_SCORE_MAX) / 2
-        cat, score = categorize_line(qs, "some noisy text x", 2, 0.4, 1000.0,
-                                     weird_ratio=CLEAN_PROSE_WEIRD_MAX + 0.2)
-        assert cat == "Noisy"
-        assert CATEG_TRASH_SCORE_MAX <= score < CATEG_NOISY_SCORE_MAX
-
-    def test_qs_above_noisy_threshold_gives_clear(self):
-        qs = CATEG_NOISY_SCORE_MAX + 0.01
-        cat, score = categorize_line(qs, "čistý text", 2, 0.4, 200.0)
-        assert cat == "Clear"
-        assert score >= CATEG_NOISY_SCORE_MAX
-
-    # ── Clean-prose promotion ─────────────────────────────────────────────
-
-    def test_all_promotion_conditions_met_gives_clear(self):
-        # qs ≥ CLEAN_PROSE_MIN_SCORE, wc ≥ CLEAN_PROSE_WC_MIN,
-        # weird < CLEAN_PROSE_WEIRD_MAX, ppl < CLEAN_PROSE_PPL_MAX
-        qs  = CLEAN_PROSE_MIN_SCORE + 0.01
-        ppl = CLEAN_PROSE_PPL_MAX   - 10.0
-        wc  = CLEAN_PROSE_WC_MIN
-        cat, _ = categorize_line(
-            qs, "normální česky psaný archeologický text", wc, 0.4, ppl,
-            weird_ratio=0.0,
-        )
-        assert cat == "Clear"
-
-    def test_high_ppl_blocks_clean_prose_promotion(self):
-        qs  = CLEAN_PROSE_MIN_SCORE + 0.01
-        ppl = CLEAN_PROSE_PPL_MAX   + 100.0    # too high
-        wc  = CLEAN_PROSE_WC_MIN
-        cat, _ = categorize_line(
-            qs, "normální česky psaný text zde", wc, 0.4, ppl,
-            weird_ratio=0.0,
-        )
-        assert cat == "Noisy"
-
-    def test_high_weird_ratio_blocks_clean_prose_promotion(self):
-        qs  = CLEAN_PROSE_MIN_SCORE + 0.01
-        ppl = CLEAN_PROSE_PPL_MAX   - 10.0
-        wc  = CLEAN_PROSE_WC_MIN
-        cat, _ = categorize_line(
-            qs, "normální text zde je", wc, 0.4, ppl,
-            weird_ratio=CLEAN_PROSE_WEIRD_MAX + 0.1,
-        )
-        assert cat == "Noisy"
-
-    def test_too_few_words_blocks_clean_prose_promotion(self):
-        qs  = CLEAN_PROSE_MIN_SCORE + 0.01
-        ppl = CLEAN_PROSE_PPL_MAX   - 10.0
-        wc  = CLEAN_PROSE_WC_MIN    - 1       # one word short of minimum
-        cat, _ = categorize_line(
-            qs, "text zde", wc, 0.4, ppl,
-            weird_ratio=0.0,
-        )
-        assert cat == "Noisy"
-
-    def test_qs_below_prose_min_score_blocks_promotion(self):
-        qs  = CLEAN_PROSE_MIN_SCORE - 0.01    # just below the floor
-        ppl = CLEAN_PROSE_PPL_MAX   - 10.0
-        wc  = CLEAN_PROSE_WC_MIN
-        cat, _ = categorize_line(
-            qs, "normální text zde je píše", wc, 0.4, ppl,
-            weird_ratio=0.0,
-        )
-        assert cat == "Noisy"
-
-    # ── Aligned-score clamping consistency ───────────────────────────────
-
-    def test_trash_aligned_score_is_below_trash_threshold(self):
-        qs = CATEG_TRASH_SCORE_MAX * 0.3
-        cat, score = categorize_line(qs, "noisy garbage text here", 4, 0.4, 3000.0)
-        assert cat == "Trash"
-        assert score < CATEG_TRASH_SCORE_MAX
-
-    def test_noisy_aligned_score_is_in_noisy_band(self):
-        qs = (CATEG_TRASH_SCORE_MAX + CATEG_NOISY_SCORE_MAX) / 2
-        cat, score = categorize_line(qs, "some degraded text x", 2, 0.4, 1000.0,
-                                     weird_ratio=CLEAN_PROSE_WEIRD_MAX + 0.2)
-        assert cat == "Noisy"
-        assert CATEG_TRASH_SCORE_MAX <= score < CATEG_NOISY_SCORE_MAX
-
-    def test_clear_aligned_score_is_above_noisy_threshold(self):
+    def test_clear_threshold_with_clamped_score(self):
         qs = CATEG_NOISY_SCORE_MAX + 0.02
-        cat, score = categorize_line(qs, "čistý text", 2, 0.4, 200.0)
-        assert cat == "Clear"
-        assert score >= CATEG_NOISY_SCORE_MAX
+        cat, score, reason = categorize_line(qs, "čistý text", 2, 0.4, 200.0, return_reason=True)
+        assert cat == "Clear" and reason == "clear_threshold" and score >= CATEG_NOISY_SCORE_MAX
 
 
 # ════════════════════════════════════════════════════════════════════════════

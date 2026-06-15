@@ -57,7 +57,10 @@ CSV_HEADER = [
     "ldl_fuses", "fused_words", "gibberish",
     "word_weird", "vowel_ratio", "rot_ratio",
     "quality_score",
-    "categ", "caps_header"
+    "categ", "caps_header",
+    "allcaps_novowel", "lowppl_clear", "cleanprose_clear",
+    "trash_threshold", "noisy_threshold", "clear_threshold",
+    "pp_dedup", "pp_surrounded_trash", "pp_inverted_run"
 ]
 
 
@@ -88,7 +91,7 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
     except Exception as e:
         print(f"[GPU Engine] Failed to load model: {e}")
         if gpu_dead is not None:
-            gpu_dead.set()   # (#6) signal CPU workers so they don't hang
+            gpu_dead.set()  # (#6) signal CPU workers so they don't hang
         return
 
     while True:
@@ -115,6 +118,7 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
 
 
 worker_models = {}
+
 
 def init_cpu_worker():
     """Initializes the CPU-bound FastText model once per spawned process."""
@@ -220,11 +224,21 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             rot_ratio=rot_ratio,
         )
 
-        categ, q_score = categorize_line(
+        categ, q_score, reason = categorize_line(
             q_score, text_content, wc, vowel_ratio, ppl_val,
             rot_ratio=rot_ratio,
             weird_ratio=weird_ratio,
+            return_reason=True
         )
+
+        flags = {
+            "allcaps_novowel": reason == "allcaps_novowel",
+            "lowppl_clear": reason == "lowppl_clear",
+            "cleanprose_clear": reason == "cleanprose_clear",
+            "trash_threshold": reason == "trash_threshold",
+            "noisy_threshold": reason == "noisy_threshold",
+            "clear_threshold": reason == "clear_threshold",
+        }
 
         row = [
             file_id, page_id, line_num, text_content,
@@ -233,7 +247,10 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             sym_count, upper_count, rep_count,
             fuse_count, fused_words, gibb_count,
             f"{weird_ratio:.4f}", f"{vowel_ratio:.4f}", f"{rot_ratio:.4f}",
-            f"{q_score:.4f}", categ, caps_header
+            f"{q_score:.4f}", categ, caps_header,
+            flags["allcaps_novowel"], flags["lowppl_clear"], flags["cleanprose_clear"],
+            flags["trash_threshold"], flags["noisy_threshold"], flags["clear_threshold"],
+            False, False, False
         ]
         results.append(row)
 
@@ -297,7 +314,8 @@ def process_document(task):
                     write_rows_to_doc(Path(output_dir), file_id, [[
                         file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
                         "N/A", "0.0000", "0.00", 0, len(clean_merged), "0.0000",
-                        0, 0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", "0.0000", cat, False
+                        0, 0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", "0.0000", cat, False,
+                        False, False, False, False, False, False, False, False, False
                     ]])
                     continue
 
@@ -332,7 +350,11 @@ def process_document(task):
             if not df.empty:
                 text_modes = df.groupby("text", dropna=False)["categ"].transform(
                     lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
+                changed_by_dedup = df["categ"] != text_modes
                 df["categ"] = text_modes
+                if "pp_dedup" not in df.columns:
+                    df["pp_dedup"] = False
+                df.loc[changed_by_dedup, "pp_dedup"] = True
 
                 if len(df) >= 5:
                     prev_cat = df["categ"].shift(1)
@@ -347,12 +369,18 @@ def process_document(task):
                             (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
                     )
                     df.loc[surrounded_by_trash, "categ"] = "Trash"
+                    if "pp_surrounded_trash" not in df.columns:
+                        df["pp_surrounded_trash"] = False
+                    df.loc[surrounded_by_trash, "pp_surrounded_trash"] = True
 
                 CZ_DIACS = set("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ")
                 MIN_RUN = 4
 
                 def _has_cz_diacs(text):
                     return any(c in CZ_DIACS for c in str(text))
+
+                if "pp_inverted_run" not in df.columns:
+                    df["pp_inverted_run"] = False
 
                 for page_id, page_df in df.groupby("page_num"):
                     candidates = page_df[~page_df["categ"].isin(["Empty", "Non-text"])].copy()
@@ -376,10 +404,12 @@ def process_document(task):
                         else:
                             if run_len >= MIN_RUN:
                                 df.loc[run_indices, "categ"] = "Trash"
+                                df.loc[run_indices, "pp_inverted_run"] = True
                             run_len = 0
                             run_indices = []
                     if run_len >= MIN_RUN:
                         df.loc[run_indices, "categ"] = "Trash"
+                        df.loc[run_indices, "pp_inverted_run"] = True
 
             df.to_csv(out_path, index=False)
 
@@ -431,7 +461,7 @@ def main():
     manager = mp.Manager()
     task_queue = manager.Queue()
     result_dict = manager.dict()
-    gpu_dead = manager.Event()   # (#6) shared liveness signal for the GPU worker
+    gpu_dead = manager.Event()  # (#6) shared liveness signal for the GPU worker
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
     print(f"[Main] Ensuring {MODEL_NAME} is cached...")
@@ -514,6 +544,7 @@ def main():
         logger.finalize(input_total=total_tasks)
 
     print(f"All done! Processed {total_processed} total lines.")
+
 
 if __name__ == "__main__":
     mp.set_start_method('spawn', force=True)
