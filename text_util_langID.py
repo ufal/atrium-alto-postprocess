@@ -158,14 +158,13 @@ def compute_rotatable_ratio(text: str) -> float:
     return rotatable_count / len(alpha_chars)
 
 def detect_strange_symbols(text: str) -> int:
-    """Counts the occurrences of non-standard internal symbols within words."""
+    """Counts strange-symbol OCCURRENCES (per disallowed internal char) across words."""
     count = 0
     for word in text.split():
         core = word.strip(_STRIP_CHARS)
-        if not core: continue
-        for ch in core:
-            if not ch.isalnum() and ch not in ALLOWED_INTERNAL:
-                count += 1
+        if not core:
+            continue
+        count += sum(1 for ch in core if not ch.isalnum() and ch not in ALLOWED_INTERNAL)
     return count
 
 def detect_repeated_chars(text: str) -> int:
