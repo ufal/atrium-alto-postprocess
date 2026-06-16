@@ -12,6 +12,9 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: read
+      packages: write
     uses: ufal/atrium-project/.github/workflows/docker-tool.reusable.yml@master
     secrets: inherit
     with:
