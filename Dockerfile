@@ -45,10 +45,7 @@ RUN git clone --filter=blob:none --no-checkout --depth 1 \
 # 3) FastText LID weights -> $MODEL_DIR/lid.176.bin, symlinked to the bare CWD path
 #    the batch pipeline (langID_classify.py:99) loads.
 #
-#    The previous bare `wget -q ... model.bin` exited 8 ("server issued an error
-#    response") in CI: Hugging Face / Cloudflare intermittently answers datacenter
-#    (Azure-hosted runner) IPs with 403/429/5xx, and with no retries a single
-#    transient blip failed the whole `docker build`. This hardened fetch:
+#    Hardened fetch:
 #      * follows the canonical ?download=true redirect to the LFS CDN,
 #      * sends a non-empty User-Agent (Cloudflare rejects some empty-UA bots),
 #      * retries transient HTTP errors and connection drops with backoff,
