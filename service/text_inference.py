@@ -7,17 +7,15 @@ Classification is fully aligned with the main pipeline (langID_classify.py):
   - Unified penalty path : categorize_line() from text_util_langID
   - New API fields       : word_weird, garbage_density, ldl_fuses, etc.
 """
-import torch
-import fasttext
-from transformers import LayoutLMv3ForTokenClassification, AutoModelForCausalLM, AutoTokenizer
+"""
+service/text_inference.py
+Manages the LayoutReader, FastText, and DistilGPT2/Qwen models.
+"""
 import os
 import sys
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-# REMOVED global imports for fasttext and transformers to prevent
-# test-collection crashes. They are now lazy-loaded in load_models().
 
 # ---------------------------------------------------------------------------
 # PATH SETUP
@@ -28,9 +26,9 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 try:
-    from .utils import parse_alto_xml
+    from .utils import parse_alto_xml, normalize_boxes
 except ImportError:
-    from utils import parse_alto_xml
+    from utils import parse_alto_xml, normalize_boxes
 
 try:
     from v3.helpers import prepare_inputs, boxes2inputs, parse_logits
@@ -47,6 +45,7 @@ try:
         compute_symbol_ratio, compute_quality_score, categorize_line as _categorize_line_struct,
         pre_filter_line, calculate_perplexity_batch, COMMON_LANGS
     )
+
     _UTIL_AVAILABLE = True
 except ImportError as _err:
     logging.getLogger(__name__).warning(
@@ -64,11 +63,10 @@ FASTTEXT_MODEL_PATH = MODEL_DIR / "lid.176.bin"
 
 class TextModelManager:
     def __init__(self) -> None:
-        import torch
-        self.device       = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"  # Initialized here, updated properly in load_models
         self.layout_model: Optional[Any] = None
-        self.ft_model:     Optional[Any] = None
-        self.ppl_model:    Optional[Any] = None
+        self.ft_model: Optional[Any] = None
+        self.ppl_model: Optional[Any] = None
         self.ppl_tokenizer: Optional[Any] = None
         self._models_loaded = False
 
@@ -77,10 +75,12 @@ class TextModelManager:
         if self._models_loaded:
             return
 
+        import torch
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info("Loading Text Processing Models on %s …", self.device)
 
         try:
-            # LAZY LOAD heavy ML libraries here
+            # LAZY LOAD heavy ML libraries strictly inside this method
             import fasttext
             from transformers import LayoutLMv3ForTokenClassification, AutoModelForCausalLM, AutoTokenizer
 

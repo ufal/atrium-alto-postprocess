@@ -443,6 +443,13 @@ def main():
 
     MODEL_NAME = config.get("CLASSIFY", "MODEL_NAME", fallback="Qwen/Qwen2.5-0.5B")
 
+    # [NEW] Guard against scale mismatch
+    if "qwen" in MODEL_NAME.lower() and PERPLEXITY_THRESHOLD_MAX > 500.0:
+        print(f"\n[WARNING] Configuration Mismatch: You are using '{MODEL_NAME}'.")
+        print(f"          PERPLEXITY_THRESHOLD_MAX is set to {PERPLEXITY_THRESHOLD_MAX}.")
+        print("          Qwen generally produces much lower perplexities than DistilGPT2.")
+        print("          Consider lowering the threshold to avoid false 'Clear' categorizations.\n")
+
     EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng")
     EXPECTED_LANGS = [lang.strip() for lang in EXPECTED_LANGS_STR.split(",") if lang.strip()]
 

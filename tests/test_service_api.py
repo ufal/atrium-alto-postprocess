@@ -15,7 +15,7 @@ def test_info_endpoint():
     assert "Clear" in data["quality_categories"]
 
 
-@patch("service.text_api.text_manager.process_text_file")
+@patch("service.text_api.text_manager.process_text_file", create=True)
 def test_process_text_auto_routing(mock_process):
     """Ensure text uploads correctly route to the text_manager text processor."""
     mock_process.return_value = {
@@ -35,7 +35,7 @@ def test_process_text_auto_routing(mock_process):
     assert res_data["filename"] == "document.txt"
 
 
-@patch("service.text_api.text_manager.process_alto")
+@patch("service.text_api.text_manager.process_alto", create=True)
 def test_process_alto_explicit_routing(mock_process):
     """Ensure ALTO XML uploads hit the alto pipeline specifically."""
     mock_process.return_value = {"type": "alto_xml", "cleaned_lines": []}

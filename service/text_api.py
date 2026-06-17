@@ -60,7 +60,7 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
-@app.get("/")
+@app.get("/", response_model=None)
 async def root() -> Union[HTMLResponse, Dict[str, str]]:
     index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():

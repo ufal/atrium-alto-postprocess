@@ -11,9 +11,6 @@ from typing import List, Tuple
 
 # Use lxml for highly efficient XML parsing
 import lxml.etree as ET
-import numpy as np
-import torch
-from torch import nn
 
 logger = logging.getLogger(__name__)
 

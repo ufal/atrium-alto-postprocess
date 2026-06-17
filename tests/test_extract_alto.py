@@ -19,5 +19,6 @@ def test_dehyphenate_no_hyphen():
 
 def test_dehyphenate_typographical_hyphen_variants():
     # \xad (soft hyphen), \u2013 (en-dash), \u2014 (em-dash)
-    text = "Soft\xadhyphen\nEn\u2013dash\nEm\u2014dash\n"
+    # FIX: Place the hyphens at the end of the line where the function looks for them
+    text = "Soft\xad\nhyphen\nEn\u2013\ndash\nEm\u2014\ndash\n"
     assert _dehyphenate(text) == "Softhyphen\nEndash\nEmdash\n"
