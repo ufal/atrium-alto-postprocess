@@ -13,6 +13,9 @@ and rules for contributors.
 
 ## 📦 Release History
 
+> [!NOTE] This repository is currently in the `v0.x` pre-release phase. The path to a stable `v1.0.0` will be triggered 
+> once the `run_pipeline.py` batch orchestrator and the `service/text_api.py` FastAPI wrapper are fully load-tested in production and the `atrium-project` monorepo reaches its stable milestone.*
+
 | Version     | Highlights                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Status      |
 |:------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------|
 | **v0.18.0** | Diagnostic rule flags and exact symbol occurrence counting (Added 9 boolean diagnostic columns to track which categorization rule or post-processing override decided the final label, modified `detect_strange_symbols` to return exact occurrence counts of disallowed internal characters, extracted `determine_category` for reason-tag tracking, updated unit test coverage and documentation). And Docker wrapper update to fix GH actions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Pre-release |
@@ -164,7 +167,26 @@ Allowed types:
 
 ## 🧪 Code Conventions & Testing
 
-### Code Conventions
+### Code Conventions & Linting
+
+This repository has standardized on **Ruff** for all linting and formatting,
+replacing legacy tools (`flake8`, `black`, `isort`). 
+
+Before committing, ensure your code complies by running the pre-commit hooks. 
+This prevents CI failures in the `test` branch:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+If you need to run the linter manually, use:
+
+```bash
+ruff check . --fix
+ruff format .
+```
 
 * **Comments:** informative but short, may be LLM-generated, added when function name does 
 not explain its functionality in detail

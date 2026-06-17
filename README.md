@@ -1005,6 +1005,21 @@ identify files that need another round of **OCR** 🔍 or manual correction base
 majority of **Clear** ✅ lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of **Trash** 🗑️ lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.
 
+
+## API Service Integration
+
+In addition to the batch pipeline, this repository ships with a FastAPI wrapper (`service/text_api.py`) that exposes 
+the core `text_util_langID` quality classification engine over HTTP.
+
+The batch pipeline and the API service share the same configurations and categorization logic to ensure zero drift 
+between local processing and web uploads. 
+
+For deployment instructions, endpoint specifications (`/process`, `/info`), and frontend integration details, 
+please see the dedicated **[Service Documentation](service/README.md)**.
+
+
+
+
 ## Paradata logging
 
 This project incorporates a unified provenance and **paradata** 🗒️ logging system to seamlessly track the execution
