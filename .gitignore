@@ -14,3 +14,4 @@ lid.176.bin
 .cache/
 *.log
 .env
+.idea/
