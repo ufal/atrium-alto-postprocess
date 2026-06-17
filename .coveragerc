@@ -1,0 +1,19 @@
+[run]
+source = .
+omit =
+    tests/*
+    venv/*
+    .venv/*
+    *_paradata.py
+    para_licenses.py
+
+[report]
+# Fail standard pipeline CI under a baseline coverage (optional, uncomment to ratchet)
+# fail_under = 65
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    pass
+    except ImportError:

@@ -5,6 +5,8 @@ Helper functions for ALTO parsing, box normalization, and text reconstruction.
 import re
 import sys
 import logging
+import configparser
+from pathlib import Path
 from typing import List, Tuple
 
 # Use lxml for highly efficient XML parsing
@@ -15,12 +17,26 @@ from torch import nn
 
 logger = logging.getLogger(__name__)
 
-# --- Constants ---
-COMMON_LANGS = ["ces", "deu", "eng"]
-PERPLEXITY_THRESHOLD_MAX = 5000
-PERPLEXITY_THRESHOLD_MIN = 1500
-LANG_SCORE_ROUGH = 0.45
-LANG_SCORE_CLEAR = 0.75
+# --- Configuration & Constants ---
+_config = configparser.RawConfigParser()
+# Locate config_langID.txt in the project root
+_config_path = Path(__file__).resolve().parent.parent / "config_langID.txt"
+if _config_path.exists():
+    _config.read(_config_path)
+
+def _get_float(section, key, default):
+    return _config.getfloat(section, key, fallback=default) if _config.has_section(section) else default
+
+if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
+    COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
+else:
+    COMMON_LANGS = ["ces", "deu", "eng"]
+
+# Sourced directly from config_langID.txt rather than hard-coding stale values
+PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
+PERPLEXITY_THRESHOLD_MIN = _get_float("TEXT_UTILS", "SHORT_PPL_CAP", 850.0)
+LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
+LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
 # (#5) Hardened parser for UNTRUSTED ALTO uploaded via the FastAPI /process
 # endpoint. The default lxml parser resolves entities and may hit the network,
@@ -35,7 +51,6 @@ _SAFE_PARSER = ET.XMLParser(
     dtd_validation=False,
     huge_tree=False,
 )
-
 
 def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int, int]]:
     """
@@ -145,7 +160,7 @@ def categorize_line(lang_code: str, score: float, ppl: float, text: str, weird_r
     is_common = any(lang_code.startswith(cl) for cl in COMMON_LANGS)
 
     # Hard override matching the new logic
-    if ppl > 500.0 and weird_ratio > 0.4:
+    if ppl > PERPLEXITY_THRESHOLD_MAX and weird_ratio > 0.4:
         return "Trash"
 
     # Heuristic for short lines
@@ -159,5 +174,3 @@ def categorize_line(lang_code: str, score: float, ppl: float, text: str, weird_r
         return "Noisy"
 
     return "Trash"
-
-# ... (Rest of utility functions similarly typed)

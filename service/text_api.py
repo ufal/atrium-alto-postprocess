@@ -3,6 +3,7 @@ service/text_api.py
 FastAPI wrapper for the ATRIUM text processing service.
 """
 import os
+import sys
 import shutil
 import tempfile
 from pathlib import Path
@@ -14,8 +15,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from text_inference import text_manager
+# FIX: Add the service directory to sys.path explicitly so 'text_inference'
+# can be imported whether run via uvicorn locally or via pytest from the root.
+_current_dir = Path(__file__).resolve().parent
+if str(_current_dir) not in sys.path:
+    sys.path.insert(0, str(_current_dir))
 
+from text_inference import text_manager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

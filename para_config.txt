@@ -1,10 +1,9 @@
 # para_config.txt — atrium-alto-postprocess
 # Repository-specific paradata facts. Edit this file (not the Python) when
 # components or versions change.
-
 [tool]
 program = alto-postprocess
-version = v0.15.5
+version = v0.18.0
 repository_fallback = https://github.com/ufal/atrium-alto-postprocess
 
 [components]
@@ -15,8 +14,10 @@ repository_fallback = https://github.com/ufal/atrium-alto-postprocess
 # Baseline (worst-case) components are flagged "always" so every run inherits at
 # least the project-wide CC BY-NC 4.0 floor set by the FastText LID weights —
 # the shared invariant asserted by tests/test_paradata.py across all four repos.
+#
 # The perplexity model and the GPU-bound extraction backends are conditional:
 # they are recorded only by the script that actually loads them.
+
 alto_tools     = Apache-2.0      ; always      ; alto-tools statistics + text extraction (alto-tools method)
 fasttext       = CC BY-NC 4.0    ; always      ; FastText language identification weights (langID_classify)
 qwen2.5_0.5b   = Apache-2.0      ; conditional ; Qwen2.5-0.5B multilingual perplexity model (default)
