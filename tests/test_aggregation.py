@@ -6,8 +6,8 @@ import numpy as np
 from langID_aggregate_STAT import _sum_metrics
 
 
-def test_sum_metrics_basic():
-    # Mock a dataframe representing a DOC_LINE_CATEG CSV
+def test_sum_metrics_basic_with_new_columns():
+    # Mock a dataframe representing a DOC_LINE_CATEG CSV containing new columns
     df = pd.DataFrame({
         "file": ["doc1", "doc1", "doc1"],
         "page_num": [1, 1, 1],
@@ -22,7 +22,15 @@ def test_sum_metrics_basic():
         "vowel_ratio": [0.4, 0.3, 0.0],
         "rot_ratio": [0.0, 0.0, 0.1],
         "lang": ["ces", "ces", "deu"],
-        "caps_header": [False, False, False]
+        "caps_header": [False, False, False],
+        # --- New columns added to verify survival/no-crash ---
+        "original_text": ["a", "b", "c"],
+        "original_lang": ["ces", "ces", "deu"],
+        "orig_lang_score": [0.95, 0.8, 0.4],
+        "weird_wx": [0, 0, 1],
+        "pp_dedup": [False, False, False],
+        "pp_surrounded_trash": [False, False, False],
+        "pp_inverted_run": [False, False, False],
     })
 
     res = _sum_metrics(df)

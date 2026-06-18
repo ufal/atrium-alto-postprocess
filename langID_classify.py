@@ -238,8 +238,11 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         word_scores = score_words_in_line(text_content)
         weird_ratio = compute_word_weird_ratio(word_scores)
 
+        # Calculate valid_ratio here to thread into both categorization steps
+        valid_ratio = compute_valid_ratio(text_content)
+
         q_score = compute_quality_score(
-            valid_word_ratio=compute_valid_ratio(text_content),
+            valid_word_ratio=valid_ratio,
             symbol_ratio=compute_symbol_ratio(text_content),
             perplexity=ppl_val,
             text_length=cc,
@@ -247,8 +250,6 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             vowel_ratio=vowel_ratio,
             garbage_density=g_density,
             lang_score=original_lang_score,
-            # (#13) w/x density is folded into the gibberish signal — no QS
-            # re-weighting — while still surfaced as the weird_wx column.
             gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
             fused_ratio=fused_words / max(wc, 1),
             rot_ratio=rot_ratio,
@@ -258,7 +259,8 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             q_score, text_content, wc, vowel_ratio, ppl_val,
             rot_ratio=rot_ratio,
             weird_ratio=weird_ratio,
-            return_reason=True
+            return_reason=True,
+            valid_word_ratio=valid_ratio
         )
 
         row_dict = {

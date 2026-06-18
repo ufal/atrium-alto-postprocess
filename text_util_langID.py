@@ -97,6 +97,10 @@ CLEAN_PROSE_WEIRD_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_WEIRD_MAX", 0.08)
 CLEAN_PROSE_PPL_MAX   = _get_float("TEXT_UTILS", "CLEAN_PROSE_PPL_MAX",   400.0)
 CLEAN_PROSE_WC_MIN    = _config.getint("TEXT_UTILS", "CLEAN_PROSE_WC_MIN", fallback=4)
 
+# Phase 4: Mostly-readable tightening and short-noisy penalization
+MOSTLY_READABLE_VALID_MIN = _get_float("TEXT_UTILS", "MOSTLY_READABLE_VALID_MIN", 0.85)
+SHORT_NOISY_QS_PENALTY    = _get_float("TEXT_UTILS", "SHORT_NOISY_QS_PENALTY", 0.0)
+
 # ---------------------------------------------------------------------------
 # (#3) Phase-2 calibration knobs — all defaults equal the shipped config so
 # older configs keep working unchanged.
@@ -651,25 +655,37 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 # ---------------------------------------------------------------------------
 
 def determine_category(quality_score: float, text_source: str, word_count: int,
-                       vr: float, ppl: float, weird_ratio: float = 0.0) -> tuple[str, str]:
+                       vr: float, ppl: float, weird_ratio: float = 0.0,
+                       valid_word_ratio: float = 1.0) -> tuple[str, str]:
     """Evaluates categorization rules and returns (category, reason_tag)."""
     if word_count == 0 or not text_source.strip():
         return "Empty", "empty"
     if is_all_caps_line(text_source) and vr < 0.10:
         return "Trash", "allcaps_novowel"
+
     if ppl < 50.0 and word_count >= 3:
+        if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+            return "Noisy", "noisy_threshold"
         return "Clear", "lowppl_clear"
 
     if quality_score < CATEG_TRASH_SCORE_MAX:
         return "Trash", "trash_threshold"
+
     if quality_score < CATEG_NOISY_SCORE_MAX:
         if (quality_score >= CLEAN_PROSE_MIN_SCORE
                 and word_count >= CLEAN_PROSE_WC_MIN
                 and weird_ratio < CLEAN_PROSE_WEIRD_MAX
                 and ppl < CLEAN_PROSE_PPL_MAX):
+            if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+                return "Noisy", "noisy_threshold"
             return "Clear", "cleanprose_clear"
         return "Noisy", "noisy_threshold"
+
+    if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+        return "Noisy", "noisy_threshold"
+
     return "Clear", "clear_threshold"
+
 
 def categorize_line(
         qs: float,
@@ -680,9 +696,10 @@ def categorize_line(
         rot_ratio: float = 0.0,
         weird_ratio: float = 0.0,
         return_reason: bool = False,
+        valid_word_ratio: float = 1.0,
 ) -> tuple[str, float] | tuple[str, float, str]:
     """Routes the line to its final categorization label based on its quality signals."""
-    categ, reason = determine_category(qs, txt, wc, vowel_ratio, perplexity, weird_ratio)
+    categ, reason = determine_category(qs, txt, wc, vowel_ratio, perplexity, weird_ratio, valid_word_ratio)
 
     if categ == "Trash":
         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
@@ -794,8 +811,9 @@ def compute_quality_score(
     norm_len = min(text_length / length_max, 1.0)
     norm_weird = 1.0 - min(weird_ratio, 1.0)
 
+    # Tightened #17 short noisy logic here:
     active_garbage_weight = QS_WEIGHT_GARBAGE
-    if text_length <= 12 and weird_ratio == 0.0:
+    if text_length <= 12 and weird_ratio == 0.0 and garbage_density < max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9):
         active_garbage_weight = active_garbage_weight / 2.0
 
     norm_garbage = 1.0 - min(garbage_density / max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9), 1.0)
@@ -844,5 +862,10 @@ def compute_quality_score(
         if lang_score is not None and lang_score >= 0.90:
             rot_penalty *= 0.5
 
-    final_score = max(0.0, base_score - rot_penalty)
+    # Apply short-noisy penalty
+    short_penalty = 0.0
+    if text_length <= 12 and (weird_ratio > 0.0 or garbage_density >= CATEG_GARBAGE_DENSITY_HIGH):
+        short_penalty = SHORT_NOISY_QS_PENALTY
+
+    final_score = max(0.0, base_score - rot_penalty - short_penalty)
     return min(1.0, final_score)

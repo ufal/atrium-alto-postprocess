@@ -20,10 +20,12 @@ and compiles final page-level stats, including:
 
 This process is parallelized using concurrent.futures.
 
-(#3) The per-document line CSVs now carry nine extra diagnostic boolean columns
-after `caps_header` (six categoriser-rule flags + three post-pass flags). This
-aggregation ignores them — page stats are unchanged — but a future revision could
-emit per-page rule-frequency sums from them.
+(#3) The per-document line CSVs now carry additional columns for transparency
+(`original_text`, `original_lang`, `orig_lang_score`, `weird_wx`) alongside the nine
+diagnostic boolean columns after `caps_header` (six categoriser-rule flags + three
+post-pass flags). This aggregation reads strictly by column name, safely ignoring
+the new fields — page stats are unchanged — but a future revision could emit
+per-page rule-frequency sums from them.
 """
 
 import argparse
