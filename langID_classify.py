@@ -243,7 +243,6 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
 
         q_score = compute_quality_score(
             valid_word_ratio=valid_ratio,
-            symbol_ratio=compute_symbol_ratio(text_content),
             perplexity=ppl_val,
             text_length=cc,
             weird_ratio=weird_ratio,
