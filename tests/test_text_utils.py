@@ -21,6 +21,49 @@ from text_util_langID import (
     CLEAN_PROSE_WEIRD_MAX, CLEAN_PROSE_PPL_MAX, CLEAN_PROSE_WC_MIN,
 )
 
+
+from langID_classify import CSV_HEADER, _fast_track_row, _row_from_dict
+
+def test_csv_header_and_fast_track_row_arity():
+    """Asserts that the fast-track row builder exactly matches the global CSV_HEADER length."""
+    row = _fast_track_row(
+        file_id="CTX000001", page_id="1", line_num=1,
+        clean_text="", original_text="",
+        split_ws="", split_we="", categ="Empty"
+    )
+    assert len(row) == len(CSV_HEADER), \
+        f"Fast-track row length ({len(row)}) does not match CSV_HEADER length ({len(CSV_HEADER)})."
+
+def test_row_from_dict_covers_header_exactly():
+    """Asserts that _row_from_dict enforces the exact column sequence and arity."""
+    dummy_dict = {col: "test_val" for col in CSV_HEADER}
+    try:
+        main_row = _row_from_dict(dummy_dict)
+        assert len(main_row) == len(CSV_HEADER)
+        assert main_row[0] == dummy_dict[CSV_HEADER[0]] # Check sequence preservation
+    except KeyError as e:
+        pytest.fail(f"_row_from_dict failed due to missing key matching CSV_HEADER: {e}")
+
+
+
+# To this (remove 'self'):
+def test_score_word_respects_exemptions():
+    # Academic titles should not receive a mid-uppercase penalty (score should be 0.0)
+    assert score_word("PhDr.") == 0.0
+    assert score_word("MUDr") == 0.0
+
+    # Valid measurements should not receive an LDL penalty
+    assert score_word("30cm") == 0.0
+    assert score_word("90,9g") == 0.0
+
+    # Backward letter-digit adjacency (OCR error) should be penalized
+    assert score_word("vyt1") > 0.0
+
+# Find this test in class TestDetectFusedWords:
+def test_three_consecutive_vowels_triggers(self):
+    # Change "krásnoočko" to an OCR fused string with 3+ vowels like "krásnoooučko"
+    assert detect_fused_words("krásnoooučko") >= 1
+
 # ════════════════════════════════════════════════════════════════════════════
 # Densities and Ratios
 # ════════════════════════════════════════════════════════════════════════════

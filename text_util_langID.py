@@ -380,28 +380,33 @@ def detect_gibberish_words(text: str) -> int:
             count += 1
     return count
 
+
 def _has_ldl(token: str) -> bool:
     """Measurement-aware letter-digit-letter test (#7).
 
-    Flags a token when a digit is immediately followed by a character that is
-    NOT a digit, NOT whitespace, NOT end-of-token, and NOT one of
-    LDL_ALLOWED_FOLLOW (.,/:%-;?)=) — UNLESS the alpha run that follows the digit
-    is a known measurement unit (LDL_UNITS). This catches OCR digit insertions
-    (vyt1ačená, w0rd, a1b, 5x) while leaving real measurements (30cm, 5mm, 12m,
-    90,9g, 5kg) untouched. Digit→digit is never a trigger (multi-digit numbers).
+    Flags digit->letter fusions (unless a valid unit) AND letter->digit
+    adjacency (e.g., 'vyt1').
     """
     n = len(token)
     for i, ch in enumerate(token):
         if not ch.isdigit():
             continue
+
         nxt = token[i + 1] if i + 1 < n else ""
-        if not nxt or nxt.isspace() or nxt.isdigit() or nxt in LDL_ALLOWED_FOLLOW:
-            continue
-        if nxt.isalpha():
-            run = _trailing_alpha_run(token, i + 1)
-            if run.lower() in LDL_UNITS:
-                continue  # measurement like 30cm / 5mm / 90,9g
-        return True
+        prev = token[i - 1] if i > 0 else ""
+
+        # 1. Check Forward: Digit followed by letter/symbol
+        if nxt and not nxt.isspace() and not nxt.isdigit() and nxt not in LDL_ALLOWED_FOLLOW:
+            if nxt.isalpha():
+                run = _trailing_alpha_run(token, i + 1)
+                if run.lower() in LDL_UNITS:
+                    continue  # Legitimate measurement like 30cm or 90,9g
+            return True
+
+        # 2. Check Backward: Letter immediately preceding a digit (e.g., vyt1)
+        if prev.isalpha():
+            return True
+
     return False
 
 def detect_letter_digit_letter(text: str) -> int:
@@ -580,23 +585,11 @@ def score_word(word: str) -> float:
     has_strange = any(not ch.isalnum() and ch not in ALLOWED_INTERNAL for ch in core)
     has_rep = _has_repeated_run(core)
 
-    has_ldl = False
-    prev2, prev1 = None, None
-    for ch in core:
-        if prev2 is not None and prev2.isalpha() and prev1 is not None and prev1.isdigit() and ch.isalpha():
-            has_ldl = True
-            break
-        prev2, prev1 = prev1, ch
-    has_uppercase = False
-    if len(core) >= 2 and not core.isupper():
-        lower_run = 0
-        for ch in core:
-            if ch.islower():
-                lower_run += 1
-            elif ch.isupper() and lower_run >= 1:
-                has_uppercase = True
-                break
+    # FIXED: Defer to the shared helpers to respect exemptions (measurements & titles)
+    has_ldl = _has_ldl(core)
+    has_uppercase = _is_mid_uppercase(core)
 
+    # Caps-prefix is evaluated separately here as it carries its own specific 0.20 penalty
     has_caps_prefix = False
     if len(core) >= 4 and not core.isupper():
         caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
