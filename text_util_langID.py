@@ -585,13 +585,13 @@ def score_word(word: str) -> float:
     has_strange = any(not ch.isalnum() and ch not in ALLOWED_INTERNAL for ch in core)
     has_rep = _has_repeated_run(core)
 
-    # FIXED: Defer to the shared helpers to respect exemptions (measurements & titles)
     has_ldl = _has_ldl(core)
     has_uppercase = _is_mid_uppercase(core)
 
     # Caps-prefix is evaluated separately here as it carries its own specific 0.20 penalty
     has_caps_prefix = False
-    if len(core) >= 4 and not core.isupper():
+    # FIXED: Exempt academic titles from the caps prefix penalty so MUDr -> 0.0
+    if len(core) >= 4 and not core.isupper() and core.rstrip('.') not in ACADEMIC_TITLES:
         caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
             has_caps_prefix = True
