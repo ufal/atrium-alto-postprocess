@@ -56,7 +56,6 @@ ALLOWED_INTERNAL = .-,+()"'—–:%;?!/
 STRIP_CHARS = .,;:!?()[]"'\/\
 
 QS_WEIGHT_VALID_WORD  = 0.25
-QS_WEIGHT_SYMBOL      = 0.13
 QS_WEIGHT_WEIRD       = 0.13
 QS_WEIGHT_PERPLEXITY  = 0.15
 QS_WEIGHT_LENGTH      = 0.05
@@ -86,20 +85,20 @@ CLEAN_PROSE_WC_MIN          = 4
 LANG_SCORE_REMAP            = 0.75
 SINGLE_CHAR_ALLOWED         = aAiIuUvVzZkKsS
 REPEAT_ALLOWED_CHARS        = oOuU
-REPEATED_DOUBLE_MIN         = 3
+REPEATED_DOUBLE_MIN         = 2
 VOWEL_RATIO_LOW             = 0.20
 VOWEL_RATIO_HIGH            = 0.70
 ACADEMIC_TITLES             = PhDr,MUDr,JUDr,MVDr,RNDr,PaedDr,CSc,DrSc,Ing,Mgr,Bc,PhD,DiS,prof,doc
 LDL_ALLOWED_FOLLOW          = .,/:%-;?)=
 LDL_UNITS                   = m,cm,mm,g,kg,km,ha,l,ml
-GARBAGE_KEEP_CHARS          =  ,.?!()/-
+GARBAGE_KEEP_CHARS          =
 FUSED_VOWEL_RUN_MIN         = 3
 WX_REPEAT_MIN               = 2
 ISOLATED_CHAR_RATIO_MAX     = 0.40
 ISOLATED_CHAR_MIN_TOKENS    = 3
 SYM_LET_DIG_NONTEXT         = true
 MOSTLY_READABLE_VALID_MIN   = 0.85
-SHORT_NOISY_QS_PENALTY      = 0.0
+SHORT_NOISY_QS_PENALTY      = 0.20
 
 [PIPELINE]
 METHOD        = layoutreader

@@ -99,7 +99,7 @@ CLEAN_PROSE_WC_MIN    = _config.getint("TEXT_UTILS", "CLEAN_PROSE_WC_MIN", fallb
 
 # Phase 4: Mostly-readable tightening and short-noisy penalization
 MOSTLY_READABLE_VALID_MIN = _get_float("TEXT_UTILS", "MOSTLY_READABLE_VALID_MIN", 0.85)
-SHORT_NOISY_QS_PENALTY    = _get_float("TEXT_UTILS", "SHORT_NOISY_QS_PENALTY", 0.0)
+SHORT_NOISY_QS_PENALTY    = _get_float("TEXT_UTILS", "SHORT_NOISY_QS_PENALTY", 0.20)
 
 # ---------------------------------------------------------------------------
 # (#3) Phase-2 calibration knobs — all defaults equal the shipped config so
@@ -119,7 +119,7 @@ SINGLE_CHAR_ALLOWED = _get_str("TEXT_UTILS", "SINGLE_CHAR_ALLOWED", "aAiIuUvVzZk
 REPEAT_ALLOWED_CHARS = _get_str("TEXT_UTILS", "REPEAT_ALLOWED_CHARS", "oOuU")
 # Minimum occurrence count for the doubled-char arm (guarded; 3 keeps Czech
 # doubles safe — dropping to a naive run-of-2 would falsely flag them).
-REPEATED_DOUBLE_MIN = _get_int("TEXT_UTILS", "REPEATED_DOUBLE_MIN", 3)
+REPEATED_DOUBLE_MIN = _get_int("TEXT_UTILS", "REPEATED_DOUBLE_MIN", 2)
 
 # Vowel-quality knees shared by the QS norm_vowel reward (#9) and gibberish (#8).
 VOWEL_RATIO_LOW  = _get_float("TEXT_UTILS", "VOWEL_RATIO_LOW",  0.20)
@@ -137,7 +137,7 @@ LDL_UNITS = _get_csv_set("TEXT_UTILS", "LDL_UNITS", "m,cm,mm,g,kg,km,ha,l,ml")
 
 # Garbage-density kept characters (#11). configparser strips the leading space
 # from the value, so the space is re-added explicitly here.
-GARBAGE_KEEP_CHARS = frozenset(_get_str("TEXT_UTILS", "GARBAGE_KEEP_CHARS", " ,.?!()/-")) | {" "}
+GARBAGE_KEEP_CHARS = frozenset(_get_str("TEXT_UTILS", "GARBAGE_KEEP_CHARS", "")) | {" "}
 
 # Minimum vowel-run length the fused-word detector treats as suspicious (#12).
 FUSED_VOWEL_RUN_MIN = _get_int("TEXT_UTILS", "FUSED_VOWEL_RUN_MIN", 3)
@@ -183,7 +183,7 @@ def _collapse_spaced_caps(m: re.Match) -> str:
     letters = m.group(0).replace(' ', '')
     return letters[0].upper() + letters[1:].lower()
 
-_RE_MID_UPPER: re.Pattern = re.compile(r'[a-záčďéěíňóřšťůúýžäöü][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽÄÖÜ]')
+# _RE_MID_UPPER: re.Pattern = re.compile(r'[a-záčďéěíňóřšťůúýžäöü][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽÄÖÜ]')
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
     "ces": frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ"),
@@ -193,18 +193,6 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
 # ---------------------------------------------------------------------------
 # Shared helpers (Phase 2) — reused by several detectors below
 # ---------------------------------------------------------------------------
-
-def _split_subtokens(word: str) -> list[str]:
-    """Split a whitespace token on internal '.' / '–' (U+2013), dropping empties.
-
-    DETECTOR-LOCAL ONLY. Used by detect_fused_words, detect_gibberish_words,
-    detect_repeated_chars and detect_wx_words to stop two real words glued by a
-    stray period/dash from masking each other's signals. It must NOT feed
-    word_count, compute_valid_ratio or score_word, or every wc-divided ratio
-    and wc-gated rule (and the aggregate total_word_count) would silently shift.
-    """
-    return [p for p in re.split(r"[.\u2013]", word) if p]
-
 
 def _is_mid_uppercase(core: str) -> bool:
     """Title- and caps-prefix-aware mid-word-uppercase predicate.
@@ -219,12 +207,35 @@ def _is_mid_uppercase(core: str) -> bool:
         return False
     if core.rstrip('.') in ACADEMIC_TITLES:
         return False
-    if _RE_MID_UPPER.search(core):
+    if _has_starting_uppercase(core):
         return True
     caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
     if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
         return True
     return False
+
+
+def _has_starting_uppercase(core: str) -> bool:
+    """Flags words starting with 2 or more uppercase letters. Academic titles exempt."""
+    if len(core) < 2 or core.isupper():
+        return False
+    if core.rstrip('.') in ACADEMIC_TITLES:
+        return False
+
+    # Strictly check for two uppercase letters at the beginning
+    return core[0].isupper() and core[1].isupper()
+
+def _split_subtokens(word: str) -> list[str]:
+    """Split a whitespace token on internal '.' / '–' (U+2013), dropping empties.
+
+        DETECTOR-LOCAL ONLY. Used by detect_fused_words, detect_gibberish_words,
+        detect_repeated_chars and detect_wx_words to stop two real words glued by a
+        stray period/dash from masking each other's signals. It must NOT feed
+        word_count, compute_valid_ratio or score_word, or every wc-divided ratio
+        and wc-gated rule (and the aggregate total_word_count) would silently shift.
+        """
+    return [p for p in re.split(r"[.\-\u2013]", word) if p]
+
 
 
 def remap_lang(label: str, score: float, known_bases: frozenset,
@@ -584,20 +595,20 @@ def score_word(word: str) -> float:
 
     has_strange = any(not ch.isalnum() and ch not in ALLOWED_INTERNAL for ch in core)
     has_rep = _has_repeated_run(core)
-
     has_ldl = _has_ldl(core)
     has_uppercase = _is_mid_uppercase(core)
+    has_w = 'w' in core.lower()  # <--- NEW CHECK
 
-    # Caps-prefix is evaluated separately here as it carries its own specific 0.20 penalty
     has_caps_prefix = False
-    # FIXED: Exempt academic titles from the caps prefix penalty so MUDr -> 0.0
     if len(core) >= 4 and not core.isupper() and core.rstrip('.') not in ACADEMIC_TITLES:
         caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
             has_caps_prefix = True
 
+    # Added 0.20 penalty for having a 'w'
     return min(1.0,
-               0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase + 0.20 * has_caps_prefix)
+               0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase + 0.20 * has_caps_prefix + 0.20 * has_w)
+
 
 def score_words_in_line(text: str) -> list[tuple[str, float]]:
     """Applies word weirdness scoring over an entire line of text."""
@@ -769,7 +780,6 @@ def is_non_text(text: str) -> bool:
 
 def compute_quality_score(
         valid_word_ratio: float,
-        symbol_ratio: float,
         perplexity: float,
         text_length: int,
         weird_ratio: float,
@@ -788,7 +798,6 @@ def compute_quality_score(
     """
     total_weight = (
             QS_WEIGHT_VALID_WORD
-            + QS_WEIGHT_SYMBOL
             + QS_WEIGHT_WEIRD
             + QS_WEIGHT_PERPLEXITY
             + QS_WEIGHT_LENGTH
@@ -799,7 +808,6 @@ def compute_quality_score(
             + QS_WEIGHT_FUSED
     )
 
-    norm_symbol = 1.0 - min(symbol_ratio, 1.0)
     norm_ppl = 1.0 - min(perplexity / ppl_max, 1.0)
     norm_len = min(text_length / length_max, 1.0)
     norm_weird = 1.0 - min(weird_ratio, 1.0)
@@ -829,7 +837,6 @@ def compute_quality_score(
 
     base_score = (
             QS_WEIGHT_VALID_WORD * valid_word_ratio
-            + QS_WEIGHT_SYMBOL * norm_symbol
             + QS_WEIGHT_WEIRD * norm_weird
             + QS_WEIGHT_PERPLEXITY * norm_ppl
             + QS_WEIGHT_LENGTH * norm_len
