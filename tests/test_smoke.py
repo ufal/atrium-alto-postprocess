@@ -6,7 +6,7 @@ End-to-end smoke tests for the pipeline categorization logic with mocked model i
 from text_util_langID import (
     pre_filter_line, categorize_line, compute_quality_score, score_words_in_line,
     compute_word_weird_ratio, compute_vowel_ratio, compute_garbage_density,
-    compute_rotatable_ratio, compute_valid_ratio, compute_symbol_ratio,
+    compute_rotatable_ratio, compute_valid_ratio,
     detect_gibberish_words, detect_wx_words, detect_fused_words
 )
 
@@ -34,7 +34,6 @@ class TestFullPipelineSmoke:
 
         qs = compute_quality_score(
             valid_word_ratio=valid_ratio,
-            symbol_ratio=compute_symbol_ratio(clean_text),
             perplexity=mock_ppl,
             text_length=cc,
             weird_ratio=weird_ratio,

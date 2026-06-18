@@ -42,12 +42,12 @@ class TestComputeGarbageDensity:
         assert compute_garbage_density("   ") == 0.0
     def test_clean_alphanumeric_text_returns_zero(self):
         assert compute_garbage_density("hello world 123") == 0.0
-    def test_common_punctuation_not_counted_as_noise(self):
-        assert compute_garbage_density("hello, world! (test) 1/2 a-b") == 0.0
+    def test_common_punctuation_now_counted_as_noise(self):
+        assert compute_garbage_density("hello, world! (test) 1/2 a-b") > 0.0
     def test_hash_characters_counted_as_noise(self):
         assert compute_garbage_density("he##lo") > 0.0
-    def test_dots_are_kept_chars_so_ellipsis_is_zero(self):
-        assert compute_garbage_density("konec...") == 0.0
+    def test_dots_are_now_counted_as_noise(self):
+        assert compute_garbage_density("konec...") > 0.0
 
 class TestComputeVowelRatio:
     def test_empty_returns_zero(self):
@@ -80,11 +80,11 @@ class TestDetectStrangeSymbols:
 
 class TestDetectRepeatedChars:
     def test_clean_word_returns_zero(self):
-        assert detect_repeated_chars("hello world") == 0
+        assert detect_repeated_chars("ahoj svete") == 0
     def test_triple_consonant_repeat_triggers(self):
         assert detect_repeated_chars("ssset") >= 1
-    def test_double_consonant_does_not_trigger_by_default(self):
-        assert detect_repeated_chars("panna") == 0
+    def test_double_consonant_now_triggers(self):
+        assert detect_repeated_chars("panna") >= 1
     def test_digit_repeat_not_counted(self):
         assert detect_repeated_chars("1111") == 0
 
@@ -186,7 +186,7 @@ class TestScoreWord:
 
 class TestWordWeirdRatio:
     def test_clean_line_gives_zero_ratio(self):
-        pairs = score_words_in_line("hello world text")
+        pairs = score_words_in_line("tento text je fajn")
         assert compute_word_weird_ratio(pairs) == 0.0
 
 class TestComputeValidRatio:
@@ -196,7 +196,7 @@ class TestComputeValidRatio:
 class TestComputeQualityScore:
     def test_output_in_zero_one_range(self):
         q = compute_quality_score(
-            valid_word_ratio=0.8, symbol_ratio=0.05,
+            valid_word_ratio=0.8,
             perplexity=200.0, text_length=50, weird_ratio=0.0,
         )
         assert 0.0 <= q <= 1.0
