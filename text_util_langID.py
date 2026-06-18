@@ -36,6 +36,14 @@ def _get_float(section, key, default):
 def _get_str(section, key, default):
     return _config.get(section, key, fallback=default) if _config.has_section(section) else default
 
+def _get_int(section, key, default):
+    return _config.getint(section, key, fallback=default) if _config.has_section(section) else default
+
+def _get_csv_set(section, key, default):
+    """Parse a comma-separated config value into a frozenset of stripped tokens."""
+    raw = _get_str(section, key, default)
+    return frozenset(t.strip() for t in raw.split(",") if t.strip())
+
 COMMON_LANGS = ["ces", "deu", "eng"]
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
     COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
@@ -89,6 +97,57 @@ CLEAN_PROSE_WEIRD_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_WEIRD_MAX", 0.08)
 CLEAN_PROSE_PPL_MAX   = _get_float("TEXT_UTILS", "CLEAN_PROSE_PPL_MAX",   400.0)
 CLEAN_PROSE_WC_MIN    = _config.getint("TEXT_UTILS", "CLEAN_PROSE_WC_MIN", fallback=4)
 
+# ---------------------------------------------------------------------------
+# (#3) Phase-2 calibration knobs — all defaults equal the shipped config so
+# older configs keep working unchanged.
+# ---------------------------------------------------------------------------
+
+# Language remap floor for non-Slovak remapped languages (#15). slk preserves
+# its original FastText score; everything else is floored to this value.
+LANG_SCORE_REMAP = _get_float("TEXT_UTILS", "LANG_SCORE_REMAP", 0.75)
+
+# Single-char tokens that are NOT penalised by score_word (#10).
+SINGLE_CHAR_ALLOWED = _get_str("TEXT_UTILS", "SINGLE_CHAR_ALLOWED", "aAiIuUvVzZkKsS")
+
+# Characters exempt from the doubled-/dominant-char repeat arms (#5). The
+# triple-run arm still applies to these so genuine "ooo"/"uuu" stutters are
+# caught; only legitimate Czech doubles (denní, měkký, vyšší) are spared.
+REPEAT_ALLOWED_CHARS = _get_str("TEXT_UTILS", "REPEAT_ALLOWED_CHARS", "oOuU")
+# Minimum occurrence count for the doubled-char arm (guarded; 3 keeps Czech
+# doubles safe — dropping to a naive run-of-2 would falsely flag them).
+REPEATED_DOUBLE_MIN = _get_int("TEXT_UTILS", "REPEATED_DOUBLE_MIN", 3)
+
+# Vowel-quality knees shared by the QS norm_vowel reward (#9) and gibberish (#8).
+VOWEL_RATIO_LOW  = _get_float("TEXT_UTILS", "VOWEL_RATIO_LOW",  0.20)
+VOWEL_RATIO_HIGH = _get_float("TEXT_UTILS", "VOWEL_RATIO_HIGH", 0.70)
+
+# Academic titles exempt from mid-uppercase flagging (#6).
+ACADEMIC_TITLES = _get_csv_set(
+    "TEXT_UTILS", "ACADEMIC_TITLES",
+    "PhDr,MUDr,JUDr,MVDr,RNDr,PaedDr,CSc,DrSc,Ing,Mgr,Bc,PhD,DiS,prof,doc",
+)
+
+# Letter–digit–letter / measurement awareness (#7).
+LDL_ALLOWED_FOLLOW = frozenset(_get_str("TEXT_UTILS", "LDL_ALLOWED_FOLLOW", ".,/:%-;?)="))
+LDL_UNITS = _get_csv_set("TEXT_UTILS", "LDL_UNITS", "m,cm,mm,g,kg,km,ha,l,ml")
+
+# Garbage-density kept characters (#11). configparser strips the leading space
+# from the value, so the space is re-added explicitly here.
+GARBAGE_KEEP_CHARS = frozenset(_get_str("TEXT_UTILS", "GARBAGE_KEEP_CHARS", " ,.?!()/-")) | {" "}
+
+# Minimum vowel-run length the fused-word detector treats as suspicious (#12).
+FUSED_VOWEL_RUN_MIN = _get_int("TEXT_UTILS", "FUSED_VOWEL_RUN_MIN", 3)
+
+# Minimum count of w/x glyphs (per sub-token) for the w/x detector (#13).
+WX_REPEAT_MIN = _get_int("TEXT_UTILS", "WX_REPEAT_MIN", 2)
+
+# Non-text routing in pre_filter_line (#7 / #14).
+ISOLATED_CHAR_RATIO_MAX  = _get_float("TEXT_UTILS", "ISOLATED_CHAR_RATIO_MAX", 0.40)
+ISOLATED_CHAR_MIN_TOKENS = _get_int("TEXT_UTILS", "ISOLATED_CHAR_MIN_TOKENS", 3)
+SYM_LET_DIG_NONTEXT = _get_str(
+    "TEXT_UTILS", "SYM_LET_DIG_NONTEXT", "true"
+).strip().lower() in ("true", "1", "yes", "on")
+
 ALLOWED_INTERNAL: frozenset = frozenset(_get_str("TEXT_UTILS", "ALLOWED_INTERNAL", '.-,+()"\'/—–:%;?!/'))
 _STRIP_CHARS: str = _get_str("TEXT_UTILS", "STRIP_CHARS", '.,;:!?()[]"\'/\\')
 
@@ -128,6 +187,105 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
 }
 
 # ---------------------------------------------------------------------------
+# Shared helpers (Phase 2) — reused by several detectors below
+# ---------------------------------------------------------------------------
+
+def _split_subtokens(word: str) -> list[str]:
+    """Split a whitespace token on internal '.' / '–' (U+2013), dropping empties.
+
+    DETECTOR-LOCAL ONLY. Used by detect_fused_words, detect_gibberish_words,
+    detect_repeated_chars and detect_wx_words to stop two real words glued by a
+    stray period/dash from masking each other's signals. It must NOT feed
+    word_count, compute_valid_ratio or score_word, or every wc-divided ratio
+    and wc-gated rule (and the aggregate total_word_count) would silently shift.
+    """
+    return [p for p in re.split(r"[.\u2013]", word) if p]
+
+
+def _is_mid_uppercase(core: str) -> bool:
+    """Title- and caps-prefix-aware mid-word-uppercase predicate.
+
+    Flags both the classic lowercase→uppercase transition (``aAaa``, ``aaaA``,
+    ``dalSÍ``) and a leading caps run that drops into lowercase (``AAaaaa``).
+    Academic titles (PhDr, MUDr, …) are exempt; all-caps and single-char cores
+    never trigger. Shared by detect_mid_uppercase and compute_valid_ratio so a
+    title is consistently treated the same way in both places (#6).
+    """
+    if len(core) < 2 or core.isupper():
+        return False
+    if core.rstrip('.') in ACADEMIC_TITLES:
+        return False
+    if _RE_MID_UPPER.search(core):
+        return True
+    caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
+    if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
+        return True
+    return False
+
+
+def remap_lang(label: str, score: float, known_bases: frozenset,
+               default_lang: str, remap_floor: float = LANG_SCORE_REMAP) -> tuple[str, float]:
+    """Pure language-remap helper (unit-testable without FastText) (#15).
+
+    * If the base code (``deu`` of ``deu_Latn``) is in ``known_bases`` →
+      keep the label and score unchanged.
+    * Otherwise remap the label to ``default_lang`` + the original script suffix.
+      Slovak (``slk``) is relabelled but KEEPS its original FastText score
+      (it is a near-twin of Czech, so its confidence is meaningful); every other
+      remapped language has its score floored to ``remap_floor``.
+    """
+    base = _lang_base(label)
+    if base in known_bases:
+        return label, score
+    suffix = label[len(base):]
+    new_label = default_lang + suffix
+    if base == "slk":
+        return new_label, score
+    return new_label, max(score, remap_floor)
+
+
+def _has_repeated_run(core: str) -> bool:
+    """Guarded repeated-character test shared by detect_repeated_chars and
+    score_word. Triple identical runs are always suspicious; the doubled-char
+    and dominant-char arms exempt o/u (REPEAT_ALLOWED_CHARS) and digits and
+    require >= REPEATED_DOUBLE_MIN occurrences, so Czech doubles stay clean."""
+    if len(core) < 4:
+        return False
+    for ch in set(core):
+        if ch.isdigit():
+            continue
+        # Triple identical run — genuine OCR stutter for any non-digit char.
+        if ch * 3 in core:
+            return True
+        if ch in REPEAT_ALLOWED_CHARS:
+            continue
+        if ch * 2 in core and core.count(ch) >= REPEATED_DOUBLE_MIN:
+            return True
+        if (core.count(ch) / len(core) >= 0.30) and core.count(ch) >= 3:
+            return True
+    return False
+
+
+def _trailing_alpha_run(token: str, start: int) -> str:
+    """Maximal run of alphabetic characters in ``token`` starting at ``start``."""
+    j = start
+    while j < len(token) and token[j].isalpha():
+        j += 1
+    return token[start:j]
+
+
+def has_symbol_letter_digit(word: str) -> bool:
+    """True if a single token mixes a letter, a digit and a disallowed symbol —
+    a strong OCR-garbage signature used to route the line to Non-text (#7)."""
+    has_letter = any(c.isalpha() for c in word)
+    has_digit = any(c.isdigit() for c in word)
+    has_symbol = any(
+        (not c.isalnum()) and not c.isspace() and c not in ALLOWED_INTERNAL
+        for c in word
+    )
+    return has_letter and has_digit and has_symbol
+
+# ---------------------------------------------------------------------------
 # Structural Text-Quality Detectors
 # ---------------------------------------------------------------------------
 
@@ -142,12 +300,14 @@ def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: 
     return None
 
 def compute_garbage_density(text: str) -> float:
-    """Calculates the ratio of non-alphanumeric (garbage) characters in the text."""
+    """Ratio of garbage (non-alphanumeric, non-kept) characters over the full
+    line length (#11). No ellipsis pre-strip — '...' runs count like any other
+    punctuation; '.' is itself a kept char so legitimate abbreviations are not
+    penalised. Kept set: GARBAGE_KEEP_CHARS (space , . ? ! ( ) / -). The caller
+    passes original_text so cleaning never hides noise."""
     if not text: return 0.0
-    clean_text = re.sub(r'\.{3,}', '', text)
-    if not clean_text: return 0.0
-    noise_chars = sum(1 for c in clean_text if not c.isalnum() and c not in ' ,.?!()/-')
-    return noise_chars / len(clean_text)
+    noise_chars = sum(1 for c in text if not c.isalnum() and c not in GARBAGE_KEEP_CHARS)
+    return noise_chars / len(text)
 
 def compute_rotatable_ratio(text: str) -> float:
     """Calculates the ratio of rotationally-symmetric characters to detect inverted scans."""
@@ -168,71 +328,114 @@ def detect_strange_symbols(text: str) -> int:
     return count
 
 def detect_repeated_chars(text: str) -> int:
-    """Counts words containing suspiciously repeated characters indicative of OCR stutters."""
+    """Counts words containing suspiciously repeated characters indicative of OCR
+    stutters. Guarded so legitimate Czech doubles (denní, měkký, vyšší) are NOT
+    flagged: the doubled-char arm needs >= REPEATED_DOUBLE_MIN occurrences and
+    o/u + digits are exempt. Sub-tokens are split on internal '.'/'–' first."""
     count = 0
     for word in text.split():
-        core = word.strip(_STRIP_CHARS)
-        if len(core) < 4: continue
-        for ch in set(core):
-            if ch * 3 in core:
-                count += 1
-                break
-            if ch * 2 in core and core.count(ch) >= 3 and ch not in "aeiouyáéíóúýěůäöü":
-                count += 1
-                break
-            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.30) and core.count(ch) >= 3:
-                count += 1
-                break
+        if any(_has_repeated_run(sub.strip(_STRIP_CHARS)) for sub in _split_subtokens(word)):
+            count += 1
     return count
 
 def compute_vowel_ratio(text: str) -> float:
-    """Calculates the ratio of vowels among alphabetical characters."""
-    alpha_chars = [c for c in text if c.isalpha()]
-    if not alpha_chars: return 0.0
+    """Ratio of vowels to (letters + symbols) (#5).
+
+    Digits and whitespace are excluded from the denominator; symbols
+    (non-alphanumeric, non-space) ARE included, so glyph-noise tokens dilute the
+    vowel ratio rather than being ignored. The caller passes original_text."""
     vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
-    return sum(1 for c in alpha_chars if c in vowels) / len(alpha_chars)
+    denom = [c for c in text if c.isalpha() or ((not c.isalnum()) and not c.isspace())]
+    if not denom: return 0.0
+    return sum(1 for c in denom if c in vowels) / len(denom)
 
 def detect_gibberish_words(text: str) -> int:
-    """Counts words that lack vowels or have highly abnormal vowel-to-consonant ratios."""
-    words = text.split()
-    if not words: return 0
-    count = 0
+    """Counts gibberish words. The ONLY signal is a letters-only vowel ratio
+    above VOWEL_RATIO_HIGH (0.70) (#8) — the vowel-less and low-vowel arms were
+    removed because they false-fired on Czech consonant clusters and acronyms.
+    All-caps tokens, predominantly-numeric tokens and tokens shorter than 4
+    characters are skipped. Sub-tokens are split on internal '.'/'–' first."""
     vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
-    for word in words:
-        core = word.strip(_STRIP_CHARS)
-        if len(core) < 4: continue
-        if len(core) > 0:
-            numeric_chars = sum(1 for c in core if c.isdigit() or c in '-./,;:')
-            if numeric_chars / len(core) >= 0.6: continue
-        vowel_count = sum(1 for c in core if c in vowels)
-        if vowel_count == 0:
-            count += 1
-            continue
-        v_ratio = vowel_count / len(core)
-        if v_ratio < 0.20 or v_ratio > 0.80:
-            count += 1
-    return count
-
-def detect_letter_digit_letter(text: str) -> int:
-    """Detects occurrences of numbers erroneously fused directly inside words."""
     count = 0
     for word in text.split():
-        prev2, prev1 = None, None
-        for ch in word:
-            if (prev2 is not None and prev2.isalpha() and prev1 is not None and prev1.isdigit() and ch.isalpha()):
-                count += 1
+        flagged = False
+        for sub in _split_subtokens(word):
+            core = sub.strip(_STRIP_CHARS)
+            if len(core) < 4 or core.isupper():
+                continue
+            numeric_chars = sum(1 for c in core if c.isdigit() or c in '-./,;:')
+            if numeric_chars / len(core) >= 0.6:
+                continue
+            letters = [c for c in core if c.isalpha()]
+            if not letters:
+                continue
+            if sum(1 for c in letters if c in vowels) / len(letters) > VOWEL_RATIO_HIGH:
+                flagged = True
                 break
-            prev2, prev1 = prev1, ch
+        if flagged:
+            count += 1
     return count
 
+def _has_ldl(token: str) -> bool:
+    """Measurement-aware letter-digit-letter test (#7).
+
+    Flags a token when a digit is immediately followed by a character that is
+    NOT a digit, NOT whitespace, NOT end-of-token, and NOT one of
+    LDL_ALLOWED_FOLLOW (.,/:%-;?)=) — UNLESS the alpha run that follows the digit
+    is a known measurement unit (LDL_UNITS). This catches OCR digit insertions
+    (vyt1ačená, w0rd, a1b, 5x) while leaving real measurements (30cm, 5mm, 12m,
+    90,9g, 5kg) untouched. Digit→digit is never a trigger (multi-digit numbers).
+    """
+    n = len(token)
+    for i, ch in enumerate(token):
+        if not ch.isdigit():
+            continue
+        nxt = token[i + 1] if i + 1 < n else ""
+        if not nxt or nxt.isspace() or nxt.isdigit() or nxt in LDL_ALLOWED_FOLLOW:
+            continue
+        if nxt.isalpha():
+            run = _trailing_alpha_run(token, i + 1)
+            if run.lower() in LDL_UNITS:
+                continue  # measurement like 30cm / 5mm / 90,9g
+        return True
+    return False
+
+def detect_letter_digit_letter(text: str) -> int:
+    """Counts tokens bearing the OCR digit-insertion fingerprint while leaving
+    legitimate measurements untouched. See _has_ldl for the exact rule (#7)."""
+    return sum(1 for word in text.split() if _has_ldl(word))
+
 def detect_mid_uppercase(text: str) -> int:
-    """Counts words containing abnormal mid-word capitalizations (e.g., lowercase followed directly by uppercase)."""
+    """Counts words containing abnormal mid-word capitalisation (#6).
+
+    Delegates to _is_mid_uppercase so academic titles are exempt and both the
+    classic lower→upper transition (dalSÍ) and a caps-prefix→lowercase run
+    (AAaaaa) are caught. No identifier exclusions (allowed to false-trigger)."""
     count = 0
     for word in text.split():
         core = word.strip('.,;:!?()[]"\'-/')
-        if len(core) < 2 or core.isupper():
-            continue
-        if _RE_MID_UPPER.search(core):
+        if _is_mid_uppercase(core):
+            count += 1
+    return count
+
+def detect_wx_words(text: str) -> int:
+    """Counts tokens with an abnormal density of 'w'/'x' glyphs — >= WX_REPEAT_MIN
+    of either, per sub-token (#13). Mirror / upside-down OCR collapses many real
+    glyphs onto the w/x shapes, so a token like ``exxon`` or ``wwx`` is a useful
+    standalone signal. The count is surfaced as the ``weird_wx`` column and, by
+    default, folded into gibberish_ratio at the call site (no QS re-weighting)."""
+    count = 0
+    for word in text.split():
+        flagged = False
+        for sub in _split_subtokens(word):
+            core = sub.strip(_STRIP_CHARS)
+            if not core:
+                continue
+            if sum(1 for c in core if c in "wW") >= WX_REPEAT_MIN or \
+               sum(1 for c in core if c in "xX") >= WX_REPEAT_MIN:
+                flagged = True
+                break
+        if flagged:
             count += 1
     return count
 
@@ -246,21 +449,25 @@ _RE_FUSED_CONSONANT_RUN: re.Pattern = re.compile(
     r'[bcčdfghjklmnpqrřsštvwxzž]{5,}', re.IGNORECASE
 )
 _RE_FUSED_VOWEL_RUN: re.Pattern = re.compile(
-    r'[aeiouyáéíóúýěůäöü]{4,}', re.IGNORECASE
+    r'[aeiouyáéíóúýěůäöü]{%d,}' % FUSED_VOWEL_RUN_MIN, re.IGNORECASE
 )
 
 def detect_fused_words(text: str) -> int:
-    """Counts tokens that are likely two or more Czech words merged without a space."""
+    """Counts tokens that are likely two or more Czech words merged without a
+    space (token length > 14, a consonant run of 5+, or a vowel run of
+    FUSED_VOWEL_RUN_MIN+) (#12). Sub-tokens are split on internal '.'/'–' first
+    so a stray separator cannot hide an over-long run."""
     count = 0
     for word in text.split():
-        core = word.strip(_STRIP_CHARS)
-        if not core or not any(c.isalpha() for c in core):
-            continue
-        if len(core) > 14:
-            count += 1
-        elif _RE_FUSED_CONSONANT_RUN.search(core):
-            count += 1
-        elif _RE_FUSED_VOWEL_RUN.search(core):
+        flagged = False
+        for sub in _split_subtokens(word):
+            core = sub.strip(_STRIP_CHARS)
+            if not core or not any(c.isalpha() for c in core):
+                continue
+            if len(core) > 14 or _RE_FUSED_CONSONANT_RUN.search(core) or _RE_FUSED_VOWEL_RUN.search(core):
+                flagged = True
+                break
+        if flagged:
             count += 1
     return count
 
@@ -311,6 +518,25 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     letters = sum(c.isalpha() for c in clean_text)
     if letters / n_chars < 0.3: return "Non-text", clean_text
 
+    tokens = clean_text.split()
+
+    # (#7) A single token mixing a letter, a digit AND a disallowed symbol is an
+    # OCR-garbage signature (e.g. TYRSOVA5===aras) -> Non-text.
+    if SYM_LET_DIG_NONTEXT and len(tokens) == 1 and has_symbol_letter_digit(tokens[0]):
+        return "Non-text", clean_text
+
+    # (#14) A line dominated by isolated single alphanumeric tokens is spaced-out
+    # OCR noise (e.g. "r n n 1") -> Non-text. Punctuation-only single tokens are
+    # not counted; legitimate single-letter Czech prepositions stay below the
+    # ratio in real prose.
+    if len(tokens) >= ISOLATED_CHAR_MIN_TOKENS:
+        isolated = sum(
+            1 for tok in tokens
+            if len(tok.strip(_STRIP_CHARS)) == 1 and tok.strip(_STRIP_CHARS).isalnum()
+        )
+        if isolated / len(tokens) >= ISOLATED_CHAR_RATIO_MAX:
+            return "Non-text", clean_text
+
     return "Process", clean_text
 
 def parse_line_splits(line_text: str) -> tuple[str, str, str]:
@@ -341,25 +567,14 @@ def score_word(word: str) -> float:
     """Calculates a localized corruption ('weirdness') score for a single word token."""
     core = word.strip(_STRIP_CHARS)
     if len(core) == 1:
-        if core in "aAiIoOuUvVzZkKsSpPbBjJdDrRnNmMtT" or '.' in word: return 0.0
+        if core in SINGLE_CHAR_ALLOWED or '.' in word: return 0.0
         if core.isdigit(): return 0.25
         if not core.isalpha(): return 0.0
         return 0.85
     if len(core) < 2: return 0.0
 
     has_strange = any(not ch.isalnum() and ch not in ALLOWED_INTERNAL for ch in core)
-    has_rep = False
-    if len(core) >= 4:
-        for ch in set(core):
-            if ch * 3 in core:
-                has_rep = True
-                break
-            if ch * 2 in core and core.count(ch) >= 3 and ch not in "aeiouyáéíóúýěůäöü":
-                has_rep = True
-                break
-            if ch not in "aeiouyáéíóúýěůäöü" and (core.count(ch) / len(core) >= 0.30) and core.count(ch) >= 3:
-                has_rep = True
-                break
+    has_rep = _has_repeated_run(core)
 
     has_ldl = False
     prev2, prev1 = None, None
@@ -512,18 +727,11 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
             alpha = sum(c.isalpha() for c in core)
             has_strange = any(not c.isalnum() and c not in ALLOWED_INTERNAL for c in core)
             if len(core) >= 3 and alpha / len(core) >= 0.70 and not has_strange:
-                caps_run = 0
-                for ch in core:
-                    if ch.isupper():
-                        caps_run += 1
-                    else:
-                        break
-                if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
+                # _is_mid_uppercase folds the caps-prefix guard, the lower→upper
+                # guard, AND the academic-title exemption into one predicate so a
+                # title like PhDr is counted as valid (#6).
+                if _is_mid_uppercase(core):
                     continue
-
-                if not core.isupper() and _RE_MID_UPPER.search(core):
-                    continue
-
                 valid += 1
     return valid / len(words)
 
@@ -592,11 +800,15 @@ def compute_quality_score(
 
     norm_garbage = 1.0 - min(garbage_density / max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9), 1.0)
 
+    # Vowel-quality reward: full credit inside [VOWEL_RATIO_LOW, VOWEL_RATIO_HIGH],
+    # ramping to 0 at the extremes (#9). The low arm is preserved (the "remove
+    # lower bound" directive targets the gibberish signal, not this reward).
     vr = vowel_ratio
-    if vr < 0.20:
-        norm_vowel = vr / 0.20
-    elif vr > 0.75:
-        norm_vowel = max(0.0, 1.0 - (vr - 0.75) / 0.25)
+    if vr < VOWEL_RATIO_LOW:
+        norm_vowel = (vr / VOWEL_RATIO_LOW) if VOWEL_RATIO_LOW > 0 else 1.0
+    elif vr > VOWEL_RATIO_HIGH:
+        span = max(1.0 - VOWEL_RATIO_HIGH, 1e-9)
+        norm_vowel = max(0.0, 1.0 - (vr - VOWEL_RATIO_HIGH) / span)
     else:
         norm_vowel = 1.0
 

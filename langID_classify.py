@@ -20,6 +20,13 @@ rather than hanging it.
 Input directory (#4): the text source defaults to [CLASSIFY] TEXT_DIR but is
 overridden by the LANGID_TEXT_DIR env var, which run_pipeline.py sets to the
 selected extraction method's output directory.
+
+Output columns (#3): rows are emitted dict-keyed against CSV_HEADER so the scored
+and fast-track (Empty/Non-text) writers can never drift out of column alignment.
+`categ`/`quality_score` lead the file; `original_text`, `original_lang`,
+`orig_lang_score` and `weird_wx` are recorded alongside the cleaned/remapped
+values. The page aggregator reads strictly by column NAME, so this reorder is
+safe; every aggregate-consumed name is retained verbatim.
 """
 
 import os
@@ -47,20 +54,26 @@ from atrium_paradata import ParadataLogger
 # batches are never killed, but finite so a crash cannot hang the pipeline.
 GPU_WAIT_TIMEOUT = 600.0  # seconds
 
+# (#3) Single source of truth for the per-line CSV schema. Rows are built as a
+# dict keyed by these names and emitted in this exact order, so the scored path
+# and the fast-track Empty/Non-text path cannot drift. `categ`/`quality_score`
+# lead; the aggregator reads by NAME so column ORDER is free to change.
 CSV_HEADER = [
-    "file", "page_num", "line_num", "text",
+    "categ", "quality_score",
+    "file", "page_num", "line_num",
+    "text", "original_text",
     "split_ws", "split_we",
-    "lang", "lang_score", "perplex",
+    "lang", "lang_score", "original_lang", "orig_lang_score",
+    "perplex",
     "word_count", "char_count",
     "garbage_density",
     "symbol", "upper", "repeated",
-    "ldl_fuses", "fused_words", "gibberish",
+    "ldl_fuses", "fused_words", "gibberish", "weird_wx",
     "word_weird", "vowel_ratio", "rot_ratio",
-    "quality_score",
-    "categ", "caps_header",
+    "caps_header",
     "allcaps_novowel", "lowppl_clear", "cleanprose_clear",
     "trash_threshold", "noisy_threshold", "clear_threshold",
-    "pp_dedup", "pp_surrounded_trash", "pp_inverted_run"
+    "pp_dedup", "pp_surrounded_trash", "pp_inverted_run",
 ]
 
 
@@ -138,6 +151,11 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
         writer.writerows(rows)
 
 
+def _row_from_dict(d: dict) -> list:
+    """Emit a CSV row in CSV_HEADER order from a column-keyed dict (#3)."""
+    return [d[c] for c in CSV_HEADER]
+
+
 def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir: Path,
                                 task_queue: mp.Queue, result_dict: dict, expected_langs: list = None,
                                 trusted_langs: list = None, gpu_dead=None):
@@ -176,25 +194,35 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
 
     results = []
     for i in range(len(lines)):
-        file_id, page_id, line_num, text_content, split_ws, split_we = meta[i]
+        # (#3) meta now carries the pre-repair text as a 7th element so the
+        # original line can be recorded and fed to the density/vowel signals.
+        file_id, page_id, line_num, text_content, split_ws, split_we, original_text = meta[i]
 
+        # Pre-remap FastText prediction — stored verbatim and (the score) fed to QS.
+        original_lang = langs[i]
         original_lang_score = scores[i]
 
         wc = len(text_content.split())
         cc = len(text_content)
 
-        if _lang_base(langs[i]) not in _known_lang_bases:
-            # Remap to the collection default, but PRESERVE any script suffix.
-            suffix = langs[i][len(_lang_base(langs[i])):]
-            langs[i] = expected_langs[0] + suffix
-            scores[i] = max(scores[i], LANG_SCORE_CLEAR)
+        # (#15) Language remap via the pure helper: slk keeps its score, every
+        # other unknown base is relabelled to the collection default and floored
+        # to LANG_SCORE_REMAP. The stored lang/lang_score reflect the remap; the
+        # ORIGINAL score still drives the QS_WEIGHT_LANG component.
+        langs[i], scores[i] = remap_lang(
+            langs[i], scores[i], _known_lang_bases, expected_langs[0]
+        )
 
         ppl_val = ppls[i]
 
         if wc <= 2 and ppl_val > SHORT_PPL_CAP:
             ppl_val = SHORT_PPL_CAP
 
-        g_density = compute_garbage_density(text_content)
+        # (#5/#11/#8) garbage density and vowel ratio are computed on the ORIGINAL
+        # (pre-repair) line so cleaning never hides noise; char_count and the QS
+        # length signal stay on the cleaned text_content.
+        g_density = compute_garbage_density(original_text)
+        vowel_ratio = compute_vowel_ratio(original_text)
 
         sym_count = detect_strange_symbols(text_content)
         upper_count = detect_mid_uppercase(text_content)
@@ -202,8 +230,8 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         fuse_count = detect_letter_digit_letter(text_content)
         fused_words = detect_fused_words(text_content)
         gibb_count = detect_gibberish_words(text_content)
+        wx_count = detect_wx_words(text_content)  # (#13) standalone weird_wx column
 
-        vowel_ratio = compute_vowel_ratio(text_content)
         rot_ratio = compute_rotatable_ratio(text_content)
         caps_header = is_all_caps_line(text_content)
 
@@ -219,7 +247,9 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             vowel_ratio=vowel_ratio,
             garbage_density=g_density,
             lang_score=original_lang_score,
-            gibberish_ratio=gibb_count / max(wc, 1),
+            # (#13) w/x density is folded into the gibberish signal — no QS
+            # re-weighting — while still surfaced as the weird_wx column.
+            gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
             fused_ratio=fused_words / max(wc, 1),
             rot_ratio=rot_ratio,
         )
@@ -231,32 +261,97 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             return_reason=True
         )
 
-        flags = {
+        row_dict = {
+            "categ": categ,
+            "quality_score": f"{q_score:.4f}",
+            "file": file_id,
+            "page_num": page_id,
+            "line_num": line_num,
+            "text": text_content,
+            "original_text": original_text,
+            "split_ws": split_ws,
+            "split_we": split_we,
+            "lang": langs[i],
+            "lang_score": f"{scores[i]:.4f}",
+            "original_lang": original_lang,
+            "orig_lang_score": f"{original_lang_score:.4f}",
+            "perplex": f"{ppl_val:.2f}",
+            "word_count": wc,
+            "char_count": cc,
+            "garbage_density": f"{g_density:.4f}",
+            "symbol": sym_count,
+            "upper": upper_count,
+            "repeated": rep_count,
+            "ldl_fuses": fuse_count,
+            "fused_words": fused_words,
+            "gibberish": gibb_count,
+            "weird_wx": wx_count,
+            "word_weird": f"{weird_ratio:.4f}",
+            "vowel_ratio": f"{vowel_ratio:.4f}",
+            "rot_ratio": f"{rot_ratio:.4f}",
+            "caps_header": caps_header,
             "allcaps_novowel": reason == "allcaps_novowel",
             "lowppl_clear": reason == "lowppl_clear",
             "cleanprose_clear": reason == "cleanprose_clear",
             "trash_threshold": reason == "trash_threshold",
             "noisy_threshold": reason == "noisy_threshold",
             "clear_threshold": reason == "clear_threshold",
+            "pp_dedup": False,
+            "pp_surrounded_trash": False,
+            "pp_inverted_run": False,
         }
+        results.append(_row_from_dict(row_dict))
 
-        row = [
-            file_id, page_id, line_num, text_content,
-            split_ws, split_we, langs[i], f"{scores[i]:.4f}", f"{ppl_val:.2f}",
-            wc, cc, f"{g_density:.4f}",
-            sym_count, upper_count, rep_count,
-            fuse_count, fused_words, gibb_count,
-            f"{weird_ratio:.4f}", f"{vowel_ratio:.4f}", f"{rot_ratio:.4f}",
-            f"{q_score:.4f}", categ, caps_header,
-            flags["allcaps_novowel"], flags["lowppl_clear"], flags["cleanprose_clear"],
-            flags["trash_threshold"], flags["noisy_threshold"], flags["clear_threshold"],
-            False, False, False
-        ]
-        results.append(row)
-
-    results.sort(key=lambda x: x[0])
-    for doc_id, group in groupby(results, key=lambda x: x[0]):
+    # Column 2 of CSV_HEADER is "file"; group by it to write per-document.
+    _file_idx = CSV_HEADER.index("file")
+    results.sort(key=lambda x: x[_file_idx])
+    for doc_id, group in groupby(results, key=lambda x: x[_file_idx]):
         write_rows_to_doc(out_dir, doc_id, list(group))
+
+
+def _fast_track_row(file_id, page_id, line_num, clean_text, original_text,
+                    split_ws, split_we, categ) -> list:
+    """Build a dict-keyed CSV row for a pre-filtered Empty/Non-text line (#3)."""
+    d = {
+        "categ": categ,
+        "quality_score": "0.0000",
+        "file": file_id,
+        "page_num": page_id,
+        "line_num": line_num,
+        "text": clean_text,
+        "original_text": original_text,
+        "split_ws": split_ws,
+        "split_we": split_we,
+        "lang": "N/A",
+        "lang_score": "0.0000",
+        "original_lang": "N/A",
+        "orig_lang_score": "0.0000",
+        "perplex": "0.00",
+        "word_count": 0,
+        "char_count": len(clean_text),
+        "garbage_density": "0.0000",
+        "symbol": 0,
+        "upper": 0,
+        "repeated": 0,
+        "ldl_fuses": 0,
+        "fused_words": 0,
+        "gibberish": 0,
+        "weird_wx": 0,
+        "word_weird": "0.0000",
+        "vowel_ratio": "0.0000",
+        "rot_ratio": "0.0000",
+        "caps_header": False,
+        "allcaps_novowel": False,
+        "lowppl_clear": False,
+        "cleanprose_clear": False,
+        "trash_threshold": False,
+        "noisy_threshold": False,
+        "clear_threshold": False,
+        "pp_dedup": False,
+        "pp_surrounded_trash": False,
+        "pp_inverted_run": False,
+    }
+    return _row_from_dict(d)
 
 
 def process_document(task):
@@ -308,19 +403,23 @@ def process_document(task):
                         current_split_we = expected_incoming_suffix
 
                 expected_incoming_suffix = outgoing_suffix
+                # merged_text is the pre-repair line (post split-merge); clean_merged
+                # is what pre_filter_line cleaned. We keep BOTH: original_text records
+                # merged_text, text records clean_merged (#3).
                 cat, clean_merged = pre_filter_line(merged_text)
 
                 if cat != "Process":
-                    write_rows_to_doc(Path(output_dir), file_id, [[
-                        file_id, page_id, i, clean_merged, current_split_ws, current_split_we,
-                        "N/A", "0.0000", "0.00", 0, len(clean_merged), "0.0000",
-                        0, 0, 0, 0, 0, 0, "0.0000", "0.0000", "0.0000", "0.0000", cat, False,
-                        False, False, False, False, False, False, False, False, False
-                    ]])
+                    write_rows_to_doc(
+                        Path(output_dir), file_id,
+                        [_fast_track_row(file_id, page_id, i, clean_merged, merged_text,
+                                         current_split_ws, current_split_we, cat)]
+                    )
                     continue
 
                 batch_lines.append(clean_merged)
-                batch_meta.append((file_id, page_id, i, clean_merged, current_split_ws, current_split_we))
+                batch_meta.append(
+                    (file_id, page_id, i, clean_merged, current_split_ws, current_split_we, merged_text)
+                )
                 processed_count += 1
 
                 if len(batch_lines) >= batch_size:
@@ -340,9 +439,11 @@ def process_document(task):
         if out_path.exists():
             df = pd.read_csv(out_path, dtype={
                 "text": str,
+                "original_text": str,
                 "split_ws": str,
                 "split_we": str,
                 "lang": str,
+                "original_lang": str,
                 "categ": str,
             })
             df = df.sort_values(by=["page_num", "line_num"], ascending=True)
@@ -411,7 +512,9 @@ def process_document(task):
                         df.loc[run_indices, "categ"] = "Trash"
                         df.loc[run_indices, "pp_inverted_run"] = True
 
-            df.to_csv(out_path, index=False)
+            # (#3.7) UTF-8 keeps Czech diacritics intact on the finalised file.
+            df = df[CSV_HEADER]  # guard: write columns in canonical order
+            df.to_csv(out_path, index=False, encoding='utf-8')
 
         return {
             "status": "success",
