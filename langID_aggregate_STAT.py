@@ -13,7 +13,6 @@ and compiles final page-level stats, including:
   - 'avg_word_weird'    - Mean per-word weirdness ratio for relevant lines
   - 'avg_lang_score'    - Mean FastText confidence score
   - 'avg_perplex'       - Mean perplexity score
-  - 'avg_symbol'        - Mean structural strange symbol count
   - 'main_lang'         - The statistical mode (most frequent) language per page.
   - 'avg_vowel_ratio'   - Mean vowel ratio
   - 'ch_ratio'          - The ratio of caps_header lines to valid lines
@@ -89,7 +88,7 @@ def _sum_metrics(df):
         for col in ['total_word_count', 'total_char_count']:
             stats[col] = 0
         for col in ['avg_quality_score', 'avg_word_weird', 'avg_lang_score',
-                    'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'avg_rot_ratio', 'ch_ratio']:
+                    'avg_perplex', 'avg_vowel_ratio', 'avg_rot_ratio', 'ch_ratio']:
             stats[col] = float('nan')
         stats['main_lang'] = "None"
 
@@ -99,7 +98,7 @@ def _sum_metrics(df):
                         'Clear', 'Noisy', 'Trash', 'Non-text', 'Empty',
                         'total_word_count', 'total_char_count',
                         'avg_quality_score', 'avg_word_weird', 'avg_lang_score',
-                        'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'avg_rot_ratio',
+                        'avg_perplex', 'avg_vowel_ratio', 'avg_rot_ratio',
                         'ch_ratio', 'main_lang']
         return final_page_df[ordered_cols]
 
@@ -115,7 +114,7 @@ def _sum_metrics(df):
         avg_word_weird=('word_weird', 'mean'),
         avg_lang_score=('lang_score', 'mean'),
         avg_perplex=('perplex', 'mean'),
-        avg_symbol=('symbol', 'mean'),
+        # avg_symbol=('symbol', 'mean'),
         avg_vowel_ratio=('vowel_ratio', 'mean'),
         avg_rot_ratio=('rot_ratio', 'mean')
     ).reset_index()
@@ -147,7 +146,7 @@ def _sum_metrics(df):
                     'Clear', 'Noisy', 'Trash', 'Non-text', 'Empty',
                     'total_word_count', 'total_char_count',
                     'avg_quality_score', 'avg_word_weird', 'avg_lang_score',
-                    'avg_perplex', 'avg_symbol', 'avg_vowel_ratio', 'avg_rot_ratio',
+                    'avg_perplex', 'avg_vowel_ratio', 'avg_rot_ratio',
                     'ch_ratio', 'main_lang']
     return final_page_df[ordered_cols]
 
@@ -165,7 +164,7 @@ def process_csv_file(file_path):
             'lang_score': 'float64',
             'perplex': 'float64',
             'garbage_density': 'float64',
-            'symbol': 'float64',
+            # 'symbol': 'float64',
             'vowel_ratio': 'float64',
             'rot_ratio': 'float64',
         }
