@@ -67,7 +67,7 @@ CSV_HEADER = [
     "perplex",
     "word_count", "char_count",
     "garbage_density",
-    "symbol", "upper", "repeated",
+    "upper", "repeated",
     "ldl_fuses", "fused_words", "gibberish", "weird_wx",
     "word_weird", "vowel_ratio", "rot_ratio",
     "caps_header",
@@ -224,7 +224,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         g_density = compute_garbage_density(original_text)
         vowel_ratio = compute_vowel_ratio(original_text)
 
-        sym_count = detect_strange_symbols(text_content)
+        # sym_count = detect_strange_symbols(text_content)
         upper_count = detect_mid_uppercase(text_content)
         rep_count = detect_repeated_chars(text_content)
         fuse_count = detect_letter_digit_letter(text_content)
@@ -280,7 +280,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             "word_count": wc,
             "char_count": cc,
             "garbage_density": f"{g_density:.4f}",
-            "symbol": sym_count,
+            # "symbol": sym_count,
             "upper": upper_count,
             "repeated": rep_count,
             "ldl_fuses": fuse_count,
@@ -331,7 +331,7 @@ def _fast_track_row(file_id, page_id, line_num, clean_text, original_text,
         "word_count": 0,
         "char_count": len(clean_text),
         "garbage_density": "0.0000",
-        "symbol": 0,
+        # "symbol": 0,
         "upper": 0,
         "repeated": 0,
         "ldl_fuses": 0,
