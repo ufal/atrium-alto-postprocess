@@ -83,6 +83,24 @@ CLEAN_PROSE_MIN_SCORE       = 0.65
 CLEAN_PROSE_WEIRD_MAX       = 0.08
 CLEAN_PROSE_WC_MIN          = 4
 
+LANG_SCORE_REMAP            = 0.75
+SINGLE_CHAR_ALLOWED         = aAiIuUvVzZkKsS
+REPEAT_ALLOWED_CHARS        = oOuU
+REPEATED_DOUBLE_MIN         = 3
+VOWEL_RATIO_LOW             = 0.20
+VOWEL_RATIO_HIGH            = 0.70
+ACADEMIC_TITLES             = PhDr,MUDr,JUDr,MVDr,RNDr,PaedDr,CSc,DrSc,Ing,Mgr,Bc,PhD,DiS,prof,doc
+LDL_ALLOWED_FOLLOW          = .,/:%-;?)=
+LDL_UNITS                   = m,cm,mm,g,kg,km,ha,l,ml
+GARBAGE_KEEP_CHARS          =  ,.?!()/-
+FUSED_VOWEL_RUN_MIN         = 3
+WX_REPEAT_MIN               = 2
+ISOLATED_CHAR_RATIO_MAX     = 0.40
+ISOLATED_CHAR_MIN_TOKENS    = 3
+SYM_LET_DIG_NONTEXT         = true
+MOSTLY_READABLE_VALID_MIN   = 0.85
+SHORT_NOISY_QS_PENALTY      = 0.0
+
 [PIPELINE]
 METHOD        = layoutreader
 # default extraction backend: alto-tools | layoutreader | glm

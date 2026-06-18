@@ -19,6 +19,11 @@ ENV ATRIUM_RUNNER_IMAGE=${ATRIUM_RUNNER_IMAGE} \
     MODEL_DIR=/app/models \
     LANGID_CONFIG=/app/config_langID.txt
 
+# (#3) The per-document line CSVs now carry extra diagnostic boolean and string columns
+# (including original_text, original_lang, and rule flags). This aggregation
+# ignores them — page stats are unchanged — but a future revision could
+# emit per-page rule-frequency sums from them.
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential g++ git wget ca-certificates \
     && rm -rf /var/lib/apt/lists/*
