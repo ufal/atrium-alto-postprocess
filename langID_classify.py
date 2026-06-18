@@ -411,7 +411,7 @@ def process_document(task):
                         df.loc[run_indices, "categ"] = "Trash"
                         df.loc[run_indices, "pp_inverted_run"] = True
 
-            df.to_csv(out_path, index=False)
+            df.to_csv(out_path, index=False, encoding='utf-8')
 
         return {
             "status": "success",

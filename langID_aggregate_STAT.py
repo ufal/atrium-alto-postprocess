@@ -232,7 +232,7 @@ def main():
                     elif result is not None and not result.empty:
                         all_page_stats.append(result)
                         doc_out = output_dir / f"stats_{original_file.stem}.csv"
-                        result.to_csv(doc_out, index=False)
+                        result.to_csv(doc_out, index=False, encoding='utf-8')
                         logger.log_success("csv")
                     else:
                         logger.log_skip(original_file.name, "Empty or invalid CSV structure")
@@ -247,7 +247,7 @@ def main():
             if 'file' in final_df.columns and 'page_num' in final_df.columns:
                 final_df.sort_values(by=["file", "page_num"], inplace=True)
 
-            final_df.to_csv(output_stats_path, index=False)
+            final_df.to_csv(output_stats_path, index=False, encoding='utf-8')
             print(f"Done. Final stats saved to {output_stats_path}")
         else:
             print("No valid page stats could be aggregated.")
