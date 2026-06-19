@@ -1,3 +1,3 @@
 file,page_num,num_lines,Clear,Noisy,Trash,Non-text,Empty,total_word_count,total_char_count,avg_quality_score,avg_word_weird,avg_lang_score,avg_perplex,avg_vowel_ratio,avg_rot_ratio,ch_ratio,main_lang
-CTX000000001,1,2,0,2,0,0,0,17,98,0.8516,0.02185,0.9998,36.56,0.3516,0.53805,0.0,ces_Latn
-CTX000000001,2,2,0,2,0,0,0,12,84,0.89805,0.02915,1.0,36.25,0.4013,0.55,0.0,ces_Latn
+CTX000000001,1,2,1,1,0,0,0,17,98,0.8793,0.02185,0.9998,36.56,0.3516,0.53805,0.0,ces_Latn
+CTX000000001,2,2,2,0,0,0,0,12,84,0.9506,0.02915,1.0,36.25,0.4013,0.55,0.0,ces_Latn
