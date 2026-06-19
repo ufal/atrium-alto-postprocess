@@ -15,17 +15,11 @@ import sys
 import types
 
 # --- stub the GPU/ML stack BEFORE importing langID_classify -------------------
-for _name in ("torch", "tqdm", "atrium_paradata", "fasttext", "transformers"):
+# Note: atrium_paradata was removed from this stub list. It has no ML dependencies
+# and can be imported safely without polluting the test environment for test_paradata.py.
+for _name in ("torch", "tqdm", "fasttext", "transformers"):
     sys.modules.setdefault(_name, types.ModuleType(_name))
 sys.modules["tqdm"].tqdm = lambda x, **k: x  # type: ignore[attr-defined]
-
-
-class _ParadataLoggerStub:  # pragma: no cover - import shim only
-    def __init__(self, *a, **k):
-        pass
-
-
-sys.modules["atrium_paradata"].ParadataLogger = _ParadataLoggerStub  # type: ignore[attr-defined]
 
 import pandas as pd  # noqa: E402
 
