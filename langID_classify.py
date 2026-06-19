@@ -48,7 +48,7 @@ from text_util_langID import *
 # language-remapping logic below) must be imported explicitly. has_cz_diacs is
 # imported explicitly too so the extracted page-postprocess helper can reference
 # it by name (#3 A3).
-from text_util_langID import _lang_base, has_cz_diacs
+from text_util_langID import _lang_base, has_cz_diacs, TRASH_REASONS
 from atrium_paradata import ParadataLogger
 
 # Hard ceiling on how long a CPU worker waits for a batch's perplexity before
@@ -318,7 +318,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             "allcaps_novowel": reason == "allcaps_novowel",
             "lowppl_clear": reason == "lowppl_clear",
             "cleanprose_clear": reason == "cleanprose_clear",
-            "trash_threshold": reason == "trash_threshold",
+            "trash_threshold": reason in TRASH_REASONS,
             "noisy_threshold": reason == "noisy_threshold",
             "clear_threshold": reason == "clear_threshold",
             "pp_dedup": False,

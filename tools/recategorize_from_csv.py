@@ -62,8 +62,9 @@ from langID_classify import (  # noqa: E402
 )
 from text_util_langID import (  # noqa: E402
     SHORT_PPL_CAP,
+    TRASH_REASONS,
     _lang_base,
-    analyze_rotation_signals,  # <--- NEW
+    analyze_rotation_signals,
     categorize_line,
     compute_garbage_density,
     compute_quality_score,
@@ -187,7 +188,7 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
         "allcaps_novowel": reason == "allcaps_novowel",
         "lowppl_clear": reason == "lowppl_clear",
         "cleanprose_clear": reason == "cleanprose_clear",
-        "trash_threshold": reason == "trash_threshold",
+        "trash_threshold": reason in TRASH_REASONS,
         "noisy_threshold": reason == "noisy_threshold",
         "clear_threshold": reason == "clear_threshold",
         # post-pass flags are recomputed by apply_document_postprocessing below

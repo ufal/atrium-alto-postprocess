@@ -1,46 +1,33 @@
 [EXTRACT]
-# Common
 INPUT_CSV          = ./data_samples/test_alto_stats.csv
-# page-stats CSV from Step 2 (alto_stats_create.py)
-
-# alto-tools method (extract_ALTO_2_TXT.py)
 OUTPUT_TXT         = ./data_samples/PAGE_TXT
 WORKERS_MAX        = 16
-# CPU workers; env MAX_WORKERS still overrides
-
-# LayoutReader method (extract_LytRdr_ALTO_2_TXT.py)
 OUTPUT_TXT_LR      = ./data_samples/PAGE_TXT_LR
 WORKERS_MAX_LR     = 1
-# 1 for GPU; raise for CPU parallelism
 LR_MODEL           = hantian/layoutreader
 LR_CHUNK_SIZE      = 350
-# initial lines/chunk; halved on CUDA OOM
 LR_MIN_CHUNK_SIZE  = 50
-# give up on a page below this chunk size
-
-# GLM method (extract_LLM_ALTO_2_TXT.py)
 OUTPUT_TXT_LLM     = ./data_samples/PAGE_TXT_LLM
 WORKERS_MAX_LLM    = 1
 LLM_MODEL          = THUDM/glm-4v-9b
 LLM_MAX_RESOLUTION = 1344
-# longest-side cap (px) before inference
 LLM_MAX_NEW_TOKENS = 4096
 LLM_PROMPT         = OCR: Transcribe all text on this page exactly as it appears.
 
 [CLASSIFY]
 INPUT_CSV = data_samples/test_alto_stats.csv
-# TEXT_DIR is the DEFAULT text source for a standalone `python langID_classify.py`
-# run. When launched via run_pipeline.py it is overridden per extraction method
-# through the LANGID_TEXT_DIR env var (#4), so alto-tools -> PAGE_TXT,
-# layoutreader -> PAGE_TXT_LR, glm -> PAGE_TXT_LLM are each consumed correctly.
 TEXT_DIR = data_samples/PAGE_TXT_LR
 OUTPUT_LINES_LOG = data_samples/DOC_LINE_CATEG
 BATCH_SIZE = 128
 WORKERS_MAX = 32
-# (#7) Most-expected language MUST be first: it is the force-remap default for
-# ambiguous FastText predictions. This corpus is Czech, so `ces` leads.
+# (#7) Most-expected language MUST be first (force-remap default).
 EXPECTED_LANGS = ces,deu,eng
-TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita
+# (#3) slk added on DK's request: FastText routinely confuses Czech<->Slovak.
+# NOTE the consequence: with slk trusted, remap_lang keeps such lines labelled
+# `slk` (original confidence preserved) and NEVER reaches the slk->ces special
+# case. The score-driven quality logic is identical either way; only the stored
+# `lang`/`main_lang` label differs. Drop slk here if you prefer slk->ces relabel.
+TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita,slk
 MODEL_NAME = Qwen/Qwen2.5-0.5B
 
 [AGGREGATE]
@@ -66,13 +53,20 @@ QS_WEIGHT_FUSED       = 0.03
 QS_LENGTH_MAX         = 100
 PERPLEXITY_THRESHOLD_MAX  = 1000.0
 
-SHORT_PPL_CAP              = 850.0
+SHORT_PPL_CAP               = 850.0
 CLEAN_PROSE_PPL_MAX         = 400.0
 PPL_INVERTED_MIN            = 200.0
 
 CATEG_GARBAGE_DENSITY_HIGH  = 0.35
-CATEG_TRASH_SCORE_MAX       = 0.50
-CATEG_NOISY_SCORE_MAX       = 0.90
+# (#3 Phase 1) NOISY_MAX 0.90 -> 0.85: recovers ~24 clean Czech sentences scoring
+#   0.85-0.90 as Clear. Zero garbage risk (garbage maxes at ~0.78 in simulation).
+CATEG_NOISY_SCORE_MAX       = 0.85
+# (#3 Phase 1) TRASH_MAX 0.50 -> 0.55: balanced garbage reduction. DIAL: 0.50 =
+#   zero-collateral, 0.60 = aggressive. The Phase-2 structural Trash routes
+#   (hard-sweep / inverted / short-garbage) now catch most garbage on their own,
+#   so re-validate with tools/recategorize_from_csv.py --report-only before
+#   raising this further; 0.55 vs 0.50 is the safe range here.
+CATEG_TRASH_SCORE_MAX       = 0.55
 
 ROT_RATIO_INVERTED_MIN      = 0.55
 WEIRD_RATIO_INVERTED_MIN    = 0.35
@@ -83,13 +77,10 @@ CLEAN_PROSE_WEIRD_MAX       = 0.08
 CLEAN_PROSE_WC_MIN          = 4
 
 LANG_SCORE_REMAP             = 0.75
-# (#3 A1) Cap for remapped NON-Latin-script language guesses (Hangul, Cyrillic,
-# CJK, …) on Czech archival data — almost always inverted/garbled OCR.
+# (#3 A1) Cap for remapped NON-Latin-script guesses (Hangul/Cyrillic/CJK).
 LANG_SCORE_REMAP_FAR        = 0.50
 SINGLE_CHAR_ALLOWED         = aAiIuUvVzZkKsS
-# (#3 C) Short Czech function words counted as valid by compute_valid_ratio
-# before the 3-char structural gate, so prose dense in prepositions/clitics is
-# not under-scored and can earn the clean-prose promotion.
+# (#3 C) Short Czech function words counted as valid before the 3-char gate.
 SHORT_VALID_WORDS           = a,i,k,o,s,u,v,z,se,si,po,na,za,ze,do,od,ke,ku,ve,ní,mi,ti,by,je,to,co,ač,my,ty,on,ji,jí,už,až
 REPEAT_ALLOWED_CHARS        = oOuU
 REPEATED_DOUBLE_MIN         = 2
@@ -107,14 +98,24 @@ SYM_LET_DIG_NONTEXT         = true
 MOSTLY_READABLE_VALID_MIN   = 0.85
 SHORT_NOISY_QS_PENALTY      = 0.20
 
+# (#3 Phase 2) Categoriser override / structural-route thresholds — previously
+# hardcoded inside determine_category; surfaced here so issue #3 is actually
+# calibratable. Defaults reproduce the prior hardcoded behaviour exactly.
+LOWPPL_CLEAR_MAX            = 50.0
+HARD_SWEEP_LANG_MAX        = 0.45
+HARD_SWEEP_PPL_MIN         = 1000.0
+GHOST_DOMINATED_MIN_RATIO  = 0.5
+# Per-word penalty score_word() adds for tokens containing 'w' (rare in Czech;
+# strong mirror/inverted-OCR signal, DK request).
+WORD_W_PENALTY             = 0.20
+
+# (#3 A3) Page-level inverted-scan sweep (apply_document_postprocessing).
+INVERTED_RUN_MIN           = 4
+INVERTED_PAGE_MAJORITY     = 0.60
+
 [PIPELINE]
 METHOD        = layoutreader
-# default extraction backend: alto-tools | layoutreader | glm
 INPUT_DIR     = data_samples/ALTO
-# document-level ALTO XMLs (stage 1 input)
 PAGE_ALTO_DIR = data_samples/PAGE_ALTO
-# per-page ALTO dir (stage 1 output / stage 2 input)
 SKIP_SPLIT    = false
-# set true when PAGE_ALTO is already populated
 PARADATA_DIR  = paradata
-# where stages write paradata JSON and the merged summary lands

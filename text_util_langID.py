@@ -106,6 +106,24 @@ CLEAN_PROSE_WEIRD_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_WEIRD_MAX", 0.08)
 CLEAN_PROSE_PPL_MAX   = _get_float("TEXT_UTILS", "CLEAN_PROSE_PPL_MAX",   400.0)
 CLEAN_PROSE_WC_MIN    = _config.getint("TEXT_UTILS", "CLEAN_PROSE_WC_MIN", fallback=4)
 
+# (#3 Phase 2) override + structural-route thresholds, now config-driven.
+LOWPPL_CLEAR_MAX          = _get_float("TEXT_UTILS", "LOWPPL_CLEAR_MAX",          50.0)
+HARD_SWEEP_LANG_MAX       = _get_float("TEXT_UTILS", "HARD_SWEEP_LANG_MAX",       0.45)
+HARD_SWEEP_PPL_MIN        = _get_float("TEXT_UTILS", "HARD_SWEEP_PPL_MIN",        1000.0)
+GHOST_DOMINATED_MIN_RATIO = _get_float("TEXT_UTILS", "GHOST_DOMINATED_MIN_RATIO", 0.5)
+WORD_W_PENALTY            = _get_float("TEXT_UTILS", "WORD_W_PENALTY",            0.20)
+
+# (#3 A3) Page-level inverted-scan sweep — defined here (config-driven) and
+# re-exported via `from text_util_langID import *` so langID_classify and the
+# tests share one tunable source of truth.
+INVERTED_RUN_MIN          = _get_int("TEXT_UTILS",   "INVERTED_RUN_MIN",          4)
+INVERTED_PAGE_MAJORITY    = _get_float("TEXT_UTILS", "INVERTED_PAGE_MAJORITY",    0.60)
+
+# Trash routes inside determine_category that all fold to the single
+# `trash_threshold` diagnostic boolean (keeps "exactly one categoriser flag True"
+# while preserving granular reason strings for logging / the re-scorer).
+TRASH_REASONS = frozenset({"trash_threshold", "trash_hard_sweep", "trash_inverted"})
+
 # Phase 4
 MOSTLY_READABLE_VALID_MIN = _get_float("TEXT_UTILS", "MOSTLY_READABLE_VALID_MIN", 0.85)
 SHORT_NOISY_QS_PENALTY    = _get_float("TEXT_UTILS", "SHORT_NOISY_QS_PENALTY", 0.20)
@@ -176,6 +194,70 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
 # Lexicon Integration for Rotation/Inversion detection
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Inverted / mirrored-scan lexicon (#3 item 3)
+# -----------------------------------------------------f----------------------
+# Ghost spellings are DERIVED from per-glyph transforms, not hand-typed (the old
+# MIR/ROT tables had 3 wrong entries: pouze, bude). Source words + the glyph maps
+# are the only thing maintained.
+
+# Left-right MIRROR images (reflection across a vertical axis).
+_MIRROR_GLYPH = {
+    "b": "d", "d": "b", "p": "q", "q": "p",
+    "a": "a", "e": "e", "i": "i", "l": "l", "m": "m", "n": "n",
+    "o": "o", "s": "s", "t": "t", "u": "u", "v": "v", "w": "w",
+    "x": "x", "y": "y", "z": "z",
+}
+
+# 180-degree ROTATION images. Glyphs with no clean rotated letter-image (v, k,
+# f, …) are intentionally absent: a word containing one yields NO rotation ghost
+# instead of a fabricated match.
+_ROTATE_GLYPH = {
+    "b": "q", "q": "b", "d": "p", "p": "d",
+    "n": "u", "u": "n", "m": "w", "w": "m", "y": "h",
+    "a": "a", "e": "e", "i": "i", "l": "l",
+    "o": "o", "s": "s", "x": "x", "z": "z",
+}
+
+
+def _transform_word(w: str, glyph_map: dict) -> str | None:
+    """Image of *w* under a page flip: map each glyph, then reverse reading
+    order. None if any glyph has no clean letter-image under the transform."""
+    out = []
+    for ch in w:
+        img = glyph_map.get(ch)
+        if img is None:
+            return None
+        out.append(img)
+    return "".join(reversed(out))
+
+
+# High-frequency Czech function words whose flipped images are reliable
+# inverted-scan fingerprints. ASCII/diacritic-free on purpose: a real diacritic
+# is a hard upright signal, handled separately.
+ROT_WHITELIST: frozenset = frozenset({
+    "po", "pod", "do", "od", "on", "ony", "by", "bez", "ne", "nebo",
+    "ven", "den", "zde", "se", "ve", "mez", "pouze", "bude",
+})
+
+# Flip-images that are themselves common real Czech words — pruned so upright
+# text is never read as its own ghost (e.g. mirror("on") == "no").
+_GHOST_REAL_WORD_COLLISIONS: frozenset = frozenset({"no", "bo"})
+
+
+def _build_ghostlist() -> frozenset:
+    ghosts = set()
+    for w in ROT_WHITELIST:
+        for img in (_transform_word(w, _MIRROR_GLYPH),
+                    _transform_word(w, _ROTATE_GLYPH)):
+            if img:
+                ghosts.add(img)
+    return frozenset(ghosts - ROT_WHITELIST - _GHOST_REAL_WORD_COLLISIONS)
+
+
+ROT_GHOSTLIST: frozenset = _build_ghostlist()
+
+
 # Left-right mirror mapping + reversal
 MIR_PAIRS = {
     "po": "oq", "pod": "boq", "do": "ob", "od": "bo",
@@ -202,27 +284,32 @@ ROT_WHITELIST = set(MIR_PAIRS.keys()).union(set(ROT_PAIRS.keys()))
 ROT_GHOSTLIST = set(MIR_PAIRS.values()).union(set(ROT_PAIRS.values())) - ROT_WHITELIST
 
 def analyze_rotation_signals(text: str, rot_ratio: float) -> tuple[bool, bool]:
+    """Returns (is_upright_czech, ghost_dominated).
+
+    is_upright_czech — HARD protective signal: a Czech diacritic OR a real
+        upright function word. When True the rotation penalty is bypassed and the
+        per-line `trash_inverted` route never fires.
+    ghost_dominated — genuine inverted-glyph density (rot_ratio gate) AND a
+        majority of word tokens are flip-images of real Czech words.
     """
-    Analyzes text for both mirrored and 180-rotated signals using a unified metric.
-    Returns (is_upright_czech, ghost_dominated).
-    """
-    words = [w.lower() for w in re.split(r'\W+', text) if w]
+    words = [w.lower() for w in re.split(r"\W+", text) if w]
     if not words:
         return has_cz_diacs(text), False
 
-    # Count hits against the combined dictionaries
     real_hits = sum(1 for w in words if w in ROT_WHITELIST)
     ghost_hits = sum(1 for w in words if w in ROT_GHOSTLIST)
 
-    # Upright confirmation: Spares any line with a real rotatable Czech word or diacritic
-    is_upright_czech = has_cz_diacs(text) or (real_hits > 0)
+    is_upright_czech = has_cz_diacs(text) or real_hits > 0
 
-    # Estimate susceptible tokens using rot_ratio
-    rotatable_tokens_est = max(1, int(rot_ratio * len(words)))
-
-    # Single unified metric: Is the line dominated by mirrored OR rotated ghosts?
-    ghost_dominated = (ghost_hits > 0) and (ghost_hits / rotatable_tokens_est >= 0.5)
-
+    # rot_ratio is a GATE, not a denominator; the ghost SHARE among all words
+    # must dominate. A low-rotatable line can no longer be promoted to inverted
+    # by one incidental ghost match.
+    ghost_share = ghost_hits / len(words)
+    ghost_dominated = (
+        ghost_hits > 0
+        and rot_ratio >= ROT_RATIO_INVERTED_MIN
+        and ghost_share >= GHOST_DOMINATED_MIN_RATIO
+    )
     return is_upright_czech, ghost_dominated
 
 # ---------------------------------------------------------------------------
@@ -484,7 +571,9 @@ def score_word(word: str) -> float:
         caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]): has_caps_prefix = True
 
-    return min(1.0, 0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase + 0.20 * has_caps_prefix + 0.20 * has_w)
+    return min(1.0, 0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl
+               + 0.10 * has_uppercase + 0.20 * has_caps_prefix + WORD_W_PENALTY * has_w)
+
 
 def score_words_in_line(text: str) -> list[tuple[str, float]]:
     return [(w, score_word(w)) for w in text.split()]
@@ -543,30 +632,39 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
     if word_count == 0 or not text_source.strip():
         return "Empty", "empty"
 
-    # 1. NEW: Hard sweep for true garbage leaking via capped language confidence
-    if orig_lang_score < 0.45 and ppl > 1000.0:
+    # 1. Hard sweep: confident garbage leaking past the remap CAP. Keys off the
+    #    ORIGINAL FastText score (the signal the cap masks) + an LM that is also
+    #    lost. Folds to trash_threshold in the CSV via TRASH_REASONS.
+    if orig_lang_score < HARD_SWEEP_LANG_MAX and ppl > HARD_SWEEP_PPL_MIN:
         return "Trash", "trash_hard_sweep"
 
-    # 2. NEW: Exact lexicon ghost matching sweep for inverted scans
+    # 2. Inverted / mirrored scan: line dominated by lexicon ghost tokens with no
+    #    upright-Czech evidence (diacritics / real rotatable word).
     if ghost_dominated and not is_upright_czech:
         return "Trash", "trash_inverted"
 
+    # 3. All-caps vowel-less scramble.
     if is_all_caps_line(text_source) and vr < 0.10:
         return "Trash", "allcaps_novowel"
 
+    # 4. Overwhelming non-alphanumeric density.
     if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
         return "Trash", "trash_threshold"
 
+    # 5. Structural short-garbage route (e.g. "olie").
     if (word_count <= ISOLATED_CHAR_MIN_TOKENS
             and not has_cz_diacs(text_source)
             and lang_score <= LANG_SCORE_REMAP
             and (gibberish_present or weird_ratio > 0.0)):
         return "Trash", "trash_threshold"
 
-    if ppl < 50.0 and word_count >= 3:
-        if valid_word_ratio < MOSTLY_READABLE_VALID_MIN: return "Noisy", "noisy_threshold"
+    # 6. High-confidence LM override.
+    if ppl < LOWPPL_CLEAR_MAX and word_count >= 3:
+        if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+            return "Noisy", "noisy_threshold"
         return "Clear", "lowppl_clear"
 
+    # 7. Quality-score band routing.
     if quality_score < CATEG_TRASH_SCORE_MAX:
         return "Trash", "trash_threshold"
 
@@ -575,10 +673,12 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
                 and word_count >= CLEAN_PROSE_WC_MIN
                 and weird_ratio < CLEAN_PROSE_WEIRD_MAX
                 and ppl < CLEAN_PROSE_PPL_MAX):
-            if valid_word_ratio < MOSTLY_READABLE_VALID_MIN: return "Noisy", "noisy_threshold"
+            if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+                return "Noisy", "noisy_threshold"
             return "Clear", "cleanprose_clear"
         return "Noisy", "noisy_threshold"
 
+    # 8. Mostly-readable cap.
     if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
         return "Noisy", "noisy_threshold"
 
