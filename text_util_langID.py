@@ -216,6 +216,58 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
     "deu": frozenset("äöüßÄÖÜ"),
 }
 
+
+# Left-right mirror mapping + reversal
+MIR_PAIRS = {
+    "po": "oq", "pod": "boq", "do": "ob", "od": "bo",
+    "on": "no", "ony": "yno", "by": "yd", "bez": "zed",
+    "ne": "en", "nebo": "oden", "ven": "nev", "den": "neb",
+    "zde": "ebz", "se": "es", "ve": "ev", "mez": "zem",
+    "pouze": "ezouq", "bude": "ebud"
+}
+
+# True 180-degree rotation + reversal
+ROT_PAIRS = {
+    "po": "od", "pod": "pod", "do": "op", "od": "po",
+    "on": "uo", "by": "hq", "bez": "zeq",
+    "ne": "eu", "nebo": "oqeu", "den": "uep",
+    "zde": "epz", "se": "es", "mez": "zew",
+    "pouze": "ezond", "bude": "epuq"
+}
+
+# Unified Whitelist: Any real word from either dictionary
+INVERSION_WHITELIST = set(MIR_PAIRS.keys()).union(set(ROT_PAIRS.keys()))
+
+# Unified Ghostlist: All mirrored/rotated outcomes.
+# Collisions (e.g., 'no', 'en', 'pod' acting as its own rotated ghost) are strictly pruned.
+INVERSION_GHOSTLIST = set(MIR_PAIRS.values()).union(set(ROT_PAIRS.values())) - INVERSION_WHITELIST
+
+
+def analyze_inversion_signals(text, has_cz_diacs, rot_ratio):
+    """
+    Analyzes text for both mirrored and 180-rotated signals using a unified metric.
+    Returns (is_upright_czech, ghost_dominated).
+    """
+    words = [w.lower() for w in re.split(r'\W+', text) if w]
+    if not words:
+        return has_cz_diacs, False
+
+    # Count hits against the combined dictionaries
+    real_hits = sum(1 for w in words if w in INVERSION_WHITELIST)
+    ghost_hits = sum(1 for w in words if w in INVERSION_GHOSTLIST)
+
+    # Upright confirmation: Spares any line with a real rotatable Czech word or diacritic
+    is_upright_czech = has_cz_diacs or (real_hits > 0)
+
+    # Estimate susceptible tokens using rot_ratio
+    rotatable_tokens_est = max(1, int(rot_ratio * len(words)))
+
+    # Single unified metric: Is the line dominated by mirrored OR rotated ghosts?
+    ghost_dominated = (ghost_hits > 0) and (ghost_hits / rotatable_tokens_est >= 0.5)
+
+    return is_upright_czech, ghost_dominated
+
+
 # ---------------------------------------------------------------------------
 # Shared helpers (Phase 2) — reused by several detectors below
 # ---------------------------------------------------------------------------
