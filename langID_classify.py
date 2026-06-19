@@ -79,8 +79,10 @@ CSV_HEADER = [
 ]
 
 # Page-level inverted-scan sweep parameters (#3 A3).
-INVERTED_RUN_MIN = 4           # contiguous-run threshold for mixed pages
+INVERTED_RUN_MIN = 4  # contiguous-run threshold for mixed pages
 INVERTED_PAGE_MAJORITY = 0.60  # >= this fraction of a page's scoreable lines
+
+
 #                                being suspicious => Trash the whole suspicious set
 
 
@@ -380,7 +382,8 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
       3. ``pp_inverted_run``     — page-level inverted-scan sweep. A line is
          "suspicious" when (no Czech diacritics AND stored ``lang_score`` <
          ``LANG_SCORE_ROUGH``) OR (``rot_ratio`` >= ``ROT_RATIO_INVERTED_MIN``
-         AND ``perplex`` >= ``PPL_INVERTED_MIN``). Suspicious lines are Trashed
+         AND ``perplex`` >= ``PPL_INVERTED_MIN`` AND ``word_weird`` > 0.0 AND
+         ``lang_score`` < ``ROT_HIGH_LANG_CONF``). Suspicious lines are Trashed
          when they form a contiguous run >= ``INVERTED_RUN_MIN`` *or* (#3 A3
          page-MAJORITY arm) when they make up >= ``INVERTED_PAGE_MAJORITY`` of
          the page's scoreable lines — catching garbage that is broken up by
@@ -413,10 +416,10 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         prev2_cat = df["categ"].shift(2)
         next2_cat = df["categ"].shift(-2)
         surrounded_by_trash = (
-            (prev_cat == "Trash") & (next_cat == "Trash") &
-            (prev2_cat == "Trash") & (next2_cat == "Trash") &
-            (df["categ"] == "Noisy") &
-            (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
+                (prev_cat == "Trash") & (next_cat == "Trash") &
+                (prev2_cat == "Trash") & (next2_cat == "Trash") &
+                (df["categ"] == "Noisy") &
+                (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
         )
         df.loc[surrounded_by_trash, "categ"] = "Trash"
         df.loc[surrounded_by_trash, "pp_surrounded_trash"] = True
@@ -434,7 +437,10 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         low_lang = candidates["lang_score"].astype(float) < LANG_SCORE_ROUGH
         high_rot = candidates["rot_ratio"].astype(float) >= ROT_RATIO_INVERTED_MIN
         high_ppl = candidates["perplex"].astype(float) >= PPL_INVERTED_MIN
-        suspicious = (no_diacs & low_lang) | (high_rot & high_ppl)
+        has_weird = candidates["word_weird"].astype(float) > 0.0
+        high_lang_conf = candidates["lang_score"].astype(float) >= ROT_HIGH_LANG_CONF
+
+        suspicious = (no_diacs & low_lang) | (high_rot & high_ppl & has_weird & ~high_lang_conf)
 
         # (#3 A3) Page-MAJORITY arm: a page that is mostly suspicious is an
         # inverted/garbage scan; Trash every suspicious line regardless of run

@@ -35,7 +35,7 @@ _LOW = LANG_SCORE_ROUGH - 0.10   # below the rough gate -> low_lang True
 _HIGH = 0.95
 
 
-def _row(page, line, categ, text, lang_score=_HIGH, rot=0.0, ppl=30.0, qs=0.80):
+def _row(page, line, categ, text, lang_score=_HIGH, rot=0.0, ppl=30.0, qs=0.80, word_weird=0.0):
     """Build a full CSV-schema row dict with sensible clean defaults."""
     d = {c: "" for c in CSV_HEADER}
     d.update({
@@ -46,7 +46,7 @@ def _row(page, line, categ, text, lang_score=_HIGH, rot=0.0, ppl=30.0, qs=0.80):
         "original_lang": "ces_Latn", "orig_lang_score": f"{lang_score:.4f}",
         "perplex": f"{ppl:.2f}", "word_count": len(text.split()), "char_count": len(text),
         "garbage_density": "0.0", "upper": 0, "repeated": 0, "ldl_fuses": 0,
-        "fused_words": 0, "gibberish": 0, "weird_wx": 0, "word_weird": "0.0",
+        "fused_words": 0, "gibberish": 0, "weird_wx": 0, "word_weird": f"{float(word_weird):.4f}",
         "vowel_ratio": "0.4", "rot_ratio": f"{rot:.4f}", "caps_header": False,
         "allcaps_novowel": False, "lowppl_clear": False, "cleanprose_clear": False,
         "trash_threshold": False, "noisy_threshold": False, "clear_threshold": False,
@@ -124,6 +124,38 @@ class TestRunBasedSweep:
         survivors = out[out["text"].str.startswith("zzz")]
         assert (survivors["categ"] == "Noisy").all()
         assert not survivors["pp_inverted_run"].any()
+
+
+class TestRotationArm:
+    """Ensures the rotation arm of the page-level sweep requires corroborating signals."""
+
+    def test_genuine_inversion_trashed(self):
+        # High rot, high ppl, weirdness > 0, low/mid lang score -> forms a valid run
+        rows = [_row("7", i, "Clear", f"cisty cesky radek {i}", lang_score=_HIGH)
+                for i in range(1, 5)]
+        rows += [_row("7", 4 + j, "Noisy", f"uonn qpqb dbqp {j}", lang_score=_LOW, rot=0.60, ppl=250.0, word_weird=0.50)
+                 for j in range(INVERTED_RUN_MIN)]
+        out = apply_document_postprocessing(_df(rows))
+        suspicious = out[out["text"].str.startswith("uonn")]
+        assert (suspicious["categ"] == "Trash").all()
+        assert suspicious["pp_inverted_run"].all()
+
+    def test_clean_prose_survives_rotation_false_positive(self):
+        # Clean prose (mimicking the lines 68, 73, 75 false positives)
+        # They have high rot & ppl, but are saved by missing weirdness or having high lang score
+        rows = [_row("8", i, "Clear", f"jasny text cislo {i}", lang_score=_HIGH)
+                for i in range(1, 5)]
+        rows += [
+            _row("8", 5, "Clear", "všech obcích vyvéšeny jsou.", lang_score=1.0000, rot=0.60, ppl=250.0, qs=0.90, word_weird=0.0),
+            _row("8", 6, "Clear", ". až 50 korun; v pádu nedobytnosti vězením.", lang_score=0.9814, rot=0.60, ppl=250.0, qs=0.83, word_weird=0.02),
+            _row("8", 7, "Clear", "eni - trestá so pokutou penéžitou", lang_score=0.6824, rot=0.60, ppl=250.0, qs=0.74, word_weird=0.0),
+            _row("8", 8, "Clear", "dalsi normalni radek s rotacnimi znaky", lang_score=0.9500, rot=0.60, ppl=250.0, qs=0.85, word_weird=0.0),
+        ]
+        out = apply_document_postprocessing(_df(rows))
+        fp_lines = out[out["line_num"].isin([5, 6, 7, 8])]
+
+        assert (fp_lines["categ"] == "Clear").all()
+        assert not fp_lines["pp_inverted_run"].any()
 
 
 class TestDedupAndNoOp:

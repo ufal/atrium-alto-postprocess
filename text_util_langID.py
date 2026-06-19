@@ -100,6 +100,7 @@ CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.90)
 ROT_RATIO_INVERTED_MIN   = _get_float("TEXT_UTILS", "ROT_RATIO_INVERTED_MIN",   0.55)
 WEIRD_RATIO_INVERTED_MIN = _get_float("TEXT_UTILS", "WEIRD_RATIO_INVERTED_MIN", 0.35)
 PPL_INVERTED_MIN         = _get_float("TEXT_UTILS", "PPL_INVERTED_MIN",         200.0)
+ROT_HIGH_LANG_CONF       = _get_float("TEXT_UTILS", "ROT_HIGH_LANG_CONF",       0.90)
 
 # Near-boundary promotion
 CLEAN_PROSE_MIN_SCORE = _get_float("TEXT_UTILS", "CLEAN_PROSE_MIN_SCORE", 0.65)
@@ -922,7 +923,7 @@ def compute_quality_score(
         elif perplexity >= PPL_INVERTED_MIN and weird_ratio > 0.0:
             rot_penalty = 0.40 * min(weird_ratio / WEIRD_RATIO_INVERTED_MIN, 1.0)
 
-        if lang_score is not None and lang_score >= 0.90:
+        if lang_score is not None and lang_score >= ROT_HIGH_LANG_CONF:
             rot_penalty *= 0.5
 
     # Apply short-noisy penalty
