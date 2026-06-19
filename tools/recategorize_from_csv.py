@@ -63,6 +63,7 @@ from langID_classify import (  # noqa: E402
 from text_util_langID import (  # noqa: E402
     SHORT_PPL_CAP,
     _lang_base,
+    analyze_rotation_signals,  # <--- NEW
     categorize_line,
     compute_garbage_density,
     compute_quality_score,
@@ -142,7 +143,11 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     fused_words = detect_fused_words(text_content)
     gibb_count = detect_gibberish_words(text_content)
     wx_count = detect_wx_words(text_content)
+
     rot_ratio = compute_rotatable_ratio(text_content)
+    # --- NEW: Compute unified rotation signals ---
+    is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content, rot_ratio)
+
     caps_header = is_all_caps_line(text_content)
     weird_ratio = compute_word_weird_ratio(score_words_in_line(text_content))
     valid_ratio = compute_valid_ratio(text_content)
@@ -153,6 +158,7 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
         lang_score=original_lang_score,
         gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
         fused_ratio=fused_words / max(wc, 1), rot_ratio=rot_ratio,
+        is_upright_czech=is_upright_czech,  # <--- NEW
     )
 
     # (#3 A2/B) post-cap score + gibberish flag into the categoriser.
@@ -160,7 +166,11 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
         q_score, text_content, wc, vowel_ratio, ppl_val,
         rot_ratio=rot_ratio, weird_ratio=weird_ratio, return_reason=True,
         valid_word_ratio=valid_ratio, lang_score=new_score,
+        orig_lang_score=original_lang_score,  # <--- NEW
         gibberish_present=(gibb_count + wx_count) > 0,
+        garbage_density=g_density,  # <--- NEW
+        is_upright_czech=is_upright_czech,  # <--- NEW
+        ghost_dominated=ghost_dominated,  # <--- NEW
     )
 
     out = dict(row)  # keep any columns we do not recompute
@@ -189,6 +199,19 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
 def rescore_csv(in_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return (old_df, new_df) for one per-document CSV."""
     old = pd.read_csv(in_path, dtype=str, keep_default_na=False)
+
+    # --- Normalize legacy schema to current CSV_HEADER ---
+    rename_map = {}
+    if "page" in old.columns and "page_num" not in old.columns:
+        rename_map["page"] = "page_num"
+    if "line" in old.columns and "line_num" not in old.columns:
+        rename_map["line"] = "line_num"
+    elif "line_order" in old.columns and "line_num" not in old.columns:
+        rename_map["line_order"] = "line_num"
+
+    if rename_map:
+        old = old.rename(columns=rename_map)
+
     expected_langs, known_bases = _load_lang_config(
         os.getenv("LANGID_CONFIG", str(_ROOT / "config_langID.txt")))
 
@@ -196,7 +219,7 @@ def rescore_csv(in_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     for _, r in old.iterrows():
         rd = r.to_dict()
         if _is_fast_track(rd):
-            rows.append(rd)            # pass through untouched
+            rows.append(rd)  # pass through untouched
         else:
             rows.append(_rescore_row(rd, expected_langs, known_bases))
 

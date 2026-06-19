@@ -243,6 +243,10 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         wx_count = detect_wx_words(text_content)  # (#13) standalone weird_wx column
 
         rot_ratio = compute_rotatable_ratio(text_content)
+
+        # --- NEW: Compute unified rotation signals ---
+        is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content, rot_ratio)
+
         caps_header = is_all_caps_line(text_content)
 
         word_scores = score_words_in_line(text_content)
@@ -262,6 +266,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
             fused_ratio=fused_words / max(wc, 1),
             rot_ratio=rot_ratio,
+            is_upright_czech=is_upright_czech,  # <--- NEW
         )
 
         # (#3 A2/B) Feed the categoriser the POST-CAP stored score (scores[i])
@@ -274,8 +279,11 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             return_reason=True,
             valid_word_ratio=valid_ratio,
             lang_score=scores[i],
+            orig_lang_score=original_lang_score,  # <--- NEW
             gibberish_present=(gibb_count + wx_count) > 0,
-            garbage_density=g_density,  # NEW: pass garbage density down
+            garbage_density=g_density,  # <--- NEW
+            is_upright_czech=is_upright_czech,  # <--- NEW
+            ghost_dominated=ghost_dominated,  # <--- NEW
         )
 
         row_dict = {
