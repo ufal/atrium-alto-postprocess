@@ -105,6 +105,7 @@ CLEAN_PROSE_MIN_SCORE = _get_float("TEXT_UTILS", "CLEAN_PROSE_MIN_SCORE", 0.65)
 CLEAN_PROSE_WEIRD_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_WEIRD_MAX", 0.08)
 CLEAN_PROSE_PPL_MAX   = _get_float("TEXT_UTILS", "CLEAN_PROSE_PPL_MAX",   400.0)
 CLEAN_PROSE_WC_MIN    = _config.getint("TEXT_UTILS", "CLEAN_PROSE_WC_MIN", fallback=4)
+CLEAR_BAND_WC_MIN     = _get_int("TEXT_UTILS", "CLEAR_BAND_WC_MIN", 0)
 
 # (#3 Phase 2) override + structural-route thresholds, now config-driven.
 LOWPPL_CLEAR_MAX          = _get_float("TEXT_UTILS", "LOWPPL_CLEAR_MAX",          50.0)
@@ -196,7 +197,7 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
 
 # ---------------------------------------------------------------------------
 # Inverted / mirrored-scan lexicon (#3 item 3)
-# -----------------------------------------------------f----------------------
+# ---------------------------------------------------------------------------
 # Ghost spellings are DERIVED from per-glyph transforms, not hand-typed (the old
 # MIR/ROT tables had 3 wrong entries: pouze, bude). Source words + the glyph maps
 # are the only thing maintained.
@@ -678,7 +679,15 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
             return "Clear", "cleanprose_clear"
         return "Noisy", "noisy_threshold"
 
-    # 8. Mostly-readable cap.
+    # (#3) Short-fragment guard: hold a very short, NOISY fragment at Noisy even
+    # when its QS reaches the Clear band. Only fires when the fragment also carries
+    # noise, so clean short prose ("republiky československé") still reaches Clear.
+    # The LM-certain low-ppl fast-track above is intentionally exempt.
+    if (CLEAR_BAND_WC_MIN
+            and word_count < CLEAR_BAND_WC_MIN
+            and (weird_ratio > 0.0 or garbage_density > 0.0)):
+        return "Noisy", "noisy_threshold"
+
     if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
         return "Noisy", "noisy_threshold"
 

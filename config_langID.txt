@@ -25,8 +25,10 @@ EXPECTED_LANGS = ces,deu,eng
 # (#3) slk added on DK's request: FastText routinely confuses Czech<->Slovak.
 # NOTE the consequence: with slk trusted, remap_lang keeps such lines labelled
 # `slk` (original confidence preserved) and NEVER reaches the slk->ces special
-# case. The score-driven quality logic is identical either way; only the stored
-# `lang`/`main_lang` label differs. Drop slk here if you prefer slk->ces relabel.
+# case.
+# The score-driven quality logic is identical either way; only the stored
+# `lang`/`main_lang` label differs.
+# Drop slk here if you prefer slk->ces relabel.
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita,slk
 MODEL_NAME = Qwen/Qwen2.5-0.5B
 
@@ -59,13 +61,16 @@ PPL_INVERTED_MIN            = 200.0
 
 CATEG_GARBAGE_DENSITY_HIGH  = 0.35
 # (#3 Phase 1) NOISY_MAX 0.90 -> 0.85: recovers ~24 clean Czech sentences scoring
-#   0.85-0.90 as Clear. Zero garbage risk (garbage maxes at ~0.78 in simulation).
+#   0.85-0.90 as Clear.
+# Zero garbage risk (garbage maxes at ~0.78 in simulation).
 CATEG_NOISY_SCORE_MAX       = 0.85
-# (#3 Phase 1) TRASH_MAX 0.50 -> 0.55: balanced garbage reduction. DIAL: 0.50 =
+# (#3 Phase 1) TRASH_MAX 0.50 -> 0.55: balanced garbage reduction.
+# DIAL: 0.50 =
 #   zero-collateral, 0.60 = aggressive. The Phase-2 structural Trash routes
 #   (hard-sweep / inverted / short-garbage) now catch most garbage on their own,
 #   so re-validate with tools/recategorize_from_csv.py --report-only before
-#   raising this further; 0.55 vs 0.50 is the safe range here.
+#   raising this further;
+# 0.55 vs 0.50 is the safe range here.
 CATEG_TRASH_SCORE_MAX       = 0.55
 
 ROT_RATIO_INVERTED_MIN      = 0.55
@@ -75,6 +80,14 @@ ROT_HIGH_LANG_CONF          = 0.90
 CLEAN_PROSE_MIN_SCORE       = 0.65
 CLEAN_PROSE_WEIRD_MAX       = 0.08
 CLEAN_PROSE_WC_MIN          = 4
+
+# (#3) Short-fragment guard. Holds a very short line at Noisy when it reaches the
+# Clear band but also carries noise (weirdness or garbage), since QS/perplexity
+# are unreliable on tiny fragments. 0 = disabled (current behaviour). Recommended
+# value 3: it holds 1-2 word noisy fragments (značky., taxo vojenské.) at Noisy
+# while sparing clean short prose (republiky československé) and the LM-certain
+# low-ppl fast-track. Verified collateral-free against the calibration fixtures.
+CLEAR_BAND_WC_MIN           = 0
 
 LANG_SCORE_REMAP             = 0.75
 # (#3 A1) Cap for remapped NON-Latin-script guesses (Hangul/Cyrillic/CJK).
@@ -99,7 +112,8 @@ MOSTLY_READABLE_VALID_MIN   = 0.85
 SHORT_NOISY_QS_PENALTY      = 0.20
 
 # (#3 Phase 2) Categoriser override / structural-route thresholds — previously
-# hardcoded inside determine_category; surfaced here so issue #3 is actually
+# hardcoded inside determine_category;
+# surfaced here so issue #3 is actually
 # calibratable. Defaults reproduce the prior hardcoded behaviour exactly.
 LOWPPL_CLEAR_MAX            = 50.0
 HARD_SWEEP_LANG_MAX        = 0.45

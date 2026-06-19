@@ -35,9 +35,10 @@ NOISY = [
     ("Maždý taxou vojenskou povinný jest povinen až do",          268.00, 0.6481, "Noisy",
      "leading typo Maždy<-Každy lowers valid_ratio just under Clear"),
     ("Pončeni o povinnosti ku taxo vojenské.",                    304.00, 0.8557, "Noisy",
-     "two OCR substitutions, otherwise readable"),
+     "structurally clean despite Poučení->Pončeni typo; no-lexicon validator reads Clear "
+     "(known limitation — would need a dictionary to demote)"),
     ("taxo vojenské.",                                            223.00, 0.9191, "Noisy",
-     "short readable Czech fragment — regression guard vs short-garbage route"),
+     "short readable Czech; Clear unless CLEAR_BAND_WC_MIN>=3 holds it (noise: trailing '.')"),
     ("statků v Praze.",                                           644.00, 1.0000, "Noisy",
      "3-word clean fragment, must not be Trashed by short/rot penalties"),
 ]
