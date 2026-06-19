@@ -58,18 +58,18 @@ Before you begin, set up your environment.
     ```
 3. Download the **FastText** 🌐 model for language identification:
     ```bash
-    wget "https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin" -O lid.176.bin
+    wget "[https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin](https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin)" -O lid.176.bin
     ```
 4. Clone and install `alto-tools` 🔧, which is used for statistics and text extraction in low memory environments:
     ```bash
-    git clone https://github.com/cneud/alto-tools.git
+    git clone [https://github.com/cneud/alto-tools.git](https://github.com/cneud/alto-tools.git)
     cd alto-tools
     pip install .
     cd ..
     ```
 5. Copy the `v3` folder from the 📐`layoutreader` 🔧 repository [^9] to the project directory for the LR-based text extraction method:
     ```bash
-    git clone https://github.com/ppaanngggg/layoutreader.git
+    git clone [https://github.com/ppaanngggg/layoutreader.git](https://github.com/ppaanngggg/layoutreader.git)
     cp -r layoutreader/v3/ ./
     rm -rf layoutreader/
     ```
@@ -131,7 +131,9 @@ directory, alongside the individual per-stage logs.
 First, ensure you have a directory 📁 containing your document-level `<file>.alto.xml` files.
 This script will split them into individual page-specific **XML** 📄 files.
 
-    python3 page_split.py <input_dir> <output_dir>
+```
+python3 page_split.py <input_dir> <output_dir>
+```
 
 Each page-specific file retains the header from its original source document 📌.
 
@@ -158,23 +160,28 @@ PAGE_ALTO/
 Next, use the output directory from Step 1 as the input for this script to generate a
 foundational **CSV** 📊 statistics file.
 
-    python3 alto_stats_create.py <input_dir> -o output.csv
+```
+python3 alto_stats_create.py <input_dir> -o output.csv
+```
 
 This script writes a **CSV** 📊 file line-by-line, capturing metadata for each page:
 
-    file, page, textlines, illustrations, graphics, strings, path
-    CTX200205348, 1, 33, 1, 10, 163, /lnet/.../A-PAGE/CTX200205348/CTX200205348-1.alto.xml
-    CTX200205348, 2, 0, 1, 12, 0, /lnet/.../A-PAGE/CTX200205348/CTX200205348-2.alto.xml
-    ...
+```
+file, page, textlines, illustrations, graphics, strings, path
+CTX200205348, 1, 33, 1, 10, 163, /lnet/.../A-PAGE/CTX200205348/CTX200205348-1.alto.xml
+CTX200205348, 2, 0, 1, 12, 0, /lnet/.../A-PAGE/CTX200205348/CTX200205348-2.alto.xml
+...
 
-The extraction is powered by the **alto-tools** 🔧 framework [^1].
+```
+
+The extraction is powered by the **alto-tools** 🔧 framework [^1](https://github.com/cneud/alto-tools).
 
 * **Input 📥:** `../PAGE_ALTO/` (input directory with **ALTO XML** 📄 files split into pages from Step 1)
 * **Output 📤:** `output.csv` (table with page-level statistics and paths to ALTO files)
 
 > [!IMPORTANT]
 > This statistics table is the basis for subsequent processing steps.
-> Example: [test_alto_stats.csv](test_alto_stats.csv) 📎.
+> Example: [test_alto_stats.csv](data_samples/test_alto_stats.csv) 📎.
 
 ---
 
@@ -192,15 +199,18 @@ It reads the **CSV** 📊 from Step 2.
 > [!CAUTION]
 > The model responsible for spatial layout 📐 analysis requires a **GPU** 🚀 to run efficiently.
 
-    python3 extract_LytRdr_ALTO_2_TXT.py
+```
+python3 extract_LytRdr_ALTO_2_TXT.py
+```
 
-Uses the **LayoutReader** 📐 framework [^9] to extract text and bounding boxes of **XML** 📄 elements
+Uses the **LayoutReader** 📐 framework [^9](https://github.com/ppaanngggg/layoutreader) to extract text and bounding boxes of **XML** 📄 elements
 (specifically, `<TextLine>` elements containing `String`s with `CONTENT` attribute),
 process them to reconstruct the reading order of lines (columns-friendly), handle words split
 between two lines (adding the full form of the word), and group page contents into paragraphs
 based on the vertical spread of text lines.
 
 Example of per-page text files: [PAGE_TXT_LR](data_samples/PAGE_TXT_LR) 📁.
+
 ```
 PAGE_TXT_LR/
 ├── <file1>
@@ -220,12 +230,15 @@ PAGE_TXT_LR/
 > The method is **CPU** 💻-bound and faster than the LayoutReader method, but the text lines may not be in the correct
 > reading order, and full forms of hyphenated split words are not reconstructed.
 
-    python3 extract_ALTO_2_TXT.py
+```
+python3 extract_ALTO_2_TXT.py
+```
 
-Uses the `alto-tools` 🔧 framework [^1] to extract text lines from **XML** 📄 elements directly,
+Uses the `alto-tools` 🔧 framework [^1](https://github.com/cneud/alto-tools) to extract text lines from **XML** 📄 elements directly,
 with no post-processing. Suitable for a quick overview of raw text content.
 
 Example of per-page text files: [PAGE_TXT](data_samples/PAGE_TXT) 📁.
+
 ```
 PAGE_TXT/
 ├── <file1>
@@ -242,9 +255,11 @@ PAGE_TXT/
 > [!WARNING]
 > The method is **GPU** 🚀-bound, slower than the LayoutReader method, and requires a `gpuram48G` card.
 
-    python3 extract_LLM_ALTO_2_TXT.py
+```
+python3 extract_LLM_ALTO_2_TXT.py
+```
 
-Uses the **GLM-4v-9b** 🤖 multimodal large language model [^10] to perform generative **OCR** 🔍 directly from
+Uses the **GLM-4v-9b** 🤖 multimodal large language model [^10](https://huggingface.co/THUDM/glm-4v-9b) to perform generative **OCR** 🔍 directly from
 page images, prompted as `Transcribe all text on this page exactly as it appears`. The script
 trims whitespace and resizes high-resolution images to fit model constraints.
 
@@ -253,6 +268,7 @@ trims whitespace and resizes high-resolution images to fit model constraints.
 > layouts 📐 or degraded scans. It patches the transformers configuration to run the GLM-4v architecture.
 
 Example of per-page text files: [PAGE_TXT_LLM](data_samples/PAGE_TXT_LLM) 📁.
+
 ```
 PAGE_TXT_LLM/
 ├── <file1>
@@ -303,61 +319,31 @@ MODEL_NAME = Qwen/Qwen2.5-0.5B  # Language model for perplexity scoring; English
 
 [TEXT_UTILS]
 
-PERPLEXITY_THRESHOLD_MAX = 1000.0       # or 3000 Normalization ceiling for quality score (Qwen2.5-0.5B range)
-SHORT_PPL_CAP = 850.0                   # or 2500 Effective perplexity cap for 1-2 word lines
-
-LANG_SCORE_REMAP = 0.75     # (#3) Remap CAP for unknown Latin-script languages (except slk which is preserved)
-LANG_SCORE_REMAP_FAR = 0.50 # (#3) Remap CAP for unknown NON-Latin-script languages (Hangul, Cyrillic, CJK, …)
-LANG_SCORE_ROUGH = 0.45     # Threshold for rough language confidence
-LANG_SCORE_CLEAR = 0.75     # Threshold for clear language confidence
-
-ALLOWED_INTERNAL = .-,+()"'—–:%;?!/        # Allowed punctuation inside words
-STRIP_CHARS = .,;:!?()[]"'\/\       # Characters to strip from word edges
-SINGLE_CHAR_ALLOWED = aAiIuUvVzZkKsS # Safe single chars for weirdness scoring
-SHORT_VALID_WORDS = a,i,k,o,s,u,v,z,se,si,po,na,za,ze,do,od,ke,ku,ve,ní,mi,ti,by,je,to,co,ač,my,ty,on,ji,jí,už,až # (#3) Short Czech function words counted as valid before the 3-char gate
-REPEAT_ALLOWED_CHARS = oOuU     # Chars exempt from repeated-char penalties
-REPEATED_DOUBLE_MIN = 3         # Minimum occurrence count for doubled-char penalty
-ACADEMIC_TITLES = PhDr,MUDr,JUDr,MVDr,RNDr,PaedDr,CSc,DrSc,Ing,Mgr,Bc,PhD,DiS,prof,doc # Exempt from mid-uppercase
-LDL_ALLOWED_FOLLOW = .,/:%-;?)= # Chars a digit may safely precede (measurement awareness)
-LDL_UNITS = m,cm,mm,g,kg,km,ha,l,ml # Legitimate measurement units
-GARBAGE_KEEP_CHARS =  ,.?!()/-  # Allowed chars for garbage density
-FUSED_VOWEL_RUN_MIN = 3         # Min consecutive vowels to flag as fused
-WX_REPEAT_MIN = 2               # Min w/x characters to flag as weird_wx
-
-QS_WEIGHT_VALID_WORD  = 0.25    # Weight for valid word ratio in QS
-QS_WEIGHT_SYMBOL      = 0.13    # Weight for inverted non-alphanumeric density in QS
-QS_WEIGHT_WEIRD       = 0.13    # Weight for inverted word weirdness in QS
-QS_WEIGHT_PERPLEXITY  = 0.15    # Weight for inverted normalized perplexity in QS
-QS_WEIGHT_LENGTH      = 0.05    # Weight for length reward in QS
-QS_WEIGHT_GARBAGE     = 0.20    # Weight for inverted garbage density in QS
+QS_WEIGHT_VALID_WORD  = 0.35    # Weight for valid word ratio in QS
+QS_WEIGHT_WEIRD       = 0.18    # Weight for inverted word weirdness in QS
+QS_WEIGHT_PERPLEXITY  = 0.08    # Weight for inverted normalized perplexity in QS
+QS_WEIGHT_LENGTH      = 0.02    # Weight for length reward in QS
+QS_WEIGHT_GARBAGE     = 0.18    # Weight for inverted garbage density in QS
 QS_WEIGHT_VOWEL       = 0.07    # Weight for vowel quality in QS
 QS_WEIGHT_LANG        = 0.05    # Weight for language confidence in QS
 QS_WEIGHT_GIBBERISH   = 0.04    # Weight for inverted gibberish ratio in QS
 QS_WEIGHT_FUSED       = 0.03    # Weight for inverted fused word ratio in QS
 QS_LENGTH_MAX         = 100.0   # Max length for normalization
+# NOTE: QS_WEIGHT_SYMBOL no longer exists — there is no symbol_ratio term in compute_quality_score().
 
-VOWEL_RATIO_LOW             = 0.20      # Lower bound for vowel-ratio reward
-VOWEL_RATIO_HIGH            = 0.70      # Upper bound for vowel-ratio reward (and gibberish threshold)
-CATEG_GARBAGE_DENSITY_HIGH  = 0.35      # High garbage density used to normalize the garbage-density signal in QS
-CATEG_TRASH_SCORE_MAX       = 0.50      # Max QS for Trash category
-CATEG_NOISY_SCORE_MAX       = 0.90      # Max QS for Noisy category
+CATEG_TRASH_SCORE_MAX       = 0.55      # Max QS for Trash category
+CATEG_NOISY_SCORE_MAX       = 0.85      # Max QS for Noisy category
+REPEATED_DOUBLE_MIN         = 2         # Minimum occurrence count for doubled-char penalty
+SHORT_NOISY_QS_PENALTY      = 0.20      # Opt-in QS penalty for short strings exhibiting OCR oddities
 
-ISOLATED_CHAR_RATIO_MAX     = 0.40      # Max isolated chars before routing to Non-text
-ISOLATED_CHAR_MIN_TOKENS    = 3         # Min tokens required to evaluate isolated chars
-SYM_LET_DIG_NONTEXT         = true      # Route lines with sym+let+dig fusions to Non-text
-
-# --- Inverted / 180°-rotated scan detection (rot_penalty inside QS + page-level post-processing sweep) ---
-ROT_RATIO_INVERTED_MIN      = 0.55      # Min rotatable-char ratio to suspect inverted scan
-WEIRD_RATIO_INVERTED_MIN    = 0.35      # Min word-weirdness ratio to confirm inverted scan
-PPL_INVERTED_MIN            = 200.0     # or 500 Min perplexity (LM must also be uncertain)
-
-# --- Near-boundary clean prose promotion & penalties (Overrides) ---
-CLEAN_PROSE_MIN_SCORE       = 0.65      # Lower bound of the promotable Noisy band
-CLEAN_PROSE_WEIRD_MAX       = 0.08      # Max word-weirdness for promotion to Clear
-CLEAN_PROSE_PPL_MAX         = 400.0     # or 1000 Max perplexity for promotion to Clear
-CLEAN_PROSE_WC_MIN          = 4         # Min word count for promotion to Clear
-MOSTLY_READABLE_VALID_MIN   = 0.85      # Minimum valid_word_ratio to qualify for Clear
-SHORT_NOISY_QS_PENALTY      = 0.0       # Opt-in QS penalty for short strings exhibiting OCR oddities
+# --- New since last revision: Phase-2 categoriser overrides ---
+LOWPPL_CLEAR_MAX            = 50.0      # ppl ceiling for Override 3 (was hardcoded)
+HARD_SWEEP_LANG_MAX         = 0.45      # orig_lang_score ceiling for the hard-sweep route
+HARD_SWEEP_PPL_MIN          = 1000.0    # ppl floor for the hard-sweep route
+GHOST_DOMINATED_MIN_RATIO   = 0.5       # min ghost-token share to flag ghost_dominated
+WORD_W_PENALTY              = 0.20      # per-word weirdness penalty for tokens containing 'w'
+ROT_HIGH_LANG_CONF          = 0.90      # lang_score ceiling for the page-level rotation arm
+CLEAR_BAND_WC_MIN           = 0         # short-fragment Clear-band guard (0 = disabled)
 
 ```
 
@@ -407,6 +393,7 @@ processes, running **language identification** 🌐 concurrently.
 
 ```bash
 python3 langID_classify.py
+
 ```
 
 * **Input 1 📥:** `../PAGE_TXT/` from Step 3
@@ -425,26 +412,22 @@ python3 langID_classify.py
 * `original_text` — original pre-repair text of the line 📝
 * `split_ws` — hyphenated word prefix at the end of the line (split word start)
 * `split_we` — hyphenated word suffix at the start of the line (split word end)
-
 * `word_count` — **count** of whitespace-delimited tokens in the line (**count** of **words**)
 * `char_count` — **count** of total character in the cleaned line
 * `garbage_density` — ratio of non-alphanumeric characters to total line length (calculated on `original_text`)
-* `symbol` — **count** of strange-symbol **occurrences** (per disallowed internal char) across words
 * `upper` — **count** of **words** with unexpected mid-word uppercase letters
 * `repeated` — **count** of **words** where a non-standard character makes up ≥ 30% of the word, or containing consecutive doubled garble characters
 * `ldl_fuses` — **count** of **words** with a letter–digit–letter sandwich (e.g., `vyt1ačená`), excluding valid measurements.
 * `fused_words` — **count** of tokens that appear to be fused **words** (abnormal consonant/vowel runs or extreme length)
 * `gibberish` — **count** of **words** flagged as gibberish (high vowel ratio)
 * `weird_wx` — **count** of words with an abnormal density of 'w' or 'x' glyphs
-* `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol, repeated-symbol, LDL-fusion,
-and mid-uppercase signals weighted per token (0 = fully clean). *Note: Random isolated letters receive a severe weirdness
-penalty (0.85) to catch spaced-out **OCR** 🔍 noise, while isolated numbers/measurements receive a lower, tolerable penalty (0.25).*
+* `word_weird` — mean per-word weirdness score in [0, 1]; combines strange-symbol (0.40), repeated-char (0.35), LDL-fusion (0.15), mid-uppercase (0.10), and a `WORD_W_PENALTY`-weighted (default 0.20) signal for tokens containing the letter `w` — rare in Czech and a strong inverted/mirror-OCR fingerprint — plus a separate caps-prefix penalty (0.20). The combined score is clamped to [0, 1]. Isolated single letters score 0.85 (OCR noise) or 0.25 (digit/measurement).
 * `vowel_ratio` — ratio of vowel characters to total alphabetic and symbol characters in the `original_text`
 * `rot_ratio` — the ratio of structurally ambiguous/rotatable characters (`pbqdnuwmoxszeyv`) to the total number of alphabetic characters in the line.
 
 ##### `<doc_name>.csv`'s key resulting output **columns** that depict the final classification and quality assessment:
 
-* `quality_score` — composite **quality score** 📈 in [0, 1] based on 10 combined signals; higher = cleaner
+* `quality_score` — composite **quality score** 📈 in [0, 1] based on **9** combined signals; higher = cleaner
 * `categ` — assigned category: **Clear** ✅, **Noisy** ⚠️, **Trash** 🗑️, **Non-text** 🔣, or **Empty** 🫙
 
 ##### `<doc_name>.csv`'s **columns** useful for archive managers information apart from the **quality score** 📈 and category:
@@ -457,11 +440,16 @@ penalty (0.85) to catch spaced-out **OCR** 🔍 noise, while isolated numbers/me
 * `caps_header` — **boolean** flag indicating whether all alphabetic words in the line are uppercase (typical of section headers)
 
 **Diagnostic flags (#3):**
-Nine boolean audit columns follow `caps_header`. Six name the categoriser rule that decided the line — `allcaps_novowel`,
-`lowppl_clear`, `cleanprose_clear`, `trash_threshold`, `noisy_threshold`, `clear_threshold` (exactly one `True`, or none for `Empty`).
-Three name the document-level post-pass that later changed it — `pp_dedup` (header/footer mode-harmonisation), `pp_surrounded_trash`
-(rolling-window smoothing), `pp_inverted_run` (page-level inverted-scan sweep).
-A categoriser flag and a `pp_` flag may both be `True` on one line: that is the intended trail from the original decision to the override.
+Ten boolean audit columns follow `caps_header`. Six name the categoriser rule that decided the line —
+`allcaps_novowel`, `lowppl_clear`, `cleanprose_clear`, `trash_threshold`, `noisy_threshold`, `clear_threshold`
+(exactly one `True`, or none for `Empty`). Two further internal reason codes — `trash_hard_sweep` (route 1a)
+and `trash_inverted` (route 1b) — also exist but are folded into the `trash_threshold` column rather than
+getting their own column, so the per-line reason granularity is coarser in the CSV than inside the categoriser.
+Four name the document-level post-pass that later changed it — `pp_dedup` (header/footer mode-harmonisation),
+`pp_surrounded_trash` (rolling-window smoothing), `pp_inverted_run` (page-level inverted-scan sweep), and
+`pp_page_context` (page-context Trash/Noisy adjustment, see below).
+A categoriser flag and a `pp_` flag may both be `True` on one line: that is the intended trail from the
+original decision to the override.
 
 ---
 
@@ -514,7 +502,6 @@ but their presence is meaningful for downstream NLP and archival cataloguing:
 | `str.`                                                    | Page abbreviation (*strana*)                         |
 | `Datum`                                                   | Date field label on standard report forms            |
 
-
 * **High digit-ratio bypass** — If digits make up more than 40% of the line's total characters, the line is
 forwarded as **Process** regardless of its letter ratio. This preserves content-bearing strings that are intentionally
 numeric-heavy: measurement records (e.g., `váha 90,9g`, `30–50 cm`), date strings (e.g., `5.XI.1946`), grid
@@ -555,7 +542,7 @@ confidently assign any language to any line — a strong signal that the page co
 and confidence score are **kept unchanged**. No remapping occurs.
 2. If the predicted language is `slk` (Slovak), it is considered a near-twin of Czech and is remapped to the collection default, but its **original score is preserved**.
 3. If the predicted language 🌐 is **not** in either set and not Slovak (e.g., **FastText** 🌐 guesses Danish `dan` on a
-Czech 🇨🇿 line) → the language 🌐 code is **force-remapped** to the **first entry of `EXPECTED_LANGS`** (the collection
+Czech 🇨🇿 line) → the language 🌐 code is **force-remapped** to the **first entry of `EXPECTED_LANGS**` (the collection
 default). The stored `lang_score` is set to `min(original_score, cap)` — **(#3)** *capped*, not floored: a Latin-script
 guess is capped at `LANG_SCORE_REMAP` (**0.75**) and a non-Latin-script guess (Hangul, Cyrillic, CJK, …) at
 `LANG_SCORE_REMAP_FAR` (**0.50**). A *confident* foreign guess on Czech archival data is evidence of inverted or garbled
@@ -595,38 +582,43 @@ Lines that pass the pre-filter are analysed by structural detectors defined in [
 ##### Composite Quality Score
 
 After structural detection, each line receives a single floating-point `quality_score` 📈 in [0, 1] computed by
-`compute_quality_score()` in [text_util_langID.py](text_util_langID.py)📎. The score is a weighted sum of ten
+`compute_quality_score()` in [text_util_langID.py](text_util_langID.py)📎. The score is a weighted sum of **nine**
 normalised signals, **dynamically divided by the total sum of weights** to strictly bound the maximum
 score to 1.0 (preventing score inflation):
 
 ```text
 base_score =
-    QS_WEIGHT_VALID_WORD (def: 0.25) × valid_word_ratio
-  + QS_WEIGHT_SYMBOL     (def: 0.13) × (1 − min(symbol_ratio, 1.0))
-  + QS_WEIGHT_WEIRD      (def: 0.13) × (1 − min(word_weird_ratio, 1.0))
-  + QS_WEIGHT_PERPLEXITY (def: 0.15) × (1 − min(perplexity / PERPLEXITY_THRESHOLD_MAX, 1.0))
-  + QS_WEIGHT_LENGTH     (def: 0.05) × min(char_count / QS_LENGTH_MAX, 1.0)
-  + active_garbage_wt    (def: 0.20) × (1 − min(garbage_density / CATEG_GARBAGE_DENSITY_HIGH, 1.0))
-  + QS_WEIGHT_VOWEL      (def: 0.07) × vowel_quality_score
-  + QS_WEIGHT_LANG       (def: 0.05) × lang_score
-  + QS_WEIGHT_GIBBERISH  (def: 0.04) × (1 − min(gibberish_ratio, 1.0))
-  + QS_WEIGHT_FUSED      (def: 0.03) × (1 − min(fused_ratio, 1.0))
+    QS_WEIGHT_VALID_WORD  (def: 0.35) × valid_word_ratio
+  + QS_WEIGHT_WEIRD       (def: 0.18) × (1 − min(word_weird_ratio, 1.0))
+  + QS_WEIGHT_PERPLEXITY  (def: 0.08) × (1 − min(perplexity / PERPLEXITY_THRESHOLD_MAX, 1.0))
+  + QS_WEIGHT_LENGTH      (def: 0.02) × min(char_count / QS_LENGTH_MAX, 1.0)
+  + active_garbage_wt     (def: 0.18) × (1 − min(garbage_density / CATEG_GARBAGE_DENSITY_HIGH, 1.0))
+  + QS_WEIGHT_VOWEL       (def: 0.07) × vowel_quality_score
+  + QS_WEIGHT_LANG        (def: 0.05) × lang_score
+  + QS_WEIGHT_GIBBERISH   (def: 0.04) × (1 − min(gibberish_ratio, 1.0))
+  + QS_WEIGHT_FUSED       (def: 0.03) × (1 − min(fused_ratio, 1.0))
 
-quality_score = (base_score / total_weight) - rot_penalty - short_penalty
+quality_score = (base_score / total_weight) − short_penalty
+
 ```
 
-| Signal             | Source                                                                   | Normalisation                                                                           | Notes                                                                                                                                                                                                                                                              |
-|--------------------|--------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `valid_word_ratio` | fraction of structurally valid word tokens                               | used directly [0, 1]                                                                    | A token is valid if ≥ 70% alphabetic, no disallowed internal symbols, and not a garbled all-caps **OCR** 🔍 prefix followed by lowercase (e.g., `AAMMNAbSSOAO`, `XAterenta`) — this guard prevents spurious uppercase runs from inflating the signal.              |
-| `symbol_ratio`     | fraction of non-alphanumeric, non-space characters                       | inverted: `1 − ratio`                                                                   |                                                                                                                                                                                                                                                                    |
-| `word_weird_ratio` | mean per-word weirdness across tokens                                    | inverted: `1 − ratio`                                                                   | The per-word score combines strange-symbol (0.40), repeated-char (0.35), LDL-fusion (0.15), and mid-uppercase (0.10) sub-signals, plus a separate caps-prefix penalty (0.20). Isolated single letters score 0.85 ( **OCR** 🔍  noise) or 0.25 (digit/measurement). |
-| `perplexity` 📉    | `Qwen2.5-0.5B` 🤖 NLL per token                                          | inverted & capped: `1 − min(ppl / PERPLEXITY_THRESHOLD_MAX, 1.0)`                       | A value of 0 assigned when ppl ≥ threshold (worst), 1 when ppl = 0 (best). Calibrated for `Qwen2.5-0.5B` 🤖 at default `1000.0`; use `3000.0` for `distilgpt2` 🤖.                                                                                                 |
-| `char_count`       | total character count                                                    | `min(count / QS_LENGTH_MAX, 1.0)`                                                       | Full reward for lines ≥ `QS_LENGTH_MAX` (default 100) characters.                                                                                                                                                                                                  |
-| `garbage_density`  | fraction of unusual non-alnum characters in `original_text`              | inverted & capped: `1 − min(density / CATEG_GARBAGE_DENSITY_HIGH, 1.0)`                 | Ellipsis (`...`) runs are **not** stripped. Density evaluates strictly on the original uncleaned line length.                                                                                                                                                      |
-| `vowel_ratio`      | vowel fraction among alphabetic and symbol characters in `original_text` | linear ramp: full reward in `[VOWEL_RATIO_LOW, VOWEL_RATIO_HIGH]`, ramps to 0.0 outside | Evaluated on the `original_text` to prevent hiding symbol noise.                                                                                                                                                                                                   |
-| `lang_score`       | **FastText** 🌐 language confidence (original, pre-remapping)            | used directly; default 0.5 when unavailable                                             |                                                                                                                                                                                                                                                                    |
-| `gibberish_ratio`  | fraction of extreme high-vowel words and w/x noise (word length ≥ 4)     | inverted: `1 − ratio`                                                                   | Words ≥ 60% digits/separators excluded. Folded together with `detect_wx_words` density.                                                                                                                                                                            |
-| `fused_ratio`      | fraction of suspected merged tokens                                      | inverted: `1 − ratio`                                                                   |                                                                                                                                                                                                                                                                    |
+> [!NOTE]
+> There is no `symbol_ratio` term and no `rot_penalty` subtraction in the current implementation — both
+> appeared in earlier revisions. Symbol density is no longer fed into the quality score (the `symbol`
+> per-line column has also been removed, see below); rotation/inversion is now handled entirely by the
+> per-line lexicon override and the page-level sweep described elsewhere in this document.
+
+| Signal             | Source                                                                   | Normalisation                                                                           | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|--------------------|--------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `valid_word_ratio` | fraction of structurally valid word tokens                               | used directly [0, 1]                                                                    | A token is valid if ≥ 70% alphabetic, no disallowed internal symbols, and not a garbled all-caps **OCR** 🔍 prefix followed by lowercase (e.g., `AAMMNAbSSOAO`, `XAterenta`) — this guard prevents spurious uppercase runs from inflating the signal.                                                                                                                                                                                        |
+| `word_weird_ratio` | mean per-word weirdness across tokens                                    | inverted: `1 − ratio`                                                                   | The per-word score combines strange-symbol (0.40), repeated-char (0.35), LDL-fusion (0.15), mid-uppercase (0.10), and a `WORD_W_PENALTY`-weighted (default 0.20) signal for tokens containing the letter `w` — rare in Czech and a strong inverted/mirror-OCR fingerprint — plus a separate caps-prefix penalty (0.20). The combined score is clamped to [0, 1]. Isolated single letters score 0.85 (OCR noise) or 0.25 (digit/measurement). |
+| `perplexity` 📉    | `Qwen2.5-0.5B` 🤖 NLL per token                                          | inverted & capped: `1 − min(ppl / PERPLEXITY_THRESHOLD_MAX, 1.0)`                       | A value of 0 assigned when ppl ≥ threshold (worst), 1 when ppl = 0 (best). Calibrated for `Qwen2.5-0.5B` 🤖 at default `1000.0`; use `3000.0` for `distilgpt2` 🤖.                                                                                                                                                                                                                                                                           |
+| `char_count`       | total character count                                                    | `min(count / QS_LENGTH_MAX, 1.0)`                                                       | Full reward for lines ≥ `QS_LENGTH_MAX` (default 100) characters.                                                                                                                                                                                                                                                                                                                                                                            |
+| `garbage_density`  | fraction of unusual non-alnum characters in `original_text`              | inverted & capped: `1 − min(density / CATEG_GARBAGE_DENSITY_HIGH, 1.0)`                 | Ellipsis (`...`) runs are **not** stripped. Density evaluates strictly on the original uncleaned line length.                                                                                                                                                                                                                                                                                                                                |
+| `vowel_ratio`      | vowel fraction among alphabetic and symbol characters in `original_text` | linear ramp: full reward in `[VOWEL_RATIO_LOW, VOWEL_RATIO_HIGH]`, ramps to 0.0 outside | Evaluated on the `original_text` to prevent hiding symbol noise.                                                                                                                                                                                                                                                                                                                                                                             |
+| `lang_score`       | **FastText** 🌐 language confidence (original, pre-remapping)            | used directly; default 0.5 when unavailable                                             |                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `gibberish_ratio`  | fraction of extreme high-vowel words and w/x noise (word length ≥ 4)     | inverted: `1 − ratio`                                                                   | Words ≥ 60% digits/separators excluded. Folded together with `detect_wx_words` density.                                                                                                                                                                                                                                                                                                                                                      |
+| `fused_ratio`      | fraction of suspected merged tokens                                      | inverted: `1 − ratio`                                                                   |                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 **Dynamic adjustments inside `compute_quality_score()` formula:**
 
@@ -637,7 +629,7 @@ score formula before the final weighted sum is computed.
 
 *Trigger:* `char_count ≤ 12`, `word_weird == 0.0`, **and** low garbage density
 
-*What happens:* `active_garbage_wt` is **halved** from `QS_WEIGHT_GARBAGE` (default 0.20) to 0.10. A compensating
+*What happens:* `active_garbage_wt` is **halved** from `QS_WEIGHT_GARBAGE` (default 0.18) to 0.09. A compensating
 constant of the same amount is added back to `base_score` so the total effective weight sum is unchanged and the
 maximum possible score remains 1.0.
 
@@ -645,33 +637,15 @@ maximum possible score remains 1.0.
 structural punctuation that is counted as "garbage". Since the line is short, completely structurally clean (no weirdness),
 and mostly legible, the reduced weight prevents the label from being unfairly penalised.
 
-**2. Conditional Rotation Penalty Gate**
-
-*Trigger:* `rot_ratio ≥ ROT_RATIO_INVERTED_MIN` (default 0.55) **must be true first**, then one of:
-
-* Arm A: `word_weird ≥ WEIRD_RATIO_INVERTED_MIN` (default 0.35) → strong penalty
-* Arm B: `perplexity ≥ PPL_INVERTED_MIN` 📉 (default 200.0) **and** `word_weird > 0.0` → moderate penalty
-
-*What happens:*
-
-* Arm A: `rot_penalty = (rot_ratio × word_weird) × 2.0`
-* Arm B: `rot_penalty = 0.40 × min(word_weird / WEIRD_RATIO_INVERTED_MIN, 1.0)`
-* In both arms: if `lang_score ≥ 0.90`, `rot_penalty` is **halved** regardless of its magnitude
-* If neither arm fires: `rot_penalty = 0.0`, regardless of how high `rot_ratio` is
-
-*Why:* Inverted scans produce text where many glyphs are recognised as structurally rotatable characters (`p`, `d`, `b`, `q`),
-producing a high `rot_ratio`. However, normal Czech 🇨🇿 sentences also contain many of these letters naturally.
-The gate requires an independent second signal (high weirdness or high **perplexity** 📉) to confirm the content is genuinely corrupted.
-
-**3. Short Noisy Strings Penalty (`SHORT_NOISY_QS_PENALTY`)**
+**2. Short Noisy Strings Penalty (`SHORT_NOISY_QS_PENALTY`)**
 
 *Trigger:* `char_count ≤ 12` **and** (`word_weird > 0.0` or high garbage density).
 
-*Applied:* Applies the configurable `SHORT_NOISY_QS_PENALTY` (default 0.0) as a direct subtraction to the final score.
+*Applied:* Applies the configurable `SHORT_NOISY_QS_PENALTY` (default 0.20) as a direct subtraction to the final score.
 
 *Why:* An opt-in penalty to sink very short noisy strings that might otherwise artificially float into acceptable score ranges due to their minimal features.
 
-**4. Short **Perplexity** 📉 Cap (`SHORT_PPL_CAP`)**
+**3. Short **Perplexity** 📉 Cap (`SHORT_PPL_CAP`)**
 
 *Trigger:* `word_count ≤ 2` **and** raw LM **perplexity** 📉 `> SHORT_PPL_CAP` (default **850.0** for Qwen2.5-0.5B 🤖,
 **2500.0** for distilgpt2 🤖)
@@ -695,28 +669,33 @@ downstream analytics can rely on the score as a monotone proxy for category rank
 
 Checked in order - the first match wins and skips all remaining checks including thresholds:
 
-| # | Condition                                                       | Result  | Rationale                                                                                                                |
-|---|-----------------------------------------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------|
-| 1 | `word_count == 0` or line contains only whitespace              | `Empty` | Structural blank — no content to evaluate. Assigned before any scoring.                                                  |
-| 2 | All alphabetic words are uppercase **and** `vowel_ratio < 0.10` | `Trash` | Definitively unreadable: an all-caps block with almost no vowels is a visual scramble... (Recorded as `allcaps_novowel`) |
-| 2b | `word_count ≤ ISOLATED_CHAR_MIN_TOKENS` (def: 3) **and** no Czech 🇨🇿 diacritics **and** post-cap `lang_score ≤ LANG_SCORE_REMAP` (def: 0.75) **and** (gibberish present **or** `word_weird > 0`) | `Trash` | **(#3)** Structural short-garbage route. A very short, diacritic-free token that **FastText** 🌐 could not confidently place and that trips a gibberish/weirdness signal is **OCR** 🔍 noise (e.g. `olie`), not a real fragment — it would otherwise slip into `Noisy` on an undeservedly healthy quality score. Folded into the `trash_threshold` reason (no new column). |
-| 3 | `perplexity < 50.0` 📉 **and** `word_count ≥ 3`                 | `Clear` | The language model is near-certain about the text... (Recorded as `lowppl_clear`)*                                       |
+| #  | Condition                                                                                                                                                                                          | Result  | Rationale                                                                                                                                                                                                                                                                                                                                                              |
+|----|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1  | `word_count == 0` or line contains only whitespace                                                                                                                                                 | `Empty` | Structural blank — no content to evaluate. Assigned before any scoring.                                                                                                                                                                                                                                                                                                |
+| 1a | `orig_lang_score < HARD_SWEEP_LANG_MAX` (def: 0.45) **and** `ppl > HARD_SWEEP_PPL_MIN` (def: 1000.0)                                                                                               | `Trash` | **Hard sweep.** Catches confident garbage that the language-remap CAP would otherwise mask — FastText could not place the line at all *and* the LM also found it surprising. Recorded as `trash_hard_sweep`, folded into the `trash_threshold` CSV flag.                                                                                                               |
+| 1b | `ghost_dominated` **and not** `is_upright_czech`                                                                                                                                                   | `Trash` | **Inverted/mirrored scan (per-line).** `ghost_dominated`: a majority of word tokens are flip-images of common Czech function words (`analyze_rotation_signals`, see below). `is_upright_czech` (a Czech diacritic, or a real upright function word) is a hard protective signal that bypasses this route. Recorded as `trash_inverted`, folded into `trash_threshold`. |
+| 2  | All alphabetic words are uppercase **and** `vowel_ratio < 0.10`                                                                                                                                    | `Trash` | Definitively unreadable: an all-caps block with almost no vowels is a visual scramble. (Recorded as `allcaps_novowel`)                                                                                                                                                                                                                                                 |
+| 2a | `garbage_density >= CATEG_GARBAGE_DENSITY_HIGH` (def: 0.35)                                                                                                                                        | `Trash` | **Garbage-density hard override.** A line whose raw non-alphanumeric density alone exceeds the QS normalisation ceiling is routed to Trash directly, bypassing the weighted score. Folded into `trash_threshold`.                                                                                                                                                      |
+| 2b | `word_count ≤ ISOLATED_CHAR_MIN_TOKENS` (def: 3) **and** no Czech 🇨🇿 diacritics **and** post-cap `lang_score ≤ LANG_SCORE_REMAP` (def: 0.75) **and** (gibberish present **or** `word_weird > 0`) | `Trash` | **(#3)** Structural short-garbage route (e.g. `olie`). Folded into the `trash_threshold` reason.                                                                                                                                                                                                                                                                       |
+| 3  | `perplexity < LOWPPL_CLEAR_MAX` (def: 50.0) 📉 **and** `word_count ≥ 3`                                                                                                                            | `Clear` | The language model is near-certain about the text. Recorded as `lowppl_clear`.*                                                                                                                                                                                                                                                                                        |
 
-*(Mostly-Readable Cap Applies: If override 3 fires but `valid_word_ratio < MOSTLY_READABLE_VALID_MIN`, the line is capped at `Noisy` instead).*
+*(Mostly-Readable Cap Applies: If override 3 fires but `valid_word_ratio < MOSTLY_READABLE_VALID_MIN`, the line is capped at `Noisy` instead, recorded as `noisy_threshold`.)*
 
 > [!NOTE]
-> Inverted/180°-rotated scans are handled **outside** the per-line categoriser: their fingerprint (high
-> rotatable-character density combined with internal weirdness or LM uncertainty) is encoded as a `rot_penalty`
-> subtracted directly inside `compute_quality_score`, depressing the QS so the standard thresholds route the line to
-> `Trash`. A second, page-level pass (see [Post-Processing Smoothing](#post-processing-smoothing) below) catches
-> contiguous runs of rotated lines that may have individually escaped the per-line penalty.
+> Inverted/180°-rotated scans are now detected at **two** levels:
+> * A **per-line** lexicon check (override 1b above) catches lines dominated by flip-images of common Czech function words.
+> * A **page-level** pass (see [Post-Processing Smoothing](#post-processing-smoothing) below) independently catches contiguous runs — or a page-wide majority — of suspicious lines, using rotatable-character density, perplexity, and language-confidence signals.
+> 
+> 
+> `compute_quality_score()` no longer subtracts a `rot_penalty` from the quality score. The `is_upright_czech` flag it still accepts as a parameter has no effect on the computed score in the current implementation.
 
 **Quality score 📈 threshold routing** (applied to all lines not caught by an override above):
 
 ```text
-quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.50)  →  Trash  (Recorded as trash_threshold)
-quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.90)  →  Noisy  (unless Override 4 fires, Recorded as noisy_threshold)
+quality_score < CATEG_TRASH_SCORE_MAX  (def: 0.55)  →  Trash  (Recorded as trash_threshold)
+quality_score < CATEG_NOISY_SCORE_MAX  (def: 0.85)  →  Noisy  (unless Override 4 fires, Recorded as noisy_threshold)
 otherwise                                           →  Clear  (unless capped by mostly-readable min)
+
 ```
 
 **Mostly Readable Cap:** If a line qualifies for `Clear` (either by pure quality score or Override 3), but its `valid_word_ratio < MOSTLY_READABLE_VALID_MIN` (default 0.85), it is capped at `Noisy`.
@@ -742,8 +721,14 @@ If all four of the following conditions hold simultaneously, the line is promote
 | `perplexity < CLEAN_PROSE_PPL_MAX`             | `CLEAN_PROSE_PPL_MAX`       | 400.0   | The language model considers the line reasonably likely. A very high **perplexity** 📉 even on a structurally clean line can indicate foreign or domain-specific vocabulary that is genuinely `Noisy` to process. |
 | `valid_word_ratio ≥ MOSTLY_READABLE_VALID_MIN` | `MOSTLY_READABLE_VALID_MIN` | 0.85    | Semi-readable lines dipping below this ratio are excluded from promotion.                                                                                                                                         |
 
+**Short-fragment Clear-band guard (`CLEAR_BAND_WC_MIN`, default 0 = disabled):** when set above 0, a line
+shorter than `CLEAR_BAND_WC_MIN` words that reaches the `Clear` quality-score band but still carries some
+noise (`word_weird > 0` or `garbage_density > 0`) is held at `Noisy` instead — recorded as `noisy_threshold`.
+This guard is skipped entirely by the Override-3 LM fast-track (`lowppl_clear`). It exists to stop very short
+noisy OCR fragments from floating into `Clear` on minimal-feature lines, without affecting clean short prose.
+
 **Rationale for Override 4:** Readable Czech 🇨🇿 archaeological prose — field measurements, dig site descriptions,
-formal letter phrases — can score just below `CATEG_NOISY_SCORE_MAX` (0.90) for two systematic reasons: (a) the
+formal letter phrases — can score just below `CATEG_NOISY_SCORE_MAX` (0.85) for two systematic reasons: (a) the
 **perplexity** 📉 of short isolated sentence fragments is inherently elevated even when the words are perfectly correct, and
 (b) minor but common **OCR** 🔍 artefacts such as period-abbreviations (`Obr.`, `Viz`) and occasionally merged words slightly
 depress the valid-word-ratio component. When the line is long enough, structurally clean, and the **LM** 🤖 is reasonably
@@ -752,11 +737,11 @@ confident, these small penalties should not prevent the line from reaching `Clea
 After the category is determined, the stored `quality_score` 📈 is clamped to the range corresponding to the assigned
 band. This ensures that the **CSV** 📊 value is always internally consistent with the `categ` label:
 
-* `Trash` → score clamped to `min(qs, CATEG_TRASH_SCORE_MAX − ε)` — always below 0.50
-* `Noisy` → score clamped to `[CATEG_TRASH_SCORE_MAX, CATEG_NOISY_SCORE_MAX − ε]` — always in [0.50, 0.90)
-* `Clear` → score clamped to `max(qs, CATEG_NOISY_SCORE_MAX)` — always ≥ 0.90
+* `Trash` → score clamped to `min(qs, CATEG_TRASH_SCORE_MAX − ε)` — always below 0.55
+* `Noisy` → score clamped to `[CATEG_TRASH_SCORE_MAX, CATEG_NOISY_SCORE_MAX − ε]` — always in [0.55, 0.85)
+* `Clear` → score clamped to `max(qs, CATEG_NOISY_SCORE_MAX)` — always ≥ 0.85
 
-Lines promoted by Override 4 have their raw score (which was somewhere in [0.65, 0.90)) raised to 0.90 in the **CSV** 📊.
+Lines promoted by Override 4 have their raw score (which was somewhere in [0.65, 0.85)) raised to 0.85 in the **CSV** 📊.
 Lines whose Override 2 or Override 3 fired receive a score consistent with the override result regardless of what
 the formula computed.
 
@@ -767,6 +752,22 @@ the formula computed.
 After all lines in a document are classified and written to **CSV** 📊, a final data-smoothing pass is applied before the file
 is finalized. This pass corrects categorisation anomalies that only become visible at the document or page
 level — patterns that per-line scoring cannot detect because it evaluates each line in isolation.
+
+*What it does:* Before the dedup and rolling-window passes, two page-context rules adjust borderline
+categories using page-level aggregates — `median_qs`, `clear_ratio`, and the fraction of lines in a trusted
+language (`decent_lang_ratio`, over `ces, deu, eng, fra, pol, ita, slk`):
+
+* **Heavily-garbage pages:** if a page's `Clear` ratio is ≤ 0.05, its trusted-language ratio is < 0.50, and
+its median quality score is < 0.55, every `Noisy` line on that page scoring below 0.80 is downgraded to
+`Trash`.
+* **Predominantly-clean pages:** if a page's `Clear` ratio is > 0.60 and its median quality score is > 0.80,
+every `Trash` line on that page scoring ≥ 0.45 *and* in a trusted language is promoted to `Noisy`.
+
+**Recorded as** `pp_page_context`
+
+*Why:* A page that is almost entirely garbage rarely contains a genuinely-recoverable `Noisy` line; a page
+that is almost entirely clean rarely contains a genuinely-unrecoverable `Trash` line. These rules use the
+page as additional context the per-line categoriser cannot see.
 
 *What it does:* All occurrences of the exact same text string across a document are identified. If the same string
 has been assigned to different categories on different pages (e.g., `Obr. 1. SKUHROV NAD BĚLOU` is `Clear` on page 3
@@ -781,12 +782,12 @@ occurrences is the most reliable estimate of the correct category.
 
 *What it does:* Scans the document line-by-line. If a `Noisy` ⚠️ line is surrounded by `Trash` 🗑 on both sides in a
 5-line window (positions −2 and −1 are `Trash` 🗑 **and** positions +1 and +2 are `Trash` 🗑), **and** the `Noisy` ⚠️ line's
-quality score is below `CATEG_TRASH_SCORE_MAX + 0.15` (default: **0.65**), it is downgraded to `Trash` 🗑.
+quality score is below `CATEG_TRASH_SCORE_MAX + 0.15` (default: **0.70**), it is downgraded to `Trash` 🗑.
 
 **Recorded as** `pp_surrounded_trash`
 
 *Why:* A single `Noisy` ⚠️ island embedded in four consecutive `Trash` 🗑️ lines is almost certainly corrupted text that
-narrowly escaped the `Trash` 🗑 threshold. The rolling window catches these borderline cases. The score guard of 0.65
+narrowly escaped the `Trash` 🗑 threshold. The rolling window catches these borderline cases. The score guard of 0.70
 ensures that only near-boundary `Noisy` ⚠️ lines are affected — a `Noisy` ⚠️ line with a **quality score** 📈 of 0.80
 is left alone even in a `Trash` 🗑 neighbourhood, because its quality is genuinely different from the surrounding lines.
 
@@ -799,9 +800,15 @@ least `INVERTED_PAGE_MAJORITY` (default **0.60**) of the page's scoreable lines 
 uppercase equivalents) **and** has a **FastText** 🌐 confidence below `LANG_SCORE_ROUGH` (default **0.45**).
 Together these indicate that the **OCR** 🔍 produced no Czech-identifiable content and the language model cannot
 confidently assign any language 🌐 — a strong signal of a page-level scan fault.
-* **Rotation arm:** the line has `rot_ratio ≥ ROT_RATIO_INVERTED_MIN` (default **0.55**) **and**
-`perplexity ≥ PPL_INVERTED_MIN` 📉 (default **200.0**). A high concentration of rotationally ambiguous characters
-*combined* with high LM **perplexity** 📉 confirms the **OCR** 🔍 was processing visually flipped content.
+* **Rotation arm:** the line has `perplexity ≥ PPL_INVERTED_MIN` 📉 (default **200.0**), `word_weird > 0.0`,
+**and** a stored `lang_score < ROT_HIGH_LANG_CONF` (default **0.90**).
+
+> [!WARNING]
+> Although `rot_ratio` is computed for every candidate line in this pass, it is **not** part of the boolean
+> condition above in the current implementation — only perplexity, word-weirdness, and language confidence
+> gate this arm. If a `rot_ratio` requirement is intended, this is a code/doc discrepancy worth confirming
+> with the maintainers rather than something this document should silently "fix" by asserting a behaviour
+> the code doesn't have.
 
 **Recorded as** `pp_inverted_run`
 
@@ -822,29 +829,30 @@ and LM uncertainty together, without requiring the absence of diacritics.
 The table below consolidates every factor that influences `quality_score` 📈 or the final category assignment, including
 where each factor is controlled and any known edge cases.
 
-| Factor                                     | Where applied                                                    | Config key(s)                                                                                                  | Edge cases / exceptions                                                                                                                                                                                                                                                                                                                                            |
-|--------------------------------------------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Valid word ratio                           | `compute_quality_score` (25% weight)                             | `QS_WEIGHT_VALID_WORD`                                                                                         | All-caps **OCR** 🔍 prefix guard: tokens like `AAMMNAbSSOAO` are excluded from valid-word count even though they are alphabetically dominant.                                                                                                                                                                                                                      |
-| Symbol ratio                               | `compute_quality_score` (13% weight)                             | `QS_WEIGHT_SYMBOL`                                                                                             | Characters in `ALLOWED_INTERNAL` are not counted as symbols; edge punctuation stripped before inspection.                                                                                                                                                                                                                                                          |
-| Word weirdness ratio                       | `compute_quality_score` (13% weight)                             | `QS_WEIGHT_WEIRD`                                                                                              | Isolated single letters score 0.85 (**OCR** 🔍 spaced-out noise); isolated digits/measurements score 0.25 (tolerable). All-caps words and specific capitalized sequences excluded from mid-uppercase detection.                                                                                                                                                    |
-| Perplexity 📉 (LM)                         | `compute_quality_score` (15% weight)                             | `QS_WEIGHT_PERPLEXITY`, `PERPLEXITY_THRESHOLD_MAX`                                                             | Short-text **perplexity** 📉 is capped at `SHORT_PPL_CAP` before scoring to prevent penalising legitimate 1–2 word inputs. Override 3 (`ppl < 50`) bypasses thresholds entirely for highly confident predictions.                                                                                                                                                  |
-| Text length                                | `compute_quality_score` (5% weight)                              | `QS_WEIGHT_LENGTH`, `QS_LENGTH_MAX`                                                                            | Full reward for lines ≥ 100 chars; no minimum penalty for short lines.                                                                                                                                                                                                                                                                                             |
-| Garbage density                            | `compute_quality_score` (20% weight)                             | `QS_WEIGHT_GARBAGE`, `CATEG_GARBAGE_DENSITY_HIGH`                                                              | **Halved** to 10% for lines ≤ 12 characters with zero weirdness (short-string guard) to protect clean labels with colons. Evaluated on the original text string.                                                                                                                                                                                                   |
-| Vowel quality                              | `compute_quality_score` (7% weight)                              | `QS_WEIGHT_VOWEL`, `VOWEL_RATIO_LOW`, `VOWEL_RATIO_HIGH`                                                       | Linear ramp: full score in [0.20, 0.70] vowel ratio, ramps to 0.0 outside that range.                                                                                                                                                                                                                                                                              |
-| Language 🌐 confidence                     | `compute_quality_score` (5% weight)                              | `QS_WEIGHT_LANG`                                                                                               | Uses the **original** (pre-remapping) **FastText** 🌐 score; defaults to 0.5 when unavailable.                                                                                                                                                                                                                                                                     |
-| Gibberish ratio                            | `compute_quality_score` (4% weight)                              | `QS_WEIGHT_GIBBERISH`                                                                                          | Words ≥ 60% digits/separators excluded. Detection only on words ≥ 4 characters. Folds in the w/x count.                                                                                                                                                                                                                                                            |
-| Fused word ratio                           | `compute_quality_score` (3% weight)                              | `QS_WEIGHT_FUSED`, `FUSED_VOWEL_RUN_MIN`                                                                       | Triggers on tokens > 14 chars, consonant runs of 5+, or vowel runs of 3+.                                                                                                                                                                                                                                                                                          |
-| Rotation penalty                           | `compute_quality_score` (dynamic, subtracted post-normalisation) | `ROT_RATIO_INVERTED_MIN`, `WEIRD_RATIO_INVERTED_MIN`, `PPL_INVERTED_MIN`                                       | **Not applied** unless `rot_ratio ≥ 0.55` **and** (`word_weird ≥ 0.35` or `ppl ≥ 200`). Penalty halved when `lang_score ≥ 0.90`.                                                                                                                                                                                                                                   |
-| Short noisy penalty                        | `compute_quality_score` (dynamic, subtracted post-normalisation) | `SHORT_NOISY_QS_PENALTY`                                                                                       | Applies a flat penalty to short strings (≤12 chars) that exhibit minor OCR oddities like elevated word weirdness or high garbage density.                                                                                                                                                                                                                          |
-| All-caps + low vowel override (Override 2) | `categorize_line`                                                | none (hardcoded)                                                                                               | Fires only if **all** alphabetic words are uppercase **and** `vowel_ratio < 0.10`. A legitimate all-caps header with normal vowel density is **not** affected. **Recorded as** `allcaps_novowel`                                                                                                                                                                   |
-| High LM confidence override (Override 3)   | `categorize_line`                                                | none (configurable only via `PERPLEXITY_THRESHOLD_MAX`)                                                        | Requires both `ppl < 50` **and** `word_count ≥ 3`; single-word lines are never fast-tracked to `Clear` by this override. Capped at Noisy if mostly-readable threshold triggers. **Recorded as** `lowppl_clear`                                                                                                                                                     |
-| Near-boundary promotion (Override 4)       | `categorize_line`                                                | `CLEAN_PROSE_MIN_SCORE`, `CLEAN_PROSE_WC_MIN`, `CLEAN_PROSE_WEIRD_MAX`, `CLEAN_PROSE_PPL_MAX`                  | Only fires within the `Noisy` band (score ∈ [0.65, 0.90)). Requires all four conditions simultaneously. **Recorded as** `cleanprose_clear`                                                                                                                                                                                                                         |
-| Mostly readable valid cap                  | `categorize_line`                                                | `MOSTLY_READABLE_VALID_MIN`                                                                                    | Capps semi-readable strings at `Noisy` that might otherwise slip into `Clear` via override 3 or 4.                                                                                                                                                                                                                                                                 |
-| Short **perplexity** 📉 cap                | `langID_classify.py` (before scoring)                            | `SHORT_PPL_CAP`                                                                                                | Applied only to lines with ≤ 2 words. Does not change the stored `perplex` column; affects only the value passed to quality scoring.                                                                                                                                                                                                                               |
-| Language 🌐 remapping                      | `langID_classify.py` (before scoring)                            | `EXPECTED_LANGS`, `TRUSTED_FOREIGN_LANGS`, `LANG_SCORE_REMAP`                                                  | Unknown languages remapped to first entry of `EXPECTED_LANGS`; score **capped (#3)** at `LANG_SCORE_REMAP` (Latin) or `LANG_SCORE_REMAP_FAR` (non-Latin), except `slk` which retains its original score. The original score is still used as the `QS_WEIGHT_LANG` input.                                                                                           |
-| Context smoothing (rolling window)         | Post-processing in `langID_classify.py`                          | `CATEG_TRASH_SCORE_MAX`                                                                                        | `Noisy` line must be surrounded by 2 `Trash` lines on **each** side (4 total); score must be < `Trash` threshold + 0.15. **Recorded as** `pp_surrounded_trash`                                                                                                                                                                                                     |
-| Page-level inverted-scan sweep             | Post-processing in `langID_classify.py`                          | `ROT_RATIO_INVERTED_MIN`, `PPL_INVERTED_MIN`, `LANG_SCORE_ROUGH`, `INVERTED_RUN_MIN`, `INVERTED_PAGE_MAJORITY` | A line is suspicious via one of two arms (diacritic-absence + low confidence, or rotation ratio + high **perplexity** 📉). Suspicious lines are Trashed when they form a run of **at least 4** consecutive non-`Empty`/`Non-text` lines, **or (#3)** when they are **≥ 60 %** of the page's scoreable lines (page-majority arm). **Recorded as** `pp_inverted_run` |
-| Header/footer deduplication                | Post-processing in `langID_classify.py`                          | none                                                                                                           | Based on **exact text match** across the whole document; harmonises to modal category. **Recorded as** `pp_dedup`                                                                                                                                                                                                                                                  |
+| Factor                                        | Where applied                                                    | Config key(s)                                                                                                  | Edge cases / exceptions                                                                                                                                                                                                                                                                                                                                            |
+|-----------------------------------------------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Valid word ratio                              | `compute_quality_score` (35% weight)                             | `QS_WEIGHT_VALID_WORD`                                                                                         | All-caps **OCR** 🔍 prefix guard: tokens like `AAMMNAbSSOAO` are excluded from valid-word count even though they are alphabetically dominant.                                                                                                                                                                                                                      |
+| Word weirdness ratio                          | `compute_quality_score` (18% weight)                             | `QS_WEIGHT_WEIRD`                                                                                              | Isolated single letters score 0.85 (**OCR** 🔍 spaced-out noise); isolated digits/measurements score 0.25 (tolerable). All-caps words and specific capitalized sequences excluded from mid-uppercase detection.                                                                                                                                                    |
+| Perplexity 📉 (LM)                            | `compute_quality_score` (8% weight)                              | `QS_WEIGHT_PERPLEXITY`, `PERPLEXITY_THRESHOLD_MAX`                                                             | Short-text **perplexity** 📉 is capped at `SHORT_PPL_CAP` before scoring to prevent penalising legitimate 1–2 word inputs. Override 3 (`ppl < 50`) bypasses thresholds entirely for highly confident predictions.                                                                                                                                                  |
+| Text length                                   | `compute_quality_score` (2% weight)                              | `QS_WEIGHT_LENGTH`, `QS_LENGTH_MAX`                                                                            | Full reward for lines ≥ 100 chars; no minimum penalty for short lines.                                                                                                                                                                                                                                                                                             |
+| Garbage density                               | `compute_quality_score` (18% weight)                             | `QS_WEIGHT_GARBAGE`, `CATEG_GARBAGE_DENSITY_HIGH`                                                              | **Halved** to 9% for lines ≤ 12 characters with zero weirdness (short-string guard) to protect clean labels with colons. Evaluated on the original text string.                                                                                                                                                                                                    |
+| Vowel quality                                 | `compute_quality_score` (7% weight)                              | `QS_WEIGHT_VOWEL`, `VOWEL_RATIO_LOW`, `VOWEL_RATIO_HIGH`                                                       | Linear ramp: full score in [0.20, 0.70] vowel ratio, ramps to 0.0 outside that range.                                                                                                                                                                                                                                                                              |
+| Language 🌐 confidence                        | `compute_quality_score` (5% weight)                              | `QS_WEIGHT_LANG`                                                                                               | Uses the **original** (pre-remapping) **FastText** 🌐 score; defaults to 0.5 when unavailable.                                                                                                                                                                                                                                                                     |
+| Gibberish ratio                               | `compute_quality_score` (4% weight)                              | `QS_WEIGHT_GIBBERISH`                                                                                          | Words ≥ 60% digits/separators excluded. Detection only on words ≥ 4 characters. Folds in the w/x count.                                                                                                                                                                                                                                                            |
+| Fused word ratio                              | `compute_quality_score` (3% weight)                              | `QS_WEIGHT_FUSED`, `FUSED_VOWEL_RUN_MIN`                                                                       | Triggers on tokens > 14 chars, consonant runs of 5+, or vowel runs of 3+.                                                                                                                                                                                                                                                                                          |
+| Hard sweep (Trash override 1a)                | `categorize_line`                                                | `HARD_SWEEP_LANG_MAX`, `HARD_SWEEP_PPL_MIN`                                                                    | Fires before quality-score thresholds; folds to `trash_threshold`.                                                                                                                                                                                                                                                                                                 |
+| Inverted/mirrored lexicon (Trash override 1b) | `categorize_line`, `analyze_rotation_signals`                    | `GHOST_DOMINATED_MIN_RATIO`                                                                                    | Bypassed by any Czech diacritic or upright whitelist word; folds to `trash_threshold`.                                                                                                                                                                                                                                                                             |
+| Garbage-density hard override (2a)            | `categorize_line`                                                | `CATEG_GARBAGE_DENSITY_HIGH`                                                                                   | Fires before the short-garbage route and QS thresholds; folds to `trash_threshold`.                                                                                                                                                                                                                                                                                |
+| Short noisy penalty                           | `compute_quality_score` (dynamic, subtracted post-normalisation) | `SHORT_NOISY_QS_PENALTY`                                                                                       | Applies a flat penalty to short strings (≤12 chars) that exhibit minor OCR oddities like elevated word weirdness or high garbage density.                                                                                                                                                                                                                          |
+| All-caps + low vowel override (Override 2)    | `categorize_line`                                                | none (hardcoded)                                                                                               | Fires only if **all** alphabetic words are uppercase **and** `vowel_ratio < 0.10`. A legitimate all-caps header with normal vowel density is **not** affected. **Recorded as** `allcaps_novowel`                                                                                                                                                                   |
+| High LM confidence override (Override 3)      | `categorize_line`                                                | `LOWPPL_CLEAR_MAX` (NOT `PERPLEXITY_THRESHOLD_MAX`)                                                            | Requires both `ppl < LOWPPL_CLEAR_MAX` (def. 50.0) **and** `word_count ≥ 3`; single-word lines are never fast-tracked to `Clear` by this override. Capped at Noisy if mostly-readable threshold triggers. **Recorded as** `lowppl_clear`                                                                                                                           |
+| Near-boundary promotion (Override 4)          | `categorize_line`                                                | `CLEAN_PROSE_MIN_SCORE`, `CLEAN_PROSE_WC_MIN`, `CLEAN_PROSE_WEIRD_MAX`, `CLEAN_PROSE_PPL_MAX`                  | Only fires within the `Noisy` band (score ∈ [0.65, 0.85)). Requires all four conditions simultaneously. **Recorded as** `cleanprose_clear`                                                                                                                                                                                                                         |
+| Mostly readable valid cap                     | `categorize_line`                                                | `MOSTLY_READABLE_VALID_MIN`                                                                                    | Capps semi-readable strings at `Noisy` that might otherwise slip into `Clear` via override 3 or 4.                                                                                                                                                                                                                                                                 |
+| Short **perplexity** 📉 cap                   | `langID_classify.py` (before scoring)                            | `SHORT_PPL_CAP`                                                                                                | Applied only to lines with ≤ 2 words. Does not change the stored `perplex` column; affects only the value passed to quality scoring.                                                                                                                                                                                                                               |
+| Language 🌐 remapping                         | `langID_classify.py` (before scoring)                            | `EXPECTED_LANGS`, `TRUSTED_FOREIGN_LANGS`, `LANG_SCORE_REMAP`                                                  | Unknown languages remapped to first entry of `EXPECTED_LANGS`; score **capped (#3)** at `LANG_SCORE_REMAP` (Latin) or `LANG_SCORE_REMAP_FAR` (non-Latin), except `slk` which retains its original score. The original score is still used as the `QS_WEIGHT_LANG` input.                                                                                           |
+| Context smoothing (rolling window)            | Post-processing in `langID_classify.py`                          | `CATEG_TRASH_SCORE_MAX`                                                                                        | `Noisy` line must be surrounded by 2 `Trash` lines on **each** side (4 total); score must be < `Trash` threshold + 0.15. **Recorded as** `pp_surrounded_trash`                                                                                                                                                                                                     |
+| Page-level inverted-scan sweep                | Post-processing in `langID_classify.py`                          | `ROT_RATIO_INVERTED_MIN`, `PPL_INVERTED_MIN`, `LANG_SCORE_ROUGH`, `INVERTED_RUN_MIN`, `INVERTED_PAGE_MAJORITY` | A line is suspicious via one of two arms (diacritic-absence + low confidence, or rotation ratio + high **perplexity** 📉). Suspicious lines are Trashed when they form a run of **at least 4** consecutive non-`Empty`/`Non-text` lines, **or (#3)** when they are **≥ 60 %** of the page's scoreable lines (page-majority arm). **Recorded as** `pp_inverted_run` |
+| Header/footer deduplication                   | Post-processing in `langID_classify.py`                          | none                                                                                                           | Based on **exact text match** across the whole document; harmonises to modal category. **Recorded as** `pp_dedup`                                                                                                                                                                                                                                                  |
 
 ---
 
@@ -888,7 +896,6 @@ For each page, the aggregation computes features outputted in the following stri
 * `avg_word_weird` — mean per-word weirdness ratio in [0, 1]; 0 = fully clean, lower is better 📉
 * `avg_lang_score` — mean **FastText** 🌐 confidence score
 * `avg_perplex` — mean **Qwen2.5-0.5B** 🤖 **perplexity** 📉 score
-* `avg_symbol` — mean strange-symbol occurrences per line
 * `avg_vowel_ratio` — mean vowel-to-alphabetic-character ratio per line
 * `avg_rot_ratio` — mean rotatable character ratio per line
 * `ch_ratio` — mean fraction of lines flagged as all-caps headers (`caps_header = True`)
@@ -900,7 +907,7 @@ For each page, the aggregation computes features outputted in the following stri
 > [!NOTE]
 > `avg_*` columns and `main_lang` will be `NaN` / `None` for pages whose only lines are
 > `Empty` or `Non-text` (i.e., pages with no scoreable text content).
-> Additional per-line diagnostic variables (e.g. `weird_wx`, `original_lang`, `original_text`) and flags added 
+> Additional per-line diagnostic variables (e.g. `weird_wx`, `original_lang`, `original_text`) and flags added
 > and ignored for this page-level aggregation to ensure stability.
 
 All numeric averages are rounded to 4 decimal places; totals are stored as integers.
@@ -916,13 +923,13 @@ DOC_LINE_STAT/
 ├── stats_<docname2>.csv
 └── ...
 
+
 ```
 
 This is the end of the text quality classification and filtering step. You can now use [arup_page_stats_SHORT.csv](data_samples/arup_page_stats_SHORT.csv) 📎 to
 identify files that need another round of **OCR** 🔍 or manual correction based on the line type counts. Pages with the
 majority of **Clear** ✅ lines can be marked for further processing. The absence of clear lines combined with a high proportion
 of **Trash** 🗑️ lines may also indicate handwritten content, which can be excluded before Handwritten Text Recognition (HTR) is applied.
-
 
 ## API Service Integration
 
@@ -952,8 +959,8 @@ points at the image actually executing rather than a fixed fork.
 exercised, and records it as `license` / `license_url` plus a detailed `license_detail` block (per-component licenses,
 which component(s) `determined_by` the result, `is_non_commercial` / `is_share_alike` flags, and any unknown licenses).
 See [Output licensing](#output-licensing-) below.
-* **Configuration ⚙️:** StoreSee [Output licensing](#output-licensing-) below.ensing) below.ensing) below.time configuration 
-⚙️, including script names, input/output paths, and specific model choices.
+* **Configuration ⚙️:** StoreSee [Output licensing](#output-licensing-) below time configuration ⚙️, including script 
+names, input/output paths, and specific model choices.
 * **Timing ⏱️:** Records precise UTC start times, end times, and the total duration of the run in seconds.
 * **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes performance
 throughput (e.g., output files generated per minute).
@@ -1004,18 +1011,22 @@ permissive components would resolve to **Apache-2.0**.
 
 ## Acknowledgements 🙏
 
-**For support write to:** lutsai.k@gmail.com — responsible for this GitHub repository [^8] 🔗
+**For support write to:** lutsai.k@gmail.com — responsible for this GitHub repository [^8](https://github.com/ufal/atrium-alto-postprocess) 🔗
 
-- **Developed by** UFAL [^7] 👥
-- **Funded by** ATRIUM [^4] 💰
-- **Shared by** ATRIUM [^4] & UFAL [^7] 🔗
-- **Models used**:
-  - **FastText** 🌐 [^2] for language identification
-  - **Qwen2.5-0.5B** 🤖 [^6] for **perplexity** 📉 scoring
-  - **GLM-4v-9b** 🤖 [^10] for generative **OCR** 🔍 (LLM-based method)
-  - **LayoutLMv3** 📐 [^9] for layout-aware text extraction
+* **Developed by** UFAL [^7](https://ufal.mff.cuni.cz/home-page) 👥
+* **Funded by** ATRIUM [^4](https://atrium-research.eu/) 💰
+* **Shared by** ATRIUM [^4](https://atrium-research.eu/) & UFAL [^7](https://ufal.mff.cuni.cz/home-page) 🔗
+* **Models used**:
+* **FastText** 🌐 [^2](https://huggingface.co/facebook/fasttext-language-identification) for language identification
+* **Qwen2.5-0.5B** 🤖 [^6](https://huggingface.co/Qwen/Qwen2.5-0.5B) for **perplexity** 📉 scoring
+* **GLM-4v-9b** 🤖 [^10](https://huggingface.co/THUDM/glm-4v-9b) for generative **OCR** 🔍 (LLM-based method)
+* **LayoutLMv3** 📐 [^9](https://github.com/ppaanngggg/layoutreader) for layout-aware text extraction
+
+
 
 **©️ 2026 UFAL & ATRIUM**
+
+```
 
 [^1]: https://github.com/cneud/alto-tools
 [^2]: https://huggingface.co/facebook/fasttext-language-identification
