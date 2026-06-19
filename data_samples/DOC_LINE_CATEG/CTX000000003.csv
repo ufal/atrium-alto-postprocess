@@ -1,3 +1,3 @@
 categ,quality_score,file,page_num,line_num,text,original_text,split_ws,split_we,lang,lang_score,original_lang,orig_lang_score,perplex,word_count,char_count,garbage_density,upper,repeated,ldl_fuses,fused_words,gibberish,weird_wx,word_weird,vowel_ratio,rot_ratio,caps_header,allcaps_novowel,lowppl_clear,cleanprose_clear,trash_threshold,noisy_threshold,clear_threshold,pp_dedup,pp_surrounded_trash,pp_inverted_run
-Noisy,0.6968,CTX000000003,1,1,Náčrt sondy.,Náčrt sondy.,,,ces_Latn,0.9858,slk_Latn,0.9858,604.00,2,12,0.0833,0,0,0,0,0,0,0.0000,0.2727,0.6000,False,False,False,False,False,True,False,False,False,False
+Noisy,0.8468,CTX000000003,1,1,Náčrt sondy.,Náčrt sondy.,,,ces_Latn,0.9858,slk_Latn,0.9858,604.00,2,12,0.0833,0,0,0,0,0,0,0.0000,0.2727,0.6000,False,False,False,False,False,True,False,False,False,False
 Non-text,0.0,CTX000000003,1,2,1998,1998,,,,0.0,,0.0,0.0,0,4,0.0,0,0,0,0,0,0,0.0,0.0,0.0,False,False,False,False,False,False,False,False,False,False
