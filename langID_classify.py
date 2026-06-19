@@ -275,6 +275,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             valid_word_ratio=valid_ratio,
             lang_score=scores[i],
             gibberish_present=(gibb_count + wx_count) > 0,
+            garbage_density=g_density,  # NEW: pass garbage density down
         )
 
         row_dict = {

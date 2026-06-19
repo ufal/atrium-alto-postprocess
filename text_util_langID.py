@@ -77,13 +77,12 @@ LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
 # Core signal weights — must sum to 1.0 across all ten components.
-QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.25)
-# QS_WEIGHT_SYMBOL     = _get_float("TEXT_UTILS", "QS_WEIGHT_SYMBOL",     0.13)
-QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.13)
+QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.30)
+QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.16)
 QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.15)
 QS_WEIGHT_LENGTH     = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH",     0.05)
 # Extended signal weights
-QS_WEIGHT_GARBAGE    = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE",    0.10)
+QS_WEIGHT_GARBAGE    = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE",    0.15)
 QS_WEIGHT_VOWEL      = _get_float("TEXT_UTILS", "QS_WEIGHT_VOWEL",      0.07)
 QS_WEIGHT_LANG       = _get_float("TEXT_UTILS", "QS_WEIGHT_LANG",       0.05)
 QS_WEIGHT_GIBBERISH  = _get_float("TEXT_UTILS", "QS_WEIGHT_GIBBERISH",  0.04)
@@ -632,7 +631,9 @@ def score_word(word: str) -> float:
     has_rep = _has_repeated_run(core)
     has_ldl = _has_ldl(core)
     has_uppercase = _is_mid_uppercase(core)
-    has_w = 'w' in core.lower()  # <--- NEW CHECK
+
+    # FIX: Only penalize 'w'. 'x' is valid in words like "text" or "praxe".
+    has_w = 'w' in core.lower()
 
     has_caps_prefix = False
     if len(core) >= 4 and not core.isupper() and core.rstrip('.') not in ACADEMIC_TITLES:
@@ -640,7 +641,7 @@ def score_word(word: str) -> float:
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
             has_caps_prefix = True
 
-    # Added 0.20 penalty for having a 'w'
+    # Apply the 0.20 penalty specifically for has_w
     return min(1.0,
                0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl + 0.10 * has_uppercase + 0.20 * has_caps_prefix + 0.20 * has_w)
 
@@ -697,7 +698,8 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
                        vr: float, ppl: float, weird_ratio: float = 0.0,
                        valid_word_ratio: float = 1.0,
                        lang_score: float = 1.0,
-                       gibberish_present: bool = False) -> tuple[str, str]:
+                       gibberish_present: bool = False,
+                       garbage_density: float = 0.0) -> tuple[str, str]:
     """Evaluates categorization rules and returns (category, reason_tag).
 
     (#3 A2/B) ``lang_score`` (the POST-cap stored score) and ``gibberish_present``
@@ -710,6 +712,10 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
         return "Empty", "empty"
     if is_all_caps_line(text_source) and vr < 0.10:
         return "Trash", "allcaps_novowel"
+
+        # NEW: Immediate Trash override for high symbol density
+    if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
+        return "Trash", "trash_threshold"
 
     # (#3 A2/B) Structural short-garbage route. A very short line (<= the
     # isolated-token floor) with no Czech diacritics, a non-trusted/capped
@@ -758,10 +764,12 @@ def categorize_line(
         valid_word_ratio: float = 1.0,
         lang_score: float = 1.0,
         gibberish_present: bool = False,
+        garbage_density: float = 0.0,
 ) -> tuple[str, float] | tuple[str, float, str]:
     """Routes the line to its final categorization label based on its quality signals."""
     categ, reason = determine_category(qs, txt, wc, vowel_ratio, perplexity, weird_ratio,
-                                       valid_word_ratio, lang_score, gibberish_present)
+                                       valid_word_ratio, lang_score, gibberish_present, garbage_density)
+    # ... rest of the function remains the same ...
 
     if categ == "Trash":
         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
@@ -920,8 +928,9 @@ def compute_quality_score(
     if rot_ratio >= ROT_RATIO_INVERTED_MIN:
         if weird_ratio >= WEIRD_RATIO_INVERTED_MIN:
             rot_penalty = (rot_ratio * weird_ratio) * 2.0
-        elif perplexity >= PPL_INVERTED_MIN and weird_ratio > 0.0:
-            rot_penalty = 0.40 * min(weird_ratio / WEIRD_RATIO_INVERTED_MIN, 1.0)
+        elif perplexity >= PPL_INVERTED_MIN:
+            # Decoupled from `and weird_ratio > 0.0` to catch clean inverted strings
+            rot_penalty = rot_ratio * 0.5
 
         if lang_score is not None and lang_score >= ROT_HIGH_LANG_CONF:
             rot_penalty *= 0.5
