@@ -45,10 +45,16 @@ class TestFullPipelineSmoke:
             rot_ratio=rot_ratio
         )
 
+        # (#3 A2/B) The orchestrator caps the remapped lang score and passes a
+        # gibberish/wx presence flag into the categoriser; mirror that here so the
+        # short-garbage route is exercised by the smoke path too.
+        capped_lang_score = min(mock_lang_score, 0.75)
         final_cat, _ = categorize_line(
             qs, clean_text, wc, vowel_ratio, mock_ppl,
             rot_ratio=rot_ratio, weird_ratio=weird_ratio,
-            valid_word_ratio=valid_ratio
+            valid_word_ratio=valid_ratio,
+            lang_score=capped_lang_score,
+            gibberish_present=(gibb_count + wx_count) > 0,
         )
         return final_cat
 
@@ -73,3 +79,38 @@ class TestFullPipelineSmoke:
         for line in garbage_lines:
             cat = self._process_mocked_line(line, mock_ppl=3000.0, mock_lang_score=0.15)
             assert cat in ("Trash", "Non-text"), f"Garbage text '{line}' misclassified as {cat}"
+
+    # ────────────────────────────────────────────────────────────────────────
+    # (#3) Real-data calibration fixtures.
+    #
+    # IMPORTANT boundary: only garbage that the PER-LINE path can route on its
+    # own belongs here. Multi-token / interspersed inverted garbage (e.g.
+    # "NU -", "e.ao u", "wL-U kyuto Cona JaaVHUoaAL") scores as Noisy in
+    # isolation and is only reclassified by the page-level inverted-scan sweep —
+    # those cases live in tests/test_page_postprocess.py, which exercises
+    # apply_document_postprocessing. Asserting Trash for them here would be
+    # dishonest about where the fix actually lives.
+    # ────────────────────────────────────────────────────────────────────────
+    def test_real_short_garbage_is_trash_per_line(self):
+        # 'olie' -> short-garbage route; '° 47' -> plain quality-score Trash.
+        for line in ["olie", "° 47"]:
+            cat = self._process_mocked_line(line, mock_ppl=300.0, mock_lang_score=0.40)
+            assert cat == "Trash", f"Short garbage '{line}' misclassified as {cat}"
+
+    def test_real_clean_prose_promotes_to_clear(self):
+        # Diacritic-rich Czech prose dense in short function words must reach Clear
+        # now that compute_valid_ratio counts those short words (#3 C).
+        clear_lines = [
+            "svým jménem, nýbrž i lidovým podáním,které tvrdí,že v místech těchto stávala",
+            "Pátral Jsem v první řadě po stříbrných penězích .které prý",
+        ]
+        for line in clear_lines:
+            cat = self._process_mocked_line(line, mock_ppl=40.0, mock_lang_score=0.97)
+            assert cat == "Clear", f"Clean prose '{line[:30]}…' misclassified as {cat}"
+
+    def test_clean_czech_never_demoted_to_trash(self):
+        # Regression guard for the short-garbage route: genuine short Czech must
+        # never be Trashed.
+        for line in ["Náčrt sondy.", "Praha", "kostra hrob náramek"]:
+            cat = self._process_mocked_line(line, mock_ppl=200.0, mock_lang_score=0.97)
+            assert cat != "Trash", f"Clean Czech '{line}' wrongly Trashed ({cat})"

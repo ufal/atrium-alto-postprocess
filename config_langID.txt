@@ -83,7 +83,14 @@ CLEAN_PROSE_WEIRD_MAX       = 0.08
 CLEAN_PROSE_WC_MIN          = 4
 
 LANG_SCORE_REMAP            = 0.75
+# (#3 A1) Cap for remapped NON-Latin-script language guesses (Hangul, Cyrillic,
+# CJK, …) on Czech archival data — almost always inverted/garbled OCR.
+LANG_SCORE_REMAP_FAR        = 0.50
 SINGLE_CHAR_ALLOWED         = aAiIuUvVzZkKsS
+# (#3 C) Short Czech function words counted as valid by compute_valid_ratio
+# before the 3-char structural gate, so prose dense in prepositions/clitics is
+# not under-scored and can earn the clean-prose promotion.
+SHORT_VALID_WORDS           = a,i,k,o,s,u,v,z,se,si,po,na,za,ze,do,od,ke,ku,ve,ní,mi,ti,by,je,to,co,ač,my,ty,on,ji,jí,už,až
 REPEAT_ALLOWED_CHARS        = oOuU
 REPEATED_DOUBLE_MIN         = 2
 VOWEL_RATIO_LOW             = 0.20

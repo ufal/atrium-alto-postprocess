@@ -57,6 +57,16 @@ _TRUSTED_FOREIGN_LANG_BASES: frozenset = frozenset(
 def _lang_base(lang_code: str) -> str:
     return lang_code.split("_")[0]
 
+# (#3) Czech-specific diacritic glyphs. Presence of even one is a strong signal
+# that a line is genuine Czech text rather than inverted/foreign garbage OCR;
+# the page-level inverted-scan sweep and the short-garbage route both use it.
+CZ_DIACS = frozenset("áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ")
+
+
+def has_cz_diacs(text: str) -> bool:
+    """True if *text* contains at least one Czech diacritic glyph."""
+    return any(ch in CZ_DIACS for ch in text)
+
 _EXPECTED_LANGS_BASES: frozenset = frozenset(_lang_base(l) for l in COMMON_LANGS)
 
 PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
@@ -106,12 +116,28 @@ SHORT_NOISY_QS_PENALTY    = _get_float("TEXT_UTILS", "SHORT_NOISY_QS_PENALTY", 0
 # older configs keep working unchanged.
 # ---------------------------------------------------------------------------
 
-# Language remap floor for non-Slovak remapped languages (#15). slk preserves
-# its original FastText score; everything else is floored to this value.
+# Language remap CAP for non-Slovak remapped languages (#15, recalibrated #3).
+# slk preserves its original FastText score; every other remapped Latin-script
+# language has its score CAPPED at this value (a confident foreign guess on Czech
+# data is *less* trustworthy the higher it is, so capping — not flooring — is the
+# honest move). Non-Latin scripts are capped harder via LANG_SCORE_REMAP_FAR.
 LANG_SCORE_REMAP = _get_float("TEXT_UTILS", "LANG_SCORE_REMAP", 0.75)
+# (#3 A1) Cap for remapped NON-Latin-script languages (e.g. a Korean/Hangul or
+# Cyrillic guess on a Czech archival page is almost always inverted/garbage OCR).
+LANG_SCORE_REMAP_FAR = _get_float("TEXT_UTILS", "LANG_SCORE_REMAP_FAR", 0.50)
 
 # Single-char tokens that are NOT penalised by score_word (#10).
 SINGLE_CHAR_ALLOWED = _get_str("TEXT_UTILS", "SINGLE_CHAR_ALLOWED", "aAiIuUvVzZkKsS")
+
+# (#3 C) Short Czech function words (prepositions, conjunctions, pronouns,
+# clitics) that compute_valid_ratio accepts as valid even though they are
+# shorter than the 3-char structural gate. Without this, clean prose rich in
+# one/two-letter words ("v první řadě po stříbrných penězích") scores an
+# artificially low valid_ratio and is denied the clean-prose promotion.
+SHORT_VALID_WORDS = _get_csv_set(
+    "TEXT_UTILS", "SHORT_VALID_WORDS",
+    "a,i,k,o,s,u,v,z,se,si,po,na,za,ze,do,od,ke,ku,ve,ní,mi,ti,by,je,to,co,ač,my,ty,on,ji,jí,už,až",
+)
 
 # Characters exempt from the doubled-/dominant-char repeat arms (#5). The
 # triple-run arm still applies to these so genuine "ooo"/"uuu" stutters are
@@ -240,14 +266,21 @@ def _split_subtokens(word: str) -> list[str]:
 
 def remap_lang(label: str, score: float, known_bases: frozenset,
                default_lang: str, remap_floor: float = LANG_SCORE_REMAP) -> tuple[str, float]:
-    """Pure language-remap helper (unit-testable without FastText) (#15).
+    """Pure language-remap helper (unit-testable without FastText) (#15, recalibrated #3).
 
     * If the base code (``deu`` of ``deu_Latn``) is in ``known_bases`` →
       keep the label and score unchanged.
     * Otherwise remap the label to ``default_lang`` + the original script suffix.
       Slovak (``slk``) is relabelled but KEEPS its original FastText score
-      (it is a near-twin of Czech, so its confidence is meaningful); every other
-      remapped language has its score floored to ``remap_floor``.
+      (it is a near-twin of Czech, so its confidence is meaningful).
+    * Every other remapped language has its score CAPPED (#3 A1):
+        - Latin script      → capped at ``remap_floor`` (LANG_SCORE_REMAP, 0.75)
+        - non-Latin script  → capped at LANG_SCORE_REMAP_FAR (0.50)
+      A *confident* foreign guess on Czech archival data is evidence of inverted
+      or garbled OCR, not of a trustworthy language ID, so the old ``max`` floor
+      (which inflated weak foreign guesses up to 0.75) was backwards. Capping
+      leaves the stored ``lang_score`` honestly low, which is what the
+      page-level inverted-scan ``low_lang`` arm keys off.
     """
     base = _lang_base(label)
     if base in known_bases:
@@ -256,7 +289,8 @@ def remap_lang(label: str, score: float, known_bases: frozenset,
     new_label = default_lang + suffix
     if base == "slk":
         return new_label, score
-    return new_label, max(score, remap_floor)
+    cap = remap_floor if suffix == "_Latn" else LANG_SCORE_REMAP_FAR
+    return new_label, min(score, cap)
 
 
 def _has_repeated_run(core: str) -> bool:
@@ -660,12 +694,32 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 
 def determine_category(quality_score: float, text_source: str, word_count: int,
                        vr: float, ppl: float, weird_ratio: float = 0.0,
-                       valid_word_ratio: float = 1.0) -> tuple[str, str]:
-    """Evaluates categorization rules and returns (category, reason_tag)."""
+                       valid_word_ratio: float = 1.0,
+                       lang_score: float = 1.0,
+                       gibberish_present: bool = False) -> tuple[str, str]:
+    """Evaluates categorization rules and returns (category, reason_tag).
+
+    (#3 A2/B) ``lang_score`` (the POST-cap stored score) and ``gibberish_present``
+    let a short, isolated, diacritic-free token that FastText could not confidently
+    place AND that trips a gibberish/weirdness signal be routed straight to Trash,
+    instead of slipping into Noisy via an otherwise-decent quality score. Both
+    default to permissive values so existing callers/tests are unaffected.
+    """
     if word_count == 0 or not text_source.strip():
         return "Empty", "empty"
     if is_all_caps_line(text_source) and vr < 0.10:
         return "Trash", "allcaps_novowel"
+
+    # (#3 A2/B) Structural short-garbage route. A very short line (<= the
+    # isolated-token floor) with no Czech diacritics, a non-trusted/capped
+    # language score, and a weirdness or gibberish signal is OCR noise, not a
+    # real fragment. Folded into the trash_threshold reason so no new CSV column
+    # is introduced and the "exactly one categoriser flag" invariant holds.
+    if (word_count <= ISOLATED_CHAR_MIN_TOKENS
+            and not has_cz_diacs(text_source)
+            and lang_score <= LANG_SCORE_REMAP
+            and (gibberish_present or weird_ratio > 0.0)):
+        return "Trash", "trash_threshold"
 
     if ppl < 50.0 and word_count >= 3:
         if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
@@ -701,9 +755,12 @@ def categorize_line(
         weird_ratio: float = 0.0,
         return_reason: bool = False,
         valid_word_ratio: float = 1.0,
+        lang_score: float = 1.0,
+        gibberish_present: bool = False,
 ) -> tuple[str, float] | tuple[str, float, str]:
     """Routes the line to its final categorization label based on its quality signals."""
-    categ, reason = determine_category(qs, txt, wc, vowel_ratio, perplexity, weird_ratio, valid_word_ratio)
+    categ, reason = determine_category(qs, txt, wc, vowel_ratio, perplexity, weird_ratio,
+                                       valid_word_ratio, lang_score, gibberish_present)
 
     if categ == "Trash":
         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
@@ -745,6 +802,12 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
         if word_set is not None:
             if core.lower() in word_set: valid += 1
         else:
+            # (#3 C) Accept short Czech function words and single allowed chars
+            # before the 3-char structural gate, so clean prose dense in
+            # prepositions/clitics is not under-counted.
+            if core.lower() in SHORT_VALID_WORDS or core in SINGLE_CHAR_ALLOWED:
+                valid += 1
+                continue
             alpha = sum(c.isalpha() for c in core)
             has_strange = any(not c.isalnum() and c not in ALLOWED_INTERNAL for c in core)
             if len(core) >= 3 and alpha / len(core) >= 0.70 and not has_strange:

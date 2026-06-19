@@ -97,6 +97,9 @@ class TestDetectGibberishWords:
         assert detect_gibberish_words("AAAAAAA") == 0
     def test_all_vowels_triggers_high_vowel_ratio(self):
         assert detect_gibberish_words("aaaaaaa") >= 1
+    def test_real_high_vowel_fragment_flagged(self):
+        # (#3) 'olie' (3 vowels / 4 letters) is the canonical short-garbage token.
+        assert detect_gibberish_words("olie") >= 1
 
 class TestDetectLetterDigitLetter:
     def test_simple_ldl_pattern_detected(self):
@@ -134,15 +137,31 @@ class TestDetectWxWords:
         assert detect_wx_words("exxon") >= 1
         assert detect_wx_words("wwx") >= 1
 
-class TestLangRemapFloor:
+class TestLangRemapCap:
+    """(#3 A1) remap_lang now CAPS non-trusted scores instead of flooring them."""
     def test_known_base_preserved(self):
         lbl, sc = remap_lang("deu_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
         assert lbl == "deu_Latn"
         assert sc == 0.4
-    def test_unknown_remapped_and_floored(self):
+
+    def test_unknown_latin_weak_score_not_inflated(self):
+        # Old behaviour floored 0.4 -> 0.75; the cap must leave a weak guess weak.
         lbl, sc = remap_lang("fra_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
         assert lbl == "ces_Latn"
-        assert sc == 0.75
+        assert sc == 0.4
+
+    def test_unknown_latin_confident_score_capped(self):
+        # A confident foreign guess on Czech data is capped down to LANG_SCORE_REMAP.
+        lbl, sc = remap_lang("dan_Latn", 0.96, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Latn"
+        assert sc <= 0.75
+
+    def test_non_latin_capped_harder(self):
+        # Non-Latin scripts are capped to LANG_SCORE_REMAP_FAR (0.50).
+        lbl, sc = remap_lang("kor_Hang", 0.90, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Hang"
+        assert sc <= 0.50
+
     def test_slk_relabelled_but_score_preserved(self):
         lbl, sc = remap_lang("slk_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
         assert lbl == "ces_Latn"
@@ -193,6 +212,19 @@ class TestComputeValidRatio:
     def test_clean_czech_words_all_valid(self):
         assert compute_valid_ratio("kostra hrob náramek") == 1.0
 
+    def test_short_function_words_count_as_valid(self):
+        # (#3 C) prose dense in 1-2 letter prepositions/clitics must not be
+        # under-counted: every token here is valid -> ratio 1.0 (>= 0.85 gate).
+        assert compute_valid_ratio("v první řadě po stříbrných penězích") >= 0.85
+
+    def test_single_preposition_line_valid(self):
+        # "z a v" are all allowed single chars / short words.
+        assert compute_valid_ratio("z a v") == 1.0
+
+    def test_garbage_short_tokens_still_invalid(self):
+        # Short non-words must NOT be promoted by the short-word allowance.
+        assert compute_valid_ratio("qx zp") == 0.0
+
 class TestComputeQualityScore:
     def test_output_in_zero_one_range(self):
         q = compute_quality_score(
@@ -209,3 +241,36 @@ class TestCategorizeLineReason:
         qs = CATEG_NOISY_SCORE_MAX + 0.02
         cat, score, reason = categorize_line(qs, "čistý text", 2, 0.4, 200.0, return_reason=True)
         assert cat == "Clear" and reason == "clear_threshold" and score >= CATEG_NOISY_SCORE_MAX
+
+
+class TestShortGarbageRoute:
+    """(#3 A2/B) structural short-garbage route in determine_category."""
+
+    def test_short_gibberish_token_routed_to_trash(self):
+        # 'olie': 1 token, no Czech diacritics, capped lang score, gibberish present.
+        cat, score, reason = categorize_line(
+            0.895, "olie", 1, 0.75, 1.0, return_reason=True,
+            lang_score=0.75, gibberish_present=True,
+        )
+        assert cat == "Trash" and reason == "trash_threshold"
+
+    def test_clean_diacritic_fragment_not_trashed(self):
+        # A short clean Czech fragment with diacritics must survive the route.
+        cat, _, reason = categorize_line(
+            0.70, "Náčrt sondy.", 2, 0.4, 200.0, return_reason=True,
+            lang_score=0.99, gibberish_present=False,
+        )
+        assert cat != "Trash"
+
+    def test_high_confidence_clean_word_not_trashed(self):
+        # 'Praha': no diacritics, but trusted high lang score and no gibberish.
+        cat, _, reason = categorize_line(
+            0.95, "Praha", 1, 0.5, 30.0, return_reason=True,
+            lang_score=0.99, gibberish_present=False,
+        )
+        assert cat != "Trash"
+
+    def test_backward_compatible_default_kwargs(self):
+        # Omitting the new kwargs must reproduce the pre-#3 behaviour (no route).
+        cat, _ = categorize_line(0.95, "Praha", 1, 0.5, 30.0)
+        assert cat == "Clear"

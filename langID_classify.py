@@ -45,8 +45,10 @@ from tqdm import tqdm
 
 from text_util_langID import *
 # `from ... import *` skips underscore-prefixed names, so _lang_base (used by the
-# language-remapping logic below) must be imported explicitly.
-from text_util_langID import _lang_base
+# language-remapping logic below) must be imported explicitly. has_cz_diacs is
+# imported explicitly too so the extracted page-postprocess helper can reference
+# it by name (#3 A3).
+from text_util_langID import _lang_base, has_cz_diacs
 from atrium_paradata import ParadataLogger
 
 # Hard ceiling on how long a CPU worker waits for a batch's perplexity before
@@ -75,6 +77,11 @@ CSV_HEADER = [
     "trash_threshold", "noisy_threshold", "clear_threshold",
     "pp_dedup", "pp_surrounded_trash", "pp_inverted_run",
 ]
+
+# Page-level inverted-scan sweep parameters (#3 A3).
+INVERTED_RUN_MIN = 4           # contiguous-run threshold for mixed pages
+INVERTED_PAGE_MAJORITY = 0.60  # >= this fraction of a page's scoreable lines
+#                                being suspicious => Trash the whole suspicious set
 
 
 def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: str, gpu_dead=None):
@@ -205,10 +212,11 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         wc = len(text_content.split())
         cc = len(text_content)
 
-        # (#15) Language remap via the pure helper: slk keeps its score, every
-        # other unknown base is relabelled to the collection default and floored
-        # to LANG_SCORE_REMAP. The stored lang/lang_score reflect the remap; the
-        # ORIGINAL score still drives the QS_WEIGHT_LANG component.
+        # (#15, #3) Language remap via the pure helper: slk keeps its score, every
+        # other unknown base is relabelled to the collection default and its score
+        # CAPPED at LANG_SCORE_REMAP / LANG_SCORE_REMAP_FAR. The stored lang/
+        # lang_score reflect the remap; the ORIGINAL score still drives the
+        # QS_WEIGHT_LANG component.
         langs[i], scores[i] = remap_lang(
             langs[i], scores[i], _known_lang_bases, expected_langs[0]
         )
@@ -254,12 +262,17 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             rot_ratio=rot_ratio,
         )
 
+        # (#3 A2/B) Feed the categoriser the POST-CAP stored score (scores[i])
+        # and a gibberish/wx presence flag so the structural short-garbage route
+        # in determine_category can fire on isolated OCR noise.
         categ, q_score, reason = categorize_line(
             q_score, text_content, wc, vowel_ratio, ppl_val,
             rot_ratio=rot_ratio,
             weird_ratio=weird_ratio,
             return_reason=True,
-            valid_word_ratio=valid_ratio
+            valid_word_ratio=valid_ratio,
+            lang_score=scores[i],
+            gibberish_present=(gibb_count + wx_count) > 0,
         )
 
         row_dict = {
@@ -355,6 +368,103 @@ def _fast_track_row(file_id, page_id, line_num, clean_text, original_text,
     return _row_from_dict(d)
 
 
+def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
+    """Document-level smoothing — pure pandas, GPU-free, idempotent-safe.
+
+    Runs the three post-passes in order on a per-document line dataframe and
+    sets the matching ``pp_*`` flags:
+
+      1. ``pp_dedup``            — harmonise identical text to its modal category.
+      2. ``pp_surrounded_trash`` — a low-scoring Noisy island fully enclosed by a
+                                   4-line Trash window is downgraded to Trash.
+      3. ``pp_inverted_run``     — page-level inverted-scan sweep. A line is
+         "suspicious" when (no Czech diacritics AND stored ``lang_score`` <
+         ``LANG_SCORE_ROUGH``) OR (``rot_ratio`` >= ``ROT_RATIO_INVERTED_MIN``
+         AND ``perplex`` >= ``PPL_INVERTED_MIN``). Suspicious lines are Trashed
+         when they form a contiguous run >= ``INVERTED_RUN_MIN`` *or* (#3 A3
+         page-MAJORITY arm) when they make up >= ``INVERTED_PAGE_MAJORITY`` of
+         the page's scoreable lines — catching garbage that is broken up by
+         Empty / Non-text / short fragments and so never forms a long run.
+
+    Extracted out of ``process_document`` (#3 A3) so the Step-5 re-scorer
+    (``tools/recategorize_from_csv.py``) reuses byte-identical logic: zero drift
+    between production output and offline re-measurement.
+    """
+    if df.empty:
+        return df
+
+    df = df.sort_values(by=["page_num", "line_num"], ascending=True).copy()
+
+    # 1. header/footer dedup -> modal category
+    text_modes = df.groupby("text", dropna=False)["categ"].transform(
+        lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
+    changed_by_dedup = df["categ"] != text_modes
+    df["categ"] = text_modes
+    if "pp_dedup" not in df.columns:
+        df["pp_dedup"] = False
+    df.loc[changed_by_dedup, "pp_dedup"] = True
+
+    # 2. rolling-window surrounded-Trash smoothing
+    if "pp_surrounded_trash" not in df.columns:
+        df["pp_surrounded_trash"] = False
+    if len(df) >= 5:
+        prev_cat = df["categ"].shift(1)
+        next_cat = df["categ"].shift(-1)
+        prev2_cat = df["categ"].shift(2)
+        next2_cat = df["categ"].shift(-2)
+        surrounded_by_trash = (
+            (prev_cat == "Trash") & (next_cat == "Trash") &
+            (prev2_cat == "Trash") & (next2_cat == "Trash") &
+            (df["categ"] == "Noisy") &
+            (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
+        )
+        df.loc[surrounded_by_trash, "categ"] = "Trash"
+        df.loc[surrounded_by_trash, "pp_surrounded_trash"] = True
+
+    # 3. page-level inverted-scan sweep (run-based + page-majority)
+    if "pp_inverted_run" not in df.columns:
+        df["pp_inverted_run"] = False
+
+    for _page_id, page_df in df.groupby("page_num"):
+        candidates = page_df[~page_df["categ"].isin(["Empty", "Non-text"])].copy()
+        if candidates.empty:
+            continue
+
+        no_diacs = ~candidates["text"].apply(has_cz_diacs)
+        low_lang = candidates["lang_score"].astype(float) < LANG_SCORE_ROUGH
+        high_rot = candidates["rot_ratio"].astype(float) >= ROT_RATIO_INVERTED_MIN
+        high_ppl = candidates["perplex"].astype(float) >= PPL_INVERTED_MIN
+        suspicious = (no_diacs & low_lang) | (high_rot & high_ppl)
+
+        # (#3 A3) Page-MAJORITY arm: a page that is mostly suspicious is an
+        # inverted/garbage scan; Trash every suspicious line regardless of run
+        # length. Catches garbage broken up by Empty/Non-text/short lines.
+        if len(candidates) > 0 and (suspicious.sum() / len(candidates)) >= INVERTED_PAGE_MAJORITY:
+            idx = suspicious[suspicious].index
+            df.loc[idx, "categ"] = "Trash"
+            df.loc[idx, "pp_inverted_run"] = True
+            continue
+
+        # Otherwise fall back to the contiguous-run rule for mixed pages.
+        run_len = 0
+        run_indices = []
+        for idx, flag in suspicious.items():
+            if flag:
+                run_len += 1
+                run_indices.append(idx)
+            else:
+                if run_len >= INVERTED_RUN_MIN:
+                    df.loc[run_indices, "categ"] = "Trash"
+                    df.loc[run_indices, "pp_inverted_run"] = True
+                run_len = 0
+                run_indices = []
+        if run_len >= INVERTED_RUN_MIN:
+            df.loc[run_indices, "categ"] = "Trash"
+            df.loc[run_indices, "pp_inverted_run"] = True
+
+    return df
+
+
 def process_document(task):
     """
     Worker function executed by CPU pool.
@@ -447,71 +557,9 @@ def process_document(task):
                 "original_lang": str,
                 "categ": str,
             })
-            df = df.sort_values(by=["page_num", "line_num"], ascending=True)
 
             if not df.empty:
-                text_modes = df.groupby("text", dropna=False)["categ"].transform(
-                    lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
-                changed_by_dedup = df["categ"] != text_modes
-                df["categ"] = text_modes
-                if "pp_dedup" not in df.columns:
-                    df["pp_dedup"] = False
-                df.loc[changed_by_dedup, "pp_dedup"] = True
-
-                if len(df) >= 5:
-                    prev_cat = df["categ"].shift(1)
-                    next_cat = df["categ"].shift(-1)
-                    prev2_cat = df["categ"].shift(2)
-                    next2_cat = df["categ"].shift(-2)
-
-                    surrounded_by_trash = (
-                            (prev_cat == "Trash") & (next_cat == "Trash") &
-                            (prev2_cat == "Trash") & (next2_cat == "Trash") &
-                            (df["categ"] == "Noisy") &
-                            (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
-                    )
-                    df.loc[surrounded_by_trash, "categ"] = "Trash"
-                    if "pp_surrounded_trash" not in df.columns:
-                        df["pp_surrounded_trash"] = False
-                    df.loc[surrounded_by_trash, "pp_surrounded_trash"] = True
-
-                CZ_DIACS = set("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ")
-                MIN_RUN = 4
-
-                def _has_cz_diacs(text):
-                    return any(c in CZ_DIACS for c in str(text))
-
-                if "pp_inverted_run" not in df.columns:
-                    df["pp_inverted_run"] = False
-
-                for page_id, page_df in df.groupby("page_num"):
-                    candidates = page_df[~page_df["categ"].isin(["Empty", "Non-text"])].copy()
-                    if candidates.empty:
-                        continue
-
-                    no_diacs = ~candidates["text"].apply(_has_cz_diacs)
-                    low_lang = candidates["lang_score"].astype(float) < LANG_SCORE_ROUGH
-
-                    high_rot = candidates["rot_ratio"].astype(float) >= ROT_RATIO_INVERTED_MIN
-                    high_ppl = candidates["perplex"].astype(float) >= PPL_INVERTED_MIN
-
-                    suspicious = (no_diacs & low_lang) | (high_rot & high_ppl)
-
-                    run_len = 0
-                    run_indices = []
-                    for idx, flag in suspicious.items():
-                        if flag:
-                            run_len += 1
-                            run_indices.append(idx)
-                        else:
-                            if run_len >= MIN_RUN:
-                                df.loc[run_indices, "categ"] = "Trash"
-                                df.loc[run_indices, "pp_inverted_run"] = True
-                            run_len = 0
-                            run_indices = []
-                    if run_len >= MIN_RUN:
-                        df.loc[run_indices, "categ"] = "Trash"
-                        df.loc[run_indices, "pp_inverted_run"] = True
+                df = apply_document_postprocessing(df)
 
             # (#3.7) UTF-8 keeps Czech diacritics intact on the finalised file.
             df = df[CSV_HEADER]  # guard: write columns in canonical order
