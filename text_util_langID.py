@@ -77,22 +77,22 @@ LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
 LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
 # Core signal weights
-QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.30)
-QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.16)
-QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.15)
-QS_WEIGHT_LENGTH     = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH",     0.05)
-QS_WEIGHT_GARBAGE    = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE",    0.15)
 QS_WEIGHT_VOWEL      = _get_float("TEXT_UTILS", "QS_WEIGHT_VOWEL",      0.07)
 QS_WEIGHT_LANG       = _get_float("TEXT_UTILS", "QS_WEIGHT_LANG",       0.05)
 QS_WEIGHT_GIBBERISH  = _get_float("TEXT_UTILS", "QS_WEIGHT_GIBBERISH",  0.04)
 QS_WEIGHT_FUSED      = _get_float("TEXT_UTILS", "QS_WEIGHT_FUSED",      0.03)
 QS_LENGTH_MAX        = _get_float("TEXT_UTILS", "QS_LENGTH_MAX",        100.0)
+QS_WEIGHT_VALID_WORD = _get_float("TEXT_UTILS", "QS_WEIGHT_VALID_WORD", 0.35)
+QS_WEIGHT_WEIRD      = _get_float("TEXT_UTILS", "QS_WEIGHT_WEIRD",      0.18)
+QS_WEIGHT_PERPLEXITY = _get_float("TEXT_UTILS", "QS_WEIGHT_PERPLEXITY", 0.08)
+QS_WEIGHT_LENGTH     = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH",     0.02)
+QS_WEIGHT_GARBAGE    = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE",    0.18)
+
+CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.55)
+CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.85)
 
 CATEG_GARBAGE_DENSITY_HIGH = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH", 0.35)
 
-# Boundary Thresholds
-CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.50)
-CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.90)
 
 # Inverted / 180°-rotated scan detection
 ROT_RATIO_INVERTED_MIN   = _get_float("TEXT_UTILS", "ROT_RATIO_INVERTED_MIN",   0.55)
@@ -279,18 +279,15 @@ ROT_PAIRS = {
 
 # Unified Whitelist: Any real word from either dictionary
 ROT_WHITELIST = set(MIR_PAIRS.keys()).union(set(ROT_PAIRS.keys()))
+ROT_GHOSTLIST: frozenset = _build_ghostlist()
 
-# Unified Ghostlist: All mirrored/rotated outcomes.
-# Collisions are strictly pruned so upright text isn't flagged as its own ghost.
-ROT_GHOSTLIST = set(MIR_PAIRS.values()).union(set(ROT_PAIRS.values())) - ROT_WHITELIST
-
-def analyze_rotation_signals(text: str, rot_ratio: float) -> tuple[bool, bool]:
+def analyze_rotation_signals(text: str) -> tuple[bool, bool]:
     """Returns (is_upright_czech, ghost_dominated).
 
     is_upright_czech — HARD protective signal: a Czech diacritic OR a real
         upright function word. When True the rotation penalty is bypassed and the
         per-line `trash_inverted` route never fires.
-    ghost_dominated — genuine inverted-glyph density (rot_ratio gate) AND a
+    ghost_dominated — genuine inverted-glyph density AND a
         majority of word tokens are flip-images of real Czech words.
     """
     words = [w.lower() for w in re.split(r"\W+", text) if w]
@@ -302,16 +299,13 @@ def analyze_rotation_signals(text: str, rot_ratio: float) -> tuple[bool, bool]:
 
     is_upright_czech = has_cz_diacs(text) or real_hits > 0
 
-    # rot_ratio is a GATE, not a denominator; the ghost SHARE among all words
-    # must dominate. A low-rotatable line can no longer be promoted to inverted
-    # by one incidental ghost match.
     ghost_share = ghost_hits / len(words)
     ghost_dominated = (
-        ghost_hits > 0
-        and rot_ratio >= ROT_RATIO_INVERTED_MIN
-        and ghost_share >= GHOST_DOMINATED_MIN_RATIO
+            ghost_hits > 0
+            and ghost_share >= GHOST_DOMINATED_MIN_RATIO
     )
     return is_upright_czech, ghost_dominated
+
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -700,7 +694,6 @@ def categorize_line(
         wc: int,
         vowel_ratio: float,
         perplexity: float,
-        rot_ratio: float = 0.0,
         weird_ratio: float = 0.0,
         return_reason: bool = False,
         valid_word_ratio: float = 1.0,
@@ -782,6 +775,7 @@ def is_non_text(text: str) -> bool:
     if len(text) < 15 and compute_digit_ratio(text) > 0.5: return True
     return False
 
+
 def compute_quality_score(
         valid_word_ratio: float,
         perplexity: float,
@@ -794,7 +788,6 @@ def compute_quality_score(
         fused_ratio: float = 0.0,
         ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
         length_max: float = QS_LENGTH_MAX,
-        rot_ratio: float = 0.0,
         is_upright_czech: bool = False,
 ) -> float:
     total_weight = (
@@ -814,11 +807,13 @@ def compute_quality_score(
     norm_garbage = 1.0 - min(garbage_density / max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9), 1.0)
 
     vr = vowel_ratio
-    if vr < VOWEL_RATIO_LOW: norm_vowel = (vr / VOWEL_RATIO_LOW) if VOWEL_RATIO_LOW > 0 else 1.0
+    if vr < VOWEL_RATIO_LOW:
+        norm_vowel = (vr / VOWEL_RATIO_LOW) if VOWEL_RATIO_LOW > 0 else 1.0
     elif vr > VOWEL_RATIO_HIGH:
         span = max(1.0 - VOWEL_RATIO_HIGH, 1e-9)
         norm_vowel = max(0.0, 1.0 - (vr - VOWEL_RATIO_HIGH) / span)
-    else: norm_vowel = 1.0
+    else:
+        norm_vowel = 1.0
 
     norm_lang = lang_score if lang_score is not None else 0.5
     norm_gibb = 1.0 - min(gibberish_ratio, 1.0)
@@ -841,20 +836,9 @@ def compute_quality_score(
 
     base_score = base_score / total_weight
 
-    rot_penalty = 0.0
-    # BYPASS rotation penalty entirely for confirmed upright Czech
-    if not is_upright_czech and rot_ratio >= ROT_RATIO_INVERTED_MIN:
-        if weird_ratio >= WEIRD_RATIO_INVERTED_MIN:
-            rot_penalty = (rot_ratio * weird_ratio) * 2.0
-        elif perplexity >= PPL_INVERTED_MIN:
-            rot_penalty = rot_ratio * 0.5
-
-        if lang_score is not None and lang_score >= ROT_HIGH_LANG_CONF:
-            rot_penalty *= 0.5
-
     short_penalty = 0.0
     if text_length <= 12 and (weird_ratio > 0.0 or garbage_density >= CATEG_GARBAGE_DENSITY_HIGH):
         short_penalty = SHORT_NOISY_QS_PENALTY
 
-    final_score = max(0.0, base_score - rot_penalty - short_penalty)
+    final_score = max(0.0, base_score - short_penalty)
     return min(1.0, final_score)

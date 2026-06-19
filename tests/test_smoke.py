@@ -7,7 +7,8 @@ from text_util_langID import (
     pre_filter_line, categorize_line, compute_quality_score, score_words_in_line,
     compute_word_weird_ratio, compute_vowel_ratio, compute_garbage_density,
     compute_rotatable_ratio, compute_valid_ratio,
-    detect_gibberish_words, detect_wx_words, detect_fused_words
+    detect_gibberish_words, detect_wx_words, detect_fused_words,
+    analyze_rotation_signals
 )
 
 class TestFullPipelineSmoke:
@@ -32,6 +33,8 @@ class TestFullPipelineSmoke:
         wx_count = detect_wx_words(clean_text)
         fused_words = detect_fused_words(clean_text)
 
+        is_upright_czech, ghost_dominated = analyze_rotation_signals(clean_text)
+
         qs = compute_quality_score(
             valid_word_ratio=valid_ratio,
             perplexity=mock_ppl,
@@ -42,19 +45,18 @@ class TestFullPipelineSmoke:
             lang_score=mock_lang_score,
             gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
             fused_ratio=fused_words / max(wc, 1),
-            rot_ratio=rot_ratio
+            is_upright_czech=is_upright_czech
         )
 
-        # (#3 A2/B) The orchestrator caps the remapped lang score and passes a
-        # gibberish/wx presence flag into the categoriser; mirror that here so the
-        # short-garbage route is exercised by the smoke path too.
         capped_lang_score = min(mock_lang_score, 0.75)
         final_cat, _ = categorize_line(
             qs, clean_text, wc, vowel_ratio, mock_ppl,
-            rot_ratio=rot_ratio, weird_ratio=weird_ratio,
+            weird_ratio=weird_ratio,
             valid_word_ratio=valid_ratio,
             lang_score=capped_lang_score,
             gibberish_present=(gibb_count + wx_count) > 0,
+            is_upright_czech=is_upright_czech,
+            ghost_dominated=ghost_dominated
         )
         return final_cat
 

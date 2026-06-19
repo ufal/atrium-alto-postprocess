@@ -75,7 +75,7 @@ CSV_HEADER = [
     "caps_header",
     "allcaps_novowel", "lowppl_clear", "cleanprose_clear",
     "trash_threshold", "noisy_threshold", "clear_threshold",
-    "pp_dedup", "pp_surrounded_trash", "pp_inverted_run",
+    "pp_dedup", "pp_surrounded_trash", "pp_inverted_run", "pp_page_context",
 ]
 
 # Page-level inverted-scan sweep parameters (#3 A3).
@@ -244,16 +244,21 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
 
         rot_ratio = compute_rotatable_ratio(text_content)
 
-        # --- NEW: Compute unified rotation signals ---
-        is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content, rot_ratio)
-
+        is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content)
         caps_header = is_all_caps_line(text_content)
-
         word_scores = score_words_in_line(text_content)
         weird_ratio = compute_word_weird_ratio(word_scores)
-
-        # Calculate valid_ratio here to thread into both categorization steps
         valid_ratio = compute_valid_ratio(text_content)
+
+        # Two-tier Trust System over flat remapping
+        base_lang = _lang_base(original_lang)
+        if base_lang in _known_lang_bases:
+            if base_lang in expected_langs:
+                trust_lang_score = original_lang_score
+            else:
+                trust_lang_score = original_lang_score * 0.85
+        else:
+            trust_lang_score = original_lang_score * 0.50
 
         q_score = compute_quality_score(
             valid_word_ratio=valid_ratio,
@@ -262,28 +267,23 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             weird_ratio=weird_ratio,
             vowel_ratio=vowel_ratio,
             garbage_density=g_density,
-            lang_score=original_lang_score,
+            lang_score=trust_lang_score,  # Feed trust-tier into QS natively
             gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
             fused_ratio=fused_words / max(wc, 1),
-            rot_ratio=rot_ratio,
-            is_upright_czech=is_upright_czech,  # <--- NEW
+            is_upright_czech=is_upright_czech,
         )
 
-        # (#3 A2/B) Feed the categoriser the POST-CAP stored score (scores[i])
-        # and a gibberish/wx presence flag so the structural short-garbage route
-        # in determine_category can fire on isolated OCR noise.
         categ, q_score, reason = categorize_line(
             q_score, text_content, wc, vowel_ratio, ppl_val,
-            rot_ratio=rot_ratio,
             weird_ratio=weird_ratio,
             return_reason=True,
             valid_word_ratio=valid_ratio,
-            lang_score=scores[i],
-            orig_lang_score=original_lang_score,  # <--- NEW
+            lang_score=trust_lang_score,  # Structural guard uses tier trust
+            orig_lang_score=original_lang_score,
             gibberish_present=(gibb_count + wx_count) > 0,
-            garbage_density=g_density,  # <--- NEW
-            is_upright_czech=is_upright_czech,  # <--- NEW
-            ghost_dominated=ghost_dominated,  # <--- NEW
+            garbage_density=g_density,
+            is_upright_czech=is_upright_czech,
+            ghost_dominated=ghost_dominated,
         )
 
         row_dict = {
@@ -375,6 +375,7 @@ def _fast_track_row(file_id, page_id, line_num, clean_text, original_text,
         "pp_dedup": False,
         "pp_surrounded_trash": False,
         "pp_inverted_run": False,
+        "pp_page_context": False,
     }
     return _row_from_dict(d)
 
@@ -437,6 +438,39 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
     if "pp_inverted_run" not in df.columns:
         df["pp_inverted_run"] = False
 
+    if "pp_page_context" not in df.columns:
+        df["pp_page_context"] = False
+
+    for _page_id, page_df in df.groupby("page_num"):
+        scoreable_idx = page_df[~page_df["categ"].isin(["Empty", "Non-text"])].index
+        if len(scoreable_idx) == 0:
+            continue
+
+        page_scoreable = df.loc[scoreable_idx]
+        median_qs = page_scoreable["quality_score"].astype(float).median()
+        clear_ratio = (page_scoreable["categ"] == "Clear").mean()
+
+        # Determine ratio of document leaning towards trusted languages based strictly on origin
+        trusted_bases = set(["ces", "deu", "eng", "fra", "pol", "ita", "slk"])
+        is_trusted = page_scoreable["original_lang"].apply(lambda x: str(x).split("_")[0] in trusted_bases)
+        decent_lang_ratio = is_trusted.mean()
+
+        # Symmetric Rule 1: Page is heavily garbage (Pull borderline Noisy down)
+        if clear_ratio <= 0.05 and decent_lang_ratio < 0.50 and median_qs < 0.55:
+            sus_idx = page_scoreable[
+                (page_scoreable["categ"] == "Noisy") & (page_scoreable["quality_score"].astype(float) < 0.80)].index
+            if len(sus_idx) > 0:
+                df.loc[sus_idx, "categ"] = "Trash"
+                df.loc[sus_idx, "pp_page_context"] = True
+
+        # Symmetric Rule 2: Page is predominantly clean (Promote edge-case recoverable Trash)
+        elif clear_ratio > 0.60 and median_qs > 0.80:
+            sus_idx = page_scoreable[(page_scoreable["categ"] == "Trash") & (
+                        page_scoreable["quality_score"].astype(float) >= 0.45) & is_trusted].index
+            if len(sus_idx) > 0:
+                df.loc[sus_idx, "categ"] = "Noisy"
+                df.loc[sus_idx, "pp_page_context"] = True
+
     for _page_id, page_df in df.groupby("page_num"):
         candidates = page_df[~page_df["categ"].isin(["Empty", "Non-text"])].copy()
         if candidates.empty:
@@ -449,7 +483,7 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         has_weird = candidates["word_weird"].astype(float) > 0.0
         high_lang_conf = candidates["lang_score"].astype(float) >= ROT_HIGH_LANG_CONF
 
-        suspicious = (no_diacs & low_lang) | (high_rot & high_ppl & has_weird & ~high_lang_conf)
+        suspicious = (no_diacs & low_lang) | (high_ppl & has_weird & ~high_lang_conf)
 
         # (#3 A3) Page-MAJORITY arm: a page that is mostly suspicious is an
         # inverted/garbage scan; Trash every suspicious line regardless of run
@@ -459,6 +493,8 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
             df.loc[idx, "categ"] = "Trash"
             df.loc[idx, "pp_inverted_run"] = True
             continue
+
+
 
         # Otherwise fall back to the contiguous-run rule for mixed pages.
         run_len = 0

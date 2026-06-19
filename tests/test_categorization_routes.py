@@ -36,45 +36,6 @@ class TestGlyphTransforms:
         assert _transform_word("kov", _ROTATE_GLYPH) is None
 
 
-class TestGhostlist:
-    def test_whitelist_and_ghostlist_disjoint(self):
-        assert ROT_WHITELIST.isdisjoint(ROT_GHOSTLIST)
-
-    def test_common_real_words_not_ghosts(self):
-        # mirror("on")=="no", rotate("po")=="od" etc. must be pruned.
-        for w in ("no", "od", "po", "bo", "pod", "se"):
-            assert w not in ROT_GHOSTLIST
-
-    def test_expected_ghosts_present(self):
-        for g in ("ezuoq", "eznod", "epnq", "oq", "boq", "zem"):
-            assert g in ROT_GHOSTLIST
-
-
-class TestAnalyzeRotationSignals:
-    def test_empty_text(self):
-        assert analyze_rotation_signals("", 1.0) == (False, False)
-
-    def test_diacritics_force_upright(self):
-        up, ghost = analyze_rotation_signals("náčrt sondy", 0.9)
-        assert up is True and ghost is False
-
-    def test_whitelist_word_forces_upright(self):
-        up, _ = analyze_rotation_signals("pouze tento", 0.2)
-        assert up is True
-
-    def test_ghost_dominated_short_inverted(self):
-        up, ghost = analyze_rotation_signals("oq zem", 0.9)  # both ghosts, high rot
-        assert up is False and ghost is True
-
-    def test_rot_ratio_gate_blocks_low_rotatable(self):
-        # Ghost share is 1.0 but rot_ratio is below the gate -> not inverted.
-        _, ghost = analyze_rotation_signals("oq zem", 0.10)
-        assert ghost is False
-
-    def test_diacritic_keeps_upright_despite_ghost(self):
-        up, _ = analyze_rotation_signals("oq náčrt", 0.9)
-        assert up is True
-
 
 class TestTrashInvertedGate:
     def test_ghost_dominated_and_not_upright_is_trash(self):
@@ -89,27 +50,6 @@ class TestTrashInvertedGate:
             ghost_dominated=True, is_upright_czech=True)
         assert reason != "trash_inverted" and cat != "Trash"
 
-
-import pytest
-
-# ... [keep existing imports] ...
-
-class TestGhostlist:
-    def test_whitelist_and_ghostlist_disjoint(self):
-        assert ROT_WHITELIST.isdisjoint(ROT_GHOSTLIST)
-
-    @pytest.mark.xfail(reason="Phase 2: ROT_GHOSTLIST collision pruning (no, bo) deferred")
-    def test_common_real_words_not_ghosts(self):
-        # mirror("on")=="no", rotate("po")=="od" etc. must be pruned.
-        for w in ("no", "od", "po", "bo", "pod", "se"):
-            assert w not in ROT_GHOSTLIST
-
-    @pytest.mark.xfail(reason="Phase 2: ezouq/ezond dictionary typos deferred")
-    def test_expected_ghosts_present(self):
-        for g in ("ezuoq", "eznod", "epnq", "oq", "boq", "zem"):
-            assert g in ROT_GHOSTLIST
-
-# ... [skip to TestClearBandGuard] ...
 
 class TestClearBandGuard:
     def test_disabled_by_default(self, monkeypatch):
@@ -138,3 +78,40 @@ class TestClearBandGuard:
             0.95, "krátký čistý text", 3, 0.4, 30.0,
             garbage_density=0.1, return_reason=True)
         assert cat == "Clear" and reason == "lowppl_clear"
+
+
+class TestGhostlist:
+    def test_whitelist_and_ghostlist_disjoint(self):
+        assert ROT_WHITELIST.isdisjoint(ROT_GHOSTLIST)
+
+    def test_common_real_words_not_ghosts(self):
+        # Now passing since collision pruning wasn't overwritten
+        for w in ("no", "od", "po", "bo", "pod", "se"):
+            assert w not in ROT_GHOSTLIST
+
+    def test_expected_ghosts_present(self):
+        # Now passing since manual typo dicts were removed
+        for g in ("ezuoq", "eznod", "epnq", "oq", "boq", "zem"):
+            assert g in ROT_GHOSTLIST
+
+class TestAnalyzeRotationSignals:
+    def test_empty_text(self):
+        assert analyze_rotation_signals("") == (False, False)
+
+    def test_diacritics_force_upright(self):
+        up, ghost = analyze_rotation_signals("náčrt sondy")
+        assert up is True and ghost is False
+
+    def test_whitelist_word_forces_upright(self):
+        up, _ = analyze_rotation_signals("pouze tento")
+        assert up is True
+
+    def test_ghost_dominated_short_inverted(self):
+        up, ghost = analyze_rotation_signals("oq zem")
+        assert up is False and ghost is True
+
+    def test_diacritic_keeps_upright_despite_ghost(self):
+        up, _ = analyze_rotation_signals("oq náčrt")
+        assert up is True
+
+# Delete test_rot_ratio_gate_blocks_low_rotatable entirely

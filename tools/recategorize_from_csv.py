@@ -147,7 +147,7 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
 
     rot_ratio = compute_rotatable_ratio(text_content)
     # --- NEW: Compute unified rotation signals ---
-    is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content, rot_ratio)
+    is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content)
 
     caps_header = is_all_caps_line(text_content)
     weird_ratio = compute_word_weird_ratio(score_words_in_line(text_content))
@@ -158,20 +158,20 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
         weird_ratio=weird_ratio, vowel_ratio=vowel_ratio, garbage_density=g_density,
         lang_score=original_lang_score,
         gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
-        fused_ratio=fused_words / max(wc, 1), rot_ratio=rot_ratio,
-        is_upright_czech=is_upright_czech,  # <--- NEW
+        fused_ratio=fused_words / max(wc, 1),
+        is_upright_czech=is_upright_czech,
     )
 
     # (#3 A2/B) post-cap score + gibberish flag into the categoriser.
     categ, q_score, reason = categorize_line(
         q_score, text_content, wc, vowel_ratio, ppl_val,
-        rot_ratio=rot_ratio, weird_ratio=weird_ratio, return_reason=True,
+        weird_ratio=weird_ratio, return_reason=True,
         valid_word_ratio=valid_ratio, lang_score=new_score,
-        orig_lang_score=original_lang_score,  # <--- NEW
+        orig_lang_score=original_lang_score,
         gibberish_present=(gibb_count + wx_count) > 0,
-        garbage_density=g_density,  # <--- NEW
-        is_upright_czech=is_upright_czech,  # <--- NEW
-        ghost_dominated=ghost_dominated,  # <--- NEW
+        garbage_density=g_density,
+        is_upright_czech=is_upright_czech,
+        ghost_dominated=ghost_dominated,
     )
 
     out = dict(row)  # keep any columns we do not recompute
