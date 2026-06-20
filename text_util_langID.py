@@ -336,9 +336,16 @@ def analyze_rotation_signals(text: str) -> tuple[bool, bool]:
 def _is_mid_uppercase(core: str) -> bool:
     if len(core) < 2 or core.isupper(): return False
     if core.rstrip('.') in ACADEMIC_TITLES: return False
-    if _has_starting_uppercase(core): return True
+
+    # Check if it starts with 2+ caps and has lowers later (e.g. "MCDonald")
     caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
     if caps_run >= 2 and any(c.islower() for c in core[caps_run:]): return True
+
+    # NEW: Catch actual mid-word uppercase (e.g., "ClAŕ", "neschopnýA")
+    for i in range(1, len(core)):
+        if core[i].isupper() and core[i - 1].islower():
+            return True
+
     return False
 
 def _has_starting_uppercase(core: str) -> bool:
@@ -650,8 +657,18 @@ def score_word(word: str) -> float:
         caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]): has_caps_prefix = True
 
+    # --- FIX 1: Vowelless Anchor Penalty ---
+    alpha_chars = [c for c in core if c.isalpha()]
+    is_vowelless_long = (
+            len(alpha_chars) >= 3
+            and not any(c in VOWEL_CHARS for c in alpha_chars)
+            and core.rstrip('.') not in ACADEMIC_TITLES
+    )
+
+    # --- FIX 1b: Increased mid-uppercase penalty (0.10 -> 0.25) ---
     return min(1.0, 0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl
-               + 0.10 * has_uppercase + 0.20 * has_caps_prefix + WORD_W_PENALTY * has_wqx)
+               + 0.25 * has_uppercase + 0.20 * has_caps_prefix
+               + WORD_W_PENALTY * has_wqx + 0.50 * is_vowelless_long)
 
 
 def score_words_in_line(text: str) -> list[tuple[str, float]]:
@@ -665,11 +682,26 @@ def score_words_in_line(text: str) -> list[tuple[str, float]]:
     # FIX 2b: Use config-driven thresholds for suspicious rotation
     is_suspicious_rot = (rot_ratio > SUSPICIOUS_ROT_RATIO and wqx_ratio >= SUSPICIOUS_WQX_RATIO and not is_upright)
 
+    # --- FIX 2: Ledger/Fragmentation Detection ---
+    # Count tokens that are purely digits OR extremely short (1-2 chars)
+    frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
+    frag_ratio = frag_count / len(words) if words else 0.0
+
+    # Flag the line if it is predominantly fragmented
+    is_highly_fragmented = (frag_ratio > 0.60 and len(words) >= 4)
+
     results = []
     for w in words:
         s = score_word(w)
         if (ghost_dom or is_suspicious_rot) and not is_upright:
             s = min(1.0, s + INVERTED_WEIRD_PENALTY)
+
+        # --- FIX 2b: Contextual penalty for fragments in ledgers ---
+        if is_highly_fragmented:
+            core = w.strip(_STRIP_CHARS)
+            if core.isdigit() or len(core) <= 2:
+                s = min(1.0, s + 0.35)  # Drag down the overall line quality
+
         results.append((w, s))
 
     return results
@@ -824,9 +856,34 @@ def categorize_line(
         ghost_dominated: bool = False,
 ) -> tuple[str, float] | tuple[str, float, str]:
     rot_ratio = compute_rotatable_ratio(txt)
-    if rot_ratio > 0.60 and orig_lang_score < 0.75 and not is_upright_czech:
-        qs = max(0.0, qs - 0.20)
+    words = txt.split()
 
+    # --- FIX 1: Sneaky leaks (WQX & Rotation) ---
+    # "mos(" escaped because its rot_ratio was ~0.55 (under the 0.60 threshold).
+    # Lowering the threshold slightly and combining it with W/Q/X catches the alien text.
+    wqx_ratio = sum(1 for w in words if any(c in 'wqxWQX' for c in w)) / max(wc, 1)
+    if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
+        qs = max(0.0, qs - 0.35)
+
+    # --- FIX 2: Vowelless/Acronym gibberish ("WVL A") ---
+    # Short, all caps, poor vowel ratio (<0.30), lacking Czech anchors.
+    if is_all_caps_line(txt) and wc <= 3 and vowel_ratio < 0.30 and not is_upright_czech:
+        qs = max(0.0, qs - 0.35)
+
+    # --- FIX 3: Ledger / Table Fragmentation Loophole ---
+    # e.g., 'nonč, mI 47 žn dn A\' 1074 484 "Nik 1726.'
+    # If > 60% of the tokens are raw digits or 1-2 characters long, it's fragmented noise.
+    if words:
+        frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
+        if (frag_count / len(words)) > 0.60 and len(words) >= 4:
+            qs = max(0.0, qs - 0.35)
+
+    # --- FIX 4: Isolated Mid-Uppercase Fragments ("ClAŕ") ---
+    # Short fragments containing mid-uppercase corruption are practically useless.
+    if wc <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
+        qs = max(0.0, qs - 0.35)
+
+    # The heavily penalized `qs` now routes safely to determine_category
     categ, reason = determine_category(
         qs, txt, wc, vowel_ratio, perplexity, weird_ratio,
         valid_word_ratio, lang_score, orig_lang_score,

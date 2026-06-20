@@ -193,7 +193,7 @@ def main():
     input_dir = Path(config["input_dir"])
     output_dir = Path(config["output_dir"])
     output_stats_path = Path(config["output_stats"])
-    STANDARD_COLS = Path(config.get("standard_cols", "Clear,Noisy,Trash,Non-text,Empty").split(","))
+    STANDARD_COLS = frozenset(config.get("standard_cols", "Clear,Noisy,Trash,Non-text,Empty").split(","))
 
     if not input_dir.exists():
         print(f"Error: Input directory {input_dir} does not exist.")
