@@ -119,6 +119,11 @@ ANCHOR_VOWEL_RATIO          = 0.10
 SUSPICIOUS_ROT_RATIO        = 0.65
 SUSPICIOUS_WQX_RATIO        = 0.15
 INVERTED_WEIRD_PENALTY      = 0.45
+# (#3 remaining hard cases)
+# P3 absolute-perplexity garbage route (ignores lang confidence; non-upright only).
+PPL_GARBAGE_ABSOLUTE        = 30000.0
+# P1 minimum ghost-token share for the broadened per-line inverted-scan route.
+GHOST_HITS_INVERTED_MIN     = 1
 
 [PIPELINE]
 METHOD        = layoutreader
