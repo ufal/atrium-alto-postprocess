@@ -525,8 +525,42 @@ def pre_filter_line(line: str) -> tuple[str, str]:
         return "Non-text", clean_text
 
     if len(tokens) >= ISOLATED_CHAR_MIN_TOKENS:
-        isolated = sum(1 for tok in tokens if len(tok.strip(_STRIP_CHARS)) == 1 and tok.strip(_STRIP_CHARS).isalnum())
-        if isolated / len(tokens) >= ISOLATED_CHAR_RATIO_MAX: return "Non-text", clean_text
+        valid_singles = frozenset(SINGLE_CHAR_ALLOWED)
+        isolated = sum(
+            1 for tok in tokens
+            if len(tok.strip(_STRIP_CHARS)) == 1
+            and tok.strip(_STRIP_CHARS).isalnum()
+            and tok.strip(_STRIP_CHARS) not in valid_singles
+        )
+
+        if isolated / len(tokens) >= ISOLATED_CHAR_RATIO_MAX:
+            # FIX 1: Surgical spaced-typography rescue (e.g., "P r a z e")
+            run_length = 0
+            collapsed_spans = []
+            current_span = []
+
+            for tok in tokens:
+                core = tok.strip(_STRIP_CHARS)
+                if len(core) == 1 and core.isalpha():
+                    run_length += 1
+                    current_span.append(core)
+                else:
+                    if run_length >= 3:
+                        collapsed_spans.append("".join(current_span))
+                    run_length = 0
+                    current_span = []
+            if run_length >= 3:
+                collapsed_spans.append("".join(current_span))
+
+            rescued = False
+            for span in collapsed_spans:
+                # If any collapsed span forms a valid phonetic structure, let it through to ML
+                if compute_vowel_ratio(span) > 0.15 and compute_garbage_density(span) < 0.20:
+                    rescued = True
+                    break
+
+            if not rescued:
+                return "Non-text", clean_text
 
     return "Process", clean_text
 
@@ -664,7 +698,15 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
 
     # 4. Overwhelming non-alphanumeric density.
     if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
-        return "Trash", "trash_threshold"
+        # FIX 2a: Rescue archival headers (e.g., "Předmět; . .. <") from hard Trash override
+        if word_count <= 4 and len(text_source) <= 25 and valid_word_ratio > 0.0:
+            stripped_text = text_source.rstrip(" ._:-<")
+            if stripped_text and compute_garbage_density(stripped_text) < CATEG_GARBAGE_DENSITY_HIGH:
+                pass  # Bypass this override and allow it to route naturally
+            else:
+                return "Trash", "trash_threshold"
+        else:
+            return "Trash", "trash_threshold"
 
     # 5. Structural short-garbage route (e.g. "olie").
     if (word_count <= ISOLATED_CHAR_MIN_TOKENS
@@ -681,17 +723,12 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
 
     # 7. Quality-score band routing.
     if quality_score < CATEG_TRASH_SCORE_MAX:
-        return "Trash", "trash_threshold"
-
-    if quality_score < CATEG_NOISY_SCORE_MAX:
-        if (quality_score >= CLEAN_PROSE_MIN_SCORE
-                and word_count >= CLEAN_PROSE_WC_MIN
-                and weird_ratio < CLEAN_PROSE_WEIRD_MAX
-                and ppl < CLEAN_PROSE_PPL_MAX):
-            if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+        # FIX 2b: Prevent the same archival headers from dying strictly on the QS boundary
+        if word_count <= 4 and len(text_source) <= 25 and valid_word_ratio > 0.0:
+            stripped_text = text_source.rstrip(" ._:-<")
+            if stripped_text and compute_garbage_density(stripped_text) < CATEG_GARBAGE_DENSITY_HIGH:
                 return "Noisy", "noisy_threshold"
-            return "Clear", "cleanprose_clear"
-        return "Noisy", "noisy_threshold"
+        return "Trash", "trash_threshold"
 
     # (#3) Short-fragment guard: hold a very short, NOISY fragment at Noisy even
     # when its QS reaches the Clear band. Only fires when the fragment also carries
@@ -725,6 +762,10 @@ def categorize_line(
         is_upright_czech: bool = False,
         ghost_dominated: bool = False,
 ) -> tuple[str, float] | tuple[str, float, str]:
+    rot_ratio = compute_rotatable_ratio(txt)
+    if rot_ratio > 0.60 and orig_lang_score < 0.75 and not is_upright_czech:
+        qs = max(0.0, qs - 0.20)
+
     categ, reason = determine_category(
         qs, txt, wc, vowel_ratio, perplexity, weird_ratio,
         valid_word_ratio, lang_score, orig_lang_score,
