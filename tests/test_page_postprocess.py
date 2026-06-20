@@ -191,6 +191,48 @@ class TestDedupAndNoOp:
             assert col in out.columns
 
 
+
+class TestRotArmWeirdless:
+    """(#3 Problem 1) the rot arm catches no-diacritics, structurally rotatable,
+    LM-lost lines that the WEIRD arm misses because word_weird == 0 — the exact
+    gap that let noxer/uuysod through. Isolated here with a MID lang score
+    (between LANG_SCORE_ROUGH and ROT_HIGH_LANG_CONF) so the diacritic-absence
+    arm does NOT fire: only the rot arm can be responsible."""
+
+    _MID = 0.50  # > LANG_SCORE_ROUGH (0.45), < ROT_HIGH_LANG_CONF (0.90)
+
+    def test_weirdless_rot_run_trashed_by_rot_arm(self):
+        # 4 clean + 4 suspicious = 50% < majority, so the page-MAJORITY arm does
+        # NOT fire; the contiguous run >= INVERTED_RUN_MIN does, via the rot arm.
+        # word_weird=0 disqualifies the weird arm; _MID lang disqualifies the
+        # diacritic-absence arm -> only (no_diacs & high_rot & high_ppl &
+        # ~high_lang_conf) remains.
+        rows = [_row("9", i, "Clear", f"cisty cesky radek {i}", lang_score=_HIGH)
+                for i in range(1, 5)]
+        rows += [_row("9", 4 + j, "Noisy", f"uonn qpqb dbqp {j}",
+                      lang_score=self._MID, rot=0.60, ppl=250.0, word_weird=0.0)
+                 for j in range(INVERTED_RUN_MIN)]
+        out = apply_document_postprocessing(_df(rows))
+        suspicious = out[out["text"].str.startswith("uonn")]
+        assert (suspicious["categ"] == "Trash").all()
+        assert suspicious["pp_inverted_run"].all()
+        assert (out[out["text"].str.startswith("cisty")]["categ"] == "Clear").all()
+
+    def test_high_lang_conf_rotatable_line_not_trashed(self):
+        # A no-diacritics, high-rot, high-ppl line is SPARED when FastText is
+        # confident (lang_score >= ROT_HIGH_LANG_CONF): ~high_lang_conf is False
+        # so the rot arm cannot fire (guards confident upright ASCII Czech such
+        # as 'dalsi normalni radek').
+        rows = [_row("10", i, "Clear", f"jasny cesky radek {i}", lang_score=_HIGH)
+                for i in range(1, 5)]
+        rows += [_row("10", 4 + j, "Clear", f"uonn qpqb dbqp znak {j}",
+                      lang_score=0.95, rot=0.60, ppl=250.0, word_weird=0.0)
+                 for j in range(INVERTED_RUN_MIN)]
+        out = apply_document_postprocessing(_df(rows))
+        assert (out["categ"] == "Clear").all()
+        assert not out["pp_inverted_run"].any()
+
+
 def test_module_constants_sane():
     assert INVERTED_RUN_MIN >= 2
     assert 0.0 < INVERTED_PAGE_MAJORITY <= 1.0

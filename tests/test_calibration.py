@@ -39,7 +39,6 @@ from tests.calibration_fixtures import (  # noqa: E402
 
 _EXPECTED, _KNOWN = _load_lang_config(str(_ROOT / "config_langID.txt"))
 
-
 def _categ(text, ppl, lang_score):
     """Faithful per-line category via the production re-scorer. original_lang is
     set to ces (trusted): for these low-score garbage lines the remap CAP is a

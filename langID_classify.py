@@ -483,7 +483,11 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         has_weird = candidates["word_weird"].astype(float) > 0.0
         high_lang_conf = candidates["lang_score"].astype(float) >= ROT_HIGH_LANG_CONF
 
-        suspicious = (no_diacs & low_lang) | (high_ppl & has_weird & ~high_lang_conf)
+        suspicious = (
+                (no_diacs & low_lang)
+                | (high_ppl & has_weird & ~high_lang_conf)
+                | (no_diacs & high_rot & high_ppl & ~high_lang_conf)  # (#3 Problem 1) rot arm
+        )
 
         # (#3 A3) Page-MAJORITY arm: a page that is mostly suspicious is an
         # inverted/garbage scan; Trash every suspicious line regardless of run

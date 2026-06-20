@@ -191,6 +191,12 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
     "deu": frozenset("äöüßÄÖÜ"),
 }
 
+# (#3) Extreme-perplexity trash route + LM-confident upright-Czech recovery.
+PPL_EXTREME_MIN           = _get_float("TEXT_UTILS", "PPL_EXTREME_MIN",           3000.0)
+EXTREME_LANG_CONF         = _get_float("TEXT_UTILS", "EXTREME_LANG_CONF",         0.85)
+LOWPPL_CZECH_CLEAR_MAX    = _get_float("TEXT_UTILS", "LOWPPL_CZECH_CLEAR_MAX",    180.0)
+CZECH_CLEAR_GARBAGE_MAX   = _get_float("TEXT_UTILS", "CZECH_CLEAR_GARBAGE_MAX",   0.15)
+
 # ---------------------------------------------------------------------------
 # Lexicon Integration for Rotation/Inversion detection
 # ---------------------------------------------------------------------------
@@ -214,9 +220,9 @@ _MIRROR_GLYPH = {
 # f, …) are intentionally absent: a word containing one yields NO rotation ghost
 # instead of a fabricated match.
 _ROTATE_GLYPH = {
-    "b": "q", "q": "b", "d": "p", "p": "d",
+    "b": "q", "q": "b", "d": "p", "p": "d", "h": "y",
     "n": "u", "u": "n", "m": "w", "w": "m", "y": "h",
-    "a": "a", "e": "e", "i": "i", "l": "l",
+    "a": "e", "e": "a", "i": "!", "l": "l",
     "o": "o", "s": "s", "x": "x", "z": "z",
 }
 
@@ -615,6 +621,15 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 # Categorisation & Clamping
 # ---------------------------------------------------------------------------
 
+def _lm_confident_czech(is_upright_czech, ppl, garbage_density):
+    """(#3 Problem 2) True when an upright-Czech line is LM-confident and clean
+    enough to bypass the fragile valid_word_ratio Mostly-Readable cap. The
+    perplexity gate (clean Czech 58-153 vs NOISY guards >=203) and the diacritic
+    requirement (is_upright_czech) keep garbage out."""
+    return (is_upright_czech and ppl < LOWPPL_CZECH_CLEAR_MAX
+            and garbage_density < CZECH_CLEAR_GARBAGE_MAX)
+
+
 def determine_category(quality_score: float, text_source: str, word_count: int,
                        vr: float, ppl: float, weird_ratio: float = 0.0,
                        valid_word_ratio: float = 1.0,
@@ -631,6 +646,11 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
     #    ORIGINAL FastText score (the signal the cap masks) + an LM that is also
     #    lost. Folds to trash_threshold in the CSV via TRASH_REASONS.
     if orig_lang_score < HARD_SWEEP_LANG_MAX and ppl > HARD_SWEEP_PPL_MIN:
+        return "Trash", "trash_hard_sweep"
+    # (#3 Problem 3) Extreme LM loss the lang-gated hard sweep misses (e.g.
+    # slk-labeled garbage at confidence >= 0.45). The orig-score gate spares
+    # readable OCR-degraded trusted text with genuinely high ppl.
+    if ppl >= PPL_EXTREME_MIN and orig_lang_score < EXTREME_LANG_CONF:
         return "Trash", "trash_hard_sweep"
 
     # 2. Inverted / mirrored scan: line dominated by lexicon ghost tokens with no
@@ -682,7 +702,8 @@ def determine_category(quality_score: float, text_source: str, word_count: int,
             and (weird_ratio > 0.0 or garbage_density > 0.0)):
         return "Noisy", "noisy_threshold"
 
-    if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+    if valid_word_ratio < MOSTLY_READABLE_VALID_MIN and not _lm_confident_czech(
+            is_upright_czech, ppl, garbage_density):
         return "Noisy", "noisy_threshold"
 
     return "Clear", "clear_threshold"

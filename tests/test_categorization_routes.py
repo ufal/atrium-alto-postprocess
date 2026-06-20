@@ -23,8 +23,8 @@ class TestGlyphTransforms:
 
     def test_rotate_corrected_values(self):
         # The three entries the hand tables got wrong.
-        assert _transform_word("pouze", _ROTATE_GLYPH) == "eznod"
-        assert _transform_word("bude", _ROTATE_GLYPH) == "epnq"
+        assert _transform_word("pouze", _ROTATE_GLYPH) == "aznod"
+        assert _transform_word("bude", _ROTATE_GLYPH) == "apnq"
 
     def test_short_words(self):
         assert _transform_word("po", _MIRROR_GLYPH) == "oq"
@@ -91,7 +91,7 @@ class TestGhostlist:
 
     def test_expected_ghosts_present(self):
         # Now passing since manual typo dicts were removed
-        for g in ("ezuoq", "eznod", "epnq", "oq", "boq", "zem"):
+        for g in ("aznod", "apnq", "oq", "boq", "zem"):
             assert g in ROT_GHOSTLIST
 
 class TestAnalyzeRotationSignals:
@@ -115,3 +115,58 @@ class TestAnalyzeRotationSignals:
         assert up is True
 
 # Delete test_rot_ratio_gate_blocks_low_rotatable entirely
+
+class TestExtremePplRoute:
+    """(#3 Problem 3) extreme-perplexity trash route in determine_category."""
+
+    def test_extreme_ppl_low_conf_garbage_trashed(self):
+        # 'Alyrý cvod nede % Agrgr oAOrt': ppl 15168, slk @ 0.6658 (< 0.85).
+        # FastText is confident enough (0.6658 >= HARD_SWEEP_LANG_MAX) that the
+        # original hard sweep misses it; the extreme-ppl route must catch it.
+        cat, _, reason = categorize_line(
+            0.80, "Alyrý cvod nede % Agrgr oAOrt", 6, 0.41, 15168.0,
+            return_reason=True, orig_lang_score=0.6658)
+        assert cat == "Trash" and reason == "trash_hard_sweep"
+
+    def test_extreme_ppl_confident_text_spared(self):
+        # Same extreme ppl but a confident label (>= EXTREME_LANG_CONF) -> NOT
+        # trashed by this route: readable OCR-degraded text with a genuinely huge
+        # ppl is spared (e.g. 'Taxon vojcuskou' ces:0.90 ppl=10432).
+        cat, _, reason = categorize_line(
+            0.80, "Taxon vojcuskou povinen jest", 4, 0.45, 15168.0,
+            return_reason=True, orig_lang_score=0.95)
+        assert reason != "trash_hard_sweep"
+
+
+class TestLmConfidentCzechBypass:
+    """(#3 Problem 2) LM-confident upright Czech bypasses the Mostly-Readable
+    valid_word_ratio cap at the Clear-band, recovering clean prose stranded at
+    Noisy/0.8499. Applied ONLY at the Clear-band cap, not the cleanprose band."""
+
+    def test_upright_czech_low_ppl_bypasses_valid_cap(self):
+        # qs in Clear band, valid_ratio < 0.85, but upright Czech + low ppl ->
+        # cap bypassed -> Clear (e.g. 'í nezpůsobilost ke službě nebyla').
+        cat, _, reason = categorize_line(
+            0.88, "í nezpůsobilost ke službě nebyla", 5, 0.43, 80.0,
+            return_reason=True, valid_word_ratio=0.80,
+            is_upright_czech=True, garbage_density=0.0)
+        assert cat == "Clear" and reason == "clear_threshold"
+
+    def test_non_czech_low_valid_still_capped(self):
+        # Control: same band/ppl but NOT upright Czech -> cap still demotes.
+        cat, _, reason = categorize_line(
+            0.88, "slovo bez diakritiky tady", 5, 0.43, 80.0,
+            return_reason=True, valid_word_ratio=0.80,
+            is_upright_czech=False, garbage_density=0.0)
+        assert cat == "Noisy" and reason == "noisy_threshold"
+
+    def test_high_garbage_czech_not_bypassed(self):
+        # Guard (cleanprose-band deviation): an upright low-ppl Czech FRAGMENT
+        # with high garbage density is NOT bypassed, so diacritic-bearing garbage
+        # like 'nonč, mI 47 žn dn ...' (garbage_density >= CZECH_CLEAR_GARBAGE_MAX)
+        # can never reach Clear through this route.
+        cat, _, _ = categorize_line(
+            0.88, "nonč mI žn dn 1074 484", 5, 0.22, 131.0,
+            return_reason=True, valid_word_ratio=0.40,
+            is_upright_czech=True, garbage_density=0.20)
+        assert cat == "Noisy"

@@ -28,6 +28,16 @@ CLEAR = [
      "long clean prose, rot_ratio 0.64 — must NOT be rot-penalised"),
     ("svým jménem, nýbrž i lidovým podáním,které tvrdí,že v místech těchto stávala",
      26.62, 1.0000, "Clear", "clean prose dense in short function words (valid_ratio guard)"),
+    # (#3 Problem 2) clean Czech stranded at Noisy/0.8499 by the valid_ratio cap;
+    # recovered to Clear via the LM-confident upright-Czech Clear-band bypass.
+    ("í nezpůsobilost ke službě nebyla",                            66.00, 1.0000, "Clear",
+     "(#3 P2) raw QS >= 0.85, ppl 66, valid_ratio < 0.85 — LM bypass recovers Clear"),
+    ("Klademe si za čest oznámiti, že jsme počátkem září t.r,",     79.50, 1.0000, "Clear",
+     "(#3 P2) ppl 79.5, fragments (t.r) under-count valid_ratio — LM bypass recovers"),
+    ("li domovská příslušnost pochybna.",                          58.00, 0.9999, "Clear",
+     "(#3 P2) leading OCR fragment 'li' under-counts valid_ratio; low ppl recovers"),
+    ("ězenim až do 5 dnů.",                                        123.00, 0.9988, "Clear",
+     "(#3 P2) leading fragment 'ězenim' + number; ppl < 180 recovers Clear"),
 ]
 
 # ── NOISY: readable but degraded; must stay usable, never Clear, never Trash. ─
@@ -44,8 +54,6 @@ NOISY = [
 ]
 
 # ── TRASH (handwriting garbage): word-like random letters + high ppl. ────────
-# These are the current false-Noisy survivors in CTX192601143. The combined
-# "FastText-uncertain AND high perplexity" signal should route them to Trash.
 TRASH_GARBAGE = [
     ("C LaN-n 0(/r\u201c (A 30 Gx A 25 so pgAuc4pi) dato md3\u00f3ny",
      1064.00, 0.3385, "Trash", "uncertain lang + high ppl, word-like blobs"),
@@ -55,6 +63,10 @@ TRASH_GARBAGE = [
      1032.00, 0.2033, "Trash", "uncertain lang + high ppl"),
     ("' ' \" k4\u017ee /olonbka,\"3 Ege 94%",                      1648.00, 0.2013, "Trash",
      "uncertain lang + high ppl, currently Noisy 0.50"),
+    # (#3 Problem 3) confident-labelled garbage the lang-gated hard sweep misses
+    # (slk @ 0.6658 >= HARD_SWEEP_LANG_MAX); the extreme-ppl route catches it.
+    ("Alyrý cvod nede % Agrgr oAOrt",                             15168.00, 0.6658, "Trash",
+     "(#3 P3) extreme ppl 15168, slk:0.6658 — extreme-ppl route -> Trash"),
 ]
 
 # ── TRASH (inverted / 180-rotated scan): upside-down Czech. ──────────────────
@@ -76,8 +88,6 @@ NON_TEXT = [
 ]
 
 # ── REGRESSION GUARDS: clean high-rot Czech that the rot penalty must spare. ─
-# Currently 10,68 ("eni - trestá so pokutou penéžitou") is wrongly Trashed.
-# Whatever the rot fix is, these must remain >= Noisy.
 ROT_FALSE_POSITIVE_GUARDS = [
     ("eni - trest\u00e1 so pokutou pen\u00e9\u017eitou",          624.00, 0.6824, "Noisy",
      "rot 0.59, weird 0 — currently Trash 0.45, MUST recover to >= Noisy"),

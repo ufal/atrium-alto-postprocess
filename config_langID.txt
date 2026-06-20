@@ -20,15 +20,7 @@ TEXT_DIR = data_samples/PAGE_TXT_LR
 OUTPUT_LINES_LOG = data_samples/DOC_LINE_CATEG
 BATCH_SIZE = 128
 WORKERS_MAX = 32
-# (#7) Most-expected language MUST be first (force-remap default).
 EXPECTED_LANGS = ces,deu,eng
-# (#3) slk added on DK's request: FastText routinely confuses Czech<->Slovak.
-# NOTE the consequence: with slk trusted, remap_lang keeps such lines labelled
-# `slk` (original confidence preserved) and NEVER reaches the slk->ces special
-# case.
-# The score-driven quality logic is identical either way; only the stored
-# `lang`/`main_lang` label differs.
-# Drop slk here if you prefer slk->ces relabel.
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita,slk
 MODEL_NAME = Qwen/Qwen2.5-0.5B
 
@@ -50,7 +42,6 @@ SHORT_PPL_CAP               = 850.0
 CLEAN_PROSE_PPL_MAX         = 400.0
 PPL_INVERTED_MIN            = 200.0
 
-
 QS_WEIGHT_VALID_WORD  = 0.35
 QS_WEIGHT_WEIRD       = 0.18
 QS_WEIGHT_PERPLEXITY  = 0.08
@@ -61,10 +52,8 @@ QS_WEIGHT_LANG        = 0.05
 QS_WEIGHT_GIBBERISH   = 0.04
 QS_WEIGHT_FUSED       = 0.03
 
-# Phase 1: Quality Band Thresholds
 CATEG_NOISY_SCORE_MAX       = 0.85
 CATEG_TRASH_SCORE_MAX       = 0.55
-
 
 CATEG_GARBAGE_DENSITY_HIGH  = 0.35
 
@@ -76,19 +65,11 @@ CLEAN_PROSE_MIN_SCORE       = 0.65
 CLEAN_PROSE_WEIRD_MAX       = 0.08
 CLEAN_PROSE_WC_MIN          = 4
 
-# (#3) Short-fragment guard. Holds a very short line at Noisy when it reaches the
-# Clear band but also carries noise (weirdness or garbage), since QS/perplexity
-# are unreliable on tiny fragments. 0 = disabled (current behaviour). Recommended
-# value 3: it holds 1-2 word noisy fragments (značky., taxo vojenské.) at Noisy
-# while sparing clean short prose (republiky československé) and the LM-certain
-# low-ppl fast-track. Verified collateral-free against the calibration fixtures.
 CLEAR_BAND_WC_MIN           = 0
 
 LANG_SCORE_REMAP             = 0.75
-# (#3 A1) Cap for remapped NON-Latin-script guesses (Hangul/Cyrillic/CJK).
 LANG_SCORE_REMAP_FAR        = 0.50
 SINGLE_CHAR_ALLOWED         = aAiIuUvVzZkKsS
-# (#3 C) Short Czech function words counted as valid before the 3-char gate.
 SHORT_VALID_WORDS           = a,i,k,o,s,u,v,z,se,si,po,na,za,ze,do,od,ke,ku,ve,ní,mi,ti,by,je,to,co,ač,my,ty,on,ji,jí,už,až
 REPEAT_ALLOWED_CHARS        = oOuU
 REPEATED_DOUBLE_MIN         = 2
@@ -106,21 +87,22 @@ SYM_LET_DIG_NONTEXT         = true
 MOSTLY_READABLE_VALID_MIN   = 0.85
 SHORT_NOISY_QS_PENALTY      = 0.20
 
-# (#3 Phase 2) Categoriser override / structural-route thresholds — previously
-# hardcoded inside determine_category;
-# surfaced here so issue #3 is actually
-# calibratable. Defaults reproduce the prior hardcoded behaviour exactly.
 LOWPPL_CLEAR_MAX            = 50.0
 HARD_SWEEP_LANG_MAX        = 0.45
 HARD_SWEEP_PPL_MIN         = 1000.0
 GHOST_DOMINATED_MIN_RATIO  = 0.5
-# Per-word penalty score_word() adds for tokens containing 'w' (rare in Czech;
-# strong mirror/inverted-OCR signal, DK request).
 WORD_W_PENALTY             = 0.20
 
-# (#3 A3) Page-level inverted-scan sweep (apply_document_postprocessing).
 INVERTED_RUN_MIN           = 4
 INVERTED_PAGE_MAJORITY     = 0.60
+
+# (#3) Extreme-perplexity trash route (catches confident-labeled garbage the
+# lang-gated hard sweep misses). orig-score gate spares readable OCR-degraded text.
+PPL_EXTREME_MIN            = 3000.0
+EXTREME_LANG_CONF          = 0.85
+# (#3) LM-confident upright-Czech recovery past the fragile valid_ratio cap.
+LOWPPL_CZECH_CLEAR_MAX     = 180.0
+CZECH_CLEAR_GARBAGE_MAX    = 0.15
 
 [PIPELINE]
 METHOD        = layoutreader
