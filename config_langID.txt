@@ -20,6 +20,7 @@ TEXT_DIR = data_samples/PAGE_TXT_LR
 OUTPUT_LINES_LOG = data_samples/DOC_LINE_CATEG
 BATCH_SIZE = 128
 WORKERS_MAX = 32
+GPU_WAIT_TIMEOUT = 600.0
 EXPECTED_LANGS = ces,deu,eng
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita,slk
 MODEL_NAME = Qwen/Qwen2.5-0.5B
@@ -28,12 +29,17 @@ MODEL_NAME = Qwen/Qwen2.5-0.5B
 RAW_LINES_CSV = data_samples/DOC_LINE_CATEG
 OUTPUT_STATS = samples_page_stats.csv
 OUTPUT_DOC_DIR = data_samples/DOC_LINE_STATS
+STANDARD_COLS = Clear,Noisy,Trash,Non-text,Empty
 
 [TEXT_UTILS]
 LANG_SCORE_ROUGH = 0.45
 LANG_SCORE_CLEAR = 0.75
 ALLOWED_INTERNAL = .-,+()"'—–:%;?!/
 STRIP_CHARS = .,;:!?()[]"'\/\
+METADATA_MARKERS = Tb.,č.neg,neg.,obr.,obr ,neg ,Tb ,č. neg,č.neg.,č.,str.,Datum
+CZ_DIACS = áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ
+VOWEL_CHARS = aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ
+ROTATABLE_CHARS = pbqdnuwmoxszeyv
 
 QS_LENGTH_MAX         = 100
 PERPLEXITY_THRESHOLD_MAX  = 1000.0

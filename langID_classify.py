@@ -54,7 +54,7 @@ from atrium_paradata import ParadataLogger
 # Hard ceiling on how long a CPU worker waits for a batch's perplexity before
 # declaring the GPU worker unresponsive (#6). Generous so legitimate large
 # batches are never killed, but finite so a crash cannot hang the pipeline.
-GPU_WAIT_TIMEOUT = 600.0  # seconds
+# GPU_WAIT_TIMEOUT = 600.0  # seconds
 
 # (#3) Single source of truth for the per-line CSV schema. Rows are built as a
 # dict keyed by these names and emitted in this exact order, so the scored path
@@ -77,13 +77,6 @@ CSV_HEADER = [
     "trash_threshold", "noisy_threshold", "clear_threshold",
     "pp_dedup", "pp_surrounded_trash", "pp_inverted_run", "pp_page_context",
 ]
-
-# Page-level inverted-scan sweep parameters (#3 A3).
-INVERTED_RUN_MIN = 4  # contiguous-run threshold for mixed pages
-INVERTED_PAGE_MAJORITY = 0.60  # >= this fraction of a page's scoreable lines
-
-
-#                                being suspicious => Trash the whole suspicious set
 
 
 def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: str, gpu_dead=None):
@@ -167,7 +160,7 @@ def _row_from_dict(d: dict) -> list:
 
 def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir: Path,
                                 task_queue: mp.Queue, result_dict: dict, expected_langs: list = None,
-                                trusted_langs: list = None, gpu_dead=None):
+                                trusted_langs: list = None, gpu_dead=None, gpu_time_out=600.0):
     """Evaluates heuristical bounds, queries FastText, and fetches PPL to finalize scores."""
     ft = worker_models['ft']
 
@@ -193,9 +186,9 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
             )
         time.sleep(0.01)
         waited += 0.01
-        if waited >= GPU_WAIT_TIMEOUT:
+        if waited >= gpu_time_out:
             raise RuntimeError(
-                f"Timed out after {GPU_WAIT_TIMEOUT:.0f}s waiting for perplexity "
+                f"Timed out after {gpu_time_out:.0f}s waiting for perplexity "
                 f"of batch {batch_id}; GPU worker unresponsive."
             )
 
@@ -592,7 +585,7 @@ def process_document(task):
                     b_id = f"{file_id}_{batch_counter}"
                     process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue,
                                                 result_dict,
-                                                expected_langs, trusted_bases, gpu_dead=gpu_dead)
+                                                expected_langs, trusted_bases, gpu_dead=gpu_dead, gpu_time_out=GPU_WAIT_TIMEOUT)
                     batch_lines.clear()
                     batch_meta.clear()
                     batch_counter += 1
@@ -600,7 +593,7 @@ def process_document(task):
         if batch_lines:
             b_id = f"{file_id}_{batch_counter}"
             process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue, result_dict,
-                                        expected_langs, trusted_bases, gpu_dead=gpu_dead)
+                                        expected_langs, trusted_bases, gpu_dead=gpu_dead, gpu_time_out=GPU_WAIT_TIMEOUT)
 
         if out_path.exists():
             df = pd.read_csv(out_path, dtype={
@@ -647,6 +640,7 @@ def main():
     OUTPUT_DIR = config.get("CLASSIFY", "OUTPUT_LINES_LOG")
     BATCH_SIZE = config.getint("CLASSIFY", "BATCH_SIZE")
     WORKERS_MAX = config.getint("CLASSIFY", "WORKERS_MAX", fallback=32)
+    GPU_WAIT_TIMEOUT = config.getint("CLASSIFY", "GPU_WAIT_TIMEOUT", fallback=600.0)
 
     MODEL_NAME = config.get("CLASSIFY", "MODEL_NAME", fallback="Qwen/Qwen2.5-0.5B")
 

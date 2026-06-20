@@ -60,8 +60,14 @@ def _lang_base(lang_code: str) -> str:
 # (#3) Czech-specific diacritic glyphs. Presence of even one is a strong signal
 # that a line is genuine Czech text rather than inverted/foreign garbage OCR;
 # the page-level inverted-scan sweep and the short-garbage route both use it.
-CZ_DIACS = frozenset("áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ")
+# CZ_DIACS = frozenset("áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ")
+CZ_DIACS = frozenset(_get_str("TEXT_UTILS", "CZ_DIACS", "áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ"))
 
+METADATA_MARKERS = frozenset(_get_str("TEXT_UTILS", "METADATA_MARKERS", "©,®").split(","))
+
+VOWEL_CHARS = frozenset(_get_str("TEXT_UTILS", "VOWEL_CHARS", "aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ"))
+
+ROTATABLE_CHARS = frozenset(_get_str("TEXT_UTILS", "ROTATBLE_CHARS", "pbqdnuwmoxszeyv"))
 
 def has_cz_diacs(text: str) -> bool:
     """True if *text* contains at least one Czech diacritic glyph."""
@@ -394,8 +400,8 @@ def compute_garbage_density(text: str) -> float:
 def compute_rotatable_ratio(text: str) -> float:
     alpha_chars = [c.lower() for c in text if c.isalpha()]
     if not alpha_chars: return 0.0
-    rotatable_set = frozenset("pbqdnuwmoxszeyv")
-    rotatable_count = sum(1 for c in alpha_chars if c in rotatable_set)
+    # rotatable_set = frozenset("pbqdnuwmoxszeyv")
+    rotatable_count = sum(1 for c in alpha_chars if c in ROTATABLE_CHARS)
     return rotatable_count / len(alpha_chars)
 
 def detect_strange_symbols(text: str) -> int:
@@ -413,13 +419,13 @@ def detect_repeated_chars(text: str) -> int:
     return count
 
 def compute_vowel_ratio(text: str) -> float:
-    vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
+    # vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
     denom = [c for c in text if c.isalpha() or ((not c.isalnum()) and not c.isspace())]
     if not denom: return 0.0
-    return sum(1 for c in denom if c in vowels) / len(denom)
+    return sum(1 for c in denom if c in VOWEL_CHARS) / len(denom)
 
 def detect_gibberish_words(text: str) -> int:
-    vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
+    # vowels = frozenset("aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ")
     count = 0
     for word in text.split():
         flagged = False
@@ -430,7 +436,7 @@ def detect_gibberish_words(text: str) -> int:
             if numeric_chars / len(core) >= 0.6: continue
             letters = [c for c in core if c.isalpha()]
             if not letters: continue
-            if sum(1 for c in letters if c in vowels) / len(letters) > VOWEL_RATIO_HIGH:
+            if sum(1 for c in letters if c in VOWEL_CHARS) / len(letters) > VOWEL_RATIO_HIGH:
                 flagged = True
                 break
         if flagged: count += 1
@@ -506,12 +512,12 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     clean_text = re.sub(r'\b2(?=[a-záčďéěíňóřšťůúýž])', 'z', clean_text)
     clean_text = _RE_SPACED_CAPS.sub(_collapse_spaced_caps, clean_text)
 
-    metadata_markers = [
-        "Tb.", "č.neg", "neg.", "obr.", "obr ", "neg ", "Tb ", "č. neg",
-        "č neg", "č.neg.", "neg.", "neg ", "Tb.", "Tb ", "č.neg.",
-        "č. neg.", "č neg.", "č.", "str.", "Datum"
-    ]
-    if any(marker.lower() in clean_text.lower() for marker in metadata_markers): return "Process", clean_text
+    # metadata_markers = [
+    #     "Tb.", "č.neg", "neg.", "obr.", "obr ", "neg ", "Tb ", "č. neg",
+    #     "č neg", "č.neg.", "neg.", "neg ", "Tb.", "Tb ", "č.neg.",
+    #     "č. neg.", "č neg.", "č.", "str.", "Datum"
+    # ]
+    if any(marker.lower() in clean_text.lower() for marker in METADATA_MARKERS): return "Process", clean_text
 
     if clean_text.startswith('"') and not clean_text.endswith('"'): clean_text += '"'
     elif clean_text.endswith('"') and not clean_text.startswith('"'): clean_text = '"' + clean_text
