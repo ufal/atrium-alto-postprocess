@@ -197,6 +197,16 @@ EXTREME_LANG_CONF         = _get_float("TEXT_UTILS", "EXTREME_LANG_CONF",       
 LOWPPL_CZECH_CLEAR_MAX    = _get_float("TEXT_UTILS", "LOWPPL_CZECH_CLEAR_MAX",    180.0)
 CZECH_CLEAR_GARBAGE_MAX   = _get_float("TEXT_UTILS", "CZECH_CLEAR_GARBAGE_MAX",   0.15)
 
+# Fix 1: Linguistic Anchor Bypass Config
+ANCHOR_MIN_WORDS       = _get_int("TEXT_UTILS", "ANCHOR_MIN_WORDS", 2)
+ANCHOR_WORD_LEN        = _get_int("TEXT_UTILS", "ANCHOR_WORD_LEN", 3)
+ANCHOR_VOWEL_RATIO     = _get_float("TEXT_UTILS", "ANCHOR_VOWEL_RATIO", 0.10)
+
+# Fix 2: Suspicious Rotation Config
+SUSPICIOUS_ROT_RATIO   = _get_float("TEXT_UTILS", "SUSPICIOUS_ROT_RATIO", 0.65)
+SUSPICIOUS_WQX_RATIO   = _get_float("TEXT_UTILS", "SUSPICIOUS_WQX_RATIO", 0.15)
+INVERTED_WEIRD_PENALTY = _get_float("TEXT_UTILS", "INVERTED_WEIRD_PENALTY", 0.45)
+
 # ---------------------------------------------------------------------------
 # Lexicon Integration for Rotation/Inversion detection
 # ---------------------------------------------------------------------------
@@ -512,6 +522,17 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     if RE_ROMAN_NUMERAL.match(clean_text.strip()): return "Non-text", clean_text
     if RE_STAMP.search(clean_text) or "IVerc" in clean_text: return "Non-text", clean_text
 
+    # FIX 1: Linguistic Anchor Bypass
+    tokens = clean_text.split()
+    valid_long_words = sum(
+        1 for tok in tokens
+        if len(tok.strip(_STRIP_CHARS)) >= ANCHOR_WORD_LEN
+        and tok.strip(_STRIP_CHARS).isalpha()
+        and compute_vowel_ratio(tok.strip(_STRIP_CHARS)) >= ANCHOR_VOWEL_RATIO
+    )
+    if valid_long_words >= ANCHOR_MIN_WORDS:
+        return "Process", clean_text
+
     if sum(c.isdigit() for c in clean_text) / n_chars > 0.4: return "Process", clean_text
 
     unique_symbols = set(c for c in clean_text if not c.isspace())
@@ -525,42 +546,59 @@ def pre_filter_line(line: str) -> tuple[str, str]:
         return "Non-text", clean_text
 
     if len(tokens) >= ISOLATED_CHAR_MIN_TOKENS:
-        valid_singles = frozenset(SINGLE_CHAR_ALLOWED)
-        isolated = sum(
-            1 for tok in tokens
-            if len(tok.strip(_STRIP_CHARS)) == 1
-            and tok.strip(_STRIP_CHARS).isalnum()
-            and tok.strip(_STRIP_CHARS) not in valid_singles
-        )
+        # 1. Isolate only tokens that actually contain letters
+        alpha_tokens = [tok for tok in tokens if any(c.isalpha() for c in tok)]
 
-        if isolated / len(tokens) >= ISOLATED_CHAR_RATIO_MAX:
-            # FIX 1: Surgical spaced-typography rescue (e.g., "P r a z e")
-            run_length = 0
-            collapsed_spans = []
-            current_span = []
+        if alpha_tokens:
+            valid_singles = frozenset(SINGLE_CHAR_ALLOWED)
 
-            for tok in tokens:
-                core = tok.strip(_STRIP_CHARS)
-                if len(core) == 1 and core.isalpha():
-                    run_length += 1
-                    current_span.append(core)
-                else:
-                    if run_length >= 3:
-                        collapsed_spans.append("".join(current_span))
-                    run_length = 0
-                    current_span = []
-            if run_length >= 3:
-                collapsed_spans.append("".join(current_span))
+            # 2. Count tokens that are strictly 1 character long (after stripping)
+            single_char_tokens = [
+                tok for tok in alpha_tokens
+                if len(tok.strip(_STRIP_CHARS)) == 1 and tok.strip(_STRIP_CHARS).isalpha()
+            ]
 
-            rescued = False
-            for span in collapsed_spans:
-                # If any collapsed span forms a valid phonetic structure, let it through to ML
-                if compute_vowel_ratio(span) > 0.15 and compute_garbage_density(span) < 0.20:
-                    rescued = True
-                    break
+            # 3. Identify how many of those singles are NOT valid Czech prepositions/conjunctions
+            invalid_singles = [
+                tok for tok in single_char_tokens
+                if tok.strip(_STRIP_CHARS) not in valid_singles
+            ]
 
-            if not rescued:
-                return "Non-text", clean_text
+            # THE TRAP TRIGGER:
+            # Rule A: The line contains absolutely no multi-letter words (e.g., "r C , A")
+            is_pure_isolated = (len(single_char_tokens) == len(alpha_tokens))
+
+            # Rule B: The density of invalid singles among ALPHABETIC tokens is too high
+            high_isolated_ratio = (len(invalid_singles) / len(alpha_tokens)) >= ISOLATED_CHAR_RATIO_MAX
+
+            if is_pure_isolated or high_isolated_ratio:
+                # FIX 1: Surgical spaced-typography rescue (e.g., "P r a z e")
+                run_length = 0
+                collapsed_spans = []
+                current_span = []
+
+                for tok in tokens:
+                    core = tok.strip(_STRIP_CHARS)
+                    if len(core) == 1 and core.isalpha():
+                        run_length += 1
+                        current_span.append(core)
+                    else:
+                        if run_length >= 3:
+                            collapsed_spans.append("".join(current_span))
+                        run_length = 0
+                        current_span = []
+                if run_length >= 3:
+                    collapsed_spans.append("".join(current_span))
+
+                rescued = False
+                for span in collapsed_spans:
+                    # If the collapsed span forms a valid phonetic structure, let it through to ML
+                    if compute_vowel_ratio(span) > 0.15 and compute_garbage_density(span) < 0.20:
+                        rescued = True
+                        break
+
+                if not rescued:
+                    return "Non-text", clean_text
 
     return "Process", clean_text
 
@@ -599,7 +637,7 @@ def score_word(word: str) -> float:
     has_rep = _has_repeated_run(core)
     has_ldl = _has_ldl(core)
     has_uppercase = _is_mid_uppercase(core)
-    has_w = 'w' in core.lower()
+    has_wqx = any(c in 'wqxWQX' for c in core)
 
     has_caps_prefix = False
     if len(core) >= 4 and not core.isupper() and core.rstrip('.') not in ACADEMIC_TITLES:
@@ -607,11 +645,28 @@ def score_word(word: str) -> float:
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]): has_caps_prefix = True
 
     return min(1.0, 0.40 * has_strange + 0.35 * has_rep + 0.15 * has_ldl
-               + 0.10 * has_uppercase + 0.20 * has_caps_prefix + WORD_W_PENALTY * has_w)
+               + 0.10 * has_uppercase + 0.20 * has_caps_prefix + WORD_W_PENALTY * has_wqx)
 
 
 def score_words_in_line(text: str) -> list[tuple[str, float]]:
-    return [(w, score_word(w)) for w in text.split()]
+    is_upright, ghost_dom = analyze_rotation_signals(text)
+    rot_ratio = compute_rotatable_ratio(text)
+
+    words = text.split()
+    wqx_words = sum(1 for w in words if any(c in "wqxWQX" for c in w))
+    wqx_ratio = wqx_words / len(words) if words else 0.0
+
+    # FIX 2b: Use config-driven thresholds for suspicious rotation
+    is_suspicious_rot = (rot_ratio > SUSPICIOUS_ROT_RATIO and wqx_ratio >= SUSPICIOUS_WQX_RATIO and not is_upright)
+
+    results = []
+    for w in words:
+        s = score_word(w)
+        if (ghost_dom or is_suspicious_rot) and not is_upright:
+            s = min(1.0, s + INVERTED_WEIRD_PENALTY)
+        results.append((w, s))
+
+    return results
 
 def compute_word_weird_ratio(word_scores: list[tuple[str, float]]) -> float:
     if not word_scores: return 0.0

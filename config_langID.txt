@@ -104,6 +104,16 @@ EXTREME_LANG_CONF          = 0.85
 LOWPPL_CZECH_CLEAR_MAX     = 180.0
 CZECH_CLEAR_GARBAGE_MAX    = 0.15
 
+# Fix 1: Linguistic Anchor Bypass
+ANCHOR_MIN_WORDS            = 2
+ANCHOR_WORD_LEN             = 3
+ANCHOR_VOWEL_RATIO          = 0.10
+
+# Fix 2: Inverted / Rotated Text Organic Penalties
+SUSPICIOUS_ROT_RATIO        = 0.65
+SUSPICIOUS_WQX_RATIO        = 0.15
+INVERTED_WEIRD_PENALTY      = 0.45
+
 [PIPELINE]
 METHOD        = layoutreader
 INPUT_DIR     = data_samples/ALTO
