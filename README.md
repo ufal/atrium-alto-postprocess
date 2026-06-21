@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" title="Python Version"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" title="Python Version"></a>
   <a href="https://huggingface.co/facebook/fasttext-language-identification"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-fasttext--langID-yellow.svg" title="FastText Language Identification"></a>
   <a href="https://huggingface.co/Qwen/Qwen2.5-0.5B"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-Qwen2.5--0.5B-yellow.svg" title="Qwen2.5-0.5B Perplexity"></a>
   <a href="https://github.com/cneud/alto-tools"><img src="https://img.shields.io/badge/dep-alto--tools-lightgrey.svg" title="alto-tools"></a>
@@ -936,8 +936,9 @@ of **Trash** 🗑️ lines may also indicate handwritten content, which can be e
 In addition to the batch pipeline, this repository ships with a FastAPI wrapper (`service/text_api.py`) that exposes
 the core `text_util_langID` quality classification engine over HTTP.
 
-The batch pipeline and the API service share the same configurations and categorization logic to ensure zero drift
-between local processing and web uploads.
+The batch pipeline and the API service share the same `text_util_langID` categorization engine and `config_langID.txt`
+settings — including the default **Qwen2.5-0.5B** 🤖 perplexity model — to ensure zero drift between local processing
+and web uploads.
 
 For deployment instructions, endpoint specifications (`/process`, `/info`), and frontend integration details,
 please see the dedicated **[Service Documentation](service/README.md)**.
@@ -959,7 +960,7 @@ points at the image actually executing rather than a fixed fork.
 exercised, and records it as `license` / `license_url` plus a detailed `license_detail` block (per-component licenses,
 which component(s) `determined_by` the result, `is_non_commercial` / `is_share_alike` flags, and any unknown licenses).
 See [Output licensing](#output-licensing-) below.
-* **Configuration ⚙️:** StoreSee [Output licensing](#output-licensing-) below time configuration ⚙️, including script
+* **Configuration ⚙️:** Stores run-time configuration ⚙️, including script
 names, input/output paths, and specific model choices.
 * **Timing ⏱️:** Records precise UTC start times, end times, and the total duration of the run in seconds.
 * **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes performance
@@ -1030,7 +1031,6 @@ permissive components would resolve to **Apache-2.0**.
 
 [^1]: https://github.com/cneud/alto-tools
 [^2]: https://huggingface.co/facebook/fasttext-language-identification
-[^3]: https://github.com/ufal/ker
 [^4]: https://atrium-research.eu/
 [^5]: https://github.com/ufal/atrium-nlp-enrich
 [^6]: https://huggingface.co/Qwen/Qwen2.5-0.5B

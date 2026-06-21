@@ -113,7 +113,7 @@ async def process_document(
       text            (str)   – cleaned text with split-word merges applied
       lang            (str)   – ISO language code predicted by FastText
       lang_score      (float) – FastText confidence [0, 1]
-      perplexity      (float) – DistilGPT2 perplexity; 0 for pre-filtered lines
+      perplexity      (float) – Qwen2.5-0.5B perplexity; 0 for pre-filtered lines
       garbage_density (float) – ratio of non-alphanumeric noise characters
       sym_count       (int)   – tokens with strange/unexpected symbols
       upper_count     (int)   – tokens with mid-word uppercase artefacts

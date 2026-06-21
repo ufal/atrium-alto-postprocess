@@ -1,6 +1,6 @@
 """
 service/text_inference.py
-Manages the LayoutReader, FastText, and DistilGPT2 models.
+Manages the LayoutReader, FastText, and Qwen2.5-0.5B (default) perplexity models.
 
 Classification is fully aligned with the main pipeline (langID_classify.py):
   - Unified penalty path : categorize_line() from text_util_langID
@@ -95,8 +95,8 @@ class TextModelManager:
             # 2. FastText language identification
             self.ft_model = fasttext.load_model(str(FASTTEXT_MODEL_PATH))
 
-            # 3. DistilGPT2 perplexity model
-            gpt2_path = os.getenv("GPT2_MODEL_NAME", "distilgpt2")
+            # 3. Perplexity model (Qwen2.5-0.5B by default; override with GPT2_MODEL_NAME, e.g. distilgpt2 for English-only)
+            gpt2_path = os.getenv("GPT2_MODEL_NAME", "Qwen/Qwen2.5-0.5B")
             self.ppl_tokenizer = AutoTokenizer.from_pretrained(gpt2_path)
             self.ppl_tokenizer.pad_token = self.ppl_tokenizer.eos_token
             self.ppl_model = AutoModelForCausalLM.from_pretrained(gpt2_path)

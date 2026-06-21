@@ -5,7 +5,7 @@
 **Scope:** This service provides a **FastAPI** interface for the ATRIUM Text Processing pipeline.
 It allows users to upload ALTO XML or raw text files to perform intelligent layout analysis,
 split-word reconstruction, and line-level quality classification (e.g., `Clear`, `Noisy`, `Trash`,
-`Non-text`, `Empty`) using **LayoutLMv3**, **FastText**, and **DistilGPT2** [^9] [^2] [^6].
+`Non-text`, `Empty`) using **LayoutLMv3**, **FastText**, and **Qwen2.5-0.5B** [^9] [^2] [^6].
 Two frontend variants are included: a **standalone** interface (`frontend/`) and a
 **LINDAT-integrated** interface (`frontend-lindat/`).
 
@@ -38,7 +38,7 @@ Key features:
 
 * **Layout Analysis:** Uses **LayoutLMv3** to correctly reorder tokens from ALTO XML files based on 2D spatial layout, handling multi-column pages [^9].
 * **Text Cleaning:** Automatically detects and merges hyphenated words split across lines using ALTO `SUBS_TYPE` / `SUBS_CONTENT` attributes and regex-based reconstruction.
-* **Quality Classification:** Classifies every line using structural regex detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions) and DistilGPT2 perplexity, implemented in `text_util_langID.py` [^6]. Also computes a composite quality score.
+* **Quality Classification:** Classifies every line with a composite **quality score** built from structural detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions, gibberish, fused/rotated tokens) and **Qwen2.5-0.5B** perplexity, implemented in `text_util_langID.py` [^6]. The category is then assigned from quality-score thresholds plus named overrides.
 * **GPU Support:** Automatically detects and utilises CUDA devices for inference if available [^3].
 * **Two Frontend Variants:** A self-contained standalone interface for direct use, and a LINDAT-integrated interface for deployment within the LINDAT Common framework.
 * **CORS Support:** Cross-Origin Resource Sharing is configurable via the `ALLOWED_ORIGINS` environment variable (defaults to `http://localhost:8080,http://localhost:5500`).
@@ -54,7 +54,7 @@ atrium-alto-postprocess/
 │   └── lid.176.bin              # FastText language identification binary
 ├── service/                     # 🚀 API source code
 │   ├── text_api.py              # FastAPI application entry point
-│   ├── text_inference.py        # Model manager (LayoutLMv3, FastText, DistilGPT2)
+│   ├── text_inference.py        # Model manager (LayoutLMv3, FastText, Qwen2.5-0.5B)
 │   ├── utils.py                 # XML parsing, box normalisation, cleaning logic
 │   ├── frontend/                # 🖥️  Standalone frontend (no external dependencies)
 │   │   ├── index.html           # Self-contained web interface
@@ -76,30 +76,39 @@ atrium-alto-postprocess/
 
 The pipeline applies three models in sequence, balancing structural layout understanding with semantic quality estimation.
 
-| Model          | Purpose                                                                                                 | Source               |
-|----------------|---------------------------------------------------------------------------------------------------------|----------------------|
-| **LayoutLMv3** | **Reading Order:** Reorders tokens in ALTO XML files based on 2D bounding-box layout.                   | by `hantian` [^9]    |
-| **FastText**   | **Language ID:** Identifies the language of each line as a pre-filter signal.                           | by `facebook` [^2]   |
-| **DistilGPT2** | **Perplexity:** Measures how linguistically "surprising" a line is — elevated scores suggest OCR noise. | by `distilbert` [^6] |
+| Model            | Purpose                                                                                                 | Source             |
+|------------------|---------------------------------------------------------------------------------------------------------|--------------------|
+| **LayoutLMv3**   | **Reading Order:** Reorders tokens in ALTO XML files based on 2D bounding-box layout.                   | by `hantian` [^9]  |
+| **FastText**     | **Language ID:** Identifies the language of each line as a pre-filter signal.                           | by `facebook` [^2] |
+| **Qwen2.5-0.5B** | **Perplexity:** Measures how linguistically "surprising" a line is — elevated scores suggest OCR noise. | by `Qwen` [^6]     |
 
 > [!NOTE]
-> Classification is performed primarily by the structural detectors in `text_util_langID.py`.
-> DistilGPT2 perplexity is a **supporting signal** used only on longer lines (word count ≥ 7),
-> because it is unreliable on short or non-English text.
+> The category is decided by the composite **quality score** — a weighted sum of nine structural, language and
+> perplexity signals routed through thresholds, with named overrides — not by a fixed detector decision-tree.
+> Perplexity is one weighted signal; on short 1–2 word lines it is capped before scoring because the LM has too
+> little context. `distilgpt2` remains available as an English-only alternative via the `GPT2_MODEL_NAME`
+> environment variable (re-tune `PERPLEXITY_THRESHOLD_MAX`, see [Troubleshooting](#hardware--configuration-troubleshooting)).
+> Full logic: main [README → Composite Quality Score](../README.md#composite-quality-score) and
+> [Categorisation Logic](../README.md#categorisation-logic).
 
 ## Quality Categories 🪧
 
 The service classifies every text line into one of five categories. The first two (`Empty`, `Non-text`)
 are assigned by a fast CPU pre-filter before any model inference. The remaining three are assigned by
-the structural detectors and perplexity gate in `text_util_langID.categorize_line()`.
+`text_util_langID.categorize_line()` from the composite **quality score**, after immediate overrides.
 
-| Label         | Description                                                           | Primary Signal                                                                             |
-|---------------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| `Clear` 🟢    | **High quality.** Passes all structural checks and perplexity gate.   | 0 strange-symbol tokens, 0 uppercase artefacts, PPL < threshold (on long lines).           |
-| `Noisy` 🟡    | **Usable but degraded.** Minor OCR artefacts, recoverable downstream. | 1 strange-symbol token, OR mid-word uppercase artefacts, OR elevated PPL on long lines.    |
-| `Trash` 🔴    | **Structurally corrupt.** Not worth downstream processing.            | ≥ 2 strange-symbol tokens, or co-occurring symbol + uppercase / fusion artefacts.          |
-| `Non-text` 🔵 | **No meaningful text.** Purely numeric / separator content.           | RE_NON_TEXT match (dates, page numbers, measurements) or digit ratio > 40 % on short line. |
-| `Empty` ⚪     | **Blank line.** Whitespace only.                                      | `len(stripped) == 0`                                                                       |
+| Label         | Description                                                           | Primary Signal                                                                                    |
+|---------------|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| `Clear` 🟢    | **High quality.** Ready for downstream NLP.                           | `quality_score ≥ CATEG_NOISY_SCORE_MAX` (0.85), or a low-perplexity / clean-prose override.        |
+| `Noisy` 🟡    | **Usable but degraded.** Minor OCR artefacts, recoverable downstream. | `CATEG_TRASH_SCORE_MAX` (0.55) ≤ `quality_score` < `CATEG_NOISY_SCORE_MAX` (0.85).                |
+| `Trash` 🔴    | **Structurally corrupt.** Not worth downstream processing.            | `quality_score < CATEG_TRASH_SCORE_MAX` (0.55), or a hard override (all-caps/no-vowel, inverted).  |
+| `Non-text` 🔵 | **No meaningful text.** Purely numeric / separator content.           | CPU pre-filter: dates, page numbers, archive/stamp codes, or digit ratio > 40 % on short lines.   |
+| `Empty` ⚪     | **Blank line.** Whitespace only.                                      | `word_count == 0` / whitespace only.                                                              |
+
+> [!NOTE]
+> The thresholds and the full set of overrides (hard-sweep, inverted-scan, low-perplexity-clear, clean-prose
+> promotion, mostly-readable cap, and the document/page post-passes) are documented once in the main
+> [README → Categorisation Logic](../README.md#categorisation-logic) and are not duplicated here.
 
 
 ## API Usage 📡
@@ -184,11 +193,11 @@ Each item in `cleaned_lines` carries the fields used by the classification pipel
 | `text`          | string | Cleaned line text with split-word merges applied.                                                                                          |
 | `lang`          | string | ISO language code predicted by FastText (e.g., `eng`, `ces`).                                                                              |
 | `lang_score`    | float  | FastText confidence score `[0, 1]`.                                                                                                        |
-| `perplexity`    | float  | DistilGPT2 perplexity. `0` means the line was pre-filtered and inference was skipped.                                                      |
+| `perplexity`    | float  | Qwen2.5-0.5B perplexity. `0` means the line was pre-filtered and inference was skipped.                                                    |
 | `sym_count`     | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`).                                                  |
 | `upper_count`   | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).                                                          |
-| `word_weird`    | float  | Mean per-word weirdness score `[0, 1]`; combines strange-symbol, repeated-symbol, LDL-fusion and mid-uppercase signals; `0` = fully clean. |
-| `quality_score` | float  | Composite quality score `[0, 1]`; aggregates valid-word ratio, symbol ratio, perplexity and text length; higher = cleaner OCR output.      |
+| `word_weird`    | float  | Mean per-word weirdness score `[0, 1]`; combines strange-symbol, repeated-char, LDL-fusion, mid-uppercase and mirror-OCR (`w` / caps-prefix) signals; `0` = fully clean. |
+| `quality_score` | float  | Composite quality score `[0, 1]`; weighted sum of nine signals (valid-word ratio, word-weirdness, perplexity, length, garbage density, vowel quality, language confidence, gibberish, fused-word ratio); higher = cleaner. |
 | `category`      | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                                                                    |
 
 
@@ -231,7 +240,7 @@ wget "[https://huggingface.co/facebook/fasttext-language-identification/resolve/
 ```
 
 > [!NOTE]
-> LayoutLMv3 and DistilGPT2 are downloaded and cached automatically by Hugging Face Transformers on the first run [^9] [^6].
+> LayoutLMv3 and Qwen2.5-0.5B are downloaded and cached automatically by Hugging Face Transformers on the first run [^9] [^6].
 
 ## Quick API Test Launch 🚀
 
@@ -342,10 +351,10 @@ For further details on the LINDAT development workflow see the
 * **GLM-4v VRAM Requirements:** The GLM-4v Vision-Language Model requires massive GPU memory. You **must have a GPU
 with at least 48 GB of VRAM** (e.g., an NVIDIA RTX A6000 or a multi-GPU setup) to run the extraction pipeline
 successfully. Running this on consumer GPUs (like a 3090/4090) will likely result in Out-Of-Memory (OOM) crashes.
-* **Perplexity Threshold Coupling:** If you switch the underlying language model used for line evaluation (e.g.,
-from `distilgpt2` to `Qwen2.5`), you **must** recalibrate `PERPLEXITY_THRESHOLD_MAX` in `config_langID.txt`. Perplexity
-scales differ wildly between architectures; a threshold of `1000.0` might be overly permissive for Qwen but too strict
-for DistilGPT2.
+* **Perplexity Threshold Coupling:** The service uses **Qwen2.5-0.5B** by default, matched to `PERPLEXITY_THRESHOLD_MAX
+= 1000.0` in `config_langID.txt`. If you switch the perplexity model via the `GPT2_MODEL_NAME` environment variable
+(e.g., to the English-only `distilgpt2`), you **must** recalibrate `PERPLEXITY_THRESHOLD_MAX` — perplexity scales differ
+wildly between architectures (≈ `3000.0` suits `distilgpt2`), so a value tuned for one model is mis-calibrated for the other.
 
 ---
 
@@ -361,7 +370,7 @@ for DistilGPT2.
 * **Models used:**
   - **LayoutLMv3** for reading-order layout analysis [^9]
   - **FastText** for language identification [^2]
-  - **DistilGPT2** for perplexity estimation [^6]
+  - **Qwen2.5-0.5B** for perplexity estimation [^6]
 
 **©️ 2026 UFAL & ATRIUM**
 
@@ -372,7 +381,7 @@ for DistilGPT2.
 [^3]: https://developer.nvidia.com/cuda-python
 [^4]: https://atrium-research.eu/
 [^5]: https://docs.python.org/3/library/venv.html
-[^6]: https://huggingface.co/distilbert/distilgpt2
+[^6]: https://huggingface.co/Qwen/Qwen2.5-0.5B
 [^7]: https://ufal.mff.cuni.cz/home-page
 [^8]: https://github.com/ufal/atrium-alto-postprocess
 [^9]: https://github.com/ppaanngggg/layoutreader
