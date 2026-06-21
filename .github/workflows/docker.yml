@@ -3,10 +3,10 @@ name: Docker Build & Publish
 on:
   push:
     # (#21) Triggers normalized to project integration branches plus main
-    branches: [main, master, test]
+    branches: [master, test]
     tags: ['v*']
   pull_request:
-    branches: [main, master, test]
+    branches: [master, test]
   release:
     types: [published]
 
@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ufal/atrium-project/.github/workflows/docker-tool.reusable.yml@main
+    uses: ufal/atrium-project/.github/workflows/docker-tool.reusable.yml@test
     secrets: inherit
     with:
       image-name: ufal/atrium-alto-postprocess
