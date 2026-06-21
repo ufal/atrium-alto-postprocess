@@ -1,0 +1,69 @@
+# atrium-alto-postprocess — scheduled "slow lane" smoke tests
+#
+# PR CI runs `pytest -m "not slow"` (hermetic, no network/models). The slow
+# tests — LayoutReader / Qwen2.5 perplexity / GLM-4v and the HuggingFace
+# `lid.176.bin` fetch — never run there, so upstream breakage (a moved/renamed
+# HF model, a vanished revision, a LayoutReader repo move) stays invisible until
+# a user hits it. This nightly job closes that gap.
+#
+# PARAM block is filled from this repo's docker.yml caller.
+
+name: Scheduled Smoke Tests
+
+on:
+  schedule:
+    - cron: "0 3 * * *"    # daily 03:00 UTC
+  workflow_dispatch:
+
+env:
+  APT_PACKAGES: "build-essential g++"
+  PRE_INSTALL_TORCH: "torch"
+  REQUIREMENTS: "requirements.txt service/requirements.txt requirements-test.txt"
+
+jobs:
+  slow-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write          # only used by the "open issue on failure" step below
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install APT packages
+        if: env.APT_PACKAGES != ''
+        run: sudo apt-get update && sudo apt-get install -y ${{ env.APT_PACKAGES }}
+
+      - name: Pre-install PyTorch (CPU)
+        if: env.PRE_INSTALL_TORCH != ''
+        run: pip install ${{ env.PRE_INSTALL_TORCH }} --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install dependencies
+        run: |
+          for req in ${{ env.REQUIREMENTS }}; do
+            if [ -f "$req" ]; then pip install -r "$req"; fi
+          done
+          pip install pytest pytest-cov
+
+      - name: Run slow tests (network + models)
+        env:
+          PYTHONPATH: .
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}   # only needed by repos pulling gated models
+        run: python -m pytest -m slow -v --tb=short
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Scheduled smoke tests failed (${new Date().toISOString().slice(0,10)})`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `The scheduled \`slow\` test run failed: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nLikely an upstream change (a moved/renamed HuggingFace model or revision, or the LayoutReader source repo).`,
+              labels: ["ci", "upstream"],
+            });

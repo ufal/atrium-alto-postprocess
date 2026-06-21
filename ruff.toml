@@ -1,11 +1,18 @@
-line-length = 100
+# Aligned with atrium-project docs/templates/ruff.toml (line-length 120, shared
+# extend-exclude). The template is a FLOOR, not a ceiling: this repo keeps the
+# extra "B" (flake8-bugbear) rules and target-version as a useful superset.
+# Formatting is handled by ruff-format in .pre-commit-config.yaml, so no
+# [format] section lives here.
+line-length = 120
 target-version = "py311"
+
+extend-exclude = [
+    "data_samples/",
+    "result/",
+    "service/frontend*/",
+]
 
 [lint]
 select = ["E", "F", "W", "I", "B"]
-# Ignore lines that are slightly too long but otherwise clean
+# Ignore lines that are slightly too long but otherwise clean.
 ignore = ["E501"]
-
-[format]
-quote-style = "double"
-indent-style = "space"

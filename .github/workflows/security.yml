@@ -1,0 +1,32 @@
+# atrium-alto-postprocess — caller for the security reusable workflow
+#
+# Thin caller (mirrors docker.yml) for ufal/atrium-project's
+# security.reusable.yml: Trivy image scan + SBOM + version-check in one.
+# Pin @main to a tag/SHA in production.
+
+name: Security & Supply-chain
+
+on:
+  pull_request:
+    branches: [test, master]
+  push:
+    branches: [test, master]
+    tags: ['v*']
+  release:
+    types: [published]
+  schedule:
+    - cron: "0 6 * * 1"   # weekly re-scan of the published image (new CVEs land continuously)
+  workflow_dispatch:
+
+jobs:
+  security:
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    uses: ufal/atrium-project/.github/workflows/security.reusable.yml@main
+    secrets: inherit
+    with:
+      # The published image to scan/SBOM. para-config-path defaults to
+      # para_config.txt (root), which is correct for this repo.
+      image-ref: ghcr.io/ufal/atrium-alto-postprocess:latest

@@ -2,6 +2,8 @@
 source = .
 omit =
     tests/*
+    setup/*
+    service/*
     venv/*
     .venv/*
     *_paradata.py
@@ -10,6 +12,7 @@ omit =
 [report]
 # Fail standard pipeline CI under a baseline coverage (optional, uncomment to ratchet)
 # fail_under = 65
+show_missing = True
 exclude_lines =
     pragma: no cover
     def __repr__
