@@ -3,7 +3,7 @@
 # components or versions change.
 [tool]
 program = alto-postprocess
-version = v0.18.0
+version = v0.19.1
 repository_fallback = https://github.com/ufal/atrium-alto-postprocess
 
 [components]
