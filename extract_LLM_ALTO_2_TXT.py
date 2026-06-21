@@ -6,14 +6,16 @@ Extract text from Page Images using GLM-4v (Multimodal LLM).
 Refactored to fix ChatGLMConfig errors and input formatting.
 """
 
-import os
 import configparser
+import os
+from pathlib import Path
+
 import pandas as pd
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from PIL import Image, ImageFile, ImageOps
-from pathlib import Path
 from tqdm import tqdm
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+
 from atrium_paradata import ParadataLogger
 
 _SCRIPT_NAME = "extract_llm"
@@ -45,8 +47,7 @@ def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
         "max_workers": getint("WORKERS_MAX_LLM", 1),
         "max_resolution": getint("LLM_MAX_RESOLUTION", 1344),
         "max_new_tokens": getint("LLM_MAX_NEW_TOKENS", 4096),
-        "prompt": get("LLM_PROMPT",
-                      "OCR: Transcribe all text on this page exactly as it appears."),
+        "prompt": get("LLM_PROMPT", "OCR: Transcribe all text on this page exactly as it appears."),
     }
 
 
@@ -104,6 +105,7 @@ def load_model():
 
     # --- FIX 1: Patch Tokenizer ---
     if not hasattr(tokenizer, "batch_encode_plus"):
+
         def patched_batch_encode_plus(batch_text_or_text_pairs, **kwargs):
             return tokenizer(batch_text_or_text_pairs, **kwargs)
 
@@ -119,11 +121,7 @@ def load_model():
 
     print(f"Loading model from {MODEL_PATH}...")
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_PATH,
-        config=config,
-        trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
-        low_cpu_mem_usage=True
+        MODEL_PATH, config=config, trust_remote_code=True, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True
     ).to(DEVICE)
 
     # --- FIX 4: Cleanup Config for Generation ---
@@ -148,21 +146,11 @@ def extract_single_page_glm(tokenizer, model, image_path):
         image = resize_if_huge(image)
 
         # 2. Construct Chat Input
-        messages = [
-            {
-                "role": "user",
-                "image": image,
-                "content": LLM_PROMPT
-            }
-        ]
+        messages = [{"role": "user", "image": image, "content": LLM_PROMPT}]
 
         # 3. Format Inputs
         inputs = tokenizer.apply_chat_template(
-            messages,
-            add_generation_prompt=True,
-            tokenize=True,
-            return_tensors="pt",
-            return_dict=True
+            messages, add_generation_prompt=True, tokenize=True, return_tensors="pt", return_dict=True
         ).to(DEVICE)
 
         # 4. Generate
@@ -176,7 +164,7 @@ def extract_single_page_glm(tokenizer, model, image_path):
             )
 
         # 5. Decode
-        input_length = inputs['input_ids'].shape[1]
+        input_length = inputs["input_ids"].shape[1]
         output_tokens = outputs[:, input_length:]
 
         generated_text = tokenizer.decode(output_tokens[0], skip_special_tokens=True)
@@ -198,19 +186,24 @@ def main():
         return
 
     df = pd.read_csv(INPUT_CSV)
-    has_image_col = 'image_path' in df.columns
+    has_image_col = "image_path" in df.columns
 
     # Logger is initialised here, after df is loaded, so that page_alto_dir
     # and len(df) are defined.  MAX_WORKERS is a module-level constant so it
     # is always available regardless of initialisation order.
-    page_alto_dir = Path(df.iloc[0]['path']).parent
+    page_alto_dir = Path(df.iloc[0]["path"]).parent
 
     _logger = ParadataLogger(
         program="alto-postprocess",
-        config={"script": "extract_LLM_ALTO_2_TXT", "method": "glm",
-                "input_csv": str(INPUT_CSV),
-                "input_dir": str(page_alto_dir), "output_dir": str(OUTPUT_TEXT_DIR),
-                "llm_model": str(MODEL_PATH), "n_workers": MAX_WORKERS},
+        config={
+            "script": "extract_LLM_ALTO_2_TXT",
+            "method": "glm",
+            "input_csv": str(INPUT_CSV),
+            "input_dir": str(page_alto_dir),
+            "output_dir": str(OUTPUT_TEXT_DIR),
+            "llm_model": str(MODEL_PATH),
+            "n_workers": MAX_WORKERS,
+        },
         paradata_dir="paradata",
         output_types=["txt"],
     )
@@ -226,14 +219,14 @@ def main():
 
     try:
         for _, row in tqdm(df.iterrows(), total=len(df)):
-            file_id = row['file']
-            page_id = row['page']
+            file_id = row["file"]
+            page_id = row["page"]
 
             # --- Path Logic ---
-            if has_image_col and pd.notna(row['image_path']):
-                image_path = Path(row['image_path'].replace(".alto", ""))
+            if has_image_col and pd.notna(row["image_path"]):
+                image_path = Path(row["image_path"].replace(".alto", ""))
             else:
-                xml_path = Path(row['path'])
+                xml_path = Path(row["path"])
                 image_dir = xml_path.parent
                 page_str = str(page_id).zfill(2)
                 filename = f"{file_id}-{page_str}.png"
@@ -261,7 +254,7 @@ def main():
 
             if text:
                 _logger.log_success("txt")
-                with open(txt_path, 'w', encoding='utf-8') as f:
+                with open(txt_path, "w", encoding="utf-8") as f:
                     f.write(text)
             else:
                 _logger.log_skip(str(image_path), "failed to extract text with GLM")

@@ -1,9 +1,11 @@
 """
 Tests for the concurrency and resume logic in the classification orchestrator.
 """
-from pathlib import Path
+
 import queue
+
 import pandas as pd
+
 from langID_classify import process_document
 
 
@@ -21,10 +23,7 @@ def test_process_document_resume_skips_existing(tmp_path):
     text_dir = tmp_path / "text"
     q = queue.Queue()
 
-    task = (
-        file_id, group, text_dir, out_dir,
-        128, q, {}, ["ces"], ["deu"], None
-    )
+    task = (file_id, group, text_dir, out_dir, 128, q, {}, ["ces"], ["deu"], None)
 
     result = process_document(task)
 

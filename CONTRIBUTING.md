@@ -1,19 +1,19 @@
 # 🤝 Contributing to the ALTO XML Postprocessing Pipeline of the ATRIUM project
 
 
-Welcome! Thank you for your interest in contributing. This repository [^8] provides a 
-robust workflow for transforming raw OCR outputs (ALTO XML) into clean and classified 
-textual data. It addresses common challenges in digital archives, such as multi-column 
+Welcome! Thank you for your interest in contributing. This repository [^8] provides a
+robust workflow for transforming raw OCR outputs (ALTO XML) into clean and classified
+textual data. It addresses common challenges in digital archives, such as multi-column
 layout reconstruction, word-split recovery, and automated quality filtering.
 
 The next step in the pipeline: [atrium-nlp-enrich](https://github.com/ufal/atrium-nlp-enrich)
 
-This document describes the project's capabilities, development workflow, code conventions, 
+This document describes the project's capabilities, development workflow, code conventions,
 and rules for contributors.
 
 ## 📦 Release History
 
-> [!NOTE] This repository is currently in the `v0.x` pre-release phase. The path to a stable `v1.0.0` will be triggered 
+> [!NOTE] This repository is currently in the `v0.x` pre-release phase. The path to a stable `v1.0.0` will be triggered
 > once the `run_pipeline.py` batch orchestrator and the `service/text_api.py` FastAPI wrapper are fully load-tested in production and the `atrium-project` monorepo reaches its stable milestone.*
 
 | Version     | Highlights                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Status      |
@@ -49,9 +49,9 @@ section of the main [README 🛤️ Workflow Stages](README.md#-workflow-stages)
 ### 1. Granular Data Management
 The pipeline allows archives to move from document-level files to page-level management.
 * **Splitting:** Automatically breaks down document-level ALTO XMLs into individual page files.
-* **Page Inventory:** Generates a foundational CSV statistics table capturing for every page in an archive: 
+* **Page Inventory:** Generates a foundational CSV statistics table capturing for every page in an archive:
   * text line counts
-  * number of illustrations and graphics 
+  * number of illustrations and graphics
 
 ### 2. Multi-Method Text Extraction
 Archive managers can choose extraction methods based on their specific hardware and accuracy requirements:
@@ -63,8 +63,8 @@ Archive managers can choose extraction methods based on their specific hardware 
 | **GLM (LLM-based)** [^10] | Degraded/Complex scans    | **GPU** (48GB+) | Generative OCR directly from images; patches transcription errors. |
 
 ### 3. Automated Quality & Language Assessment
-A core contribution of this project is the ability to filter "noisy" OCR data without manual review. 
-Every text line is categorized using **FastText** [^2] for language identification 
+A core contribution of this project is the ability to filter "noisy" OCR data without manual review.
+Every text line is categorized using **FastText** [^2] for language identification
 and **DistilGPT2** [^6] for perplexity scoring.
 
 **Data Quality Categories:**
@@ -75,7 +75,7 @@ and **DistilGPT2** [^6] for perplexity scoring.
 * 🫙 **Empty:** Whitespace only.
 
 ### 4. Lightweight API & Testing Interface
-The project includes a **FastAPI** service that allows for easy integration into existing 
+The project includes a **FastAPI** service that allows for easy integration into existing
 archival systems. It provides:
 * **RESTful Endpoints:** `/process` and `/info` for remote file processing.
 * **Visual Testing:** A built-in JS frontend for immediate manual verification of model performance.
@@ -132,11 +132,11 @@ Every PR must include:
 
 Use a **Draft PR** if the work is not ready for review.
 
-**Do not open PRs into `master` — merging into `master` is exclusively the 
+**Do not open PRs into `master` — merging into `master` is exclusively the
 maintainers' responsibility.
 
-> **Note on issue tracking:** Issues reference the commits and PRs that resolved 
-> them — not the other way around. Commit messages describe *what changed*; the issue 
+> **Note on issue tracking:** Issues reference the commits and PRs that resolved
+> them — not the other way around. Commit messages describe *what changed*; the issue
 > is the place to record *why* and link the resulting commits together.
 
 ---
@@ -172,9 +172,9 @@ Allowed types:
 ### Code Conventions & Linting
 
 This repository has standardized on **Ruff** for all linting and formatting,
-replacing legacy tools (`flake8`, `black`, `isort`). 
+replacing legacy tools (`flake8`, `black`, `isort`).
 
-Before committing, ensure your code complies by running the pre-commit hooks. 
+Before committing, ensure your code complies by running the pre-commit hooks.
 This prevents CI failures in the `test` branch:
 
 ```bash
@@ -190,7 +190,7 @@ ruff check . --fix
 ruff format .
 ```
 
-* **Comments:** informative but short, may be LLM-generated, added when function name does 
+* **Comments:** informative but short, may be LLM-generated, added when function name does
 not explain its functionality in detail
 * **Argument types:** set default type (e.g., `int`, `list`) for function arguments
 * **Console flags:** when a new one added, provide help message for it
@@ -211,7 +211,7 @@ pre-commit run --all-files
 ```
 
 > [!NOTE]
->  If specific scripts or extraction modules are updated, please run a smoke-test 
+>  If specific scripts or extraction modules are updated, please run a smoke-test
 > against the `data_samples/` directory to verify extraction integrity.
 
 ---
@@ -274,7 +274,7 @@ Each documentation file has one target audience and one responsibility. Rules ar
 | `README.md`       | GitHub visitors | Project overview, workflow stages, quick start |
 | `CONTRIBUTING.md` | Developers      | Code conventions, branches, PRs, testing       |
 
-* **Do not duplicate rules:** if a rule is defined in `CONTRIBUTING.md`, other files 
+* **Do not duplicate rules:** if a rule is defined in `CONTRIBUTING.md`, other files
 reference it rather than copying it.
 * **When changing a rule:** update the canonical source and verify that referencing files
 still point correctly.
@@ -289,7 +289,7 @@ For support or specific archival integration questions, contact **lutsai.k@gmail
 
 * **Developed by:** UFAL [^7]
 * **Funded by:** ATRIUM [^4]
-* **Models:** 
+* **Models:**
   * FastText [^2]
   * DistilGPT2 [^6]
   * GLM-4v-9b [^10]

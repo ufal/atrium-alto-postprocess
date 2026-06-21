@@ -15,15 +15,18 @@ History / fixes
   log_success("txt"), logs failures via log_skip, and always finalize()s so the
   alto-tools stage emits a paradata JSON like the other extraction methods.
 """
-import pandas as pd
-import subprocess
+
 import concurrent.futures
-import os
-import sys
-import shutil
-from pathlib import Path
-from tqdm import tqdm
 import configparser
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pandas as pd
+from tqdm import tqdm
+
 from atrium_paradata import ParadataLogger
 
 _SCRIPT_NAME = "extract_alto2txt"
@@ -31,7 +34,7 @@ _SCRIPT_NAME = "extract_alto2txt"
 CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
 
 # Common hyphen variations found in OCR/typesetting at a line break.
-HYPHEN_VARIATIONS = ('-', '\xad', '\u2013', '\u2014')
+HYPHEN_VARIATIONS = ("-", "\xad", "\u2013", "\u2014")
 
 
 def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
@@ -132,7 +135,7 @@ def main() -> None:
 
     tasks = []
     for _, row in df.iterrows():
-        tasks.append((row['file'], row['page'], row['path'], OUTPUT_TEXT_DIR))
+        tasks.append((row["file"], row["page"], row["path"], OUTPUT_TEXT_DIR))
 
     if not tasks:
         print("No pages to extract.")
@@ -168,7 +171,7 @@ def main() -> None:
         if results:
             print(f"Extraction complete. Success rate: {sum(results) / len(results):.2%}")
 
-        for t, r in zip(tasks, results):
+        for t, r in zip(tasks, results, strict=True):
             if r:
                 _logger.log_success("txt")
             else:

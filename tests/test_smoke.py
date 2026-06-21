@@ -3,16 +3,24 @@ tests/test_smoke.py
 ===================
 End-to-end smoke tests for the pipeline categorization logic with mocked model inferences.
 """
+
 from text_util_langID import (
-    pre_filter_line, categorize_line, compute_quality_score, score_words_in_line,
-    compute_word_weird_ratio, compute_vowel_ratio, compute_garbage_density,
-    compute_rotatable_ratio, compute_valid_ratio,
-    detect_gibberish_words, detect_wx_words, detect_fused_words,
-    analyze_rotation_signals
+    analyze_rotation_signals,
+    categorize_line,
+    compute_garbage_density,
+    compute_quality_score,
+    compute_valid_ratio,
+    compute_vowel_ratio,
+    compute_word_weird_ratio,
+    detect_fused_words,
+    detect_gibberish_words,
+    detect_wx_words,
+    pre_filter_line,
+    score_words_in_line,
 )
 
-class TestFullPipelineSmoke:
 
+class TestFullPipelineSmoke:
     def _process_mocked_line(self, line_text, mock_ppl, mock_lang_score):
         """Simulates the CPU/GPU orchestrator logic for a single line."""
         cat, clean_text = pre_filter_line(line_text)
@@ -25,7 +33,7 @@ class TestFullPipelineSmoke:
 
         vowel_ratio = compute_vowel_ratio(original_text)
         g_density = compute_garbage_density(original_text)
-        rot_ratio = compute_rotatable_ratio(clean_text)
+        # rot_ratio = compute_rotatable_ratio(clean_text)
         weird_ratio = compute_word_weird_ratio(score_words_in_line(clean_text))
         valid_ratio = compute_valid_ratio(clean_text)
 
@@ -45,18 +53,22 @@ class TestFullPipelineSmoke:
             lang_score=mock_lang_score,
             gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
             fused_ratio=fused_words / max(wc, 1),
-            is_upright_czech=is_upright_czech
+            is_upright_czech=is_upright_czech,
         )
 
         capped_lang_score = min(mock_lang_score, 0.75)
         final_cat, _ = categorize_line(
-            qs, clean_text, wc, vowel_ratio, mock_ppl,
+            qs,
+            clean_text,
+            wc,
+            vowel_ratio,
+            mock_ppl,
             weird_ratio=weird_ratio,
             valid_word_ratio=valid_ratio,
             lang_score=capped_lang_score,
             gibberish_present=(gibb_count + wx_count) > 0,
             is_upright_czech=is_upright_czech,
-            ghost_dominated=ghost_dominated
+            ghost_dominated=ghost_dominated,
         )
         return final_cat
 
@@ -64,7 +76,7 @@ class TestFullPipelineSmoke:
         prose_lines = [
             "Poučení o povinnosti ku taxe vojenské.",
             "Tento nález byl učiněn v hloubce 30 cm pod povrchem.",
-            "Keramické zlomky s vlnovkou."
+            "Keramické zlomky s vlnovkou.",
         ]
         for line in prose_lines:
             cat = self._process_mocked_line(line, mock_ppl=150.0, mock_lang_score=0.95)
@@ -73,10 +85,10 @@ class TestFullPipelineSmoke:
     def test_garbage_and_mirror_is_trash_or_nontext(self):
         garbage_lines = [
             "TYRSOVA5===aras",
-            "WVL e##xon w!wx",       # Added symbols so weirdness tanks the QS
-            "pbqdnuwmoxszeyv!!",     # Added punctuation so weirdness > 0, triggering rot_penalty
-            "AAMMNAbSSOAO###",       # Spurious caps + symbols
-            "123 456 789"            # Pure digits -> Non-text
+            "WVL e##xon w!wx",  # Added symbols so weirdness tanks the QS
+            "pbqdnuwmoxszeyv!!",  # Added punctuation so weirdness > 0, triggering rot_penalty
+            "AAMMNAbSSOAO###",  # Spurious caps + symbols
+            "123 456 789",  # Pure digits -> Non-text
         ]
         for line in garbage_lines:
             cat = self._process_mocked_line(line, mock_ppl=3000.0, mock_lang_score=0.15)

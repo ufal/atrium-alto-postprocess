@@ -7,17 +7,19 @@ Fixed: Switched from word-level to line-level extraction. Trusts ABBYY's <TextLi
        grouping to preserve tables and justified text structures.
 """
 
-import pandas as pd
 import concurrent.futures
+import configparser
 import os
 import sys
-import configparser
-from pathlib import Path
-from tqdm import tqdm
 import xml.etree.ElementTree as ET
-import torch
-from transformers import LayoutLMv3ForTokenClassification
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
+import torch
+from tqdm import tqdm
+from transformers import LayoutLMv3ForTokenClassification
+
 from atrium_paradata import ParadataLogger
 
 _SCRIPT_NAME = "extract_layoutreader"
@@ -31,10 +33,10 @@ if str(script_dir.parent) not in sys.path:
 
 try:
     # Assumes you have the 'v3' folder from the LayoutReader repo available
-    from v3.helpers import prepare_inputs, boxes2inputs, parse_logits
+    from v3.helpers import boxes2inputs, parse_logits, prepare_inputs
 except ImportError:
     try:
-        from layoutreader.v3.helpers import prepare_inputs, boxes2inputs, parse_logits
+        from layoutreader.v3.helpers import boxes2inputs, parse_logits, prepare_inputs
     except ImportError:
         print("\nCRITICAL ERROR: Could not import 'v3.helpers'.")
         print("Ensure the 'v3' folder from the LayoutReader repository is in your python path.")
@@ -109,49 +111,49 @@ def parse_alto_xml(xml_path):
     except Exception:
         return [], [], (0, 0)
 
-    ns = {'alto': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
+    ns = {"alto": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
 
     def find_all(node, tag):
-        return node.findall(f'.//alto:{tag}', ns) if ns else node.findall(f'.//{tag}')
+        return node.findall(f".//alto:{tag}", ns) if ns else node.findall(f".//{tag}")
 
-    page = root.find('.//alto:Page', ns) if ns else root.find('.//Page')
+    page = root.find(".//alto:Page", ns) if ns else root.find(".//Page")
     if page is None:
         return [], [], (0, 0)
 
     try:
-        page_w = int(float(page.attrib.get('WIDTH')))
-        page_h = int(float(page.attrib.get('HEIGHT')))
+        page_w = int(float(page.attrib.get("WIDTH")))
+        page_h = int(float(page.attrib.get("HEIGHT")))
     except (ValueError, TypeError):
         return [], [], (0, 0)
 
     lines = []
     boxes = []
 
-    text_lines_elements = find_all(root, 'TextLine')
+    text_lines_elements = find_all(root, "TextLine")
     for line_elem in text_lines_elements:
         line_text = ""
         # Initialize extremes for the unified line bounding box
-        min_x, min_y = float('inf'), float('inf')
-        max_x, max_y = float('-inf'), float('-inf')
+        min_x, min_y = float("inf"), float("inf")
+        max_x, max_y = float("-inf"), float("-inf")
 
         children = list(line_elem)
         for i, child in enumerate(children):
-            tag_name = child.tag.split('}')[-1]
+            tag_name = child.tag.split("}")[-1]
 
-            if tag_name == 'String':
-                content = child.attrib.get('CONTENT')
+            if tag_name == "String":
+                content = child.attrib.get("CONTENT")
                 if not content:
                     continue
 
                 # Get Hyphenation Ground Truth
-                subs_type = child.attrib.get('SUBS_TYPE')
-                subs_content = child.attrib.get('SUBS_CONTENT')
+                subs_type = child.attrib.get("SUBS_TYPE")
+                subs_content = child.attrib.get("SUBS_CONTENT")
 
                 try:
-                    x = int(float(child.attrib.get('HPOS')))
-                    y = int(float(child.attrib.get('VPOS')))
-                    w = int(float(child.attrib.get('WIDTH')))
-                    h = int(float(child.attrib.get('HEIGHT')))
+                    x = int(float(child.attrib.get("HPOS")))
+                    y = int(float(child.attrib.get("VPOS")))
+                    w = int(float(child.attrib.get("WIDTH")))
+                    h = int(float(child.attrib.get("HEIGHT")))
                 except (ValueError, TypeError):
                     continue
 
@@ -165,26 +167,26 @@ def parse_alto_xml(xml_path):
                 has_hyp_tag = False
                 if i + 1 < len(children):
                     next_child = children[i + 1]
-                    next_tag = next_child.tag.split('}')[-1]
-                    if next_tag == 'HYP':
-                        content += next_child.attrib.get('CONTENT', '-')
+                    next_tag = next_child.tag.split("}")[-1]
+                    if next_tag == "HYP":
+                        content += next_child.attrib.get("CONTENT", "-")
                         has_hyp_tag = True
 
                 # --- Inject Ground Truth ---
-                if subs_type == 'HypPart1' and subs_content:
-                    if not has_hyp_tag and not content.endswith('-'):
+                if subs_type == "HypPart1" and subs_content:
+                    if not has_hyp_tag and not content.endswith("-"):
                         content += "-"
                     content = f"{content} {{{subs_content}}}"
 
                 line_text += content
 
-            elif tag_name == 'SP':
+            elif tag_name == "SP":
                 # Preserve native spaces provided by OCR engine
                 line_text += " "
 
         line_text = line_text.strip()
         # Only append if we actually found valid text and coordinates
-        if line_text and min_x != float('inf'):
+        if line_text and min_x != float("inf"):
             lines.append(line_text)
             boxes.append([min_x, min_y, max_x, max_y])
 
@@ -220,7 +222,8 @@ def post_process_text(ordered_lines, ordered_boxes):
     if ordered_boxes:
         heights = [(b[3] - b[1]) for b in ordered_boxes]
         valid_heights = [h for h in heights if h > 5]
-        if not valid_heights: valid_heights = heights
+        if not valid_heights:
+            valid_heights = heights
         median_height = np.median(valid_heights) if valid_heights else 10
     else:
         median_height = 10
@@ -231,7 +234,7 @@ def post_process_text(ordered_lines, ordered_boxes):
     result_tokens = []
     prev_box = None
 
-    for i, (line_text, box) in enumerate(zip(ordered_lines, ordered_boxes)):
+    for _i, (line_text, box) in enumerate(zip(ordered_lines, ordered_boxes, strict=True)):
         separator = ""
 
         if prev_box is None:
@@ -289,7 +292,7 @@ def extract_single_page(args):
         lines, boxes, (page_w, page_h) = parse_alto_xml(xml_path)
 
         if not lines:
-            with open(txt_path, 'w', encoding='utf-8') as f:
+            with open(txt_path, "w", encoding="utf-8") as f:
                 f.write("")
             return True
 
@@ -309,8 +312,8 @@ def extract_single_page(args):
 
         i = 0
         while i < len(lines):
-            chunk_lines = lines[i: i + CHUNK_SIZE]
-            chunk_boxes = norm_boxes[i: i + CHUNK_SIZE]
+            chunk_lines = lines[i : i + CHUNK_SIZE]
+            chunk_boxes = norm_boxes[i : i + CHUNK_SIZE]
 
             if not chunk_lines:
                 i += CHUNK_SIZE
@@ -352,21 +355,17 @@ def extract_single_page(args):
                     # Even the smallest viable chunk triggers OOM: give up on
                     # this page rather than looping indefinitely.
                     print(
-                        f"Skipping {file_id}-{page_id}: OOM even at "
-                        f"chunk size {CHUNK_SIZE * 2} (min={MIN_CHUNK_SIZE})."
+                        f"Skipping {file_id}-{page_id}: OOM even at chunk size {CHUNK_SIZE * 2} (min={MIN_CHUNK_SIZE})."
                     )
                     return False
 
-                print(
-                    f"OOM on {file_id}-{page_id}: retrying chunk at "
-                    f"i={i} with reduced CHUNK_SIZE={CHUNK_SIZE}."
-                )
+                print(f"OOM on {file_id}-{page_id}: retrying chunk at i={i} with reduced CHUNK_SIZE={CHUNK_SIZE}.")
                 # Do NOT advance i — retry the same position with smaller chunk.
 
         # 4. Generate text
         final_text = post_process_text(full_ordered_lines, full_ordered_boxes)
 
-        with open(txt_path, 'w', encoding='utf-8') as f:
+        with open(txt_path, "w", encoding="utf-8") as f:
             f.write(final_text)
 
         return True
@@ -387,7 +386,7 @@ def main():
     tasks = []
     for _, row in df.iterrows():
         # Ensure your CSV has these columns
-        tasks.append((row['file'], row['page'], row['path'], OUTPUT_TEXT_DIR))
+        tasks.append((row["file"], row["page"], row["path"], OUTPUT_TEXT_DIR))
 
     use_cuda = torch.cuda.is_available()
     print(f"Device: {'CUDA' if use_cuda else 'CPU'}")
@@ -397,10 +396,15 @@ def main():
 
     _logger = ParadataLogger(
         program="alto-postprocess",
-        config={"script": "extract_LytRdr_ALTO_2_TXT", "method": "layoutreader",
-                "input_csv": str(INPUT_CSV),
-                "input_dir": str(page_alto_dir), "output_dir": str(OUTPUT_TEXT_DIR),
-                "lr_model": str(LR_MODEL), "n_workers": MAX_WORKERS},
+        config={
+            "script": "extract_LytRdr_ALTO_2_TXT",
+            "method": "layoutreader",
+            "input_csv": str(INPUT_CSV),
+            "input_dir": str(page_alto_dir),
+            "output_dir": str(OUTPUT_TEXT_DIR),
+            "lr_model": str(LR_MODEL),
+            "n_workers": MAX_WORKERS,
+        },
         paradata_dir="paradata",
         output_types=["txt"],
     )
@@ -418,17 +422,17 @@ def main():
         else:
             # CPU: Parallel execution
             print(f"CPU detected: Extracting with {MAX_WORKERS} workers...")
-            with concurrent.futures.ProcessPoolExecutor(
-                    max_workers=MAX_WORKERS,
-                    initializer=init_worker
-            ) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=MAX_WORKERS, initializer=init_worker) as executor:
                 results = list(
-                    tqdm(executor.map(extract_single_page, tasks, chunksize=1), total=len(tasks), desc="Processing (CPU)"))
+                    tqdm(
+                        executor.map(extract_single_page, tasks, chunksize=1), total=len(tasks), desc="Processing (CPU)"
+                    )
+                )
 
         success_count = sum(results)
         print(f"Extraction complete. Success rate: {success_count / len(results):.2%}")
         # log skipped files based on absent results
-        for t, r in zip(tasks, results):
+        for t, r in zip(tasks, results, strict=True):
             if not r:
                 _logger.log_skip(t[0], "layoutreader processing failed")
             else:

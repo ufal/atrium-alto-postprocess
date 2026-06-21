@@ -39,7 +39,7 @@ if [ ! -d "v3" ]; then
     TEMP_DIR="_temp_layoutreader"
     git clone --filter=blob:none --no-checkout --depth 1 $LAYOUTREADER_REPO $TEMP_DIR
 
-    pushd $TEMP_DIR > /dev/null
+    pushd $TEMP_DIR > /dev/null || exit 1
 
     # 2. Initialize sparse checkout to only look for the 'v3' directory
     git sparse-checkout init --cone
@@ -56,7 +56,7 @@ if [ ! -d "v3" ]; then
         echo "❌ Error: 'v3' directory was not found in the remote repository."
     fi
 
-    popd > /dev/null
+    popd > /dev/null || exit 1
 
     # 5. Cleanup temp folder
     rm -rf $TEMP_DIR
@@ -75,7 +75,7 @@ if [ ! -f "$MODEL_DIR/$FASTTEXT_BIN" ]; then
     echo "⬇️ FastText binary not found. Downloading from HuggingFace..."
     wget "$FASTTEXT_URL" -O "$MODEL_DIR/$FASTTEXT_BIN"
 
-    if [ $? -eq 0 ]; then
+    if wget "$FASTTEXT_URL" -O "$MODEL_DIR/$FASTTEXT_BIN"; then
         echo "✅ Successfully downloaded $FASTTEXT_BIN."
     else
         echo "❌ Failed to download $FASTTEXT_BIN."

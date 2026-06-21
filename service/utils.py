@@ -2,10 +2,9 @@
 service/utils.py
 Helper functions for ALTO parsing, box normalization, and text reconstruction.
 """
-import re
-import sys
-import logging
+
 import configparser
+import logging
 from pathlib import Path
 from typing import List, Tuple
 
@@ -21,8 +20,10 @@ _config_path = Path(__file__).resolve().parent.parent / "config_langID.txt"
 if _config_path.exists():
     _config.read(_config_path)
 
+
 def _get_float(section, key, default):
     return _config.getfloat(section, key, fallback=default) if _config.has_section(section) else default
+
 
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
     COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
@@ -49,6 +50,7 @@ _SAFE_PARSER = ET.XMLParser(
     huge_tree=False,
 )
 
+
 def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int, int]]:
     """
     Parses ALTO XML from a file path using fast lxml bindings.
@@ -66,19 +68,19 @@ def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int
         return [], [], (0, 0)
 
     # Use lxml's native namespace handling
-    ns = {'alto': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
+    ns = {"alto": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
 
     # Optimized pre-compiled tags
-    page_tag = './/alto:Page' if ns else './/Page'
-    text_line_tag = './/alto:TextLine' if ns else './/TextLine'
+    page_tag = ".//alto:Page" if ns else ".//Page"
+    text_line_tag = ".//alto:TextLine" if ns else ".//TextLine"
 
     page = root.find(page_tag, ns)
     if page is None:
         return [], [], (0, 0)
 
     try:
-        page_w = int(float(page.attrib.get('WIDTH', 0)))
-        page_h = int(float(page.attrib.get('HEIGHT', 0)))
+        page_w = int(float(page.attrib.get("WIDTH", 0)))
+        page_h = int(float(page.attrib.get("HEIGHT", 0)))
     except (ValueError, TypeError):
         return [], [], (0, 0)
 
@@ -90,34 +92,35 @@ def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int
     for line in text_lines:
         children = list(line)
         for i, child in enumerate(children):
-            tag_name = child.tag.split('}')[-1]
+            tag_name = child.tag.split("}")[-1]
 
-            if tag_name == 'String':
-                content = child.attrib.get('CONTENT')
-                if not content: continue
+            if tag_name == "String":
+                content = child.attrib.get("CONTENT")
+                if not content:
+                    continue
 
                 # ALTO Hyphenation Logic
-                subs_type = child.attrib.get('SUBS_TYPE')
-                subs_content = child.attrib.get('SUBS_CONTENT')
+                subs_type = child.attrib.get("SUBS_TYPE")
+                subs_content = child.attrib.get("SUBS_CONTENT")
 
                 try:
-                    x = int(float(child.attrib.get('HPOS', 0)))
-                    y = int(float(child.attrib.get('VPOS', 0)))
-                    w = int(float(child.attrib.get('WIDTH', 0)))
-                    h = int(float(child.attrib.get('HEIGHT', 0)))
+                    x = int(float(child.attrib.get("HPOS", 0)))
+                    y = int(float(child.attrib.get("VPOS", 0)))
+                    w = int(float(child.attrib.get("WIDTH", 0)))
+                    h = int(float(child.attrib.get("HEIGHT", 0)))
                 except (ValueError, TypeError):
                     continue
 
                 # Check for explicit visual hyphen tag
                 has_hyp_tag = False
                 if i + 1 < len(children):
-                    next_tag = children[i + 1].tag.split('}')[-1]
-                    if next_tag == 'HYP':
-                        content += children[i + 1].attrib.get('CONTENT', '-')
+                    next_tag = children[i + 1].tag.split("}")[-1]
+                    if next_tag == "HYP":
+                        content += children[i + 1].attrib.get("CONTENT", "-")
                         has_hyp_tag = True
 
-                if subs_type == 'HypPart1' and subs_content:
-                    if not has_hyp_tag and not content.endswith('-'):
+                if subs_type == "HypPart1" and subs_content:
+                    if not has_hyp_tag and not content.endswith("-"):
                         content += "-"
                     content = f"{content} {{{subs_content}}}"
 
@@ -139,12 +142,14 @@ def normalize_boxes(boxes: List[List[int]], width: int, height: int) -> List[Lis
     y_scale = 1000.0 / height
     out: List[List[int]] = []
     for x1, y1, x2, y2 in boxes:
-        out.append([
-            max(0, min(1000, int(round(x1 * x_scale)))),
-            max(0, min(1000, int(round(y1 * y_scale)))),
-            max(0, min(1000, int(round(x2 * x_scale)))),
-            max(0, min(1000, int(round(y2 * y_scale)))),
-        ])
+        out.append(
+            [
+                max(0, min(1000, int(round(x1 * x_scale)))),
+                max(0, min(1000, int(round(y1 * y_scale)))),
+                max(0, min(1000, int(round(x2 * x_scale)))),
+                max(0, min(1000, int(round(y2 * y_scale)))),
+            ]
+        )
     return out
 
 

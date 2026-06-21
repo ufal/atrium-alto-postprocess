@@ -1,4 +1,3 @@
-
 """
 service/text_inference.py
 Manages the LayoutReader, FastText, and DistilGPT2 models.
@@ -7,15 +6,12 @@ Classification is fully aligned with the main pipeline (langID_classify.py):
   - Unified penalty path : categorize_line() from text_util_langID
   - New API fields       : word_weird, garbage_density, ldl_fuses, etc.
 """
-"""
-service/text_inference.py
-Manages the LayoutReader, FastText, and DistilGPT2/Qwen models.
-"""
+
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 # ---------------------------------------------------------------------------
 # PATH SETUP
@@ -26,30 +22,32 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 try:
-    from .utils import parse_alto_xml, normalize_boxes
-except ImportError:
-    from utils import parse_alto_xml, normalize_boxes
-
-try:
-    from v3.helpers import prepare_inputs, boxes2inputs, parse_logits
+    from v3.helpers import boxes2inputs, parse_logits, prepare_inputs
 except ImportError:
     print("CRITICAL: 'v3' folder not found in project root — layout reordering unavailable.")
     prepare_inputs = boxes2inputs = parse_logits = None  # type: ignore[assignment]
 
-# Import the full quality-analysis toolkit
+# Import the full quality-analysis toolkit from the main pipeline module.
 try:
     from text_util_langID import (
-        compute_garbage_density, detect_strange_symbols, detect_mid_uppercase,
-        detect_repeated_chars, detect_letter_digit_letter, detect_gibberish_words,
-        score_words_in_line, compute_word_weird_ratio, compute_valid_ratio,
-        compute_symbol_ratio, compute_quality_score, categorize_line as _categorize_line_struct,
-        pre_filter_line, calculate_perplexity_batch, COMMON_LANGS
+        COMMON_LANGS,
+        compute_garbage_density,
+        compute_quality_score,
+        compute_valid_ratio,
+        compute_word_weird_ratio,
+        detect_gibberish_words,
+        detect_letter_digit_letter,
+        detect_mid_uppercase,
+        detect_repeated_chars,
+        detect_strange_symbols,
+        score_words_in_line,
     )
+    from text_util_langID import categorize_line as _categorize_line_struct
 
     _UTIL_AVAILABLE = True
 except ImportError as _err:
     logging.getLogger(__name__).warning(
-        "text_util_langID not found (%s); falling back to legacy utils.", _err
+        "text_util_langID not found (%s); falling back to legacy utils.categorize_line.", _err
     )
     _UTIL_AVAILABLE = False
     from utils import categorize_line as _legacy_categorize  # type: ignore[assignment]
@@ -57,6 +55,9 @@ except ImportError as _err:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# CONFIGURATION
+# ---------------------------------------------------------------------------
 MODEL_DIR = Path(os.getenv("MODEL_DIR", str(project_root / "models")))
 FASTTEXT_MODEL_PATH = MODEL_DIR / "lid.176.bin"
 
@@ -76,13 +77,14 @@ class TextModelManager:
             return
 
         import torch
+
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info("Loading Text Processing Models on %s …", self.device)
 
         try:
             # LAZY LOAD heavy ML libraries strictly inside this method
             import fasttext
-            from transformers import LayoutLMv3ForTokenClassification, AutoModelForCausalLM, AutoTokenizer
+            from transformers import AutoModelForCausalLM, AutoTokenizer, LayoutLMv3ForTokenClassification
 
             # 1. LayoutReader (LayoutLMv3)
             layout_model_path = os.getenv("LAYOUT_MODEL_PATH", "hantian/layoutreader")
@@ -111,74 +113,18 @@ class TextModelManager:
 
 
 # ---------------------------------------------------------------------------
-# PATH SETUP
-# ---------------------------------------------------------------------------
-current_dir = Path(__file__).resolve().parent
-project_root = current_dir.parent
-if str(project_root) not in sys.path:
-    sys.path.append(str(project_root))
-
-try:
-    from .utils import parse_alto_xml
-except ImportError:
-    from utils import parse_alto_xml
-
-try:
-    from v3.helpers import prepare_inputs, boxes2inputs, parse_logits
-except ImportError:
-    print("CRITICAL: 'v3' folder not found in project root — layout reordering unavailable.")
-    prepare_inputs = boxes2inputs = parse_logits = None  # type: ignore[assignment]
-
-# Import the full quality-analysis toolkit from the main pipeline module.
-try:
-    from text_util_langID import (
-        compute_garbage_density,
-        detect_strange_symbols,
-        detect_mid_uppercase,
-        detect_repeated_chars,
-        detect_letter_digit_letter,
-        detect_gibberish_words,
-        score_words_in_line,
-        compute_word_weird_ratio,
-        compute_valid_ratio,
-        compute_symbol_ratio,
-        compute_quality_score,
-        categorize_line as _categorize_line_struct,
-        pre_filter_line,
-        calculate_perplexity_batch,
-        COMMON_LANGS
-    )
-
-    _UTIL_AVAILABLE = True
-except ImportError as _err:
-    logging.getLogger(__name__).warning(
-        "text_util_langID not found (%s); falling back to legacy utils.categorize_line.", _err
-    )
-    _UTIL_AVAILABLE = False
-    from utils import categorize_line as _legacy_categorize  # type: ignore[assignment]
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# CONFIGURATION
-# ---------------------------------------------------------------------------
-MODEL_DIR = Path(os.getenv("MODEL_DIR", str(project_root / "models")))
-FASTTEXT_MODEL_PATH = MODEL_DIR / "lid.176.bin"
-
-
-# ---------------------------------------------------------------------------
 # Helper: classify one line (mirrors process_and_write_batch in langID_classify)
 # ---------------------------------------------------------------------------
 
+
 def _classify_line(
-        text: str,
-        ppl: float,
-        *,
-        ft_model,
-        ppl_model,
-        tokenizer,
-        device: str,
+    text: str,
+    ppl: float,
+    *,
+    ft_model,
+    ppl_model,
+    tokenizer,
+    device: str,
 ) -> Dict[str, Any]:
     """
     Run the full unified classification pipeline on a single text line and
@@ -200,11 +146,15 @@ def _classify_line(
     # 3. Weirdness and Quality Scores
     word_scores = score_words_in_line(text)
     weird_ratio = compute_word_weird_ratio(word_scores)
+    # NOTE: compute_quality_score's current signature has no `symbol_ratio` term
+    # (removed upstream) and requires `weird_ratio`; the original call here used
+    # the stale signature and would TypeError at runtime. Fixed to match.
     q_score = compute_quality_score(
         valid_word_ratio=compute_valid_ratio(text),
-        symbol_ratio=compute_symbol_ratio(text),
         perplexity=ppl,
         text_length=len(text),
+        weird_ratio=weird_ratio,
+        garbage_density=g_density,
     )
 
     # 4. Unified Categorization Logic (passes weird_ratio to prevent flip-flopping)
@@ -214,7 +164,7 @@ def _classify_line(
         lang=lang,
         lang_score=lang_score,
         weird_ratio=weird_ratio,
-        expected_langs=COMMON_LANGS
+        expected_langs=COMMON_LANGS,
     )
 
     return {
@@ -258,6 +208,7 @@ def _classify_line_legacy(text: str, ppl: float, ft_model) -> Dict[str, Any]:
         "quality_score": None,
         "category": categ,
     }
+
 
 # Module-level singleton used by text_api.py
 text_manager = TextModelManager()

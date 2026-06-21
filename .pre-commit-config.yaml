@@ -6,7 +6,7 @@
 # Verify latest hook revs:  pre-commit autoupdate
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0          # PARAM: pre-commit autoupdate to pin latest
+    rev: v6.0.0          # PARAM: pre-commit autoupdate to pin latest
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -15,14 +15,14 @@ repos:
         args: ["--maxkb=1024"]   # keep model/data blobs out of git
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.0          # PARAM: pre-commit autoupdate
+    rev: v0.15.18          # PARAM: pre-commit autoupdate
     hooks:
       - id: ruff          # lint (reads ./ruff.toml)
       - id: ruff-format   # formatter
 
   # setup_api_server.sh is the shell surface for this repo:
   - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.10.0         # PARAM: pre-commit autoupdate
+    rev: v0.11.0         # PARAM: pre-commit autoupdate
     hooks:
       - id: shellcheck
         args: ["-e", "SC1091"]   # don't follow sourced files that aren't present

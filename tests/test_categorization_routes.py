@@ -6,13 +6,16 @@ its derivation, analyze_rotation_signals (gate behaviour), the per-line
 trash_inverted route + non-diacritics hard gate, and the short-fragment Clear
 guard. All pure-Python — no torch/fasttext/GPU.
 """
-import pytest
 
 import text_util_langID as tul
 from text_util_langID import (
-    analyze_rotation_signals, categorize_line,
-    ROT_WHITELIST, ROT_GHOSTLIST,
-    _transform_word, _MIRROR_GLYPH, _ROTATE_GLYPH,
+    _MIRROR_GLYPH,
+    _ROTATE_GLYPH,
+    ROT_GHOSTLIST,
+    ROT_WHITELIST,
+    _transform_word,
+    analyze_rotation_signals,
+    categorize_line,
 )
 
 
@@ -36,18 +39,17 @@ class TestGlyphTransforms:
         assert _transform_word("kov", _ROTATE_GLYPH) is None
 
 
-
 class TestTrashInvertedGate:
     def test_ghost_dominated_and_not_upright_is_trash(self):
         cat, _, reason = categorize_line(
-            0.80, "oq zem", 2, 0.3, 300.0, return_reason=True,
-            ghost_dominated=True, is_upright_czech=False)
+            0.80, "oq zem", 2, 0.3, 300.0, return_reason=True, ghost_dominated=True, is_upright_czech=False
+        )
         assert cat == "Trash" and reason == "trash_inverted"
 
     def test_upright_overrides_ghost_route(self):
         cat, _, reason = categorize_line(
-            0.80, "oq náčrt", 2, 0.3, 300.0, return_reason=True,
-            ghost_dominated=True, is_upright_czech=True)
+            0.80, "oq náčrt", 2, 0.3, 300.0, return_reason=True, ghost_dominated=True, is_upright_czech=True
+        )
         assert reason != "trash_inverted" and cat != "Trash"
 
 
@@ -60,23 +62,20 @@ class TestClearBandGuard:
     def test_holds_short_noisy_fragment(self, monkeypatch):
         monkeypatch.setattr(tul, "CLEAR_BAND_WC_MIN", 3)
         # FIX: Unpack 3 values
-        cat, _, reason = categorize_line(
-            0.92, "značky.", 1, 0.4, 200.0, garbage_density=0.14, return_reason=True)
+        cat, _, reason = categorize_line(0.92, "značky.", 1, 0.4, 200.0, garbage_density=0.14, return_reason=True)
         assert cat == "Noisy" and reason == "noisy_threshold"
 
     def test_spares_clean_short_prose(self, monkeypatch):
         monkeypatch.setattr(tul, "CLEAR_BAND_WC_MIN", 3)
-        cat, _ = categorize_line(
-            0.92, "republiky československé", 2, 0.4, 200.0,
-            weird_ratio=0.0, garbage_density=0.0)
+        cat, _ = categorize_line(0.92, "republiky československé", 2, 0.4, 200.0, weird_ratio=0.0, garbage_density=0.0)
         assert cat == "Clear"
 
     def test_exempts_lowppl_fasttrack(self, monkeypatch):
         monkeypatch.setattr(tul, "CLEAR_BAND_WC_MIN", 3)
         # FIX: Unpack 3 values
         cat, _, reason = categorize_line(
-            0.95, "krátký čistý text", 3, 0.4, 30.0,
-            garbage_density=0.1, return_reason=True)
+            0.95, "krátký čistý text", 3, 0.4, 30.0, garbage_density=0.1, return_reason=True
+        )
         assert cat == "Clear" and reason == "lowppl_clear"
 
 
@@ -93,6 +92,7 @@ class TestGhostlist:
         # Now passing since manual typo dicts were removed
         for g in ("aznod", "apnq", "oq", "boq", "zem"):
             assert g in ROT_GHOSTLIST
+
 
 class TestAnalyzeRotationSignals:
     def test_empty_text(self):
@@ -114,7 +114,9 @@ class TestAnalyzeRotationSignals:
         up, _ = analyze_rotation_signals("oq náčrt")
         assert up is True
 
+
 # Delete test_rot_ratio_gate_blocks_low_rotatable entirely
+
 
 class TestExtremePplRoute:
     """(#3 Problem 3) extreme-perplexity trash route in determine_category."""
@@ -124,8 +126,8 @@ class TestExtremePplRoute:
         # FastText is confident enough (0.6658 >= HARD_SWEEP_LANG_MAX) that the
         # original hard sweep misses it; the extreme-ppl route must catch it.
         cat, _, reason = categorize_line(
-            0.80, "Alyrý cvod nede % Agrgr oAOrt", 6, 0.41, 15168.0,
-            return_reason=True, orig_lang_score=0.6658)
+            0.80, "Alyrý cvod nede % Agrgr oAOrt", 6, 0.41, 15168.0, return_reason=True, orig_lang_score=0.6658
+        )
         assert cat == "Trash" and reason == "trash_hard_sweep"
 
     def test_extreme_ppl_confident_text_spared(self):
@@ -133,8 +135,8 @@ class TestExtremePplRoute:
         # trashed by this route: readable OCR-degraded text with a genuinely huge
         # ppl is spared (e.g. 'Taxon vojcuskou' ces:0.90 ppl=10432).
         cat, _, reason = categorize_line(
-            0.80, "Taxon vojcuskou povinen jest", 4, 0.45, 15168.0,
-            return_reason=True, orig_lang_score=0.95)
+            0.80, "Taxon vojcuskou povinen jest", 4, 0.45, 15168.0, return_reason=True, orig_lang_score=0.95
+        )
         assert reason != "trash_hard_sweep"
 
 
@@ -147,17 +149,31 @@ class TestLmConfidentCzechBypass:
         # qs in Clear band, valid_ratio < 0.85, but upright Czech + low ppl ->
         # cap bypassed -> Clear (e.g. 'í nezpůsobilost ke službě nebyla').
         cat, _, reason = categorize_line(
-            0.88, "í nezpůsobilost ke službě nebyla", 5, 0.43, 80.0,
-            return_reason=True, valid_word_ratio=0.80,
-            is_upright_czech=True, garbage_density=0.0)
+            0.88,
+            "í nezpůsobilost ke službě nebyla",
+            5,
+            0.43,
+            80.0,
+            return_reason=True,
+            valid_word_ratio=0.80,
+            is_upright_czech=True,
+            garbage_density=0.0,
+        )
         assert cat == "Clear" and reason == "clear_threshold"
 
     def test_non_czech_low_valid_still_capped(self):
         # Control: same band/ppl but NOT upright Czech -> cap still demotes.
         cat, _, reason = categorize_line(
-            0.88, "slovo bez diakritiky tady", 5, 0.43, 80.0,
-            return_reason=True, valid_word_ratio=0.80,
-            is_upright_czech=False, garbage_density=0.0)
+            0.88,
+            "slovo bez diakritiky tady",
+            5,
+            0.43,
+            80.0,
+            return_reason=True,
+            valid_word_ratio=0.80,
+            is_upright_czech=False,
+            garbage_density=0.0,
+        )
         assert cat == "Noisy" and reason == "noisy_threshold"
 
     def test_high_garbage_czech_not_bypassed(self):
@@ -166,7 +182,14 @@ class TestLmConfidentCzechBypass:
         # like 'nonč, mI 47 žn dn ...' (garbage_density >= CZECH_CLEAR_GARBAGE_MAX)
         # can never reach Clear through this route.
         cat, _, _ = categorize_line(
-            0.88, "nonč mI žn dn 1074 484", 5, 0.22, 131.0,
-            return_reason=True, valid_word_ratio=0.40,
-            is_upright_czech=True, garbage_density=0.20)
+            0.88,
+            "nonč mI žn dn 1074 484",
+            5,
+            0.22,
+            131.0,
+            return_reason=True,
+            valid_word_ratio=0.40,
+            is_upright_czech=True,
+            garbage_density=0.20,
+        )
         assert cat == "Noisy" or cat == "Trash"

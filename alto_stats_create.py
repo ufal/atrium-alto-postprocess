@@ -27,14 +27,15 @@ Example:
     python alto_stats_create.py ./my_alto_files/ -o stats.csv
 """
 
-import os
 import argparse
-import subprocess  # To run external commands (like alto-tools)
-import pandas as pd  # To easily create the final CSV
+import os
 import re  # For regular expressions, to parse the command output
+import subprocess  # To run external commands (like alto-tools)
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import pandas as pd  # To easily create the final CSV
+
 from atrium_paradata import ParadataLogger
-import sys
 
 
 def parse_alto_tools_stats_line(line):
@@ -127,9 +128,9 @@ def _process_single_xml(xml_path, fname):
     # --- Derive file ID and page ID from the filename ---
     # e.g., "doc123-001.alto.xml"
     base = os.path.basename(fname).split(".")[0]  # "doc123-001"
-    parts = base.split("-")                        # ["doc123", "001"]
-    file_id = parts[0]                             # "doc123"
-    page = parts[1] if len(parts) > 1 else ""     # "001"
+    parts = base.split("-")  # ["doc123", "001"]
+    file_id = parts[0]  # "doc123"
+    page = parts[1] if len(parts) > 1 else ""  # "001"
 
     rec = {
         "file": file_id,
@@ -174,8 +175,7 @@ def process_alto_files_with_alto_tools(directory_path, max_workers=8):
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_path = {
-            executor.submit(_process_single_xml, xml_path, fname): xml_path
-            for xml_path, fname in xml_files
+            executor.submit(_process_single_xml, xml_path, fname): xml_path for xml_path, fname in xml_files
         }
         for future in as_completed(future_to_path):
             rec, skip_path = future.result()
@@ -202,9 +202,11 @@ def main():
     # --- 3. Find Subdirectories ---
     # This script is designed to check the root input_folder *and*
     # one level of subdirectories.
-    subdirs = [os.path.join(args.input_folder, d)
-               for d in os.listdir(args.input_folder)
-               if os.path.isdir(os.path.join(args.input_folder, d))]
+    subdirs = [
+        os.path.join(args.input_folder, d)
+        for d in os.listdir(args.input_folder)
+        if os.path.isdir(os.path.join(args.input_folder, d))
+    ]
 
     # 'first' flag is used to ensure we only write the CSV header *once*
     first = True

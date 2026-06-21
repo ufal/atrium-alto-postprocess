@@ -315,7 +315,7 @@ BATCH_SIZE = 128        # Batch size for processing lines
 WORKERS_MAX = 32        # Max CPU workers for parallel tasks
 EXPECTED_LANGS = ces,deu,eng    # Expected languages (ISO codes); first is default
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita     # Allowed foreign languages (ISO codes)
-MODEL_NAME = Qwen/Qwen2.5-0.5B  # Language model for perplexity scoring; English-only collections: distilgpt2 
+MODEL_NAME = Qwen/Qwen2.5-0.5B  # Language model for perplexity scoring; English-only collections: distilgpt2
 
 [TEXT_UTILS]
 
@@ -685,8 +685,8 @@ Checked in order - the first match wins and skips all remaining checks including
 > Inverted/180°-rotated scans are now detected at **two** levels:
 > * A **per-line** lexicon check (override 1b above) catches lines dominated by flip-images of common Czech function words.
 > * A **page-level** pass (see [Post-Processing Smoothing](#post-processing-smoothing) below) independently catches contiguous runs — or a page-wide majority — of suspicious lines, using rotatable-character density, perplexity, and language-confidence signals.
-> 
-> 
+>
+>
 > `compute_quality_score()` no longer subtracts a `rot_penalty` from the quality score. The `is_upright_czech` flag it still accepts as a parameter has no effect on the computed score in the current implementation.
 
 **Quality score 📈 threshold routing** (applied to all lines not caught by an override above):
@@ -959,7 +959,7 @@ points at the image actually executing rather than a fixed fork.
 exercised, and records it as `license` / `license_url` plus a detailed `license_detail` block (per-component licenses,
 which component(s) `determined_by` the result, `is_non_commercial` / `is_share_alike` flags, and any unknown licenses).
 See [Output licensing](#output-licensing-) below.
-* **Configuration ⚙️:** StoreSee [Output licensing](#output-licensing-) below time configuration ⚙️, including script 
+* **Configuration ⚙️:** StoreSee [Output licensing](#output-licensing-) below time configuration ⚙️, including script
 names, input/output paths, and specific model choices.
 * **Timing ⏱️:** Records precise UTC start times, end times, and the total duration of the run in seconds.
 * **Statistics 📊:** Tracks the total number of input files, successfully processed documents, and computes performance

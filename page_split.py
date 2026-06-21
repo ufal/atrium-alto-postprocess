@@ -12,9 +12,10 @@ Usage:
     python page_split.py <input_directory> <output_directory>
 """
 
-import xml.etree.ElementTree as ET  # For parsing and creating XML
-import os
 import argparse
+import os
+import xml.etree.ElementTree as ET  # For parsing and creating XML
+
 from atrium_paradata import ParadataLogger
 
 
@@ -30,8 +31,8 @@ def _make_safe_parser() -> ET.XMLParser:
     try:
         # expat: disable entity definitions and external entity resolution.
         parser.parser.DefaultHandler = lambda data: None
-        parser.parser.EntityDeclHandler = (
-            lambda *a, **k: (_ for _ in ()).throw(ET.ParseError("entities are not allowed"))
+        parser.parser.EntityDeclHandler = lambda *a, **k: (_ for _ in ()).throw(
+            ET.ParseError("entities are not allowed")
         )
         parser.parser.ExternalEntityRefHandler = lambda *a, **k: False
     except AttributeError:
@@ -48,17 +49,17 @@ def split_alto_xml(input_file_path, output_dir):
     Returns:
         int: The number of pages written (0 if no pages were found).
     """
-    namespace = {'alto': 'http://www.loc.gov/standards/alto/ns-v3#'}
-    ET.register_namespace('', 'http://www.loc.gov/standards/alto/ns-v3#')
+    namespace = {"alto": "http://www.loc.gov/standards/alto/ns-v3#"}
+    ET.register_namespace("", "http://www.loc.gov/standards/alto/ns-v3#")
 
     # --- Parse the Input XML (hardened parser) ---
     tree = ET.parse(input_file_path, parser=_make_safe_parser())
     root = tree.getroot()
 
-    description = root.find('alto:Description', namespace)
-    styles = root.find('alto:Styles', namespace)
+    description = root.find("alto:Description", namespace)
+    styles = root.find("alto:Styles", namespace)
 
-    pages = root.findall('.//alto:Page', namespace)
+    pages = root.findall(".//alto:Page", namespace)
 
     if not pages:
         print(f"  -> No <Page> elements found in {input_file_path}. Skipping.")
@@ -71,7 +72,7 @@ def split_alto_xml(input_file_path, output_dir):
 
     print(f"  -> Found {len(pages)} page(s). Splitting...")
     for i, page in enumerate(pages, 1):
-        page_number = page.get('PHYSICAL_IMG_NR', str(i))
+        page_number = page.get("PHYSICAL_IMG_NR", str(i))
         output_filename = f"{base_name}-{page_number}.alto.xml"
         output_filepath = os.path.join(page_output_dir, output_filename)
 
@@ -81,11 +82,11 @@ def split_alto_xml(input_file_path, output_dir):
         if styles is not None:
             new_root.append(styles)
 
-        new_layout = ET.SubElement(new_root, 'Layout')
+        new_layout = ET.SubElement(new_root, "Layout")
         new_layout.append(page)
 
         new_tree = ET.ElementTree(new_root)
-        new_tree.write(output_filepath, encoding='UTF-8', xml_declaration=True)
+        new_tree.write(output_filepath, encoding="UTF-8", xml_declaration=True)
 
     print(f"  -> Successfully split into {len(pages)} file(s) in '{page_output_dir}'.")
     return len(pages)
@@ -94,7 +95,7 @@ def split_alto_xml(input_file_path, output_dir):
 def main():
     parser = argparse.ArgumentParser(
         description="Split multi-page ALTO XML files into single-page files.",
-        formatter_class=argparse.RawTextHelpFormatter
+        formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("input_dir", help="Path to the directory containing ALTO XML files to process.")
     parser.add_argument("output_dir", help="Path to the directory where split files will be saved.")
@@ -127,7 +128,7 @@ def main():
 
     try:
         for filename in sorted(os.listdir(args.input_dir)):
-            if filename.lower().endswith('.xml'):
+            if filename.lower().endswith(".xml"):
                 input_file_path = os.path.join(args.input_dir, filename)
                 print(f"Processing '{filename}'...")
                 _total_inputs += 1

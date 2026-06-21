@@ -37,7 +37,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from atrium_paradata import merge_run_paradata
 
@@ -45,18 +45,18 @@ CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
 
 # method -> (script, [EXTRACT] output-dir key, default output dir)
 EXTRACT_METHODS = {
-    "alto-tools":   ("extract_ALTO_2_TXT.py",        "OUTPUT_TXT",     "./data_samples/PAGE_TXT"),
-    "layoutreader": ("extract_LytRdr_ALTO_2_TXT.py", "OUTPUT_TXT_LR",  "./data_samples/PAGE_TXT_LR"),
-    "glm":          ("extract_LLM_ALTO_2_TXT.py",    "OUTPUT_TXT_LLM", "./data_samples/PAGE_TXT_LLM"),
+    "alto-tools": ("extract_ALTO_2_TXT.py", "OUTPUT_TXT", "./data_samples/PAGE_TXT"),
+    "layoutreader": ("extract_LytRdr_ALTO_2_TXT.py", "OUTPUT_TXT_LR", "./data_samples/PAGE_TXT_LR"),
+    "glm": ("extract_LLM_ALTO_2_TXT.py", "OUTPUT_TXT_LLM", "./data_samples/PAGE_TXT_LLM"),
 }
 
 _DEFAULTS = {
-    "method":        "layoutreader",
-    "input_dir":     "data_samples/ALTO",
+    "method": "layoutreader",
+    "input_dir": "data_samples/ALTO",
     "page_alto_dir": "data_samples/PAGE_ALTO",
-    "skip_split":    False,
-    "paradata_dir":  "paradata",
-    "input_csv":     "test_alto_stats.csv",
+    "skip_split": False,
+    "paradata_dir": "paradata",
+    "input_csv": "test_alto_stats.csv",
 }
 
 
@@ -88,24 +88,16 @@ def _resolve_extract_outdir(method: str, cfg: configparser.ConfigParser) -> str:
 
 
 def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
-    method = (args.method or _cfg_get(cfg, "PIPELINE", "METHOD", _DEFAULTS["method"]))
+    method = args.method or _cfg_get(cfg, "PIPELINE", "METHOD", _DEFAULTS["method"])
     method = method.strip()
     if method not in EXTRACT_METHODS:
-        raise SystemExit(
-            f"Unknown extraction method '{method}'. "
-            f"Choose one of: {', '.join(EXTRACT_METHODS)}."
-        )
+        raise SystemExit(f"Unknown extraction method '{method}'. Choose one of: {', '.join(EXTRACT_METHODS)}.")
 
-    input_dir = (args.input_dir
-                 or _cfg_get(cfg, "PIPELINE", "INPUT_DIR", _DEFAULTS["input_dir"]))
-    page_alto = (args.page_alto_dir
-                 or _cfg_get(cfg, "PIPELINE", "PAGE_ALTO_DIR", _DEFAULTS["page_alto_dir"]))
-    paradata_dir = (args.paradata_dir
-                    or _cfg_get(cfg, "PIPELINE", "PARADATA_DIR", _DEFAULTS["paradata_dir"]))
-    input_csv = (args.input_csv
-                 or _cfg_get(cfg, "EXTRACT", "INPUT_CSV", _DEFAULTS["input_csv"]))
-    skip_split = args.skip_split or _cfg_getbool(cfg, "PIPELINE", "SKIP_SPLIT",
-                                                 _DEFAULTS["skip_split"])
+    input_dir = args.input_dir or _cfg_get(cfg, "PIPELINE", "INPUT_DIR", _DEFAULTS["input_dir"])
+    page_alto = args.page_alto_dir or _cfg_get(cfg, "PIPELINE", "PAGE_ALTO_DIR", _DEFAULTS["page_alto_dir"])
+    paradata_dir = args.paradata_dir or _cfg_get(cfg, "PIPELINE", "PARADATA_DIR", _DEFAULTS["paradata_dir"])
+    input_csv = args.input_csv or _cfg_get(cfg, "EXTRACT", "INPUT_CSV", _DEFAULTS["input_csv"])
+    skip_split = args.skip_split or _cfg_getbool(cfg, "PIPELINE", "SKIP_SPLIT", _DEFAULTS["skip_split"])
 
     return {
         "method": method,
@@ -126,7 +118,7 @@ def _snapshot(paradata_dir: Path) -> set:
 
 def _run_stage(name: str, cmd: List[str], paradata_dir: Path) -> List[str]:
     """Run one stage as a subprocess; return NEW paradata JSON paths it produced."""
-    print(f"\n{'='*78}\n> STAGE: {name}\n  $ {' '.join(cmd)}\n{'='*78}", flush=True)
+    print(f"\n{'=' * 78}\n> STAGE: {name}\n  $ {' '.join(cmd)}\n{'=' * 78}", flush=True)
 
     before = _snapshot(paradata_dir)
     time.sleep(1.1)  # run_id has 1-second resolution; avoid collisions
@@ -137,8 +129,7 @@ def _run_stage(name: str, cmd: List[str], paradata_dir: Path) -> List[str]:
     after = _snapshot(paradata_dir)
     new = sorted(after - before)
     new_paths = [str(paradata_dir / n) for n in new]
-    print(f"  -> paradata: {', '.join(new)}" if new_paths
-          else "  -> (no paradata emitted by this stage)")
+    print(f"  -> paradata: {', '.join(new)}" if new_paths else "  -> (no paradata emitted by this stage)")
     return new_paths
 
 
@@ -148,32 +139,41 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
 
     plan: List[Dict] = []
     if not settings["skip_split"]:
-        plan.append({
-            "name": "1. page_split (ALTO -> PAGE_ALTO)",
-            "cmd": [py, "page_split.py", settings["input_dir"], settings["page_alto_dir"]],
-            "logged": False,
-        })
-    plan.append({
-        "name": "2. alto_stats_create (PAGE_ALTO -> stats.csv)",
-        "cmd": [py, "alto_stats_create.py", settings["page_alto_dir"],
-                "-o", settings["input_csv"]],
-        "logged": True,
-    })
-    plan.append({
-        "name": f"3. extract text [{settings['method']}] (stats.csv -> {settings['text_dir']})",
-        "cmd": [py, extract_script],
-        "logged": True,
-    })
-    plan.append({
-        "name": "4. langID_classify (PAGE_TXT* -> DOC_LINE_CATEG)",
-        "cmd": [py, "langID_classify.py"],
-        "logged": True,
-    })
-    plan.append({
-        "name": "5. langID_aggregate_STAT (DOC_LINE_CATEG -> DOC_LINE_STATS)",
-        "cmd": [py, "langID_aggregate_STAT.py", "--config", config_path],
-        "logged": True,
-    })
+        plan.append(
+            {
+                "name": "1. page_split (ALTO -> PAGE_ALTO)",
+                "cmd": [py, "page_split.py", settings["input_dir"], settings["page_alto_dir"]],
+                "logged": False,
+            }
+        )
+    plan.append(
+        {
+            "name": "2. alto_stats_create (PAGE_ALTO -> stats.csv)",
+            "cmd": [py, "alto_stats_create.py", settings["page_alto_dir"], "-o", settings["input_csv"]],
+            "logged": True,
+        }
+    )
+    plan.append(
+        {
+            "name": f"3. extract text [{settings['method']}] (stats.csv -> {settings['text_dir']})",
+            "cmd": [py, extract_script],
+            "logged": True,
+        }
+    )
+    plan.append(
+        {
+            "name": "4. langID_classify (PAGE_TXT* -> DOC_LINE_CATEG)",
+            "cmd": [py, "langID_classify.py"],
+            "logged": True,
+        }
+    )
+    plan.append(
+        {
+            "name": "5. langID_aggregate_STAT (DOC_LINE_CATEG -> DOC_LINE_STATS)",
+            "cmd": [py, "langID_aggregate_STAT.py", "--config", config_path],
+            "logged": True,
+        }
+    )
     return plan
 
 
@@ -182,25 +182,28 @@ def main() -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--config", default=CONFIG_PATH,
-                    help=f"Config file to read settings from (default: {CONFIG_PATH}).")
-    ap.add_argument("--method", choices=list(EXTRACT_METHODS), default=None,
-                    help="Override the extraction backend ([PIPELINE].METHOD; default layoutreader).")
-    ap.add_argument("--input-dir", default=None,
-                    help="Override [PIPELINE].INPUT_DIR (document-level ALTO XMLs).")
-    ap.add_argument("--page-alto-dir", default=None,
-                    help="Override [PIPELINE].PAGE_ALTO_DIR (per-page ALTO dir).")
-    ap.add_argument("--input-csv", default=None,
-                    help="Override [EXTRACT].INPUT_CSV (page-stats CSV).")
-    ap.add_argument("--skip-split", action="store_true",
-                    help="Force-skip page_split (also settable via [PIPELINE].SKIP_SPLIT).")
-    ap.add_argument("--paradata-dir", default=None,
-                    help="Override [PIPELINE].PARADATA_DIR.")
-    ap.add_argument("--summary-out", default=None,
-                    help="Path for the merged run summary "
-                         "(default: <paradata-dir>/<run_id>_pipeline-run.json).")
-    ap.add_argument("--dry-run", action="store_true",
-                    help="Print the resolved plan without running anything.")
+    ap.add_argument(
+        "--config", default=CONFIG_PATH, help=f"Config file to read settings from (default: {CONFIG_PATH})."
+    )
+    ap.add_argument(
+        "--method",
+        choices=list(EXTRACT_METHODS),
+        default=None,
+        help="Override the extraction backend ([PIPELINE].METHOD; default layoutreader).",
+    )
+    ap.add_argument("--input-dir", default=None, help="Override [PIPELINE].INPUT_DIR (document-level ALTO XMLs).")
+    ap.add_argument("--page-alto-dir", default=None, help="Override [PIPELINE].PAGE_ALTO_DIR (per-page ALTO dir).")
+    ap.add_argument("--input-csv", default=None, help="Override [EXTRACT].INPUT_CSV (page-stats CSV).")
+    ap.add_argument(
+        "--skip-split", action="store_true", help="Force-skip page_split (also settable via [PIPELINE].SKIP_SPLIT)."
+    )
+    ap.add_argument("--paradata-dir", default=None, help="Override [PIPELINE].PARADATA_DIR.")
+    ap.add_argument(
+        "--summary-out",
+        default=None,
+        help="Path for the merged run summary (default: <paradata-dir>/<run_id>_pipeline-run.json).",
+    )
+    ap.add_argument("--dry-run", action="store_true", help="Print the resolved plan without running anything.")
     args = ap.parse_args()
 
     config_path = args.config
@@ -222,10 +225,12 @@ def main() -> int:
     for stage in plan:
         tag = "[paradata]" if stage["logged"] else "[no log]  "
         print(f"  {tag} {stage['name']}")
-    print(f"Resolved settings: input_dir={settings['input_dir']} "
-          f"page_alto_dir={settings['page_alto_dir']} input_csv={settings['input_csv']} "
-          f"text_dir={settings['text_dir']} "
-          f"skip_split={settings['skip_split']} paradata_dir={settings['paradata_dir']}")
+    print(
+        f"Resolved settings: input_dir={settings['input_dir']} "
+        f"page_alto_dir={settings['page_alto_dir']} input_csv={settings['input_csv']} "
+        f"text_dir={settings['text_dir']} "
+        f"skip_split={settings['skip_split']} paradata_dir={settings['paradata_dir']}"
+    )
 
     if args.dry_run:
         print("\nDry run - nothing executed.")
@@ -256,12 +261,12 @@ def main() -> int:
     )
 
     data = json.loads(Path(merged).read_text(encoding="utf-8"))
-    print(f"\n{'='*78}\n> PIPELINE COMPLETE - merged {data['stage_count']} logged stage(s)")
+    print(f"\n{'=' * 78}\n> PIPELINE COMPLETE - merged {data['stage_count']} logged stage(s)")
     print(f"  Effective output license : {data['license']}  ({data['license_url']})")
     fmts = ", ".join(f"{k}x{v}" for k, v in data["intermediate_formats"].items()) or "-"
     print(f"  Intermediate formats     : {fmts}")
     print(f"  Total duration           : {data['total_duration_seconds']} s")
-    print(f"  Run summary              : {merged}\n{'='*78}")
+    print(f"  Run summary              : {merged}\n{'=' * 78}")
     return 0
 
 

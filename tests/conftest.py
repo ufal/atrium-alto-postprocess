@@ -5,6 +5,7 @@ Shared pytest fixtures for the atrium-alto-postprocess test suite.
 
 Nothing here requires ML models, GPU, or network access.
 """
+
 from __future__ import annotations
 
 import sys

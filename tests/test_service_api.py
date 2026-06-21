@@ -1,6 +1,7 @@
-import pytest
 from unittest.mock import patch
+
 from fastapi.testclient import TestClient
+
 from service.text_api import app
 
 client = TestClient(app)
@@ -20,7 +21,7 @@ def test_process_text_auto_routing(mock_process):
     """Ensure text uploads correctly route to the text_manager text processor."""
     mock_process.return_value = {
         "type": "plain_text",
-        "cleaned_lines": [{"line_num": 1, "text": "Mocked Line", "category": "Clear"}]
+        "cleaned_lines": [{"line_num": 1, "text": "Mocked Line", "category": "Clear"}],
     }
 
     content = b"Mock line content"

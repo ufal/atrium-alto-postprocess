@@ -1,9 +1,11 @@
 """
 Tests for the run_pipeline.py orchestrator configuration precedence.
 """
+
 import configparser
 from argparse import Namespace
-from run_pipeline import resolve_settings, _resolve_extract_outdir
+
+from run_pipeline import _resolve_extract_outdir, resolve_settings
 
 
 def test_resolve_extract_outdir():
@@ -27,7 +29,7 @@ def test_resolve_settings_cli_precedence():
         page_alto_dir="cli/page_alto",
         input_csv="cli/input.csv",
         skip_split=True,  # CLI overrides config's "False"
-        paradata_dir="cli/paradata"
+        paradata_dir="cli/paradata",
     )
 
     settings = resolve_settings(args, cfg)
@@ -39,22 +41,22 @@ def test_resolve_settings_cli_precedence():
 def test_resolve_settings_config_fallback():
     """Missing CLI args should safely fall back to the config, then defaults."""
     cfg = configparser.ConfigParser()
-    cfg.read_dict({
-        "PIPELINE": {
-            "METHOD": "glm",
-            "INPUT_DIR": "cfg/input",
-            "PAGE_ALTO_DIR": "cfg/page",
-            "PARADATA_DIR": "cfg/para",
-            "SKIP_SPLIT": "True"
-        },
-        "EXTRACT": {
-            "INPUT_CSV": "cfg/stats.csv",
-            "OUTPUT_TXT_LLM": "cfg/out_llm"
+    cfg.read_dict(
+        {
+            "PIPELINE": {
+                "METHOD": "glm",
+                "INPUT_DIR": "cfg/input",
+                "PAGE_ALTO_DIR": "cfg/page",
+                "PARADATA_DIR": "cfg/para",
+                "SKIP_SPLIT": "True",
+            },
+            "EXTRACT": {"INPUT_CSV": "cfg/stats.csv", "OUTPUT_TXT_LLM": "cfg/out_llm"},
         }
-    })
+    )
 
-    args = Namespace(method=None, input_dir=None, page_alto_dir=None,
-                     input_csv=None, skip_split=False, paradata_dir=None)
+    args = Namespace(
+        method=None, input_dir=None, page_alto_dir=None, input_csv=None, skip_split=False, paradata_dir=None
+    )
 
     settings = resolve_settings(args, cfg)
     assert settings["method"] == "glm"

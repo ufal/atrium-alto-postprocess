@@ -76,78 +76,118 @@ def _sum_metrics(df, STANDARD_COLS):
     if df.empty:
         return pd.DataFrame()
 
-    valid_lines = df[df['categ'].isin(["Clear", "Noisy"])].copy()
+    valid_lines = df[df["categ"].isin(["Clear", "Noisy"])].copy()
 
-    cat_counts = df.groupby(['file', 'page_num', 'categ']).size().unstack(fill_value=0).reset_index()
+    cat_counts = df.groupby(["file", "page_num", "categ"]).size().unstack(fill_value=0).reset_index()
     for col in STANDARD_COLS:
         if col not in cat_counts.columns:
             cat_counts[col] = 0
 
     if valid_lines.empty:
-        stats = df[['file', 'page_num']].drop_duplicates().copy()
-        for col in ['total_word_count', 'total_char_count']:
+        stats = df[["file", "page_num"]].drop_duplicates().copy()
+        for col in ["total_word_count", "total_char_count"]:
             stats[col] = 0
-        for col in ['avg_quality_score', 'avg_word_weird', 'avg_lang_score',
-                    'avg_perplex', 'avg_vowel_ratio', 'avg_rot_ratio', 'ch_ratio']:
-            stats[col] = float('nan')
-        stats['main_lang'] = "None"
+        for col in [
+            "avg_quality_score",
+            "avg_word_weird",
+            "avg_lang_score",
+            "avg_perplex",
+            "avg_vowel_ratio",
+            "avg_rot_ratio",
+            "ch_ratio",
+        ]:
+            stats[col] = float("nan")
+        stats["main_lang"] = "None"
 
-        final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
-        final_page_df['num_lines'] = final_page_df[STANDARD_COLS].sum(axis=1)
-        ordered_cols = ['file', 'page_num', 'num_lines',
-                        'Clear', 'Noisy', 'Trash', 'Non-text', 'Empty',
-                        'total_word_count', 'total_char_count',
-                        'avg_quality_score', 'avg_word_weird', 'avg_lang_score',
-                        'avg_perplex', 'avg_vowel_ratio', 'avg_rot_ratio',
-                        'ch_ratio', 'main_lang']
+        final_page_df = pd.merge(cat_counts, stats, on=["file", "page_num"], how="left")
+        final_page_df["num_lines"] = final_page_df[STANDARD_COLS].sum(axis=1)
+        ordered_cols = [
+            "file",
+            "page_num",
+            "num_lines",
+            "Clear",
+            "Noisy",
+            "Trash",
+            "Non-text",
+            "Empty",
+            "total_word_count",
+            "total_char_count",
+            "avg_quality_score",
+            "avg_word_weird",
+            "avg_lang_score",
+            "avg_perplex",
+            "avg_vowel_ratio",
+            "avg_rot_ratio",
+            "ch_ratio",
+            "main_lang",
+        ]
         return final_page_df[ordered_cols]
 
-    if 'caps_header' in valid_lines.columns:
-        valid_lines['caps_header'] = valid_lines['caps_header'].map(
-            {'True': 1.0, 'False': 0.0, True: 1.0, False: 0.0}
-        ).astype(float)
+    if "caps_header" in valid_lines.columns:
+        valid_lines["caps_header"] = (
+            valid_lines["caps_header"].map({"True": 1.0, "False": 0.0, True: 1.0, False: 0.0}).astype(float)
+        )
 
-    stats = valid_lines.groupby(['file', 'page_num']).agg(
-        total_word_count=('word_count', 'sum'),
-        total_char_count=('char_count', 'sum'),
-        avg_quality_score=('quality_score', 'mean'),
-        avg_word_weird=('word_weird', 'mean'),
-        avg_lang_score=('lang_score', 'mean'),
-        avg_perplex=('perplex', 'mean'),
-        # avg_symbol=('symbol', 'mean'),
-        avg_vowel_ratio=('vowel_ratio', 'mean'),
-        avg_rot_ratio=('rot_ratio', 'mean')
-    ).reset_index()
+    stats = (
+        valid_lines.groupby(["file", "page_num"])
+        .agg(
+            total_word_count=("word_count", "sum"),
+            total_char_count=("char_count", "sum"),
+            avg_quality_score=("quality_score", "mean"),
+            avg_word_weird=("word_weird", "mean"),
+            avg_lang_score=("lang_score", "mean"),
+            avg_perplex=("perplex", "mean"),
+            # avg_symbol=('symbol', 'mean'),
+            avg_vowel_ratio=("vowel_ratio", "mean"),
+            avg_rot_ratio=("rot_ratio", "mean"),
+        )
+        .reset_index()
+    )
 
-    if 'caps_header' in valid_lines.columns:
-        ch_stats = valid_lines.groupby(['file', 'page_num'])['caps_header'].mean().reset_index(name='ch_ratio')
-        stats = pd.merge(stats, ch_stats, on=['file', 'page_num'], how='left')
+    if "caps_header" in valid_lines.columns:
+        ch_stats = valid_lines.groupby(["file", "page_num"])["caps_header"].mean().reset_index(name="ch_ratio")
+        stats = pd.merge(stats, ch_stats, on=["file", "page_num"], how="left")
     else:
-        stats['ch_ratio'] = 0.0
+        stats["ch_ratio"] = 0.0
 
-    if 'lang' in valid_lines.columns:
+    if "lang" in valid_lines.columns:
+
         def mode_lang(x):
             return x.mode().iloc[0] if not x.empty else "None"
 
-        lang_stats = valid_lines.groupby(['file', 'page_num'])['lang'].apply(mode_lang).reset_index(name='main_lang')
-        stats = pd.merge(stats, lang_stats, on=['file', 'page_num'], how='left')
+        lang_stats = valid_lines.groupby(["file", "page_num"])["lang"].apply(mode_lang).reset_index(name="main_lang")
+        stats = pd.merge(stats, lang_stats, on=["file", "page_num"], how="left")
     else:
-        stats['main_lang'] = "None"
+        stats["main_lang"] = "None"
 
-    final_page_df = pd.merge(cat_counts, stats, on=['file', 'page_num'], how='left')
+    final_page_df = pd.merge(cat_counts, stats, on=["file", "page_num"], how="left")
 
-    for count_col in ['total_word_count', 'total_char_count', 'word_count', 'char_count']:
+    for count_col in ["total_word_count", "total_char_count", "word_count", "char_count"]:
         if count_col in final_page_df.columns:
             final_page_df[count_col] = final_page_df[count_col].fillna(0).astype(int)
 
-    final_page_df['num_lines'] = final_page_df[STANDARD_COLS].sum(axis=1)
+    final_page_df["num_lines"] = final_page_df[STANDARD_COLS].sum(axis=1)
 
-    ordered_cols = ['file', 'page_num', 'num_lines',
-                    'Clear', 'Noisy', 'Trash', 'Non-text', 'Empty',
-                    'total_word_count', 'total_char_count',
-                    'avg_quality_score', 'avg_word_weird', 'avg_lang_score',
-                    'avg_perplex', 'avg_vowel_ratio', 'avg_rot_ratio',
-                    'ch_ratio', 'main_lang']
+    ordered_cols = [
+        "file",
+        "page_num",
+        "num_lines",
+        "Clear",
+        "Noisy",
+        "Trash",
+        "Non-text",
+        "Empty",
+        "total_word_count",
+        "total_char_count",
+        "avg_quality_score",
+        "avg_word_weird",
+        "avg_lang_score",
+        "avg_perplex",
+        "avg_vowel_ratio",
+        "avg_rot_ratio",
+        "ch_ratio",
+        "main_lang",
+    ]
     return final_page_df[ordered_cols]
 
 
@@ -155,21 +195,21 @@ def process_csv_file(file_path, STANDARD_COLS):
     """Reads a single CSV file and returns aggregated page metrics."""
     try:
         dtype_map = {
-            'split_ws': str,
-            'split_we': str,
-            'word_count': 'float64',
-            'char_count': 'float64',
-            'quality_score': 'float64',
-            'word_weird': 'float64',
-            'lang_score': 'float64',
-            'perplex': 'float64',
-            'garbage_density': 'float64',
+            "split_ws": str,
+            "split_we": str,
+            "word_count": "float64",
+            "char_count": "float64",
+            "quality_score": "float64",
+            "word_weird": "float64",
+            "lang_score": "float64",
+            "perplex": "float64",
+            "garbage_density": "float64",
             # 'symbol': 'float64',
-            'vowel_ratio': 'float64',
-            'rot_ratio': 'float64',
+            "vowel_ratio": "float64",
+            "rot_ratio": "float64",
         }
 
-        df = pd.read_csv(file_path, dtype=dtype_map, on_bad_lines='skip')
+        df = pd.read_csv(file_path, dtype=dtype_map, on_bad_lines="skip")
 
         if df.empty:
             return None
@@ -235,7 +275,7 @@ def main():
                     elif result is not None and not result.empty:
                         all_page_stats.append(result)
                         doc_out = output_dir / f"stats_{original_file.stem}.csv"
-                        result.to_csv(doc_out, index=False, encoding='utf-8')
+                        result.to_csv(doc_out, index=False, encoding="utf-8")
                         logger.log_success("csv")
                     else:
                         logger.log_skip(original_file.name, "Empty or invalid CSV structure")
@@ -247,10 +287,10 @@ def main():
             print("Consolidating final page stats ...")
             final_df = pd.concat(all_page_stats, ignore_index=True)
 
-            if 'file' in final_df.columns and 'page_num' in final_df.columns:
+            if "file" in final_df.columns and "page_num" in final_df.columns:
                 final_df.sort_values(by=["file", "page_num"], inplace=True)
 
-            final_df.to_csv(output_stats_path, index=False, encoding='utf-8')
+            final_df.to_csv(output_stats_path, index=False, encoding="utf-8")
             print(f"Done. Final stats saved to {output_stats_path}")
         else:
             print("No valid page stats could be aggregated.")

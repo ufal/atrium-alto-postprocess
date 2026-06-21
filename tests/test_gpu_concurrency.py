@@ -2,8 +2,10 @@
 tests/test_gpu_concurrency.py
 Verifies the concurrency guards and GPU crash resilience for the orchestrator.
 """
-import pytest
+
 import multiprocessing as mp
+
+import pytest
 
 from langID_classify import process_and_write_batch_cpu, worker_models
 
@@ -26,7 +28,7 @@ def test_cpu_worker_aborts_on_gpu_dead_signal():
     gpu_dead.set()
 
     # FIX: Inject the dummy model to prevent KeyError
-    worker_models['ft'] = DummyFT()
+    worker_models["ft"] = DummyFT()
 
     # The CPU worker should intercept the event and immediately throw a RuntimeError
     with pytest.raises(RuntimeError, match="GPU inference worker is down"):
@@ -39,6 +41,5 @@ def test_cpu_worker_aborts_on_gpu_dead_signal():
             result_dict=result_dict,
             expected_langs=["ces"],
             trusted_langs=["deu"],
-            gpu_dead=gpu_dead
+            gpu_dead=gpu_dead,
         )
-

@@ -29,27 +29,62 @@ values. The page aggregator reads strictly by column NAME, so this reorder is
 safe; every aggregate-consumed name is retained verbatim.
 """
 
+import configparser
+import csv
+import multiprocessing as mp
 import os
+import queue
+import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from itertools import groupby
+from pathlib import Path
+
 import pandas as pd
 import torch
-from pathlib import Path
-import csv
-import sys
-import time
-import queue
-from itertools import groupby
-import configparser
-import multiprocessing as mp
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
-from text_util_langID import *
+from atrium_paradata import ParadataLogger
+from text_util_langID import (
+    _TRUSTED_FOREIGN_LANG_BASES,
+    CATEG_TRASH_SCORE_MAX,
+    COMMON_LANGS,
+    INVERTED_PAGE_MAJORITY,
+    INVERTED_RUN_MIN,
+    LANG_SCORE_ROUGH,
+    PERPLEXITY_THRESHOLD_MAX,
+    PPL_INVERTED_MIN,
+    ROT_HIGH_LANG_CONF,
+    ROT_RATIO_INVERTED_MIN,
+    SHORT_PPL_CAP,
+    TRASH_REASONS,
+    _lang_base,
+    analyze_rotation_signals,
+    calculate_perplexity_batch,
+    categorize_line,
+    compute_garbage_density,
+    compute_quality_score,
+    compute_rotatable_ratio,
+    compute_valid_ratio,
+    compute_vowel_ratio,
+    compute_word_weird_ratio,
+    detect_fused_words,
+    detect_gibberish_words,
+    detect_letter_digit_letter,
+    detect_mid_uppercase,
+    detect_repeated_chars,
+    detect_wx_words,
+    has_cz_diacs,
+    is_all_caps_line,
+    parse_line_splits,
+    pre_filter_line,
+    remap_lang,
+    score_words_in_line,
+)
+
 # `from ... import *` skips underscore-prefixed names, so _lang_base (used by the
 # language-remapping logic below) must be imported explicitly. has_cz_diacs is
 # imported explicitly too so the extracted page-postprocess helper can reference
 # it by name (#3 A3).
-from text_util_langID import _lang_base, has_cz_diacs, TRASH_REASONS
-from atrium_paradata import ParadataLogger
 
 # Hard ceiling on how long a CPU worker waits for a batch's perplexity before
 # declaring the GPU worker unresponsive (#6). Generous so legitimate large
@@ -61,21 +96,43 @@ from atrium_paradata import ParadataLogger
 # and the fast-track Empty/Non-text path cannot drift. `categ`/`quality_score`
 # lead; the aggregator reads by NAME so column ORDER is free to change.
 CSV_HEADER = [
-    "categ", "quality_score",
-    "file", "page_num", "line_num",
-    "text", "original_text",
-    "split_ws", "split_we",
-    "lang", "lang_score", "original_lang", "orig_lang_score",
+    "categ",
+    "quality_score",
+    "file",
+    "page_num",
+    "line_num",
+    "text",
+    "original_text",
+    "split_ws",
+    "split_we",
+    "lang",
+    "lang_score",
+    "original_lang",
+    "orig_lang_score",
     "perplex",
-    "word_count", "char_count",
+    "word_count",
+    "char_count",
     "garbage_density",
-    "upper", "repeated",
-    "ldl_fuses", "fused_words", "gibberish", "weird_wx",
-    "word_weird", "vowel_ratio", "rot_ratio",
+    "upper",
+    "repeated",
+    "ldl_fuses",
+    "fused_words",
+    "gibberish",
+    "weird_wx",
+    "word_weird",
+    "vowel_ratio",
+    "rot_ratio",
     "caps_header",
-    "allcaps_novowel", "lowppl_clear", "cleanprose_clear",
-    "trash_threshold", "noisy_threshold", "clear_threshold",
-    "pp_dedup", "pp_surrounded_trash", "pp_inverted_run", "pp_page_context",
+    "allcaps_novowel",
+    "lowppl_clear",
+    "cleanprose_clear",
+    "trash_threshold",
+    "noisy_threshold",
+    "clear_threshold",
+    "pp_dedup",
+    "pp_surrounded_trash",
+    "pp_inverted_run",
+    "pp_page_context",
 ]
 
 
@@ -128,7 +185,7 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
             continue
         except Exception as e:
             print(f"[GPU Engine Error] Processing batch: {e}")
-            if 'msg' in locals() and msg != "STOP":
+            if "msg" in locals() and msg != "STOP":
                 result_dict[msg[0]] = [0.0] * len(msg[1])
 
 
@@ -138,7 +195,8 @@ worker_models = {}
 def init_cpu_worker():
     """Initializes the CPU-bound FastText model once per spawned process."""
     import fasttext
-    worker_models['ft'] = fasttext.load_model("lid.176.bin")
+
+    worker_models["ft"] = fasttext.load_model("lid.176.bin")
 
 
 def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
@@ -146,7 +204,7 @@ def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
     out_path = output_dir / f"{file_id}.csv"
     file_exists = out_path.exists()
 
-    with open(out_path, 'a', encoding='utf-8', newline='') as f:
+    with open(out_path, "a", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(CSV_HEADER)
@@ -158,32 +216,37 @@ def _row_from_dict(d: dict) -> list:
     return [d[c] for c in CSV_HEADER]
 
 
-def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir: Path,
-                                task_queue: mp.Queue, result_dict: dict, expected_langs: list = None,
-                                trusted_langs: list = None, gpu_dead=None, gpu_time_out=600.0):
+def process_and_write_batch_cpu(
+    batch_id: str,
+    lines: list,
+    meta: list,
+    out_dir: Path,
+    task_queue: mp.Queue,
+    result_dict: dict,
+    expected_langs: list = None,
+    trusted_langs: list = None,
+    gpu_dead=None,
+    gpu_time_out=600.0,
+):
     """Evaluates heuristical bounds, queries FastText, and fetches PPL to finalize scores."""
-    ft = worker_models['ft']
+    ft = worker_models["ft"]
 
     task_queue.put((batch_id, lines))
 
     lines_lower = [line.lower() for line in lines]
     labels, scores = ft.predict(lines_lower, k=1)
-    langs = [l[0].replace("__label__", "") for l in labels]
+    langs = [lbl[0].replace("__label__", "") for lbl in labels]
     scores = [s[0] for s in scores]
 
     # FastText returns ISO 639-3 codes with a script suffix (e.g. "deu_Latn").
     # The expected/trusted lists are bare base codes — compare on base only.
-    _known_lang_bases = frozenset(
-        _lang_base(l) for l in ((trusted_langs or []) + (expected_langs or []))
-    )
+    _known_lang_bases = frozenset(_lang_base(lng) for lng in ((trusted_langs or []) + (expected_langs or [])))
 
     # (#6) Bounded wait: abort if the GPU worker died or never answers.
     waited = 0.0
     while batch_id not in result_dict:
         if gpu_dead is not None and gpu_dead.is_set():
-            raise RuntimeError(
-                f"GPU inference worker is down; cannot score batch {batch_id}"
-            )
+            raise RuntimeError(f"GPU inference worker is down; cannot score batch {batch_id}")
         time.sleep(0.01)
         waited += 0.01
         if waited >= gpu_time_out:
@@ -212,9 +275,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         # CAPPED at LANG_SCORE_REMAP / LANG_SCORE_REMAP_FAR. The stored lang/
         # lang_score reflect the remap; the ORIGINAL score still drives the
         # QS_WEIGHT_LANG component.
-        langs[i], scores[i] = remap_lang(
-            langs[i], scores[i], _known_lang_bases, expected_langs[0]
-        )
+        langs[i], scores[i] = remap_lang(langs[i], scores[i], _known_lang_bases, expected_langs[0])
 
         ppl_val = ppls[i]
 
@@ -267,7 +328,11 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         )
 
         categ, q_score, reason = categorize_line(
-            q_score, text_content, wc, vowel_ratio, ppl_val,
+            q_score,
+            text_content,
+            wc,
+            vowel_ratio,
+            ppl_val,
             weird_ratio=weird_ratio,
             return_reason=True,
             valid_word_ratio=valid_ratio,
@@ -327,8 +392,7 @@ def process_and_write_batch_cpu(batch_id: str, lines: list, meta: list, out_dir:
         write_rows_to_doc(out_dir, doc_id, list(group))
 
 
-def _fast_track_row(file_id, page_id, line_num, clean_text, original_text,
-                    split_ws, split_we, categ) -> list:
+def _fast_track_row(file_id, page_id, line_num, clean_text, original_text, split_ws, split_we, categ) -> list:
     """Build a dict-keyed CSV row for a pre-filtered Empty/Non-text line (#3)."""
     d = {
         "categ": categ,
@@ -403,7 +467,8 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
 
     # 1. header/footer dedup -> modal category
     text_modes = df.groupby("text", dropna=False)["categ"].transform(
-        lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
+        lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0]
+    )
     changed_by_dedup = df["categ"] != text_modes
     df["categ"] = text_modes
     if "pp_dedup" not in df.columns:
@@ -419,10 +484,12 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         prev2_cat = df["categ"].shift(2)
         next2_cat = df["categ"].shift(-2)
         surrounded_by_trash = (
-                (prev_cat == "Trash") & (next_cat == "Trash") &
-                (prev2_cat == "Trash") & (next2_cat == "Trash") &
-                (df["categ"] == "Noisy") &
-                (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
+            (prev_cat == "Trash")
+            & (next_cat == "Trash")
+            & (prev2_cat == "Trash")
+            & (next2_cat == "Trash")
+            & (df["categ"] == "Noisy")
+            & (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
         )
         df.loc[surrounded_by_trash, "categ"] = "Trash"
         df.loc[surrounded_by_trash, "pp_surrounded_trash"] = True
@@ -444,22 +511,27 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         clear_ratio = (page_scoreable["categ"] == "Clear").mean()
 
         # Determine ratio of document leaning towards trusted languages based strictly on origin
-        trusted_bases = set(["ces", "deu", "eng", "fra", "pol", "ita", "slk"])
-        is_trusted = page_scoreable["original_lang"].apply(lambda x: str(x).split("_")[0] in trusted_bases)
+        trusted_bases = frozenset().union(*[_TRUSTED_FOREIGN_LANG_BASES, COMMON_LANGS])
+        is_trusted = page_scoreable["original_lang"].apply(lambda x, tb=trusted_bases: str(x).split("_")[0] in tb)
+        # is_trusted = page_scoreable["original_lang"].apply(lambda x: str(x).split("_")[0] in trusted_bases)
         decent_lang_ratio = is_trusted.mean()
 
         # Symmetric Rule 1: Page is heavily garbage (Pull borderline Noisy down)
         if clear_ratio <= 0.05 and decent_lang_ratio < 0.50 and median_qs < 0.55:
             sus_idx = page_scoreable[
-                (page_scoreable["categ"] == "Noisy") & (page_scoreable["quality_score"].astype(float) < 0.80)].index
+                (page_scoreable["categ"] == "Noisy") & (page_scoreable["quality_score"].astype(float) < 0.80)
+            ].index
             if len(sus_idx) > 0:
                 df.loc[sus_idx, "categ"] = "Trash"
                 df.loc[sus_idx, "pp_page_context"] = True
 
         # Symmetric Rule 2: Page is predominantly clean (Promote edge-case recoverable Trash)
         elif clear_ratio > 0.60 and median_qs > 0.80:
-            sus_idx = page_scoreable[(page_scoreable["categ"] == "Trash") & (
-                        page_scoreable["quality_score"].astype(float) >= 0.45) & is_trusted].index
+            sus_idx = page_scoreable[
+                (page_scoreable["categ"] == "Trash")
+                & (page_scoreable["quality_score"].astype(float) >= 0.45)
+                & is_trusted
+            ].index
             if len(sus_idx) > 0:
                 df.loc[sus_idx, "categ"] = "Noisy"
                 df.loc[sus_idx, "pp_page_context"] = True
@@ -477,9 +549,9 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         high_lang_conf = candidates["lang_score"].astype(float) >= ROT_HIGH_LANG_CONF
 
         suspicious = (
-                (no_diacs & low_lang)
-                | (high_ppl & has_weird & ~high_lang_conf)
-                | (no_diacs & high_rot & high_ppl & ~high_lang_conf)  # (#3 Problem 1) rot arm
+            (no_diacs & low_lang)
+            | (high_ppl & has_weird & ~high_lang_conf)
+            | (no_diacs & high_rot & high_ppl & ~high_lang_conf)  # (#3 Problem 1) rot arm
         )
 
         # (#3 A3) Page-MAJORITY arm: a page that is mostly suspicious is an
@@ -490,8 +562,6 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
             df.loc[idx, "categ"] = "Trash"
             df.loc[idx, "pp_inverted_run"] = True
             continue
-
-
 
         # Otherwise fall back to the contiguous-run rule for mixed pages.
         run_len = 0
@@ -518,8 +588,21 @@ def process_document(task):
     Worker function executed by CPU pool.
     Processes a single document's groups, handles split words, queues to GPU, and saves CSV.
     """
-    (file_id, group, text_dir, output_dir, batch_size, task_queue, result_dict,
-     expected_langs, trusted_bases, gpu_dead) = task
+    (
+        file_id,
+        group,
+        text_dir,
+        output_dir,
+        batch_size,
+        task_queue,
+        result_dict,
+        expected_langs,
+        trusted_bases,
+        gpu_dead,
+        *_rest,
+    ) = task
+
+    gpu_timeout = _rest[0] if _rest else 600.0
 
     try:
         out_path = Path(output_dir) / f"{file_id}.csv"
@@ -569,62 +652,78 @@ def process_document(task):
 
                 if cat != "Process":
                     write_rows_to_doc(
-                        Path(output_dir), file_id,
-                        [_fast_track_row(file_id, page_id, i, clean_merged, merged_text,
-                                         current_split_ws, current_split_we, cat)]
+                        Path(output_dir),
+                        file_id,
+                        [
+                            _fast_track_row(
+                                file_id, page_id, i, clean_merged, merged_text, current_split_ws, current_split_we, cat
+                            )
+                        ],
                     )
                     continue
 
                 batch_lines.append(clean_merged)
-                batch_meta.append(
-                    (file_id, page_id, i, clean_merged, current_split_ws, current_split_we, merged_text)
-                )
+                batch_meta.append((file_id, page_id, i, clean_merged, current_split_ws, current_split_we, merged_text))
                 processed_count += 1
 
                 if len(batch_lines) >= batch_size:
                     b_id = f"{file_id}_{batch_counter}"
-                    process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue,
-                                                result_dict,
-                                                expected_langs, trusted_bases, gpu_dead=gpu_dead, gpu_time_out=GPU_WAIT_TIMEOUT)
+                    process_and_write_batch_cpu(
+                        b_id,
+                        batch_lines,
+                        batch_meta,
+                        Path(output_dir),
+                        task_queue,
+                        result_dict,
+                        expected_langs,
+                        trusted_bases,
+                        gpu_dead=gpu_dead,
+                        gpu_time_out=gpu_timeout,
+                    )
                     batch_lines.clear()
                     batch_meta.clear()
                     batch_counter += 1
 
         if batch_lines:
             b_id = f"{file_id}_{batch_counter}"
-            process_and_write_batch_cpu(b_id, batch_lines, batch_meta, Path(output_dir), task_queue, result_dict,
-                                        expected_langs, trusted_bases, gpu_dead=gpu_dead, gpu_time_out=GPU_WAIT_TIMEOUT)
+            process_and_write_batch_cpu(
+                b_id,
+                batch_lines,
+                batch_meta,
+                Path(output_dir),
+                task_queue,
+                result_dict,
+                expected_langs,
+                trusted_bases,
+                gpu_dead=gpu_dead,
+                gpu_time_out=gpu_timeout,
+            )
 
         if out_path.exists():
-            df = pd.read_csv(out_path, dtype={
-                "text": str,
-                "original_text": str,
-                "split_ws": str,
-                "split_we": str,
-                "lang": str,
-                "original_lang": str,
-                "categ": str,
-            })
+            df = pd.read_csv(
+                out_path,
+                dtype={
+                    "text": str,
+                    "original_text": str,
+                    "split_ws": str,
+                    "split_we": str,
+                    "lang": str,
+                    "original_lang": str,
+                    "categ": str,
+                },
+            )
 
             if not df.empty:
                 df = apply_document_postprocessing(df)
 
             # (#3.7) UTF-8 keeps Czech diacritics intact on the finalised file.
             df = df[CSV_HEADER]  # guard: write columns in canonical order
-            df.to_csv(out_path, index=False, encoding='utf-8')
+            df.to_csv(out_path, index=False, encoding="utf-8")
 
-        return {
-            "status": "success",
-            "file_id": file_id,
-            "lines": processed_count
-        }
+        return {"status": "success", "file_id": file_id, "lines": processed_count}
 
     except Exception as e:
-        return {
-            "status": "error",
-            "file_id": file_id,
-            "reason": str(e)
-        }
+        return {"status": "error", "file_id": file_id, "reason": str(e)}
 
 
 def main():
@@ -640,7 +739,7 @@ def main():
     OUTPUT_DIR = config.get("CLASSIFY", "OUTPUT_LINES_LOG")
     BATCH_SIZE = config.getint("CLASSIFY", "BATCH_SIZE")
     WORKERS_MAX = config.getint("CLASSIFY", "WORKERS_MAX", fallback=32)
-    GPU_WAIT_TIMEOUT = config.getint("CLASSIFY", "GPU_WAIT_TIMEOUT", fallback=600.0)
+    GPU_WAIT_TIMEOUT = config.getfloat("CLASSIFY", "GPU_WAIT_TIMEOUT", fallback=600.0)
 
     MODEL_NAME = config.get("CLASSIFY", "MODEL_NAME", fallback="Qwen/Qwen2.5-0.5B")
 
@@ -663,7 +762,7 @@ def main():
     print(f"[Main] Classifying text from: {TEXT_DIR}")
 
     df = pd.read_csv(INPUT_CSV)
-    sort_cols = (["file", "page", "line_order"] if "line_order" in df.columns else ["file", "page"])
+    sort_cols = ["file", "page", "line_order"] if "line_order" in df.columns else ["file", "page"]
     df = df.sort_values(by=sort_cols)
 
     manager = mp.Manager()
@@ -672,20 +771,32 @@ def main():
     gpu_dead = manager.Event()  # (#6) shared liveness signal for the GPU worker
 
     from transformers import AutoModelForCausalLM, AutoTokenizer
+
     print(f"[Main] Ensuring {MODEL_NAME} is cached...")
     AutoTokenizer.from_pretrained(MODEL_NAME)
     AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype="auto")
-    print(f"[Main] Cache OK.")
+    print("[Main] Cache OK.")
 
-    gpu_process = mp.Process(target=gpu_inference_worker,
-                             args=(task_queue, result_dict, MODEL_NAME, gpu_dead))
+    gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict, MODEL_NAME, gpu_dead))
     gpu_process.start()
 
     grouped_tasks = []
     for file_id, group in df.groupby("file"):
         grouped_tasks.append(
-            (str(file_id), group, TEXT_DIR, OUTPUT_DIR, BATCH_SIZE, task_queue, result_dict, EXPECTED_LANGS,
-             _TRUSTED_FOREIGN_LANG_BASES, gpu_dead))
+            (
+                str(file_id),
+                group,
+                TEXT_DIR,
+                OUTPUT_DIR,
+                BATCH_SIZE,
+                task_queue,
+                result_dict,
+                EXPECTED_LANGS,
+                _TRUSTED_FOREIGN_LANG_BASES,
+                gpu_dead,
+                GPU_WAIT_TIMEOUT,
+            )
+        )
 
     logger = ParadataLogger(
         program="langID-classify",
@@ -732,8 +843,7 @@ def main():
                         logger.log_success("csv")
                     elif status == "skipped":
                         # (#11) record resume-skips so paradata reflects real work
-                        logger.log_skip(result["file_id"],
-                                        result.get("reason", "output already exists (resume)"))
+                        logger.log_skip(result["file_id"], result.get("reason", "output already exists (resume)"))
                         tqdm.write(f"Skipped (already exists): {result['file_id']}")
                     else:
                         logger.log_skip(result["file_id"], result["reason"])
@@ -755,5 +865,5 @@ def main():
 
 
 if __name__ == "__main__":
-    mp.set_start_method('spawn', force=True)
+    mp.set_start_method("spawn", force=True)
     main()

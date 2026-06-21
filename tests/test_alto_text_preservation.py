@@ -21,9 +21,10 @@ Design notes
   duplicated prefix, so character multisets are conserved only on the
   non-hyphenated inputs. Hyphenation is covered separately by substring tests.
 """
+
+import glob
 import sys
 import types
-import glob
 import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
@@ -43,7 +44,6 @@ sys.modules.setdefault("v3", _v3)
 sys.modules.setdefault("v3.helpers", _v3h)
 
 from extract_LytRdr_ALTO_2_TXT import parse_alto_xml, post_process_text  # noqa: E402
-
 
 # ── Sample discovery & helpers ───────────────────────────────────────────────
 
@@ -129,16 +129,13 @@ def test_sample_alto_files_present():
 # parse_alto_xml — content preservation on real samples
 # ════════════════════════════════════════════════════════════════════════════
 class TestParseAltoContentPresence:
-
     @pytest.mark.parametrize("xml_path", SAMPLE_ALTO, ids=lambda p: Path(p).name)
     def test_every_string_content_present(self, xml_path):
         """Every <String CONTENT> value must survive as a substring of the output."""
         lines, _boxes, _dims = parse_alto_xml(xml_path)
         joined = "\n".join(lines)
         for content in _string_contents(xml_path):
-            assert content in joined, (
-                f"CONTENT {content!r} dropped from extracted text of {Path(xml_path).name}"
-            )
+            assert content in joined, f"CONTENT {content!r} dropped from extracted text of {Path(xml_path).name}"
 
     @pytest.mark.parametrize("xml_path", SAMPLE_ALTO, ids=lambda p: Path(p).name)
     def test_no_word_characters_lost(self, xml_path):
@@ -158,8 +155,7 @@ class TestParseAltoContentPresence:
         missing = in_chars - out_chars
 
         assert not missing, (
-            f"Characters DROPPED during extraction of {Path(xml_path).name}! "
-            f"Missing characters: {missing}"
+            f"Characters DROPPED during extraction of {Path(xml_path).name}! Missing characters: {missing}"
         )
 
     @pytest.mark.parametrize("xml_path", SAMPLE_ALTO, ids=lambda p: Path(p).name)
@@ -179,7 +175,6 @@ class TestParseAltoContentPresence:
 # parse_alto_xml — crafted edge cases
 # ════════════════════════════════════════════════════════════════════════════
 class TestParseAltoEdgeCases:
-
     def test_sp_elements_keep_words_separated(self, tmp_path):
         """An <SP> between two Strings must keep the words separated (no merge)."""
         body = (
@@ -222,17 +217,14 @@ class TestParseAltoEdgeCases:
         path = _write(tmp_path, "hyp.alto.xml", _alto_doc(body))
         lines, _b, _d = parse_alto_xml(path)
         assert len(lines) == 1
-        assert "za" in lines[0]          # original fragment retained
-        assert "zacatek" in lines[0]     # reconstructed full form retained
-        assert "{zacatek}" in lines[0]   # full form recorded in the {..} marker
+        assert "za" in lines[0]  # original fragment retained
+        assert "zacatek" in lines[0]  # reconstructed full form retained
+        assert "{zacatek}" in lines[0]  # full form recorded in the {..} marker
 
     def test_hyp_child_tag_appends_hyphen(self, tmp_path):
         """An explicit <HYP> child tag appends its CONTENT to the preceding String."""
         body = (
-            "<TextLine>"
-            '<String CONTENT="za" HEIGHT="30" WIDTH="50" VPOS="10" HPOS="10"/>'
-            '<HYP CONTENT="-"/>'
-            "</TextLine>"
+            '<TextLine><String CONTENT="za" HEIGHT="30" WIDTH="50" VPOS="10" HPOS="10"/><HYP CONTENT="-"/></TextLine>'
         )
         path = _write(tmp_path, "hypchild.alto.xml", _alto_doc(body))
         lines, _b, _d = parse_alto_xml(path)
@@ -278,7 +270,6 @@ class TestParseAltoEdgeCases:
 # post_process_text — only inserts whitespace, never drops/merges characters
 # ════════════════════════════════════════════════════════════════════════════
 class TestPostProcessText:
-
     def test_post_process_empty_returns_empty(self):
         assert post_process_text([], []) == ""
 
@@ -289,12 +280,10 @@ class TestPostProcessText:
     @pytest.mark.parametrize(
         "lines,boxes",
         [
-            (["abc", "def"], [[0, 0, 10, 10], [0, 20, 10, 30]]),                # normal flow
-            (["one", "two", "three"],
-             [[0, 0, 10, 10], [0, 200, 10, 230], [0, 240, 10, 270]]),          # big gap -> blank line
-            (["right", "left"], [[0, 100, 10, 130], [0, 0, 10, 30]]),          # upward jump -> column reset
-            (["Příkop", "naleziště", "kostra"],
-             [[0, 0, 10, 30], [0, 40, 10, 70], [0, 80, 10, 110]]),            # unicode
+            (["abc", "def"], [[0, 0, 10, 10], [0, 20, 10, 30]]),  # normal flow
+            (["one", "two", "three"], [[0, 0, 10, 10], [0, 200, 10, 230], [0, 240, 10, 270]]),  # big gap -> blank line
+            (["right", "left"], [[0, 100, 10, 130], [0, 0, 10, 30]]),  # upward jump -> column reset
+            (["Příkop", "naleziště", "kostra"], [[0, 0, 10, 30], [0, 40, 10, 70], [0, 80, 10, 110]]),  # unicode
         ],
     )
     def test_post_process_only_inserts_whitespace(self, lines, boxes):

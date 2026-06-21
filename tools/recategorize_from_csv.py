@@ -41,6 +41,7 @@ Caveats
   re-derive anything that depended on the live FastText label distribution beyond
   the single stored top-1 guess (which is all the production path used anyway).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -90,13 +91,14 @@ def _load_lang_config(config_path: str):
     """Resolve EXPECTED_LANGS / TRUSTED_FOREIGN_LANGS exactly as langID_classify.main."""
     config = configparser.ConfigParser()
     config.read(config_path)
-    expected = [s.strip() for s in
-                config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng").split(",")
-                if s.strip()]
-    trusted = [s.strip() for s in
-               config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS",
-                          fallback="deu,eng,fra,pol,ita").split(",")
-               if s.strip()]
+    expected = [
+        s.strip() for s in config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng").split(",") if s.strip()
+    ]
+    trusted = [
+        s.strip()
+        for s in config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback="deu,eng,fra,pol,ita").split(",")
+        if s.strip()
+    ]
     known_bases = frozenset(_lang_base(code) for code in (trusted + expected))
     return expected, known_bases
 
@@ -125,7 +127,9 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
 
     # (#3 A1) remap CAP on the frozen raw FastText guess.
     new_lang, new_score = remap_lang(
-        original_lang, original_lang_score, known_bases,
+        original_lang,
+        original_lang_score,
+        known_bases,
         expected_langs[0] if expected_langs else "ces",
     )
 
@@ -154,8 +158,12 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     valid_ratio = compute_valid_ratio(text_content)
 
     q_score = compute_quality_score(
-        valid_word_ratio=valid_ratio, perplexity=ppl_val, text_length=cc,
-        weird_ratio=weird_ratio, vowel_ratio=vowel_ratio, garbage_density=g_density,
+        valid_word_ratio=valid_ratio,
+        perplexity=ppl_val,
+        text_length=cc,
+        weird_ratio=weird_ratio,
+        vowel_ratio=vowel_ratio,
+        garbage_density=g_density,
         lang_score=original_lang_score,
         gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
         fused_ratio=fused_words / max(wc, 1),
@@ -164,9 +172,15 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
 
     # (#3 A2/B) post-cap score + gibberish flag into the categoriser.
     categ, q_score, reason = categorize_line(
-        q_score, text_content, wc, vowel_ratio, ppl_val,
-        weird_ratio=weird_ratio, return_reason=True,
-        valid_word_ratio=valid_ratio, lang_score=new_score,
+        q_score,
+        text_content,
+        wc,
+        vowel_ratio,
+        ppl_val,
+        weird_ratio=weird_ratio,
+        return_reason=True,
+        valid_word_ratio=valid_ratio,
+        lang_score=new_score,
         orig_lang_score=original_lang_score,
         gibberish_present=(gibb_count + wx_count) > 0,
         garbage_density=g_density,
@@ -175,25 +189,40 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     )
 
     out = dict(row)  # keep any columns we do not recompute
-    out.update({
-        "categ": categ, "quality_score": f"{q_score:.4f}",
-        "lang": new_lang, "lang_score": f"{new_score:.4f}",
-        "original_lang": original_lang, "orig_lang_score": f"{original_lang_score:.4f}",
-        "perplex": f"{ppl_val:.2f}", "word_count": wc, "char_count": cc,
-        "garbage_density": f"{g_density:.4f}", "upper": upper_count, "repeated": rep_count,
-        "ldl_fuses": fuse_count, "fused_words": fused_words, "gibberish": gibb_count,
-        "weird_wx": wx_count, "word_weird": f"{weird_ratio:.4f}",
-        "vowel_ratio": f"{vowel_ratio:.4f}", "rot_ratio": f"{rot_ratio:.4f}",
-        "caps_header": caps_header,
-        "allcaps_novowel": reason == "allcaps_novowel",
-        "lowppl_clear": reason == "lowppl_clear",
-        "cleanprose_clear": reason == "cleanprose_clear",
-        "trash_threshold": reason in TRASH_REASONS,
-        "noisy_threshold": reason == "noisy_threshold",
-        "clear_threshold": reason == "clear_threshold",
-        # post-pass flags are recomputed by apply_document_postprocessing below
-        "pp_dedup": False, "pp_surrounded_trash": False, "pp_inverted_run": False,
-    })
+    out.update(
+        {
+            "categ": categ,
+            "quality_score": f"{q_score:.4f}",
+            "lang": new_lang,
+            "lang_score": f"{new_score:.4f}",
+            "original_lang": original_lang,
+            "orig_lang_score": f"{original_lang_score:.4f}",
+            "perplex": f"{ppl_val:.2f}",
+            "word_count": wc,
+            "char_count": cc,
+            "garbage_density": f"{g_density:.4f}",
+            "upper": upper_count,
+            "repeated": rep_count,
+            "ldl_fuses": fuse_count,
+            "fused_words": fused_words,
+            "gibberish": gibb_count,
+            "weird_wx": wx_count,
+            "word_weird": f"{weird_ratio:.4f}",
+            "vowel_ratio": f"{vowel_ratio:.4f}",
+            "rot_ratio": f"{rot_ratio:.4f}",
+            "caps_header": caps_header,
+            "allcaps_novowel": reason == "allcaps_novowel",
+            "lowppl_clear": reason == "lowppl_clear",
+            "cleanprose_clear": reason == "cleanprose_clear",
+            "trash_threshold": reason in TRASH_REASONS,
+            "noisy_threshold": reason == "noisy_threshold",
+            "clear_threshold": reason == "clear_threshold",
+            # post-pass flags are recomputed by apply_document_postprocessing below
+            "pp_dedup": False,
+            "pp_surrounded_trash": False,
+            "pp_inverted_run": False,
+        }
+    )
     return out
 
 
@@ -213,8 +242,7 @@ def rescore_csv(in_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     if rename_map:
         old = old.rename(columns=rename_map)
 
-    expected_langs, known_bases = _load_lang_config(
-        os.getenv("LANGID_CONFIG", str(_ROOT / "config_langID.txt")))
+    expected_langs, known_bases = _load_lang_config(os.getenv("LANGID_CONFIG", str(_ROOT / "config_langID.txt")))
 
     rows = []
     for _, r in old.iterrows():
@@ -262,7 +290,7 @@ def _report(in_path: Path, old: pd.DataFrame, new: pd.DataFrame) -> int:
             txt = new["text"].reset_index(drop=True) if "text" in new.columns else None
             shown = 0
             for i in diff_mask[diff_mask].index:
-                snippet = (str(txt.iloc[i])[:48] if txt is not None else "")
+                snippet = str(txt.iloc[i])[:48] if txt is not None else ""
                 print(f"    L{i:<4} {old_cat.iloc[i]:>8} -> {new_cat.iloc[i]:<8} | {snippet}")
                 shown += 1
                 if shown >= 25:
@@ -275,8 +303,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Offline re-scorer for #3 calibration.")
     ap.add_argument("path", help="DOC_LINE_CATEG CSV file or a directory of them")
     ap.add_argument("--out", help="output file/dir (default: overwrite in place)")
-    ap.add_argument("--report-only", action="store_true",
-                    help="print the diff report but do not write re-scored CSVs")
+    ap.add_argument("--report-only", action="store_true", help="print the diff report but do not write re-scored CSVs")
     args = ap.parse_args(argv)
 
     in_path = Path(args.path)

@@ -10,9 +10,13 @@ extend-exclude = [
     "data_samples/",
     "result/",
     "service/frontend*/",
+    "alto-tools/",
 ]
 
 [lint]
 select = ["E", "F", "W", "I", "B"]
 # Ignore lines that are slightly too long but otherwise clean.
 ignore = ["E501"]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.File", "fastapi.Form", "fastapi.Depends"]
