@@ -3,8 +3,13 @@ Tests for langID_aggregate_STAT.py pure-logic helpers.
 """
 import pandas as pd
 import numpy as np
-from langID_aggregate_STAT import _sum_metrics
+from pathlib import Path
+from langID_aggregate_STAT import _sum_metrics, load_config
 
+
+DEFAULT_CONFIG = "config_langID.txt"
+config = load_config(DEFAULT_CONFIG)
+STANDARD_COLS = frozenset(config.get("standard_cols", "Clear,Noisy,Trash,Non-text,Empty").split(","))
 
 def test_sum_metrics_basic_with_new_columns():
     # Mock a dataframe representing a DOC_LINE_CATEG CSV containing new columns
@@ -33,7 +38,7 @@ def test_sum_metrics_basic_with_new_columns():
         "pp_inverted_run": [False, False, False],
     })
 
-    res = _sum_metrics(df)
+    res = _sum_metrics(df, STANDARD_COLS)
 
     assert len(res) == 1
     # Only "Clear" and "Noisy" lines are aggregated for word/char counts and averages
@@ -49,5 +54,5 @@ def test_sum_metrics_basic_with_new_columns():
 
 def test_sum_metrics_empty():
     df = pd.DataFrame()
-    res = _sum_metrics(df)
+    res = _sum_metrics(df, STANDARD_COLS)
     assert res.empty

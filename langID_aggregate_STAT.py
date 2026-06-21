@@ -43,7 +43,7 @@ from atrium_paradata import ParadataLogger
 # Constants
 # ---------------------------------------------------------------------------
 
-STANDARD_COLS = ["Clear", "Noisy", "Trash", "Non-text", "Empty"]
+# STANDARD_COLS = ["Clear", "Noisy", "Trash", "Non-text", "Empty"]
 DEFAULT_CONFIG = "config_langID.txt"
 
 
@@ -71,7 +71,7 @@ def load_config(config_path):
     }
 
 
-def _sum_metrics(df):
+def _sum_metrics(df, STANDARD_COLS):
     """Groups line data by page and aggregates the statistics."""
     if df.empty:
         return pd.DataFrame()
@@ -151,7 +151,7 @@ def _sum_metrics(df):
     return final_page_df[ordered_cols]
 
 
-def process_csv_file(file_path):
+def process_csv_file(file_path, STANDARD_COLS):
     """Reads a single CSV file and returns aggregated page metrics."""
     try:
         dtype_map = {
@@ -176,7 +176,7 @@ def process_csv_file(file_path):
 
         df.columns = df.columns.str.strip()
 
-        return _sum_metrics(df)
+        return _sum_metrics(df, STANDARD_COLS)
 
     except pd.errors.EmptyDataError:
         return None
@@ -193,6 +193,7 @@ def main():
     input_dir = Path(config["input_dir"])
     output_dir = Path(config["output_dir"])
     output_stats_path = Path(config["output_stats"])
+    STANDARD_COLS = frozenset(config.get("standard_cols", "Clear,Noisy,Trash,Non-text,Empty").split(","))
 
     if not input_dir.exists():
         print(f"Error: Input directory {input_dir} does not exist.")
@@ -220,7 +221,8 @@ def main():
 
     try:
         with ProcessPoolExecutor(max_workers=max_cores) as executor:
-            futures = {executor.submit(process_csv_file, f): f for f in csv_files}
+            # futures = {executor.submit(process_csv_file, f): f for f in csv_files}
+            futures = {executor.submit(process_csv_file, f, STANDARD_COLS): f for f in csv_files}
 
             for future in tqdm(as_completed(futures), total=len(csv_files), desc="Aggregating Page Stats"):
                 original_file = futures[future]

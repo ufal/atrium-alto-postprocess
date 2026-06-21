@@ -20,6 +20,7 @@ TEXT_DIR = data_samples/PAGE_TXT_LR
 OUTPUT_LINES_LOG = data_samples/DOC_LINE_CATEG
 BATCH_SIZE = 128
 WORKERS_MAX = 32
+GPU_WAIT_TIMEOUT = 600.0
 EXPECTED_LANGS = ces,deu,eng
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita,slk
 MODEL_NAME = Qwen/Qwen2.5-0.5B
@@ -28,12 +29,17 @@ MODEL_NAME = Qwen/Qwen2.5-0.5B
 RAW_LINES_CSV = data_samples/DOC_LINE_CATEG
 OUTPUT_STATS = samples_page_stats.csv
 OUTPUT_DOC_DIR = data_samples/DOC_LINE_STATS
+STANDARD_COLS = Clear,Noisy,Trash,Non-text,Empty
 
 [TEXT_UTILS]
 LANG_SCORE_ROUGH = 0.45
 LANG_SCORE_CLEAR = 0.75
 ALLOWED_INTERNAL = .-,+()"'—–:%;?!/
 STRIP_CHARS = .,;:!?()[]"'\/\
+METADATA_MARKERS = Tb.,č.neg,neg.,obr.,obr ,neg ,Tb ,č. neg,č.neg.,č.,str.,Datum
+CZ_DIACS = áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ
+VOWEL_CHARS = aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ
+ROTATABLE_CHARS = pbqdnuwmoxszeyv
 
 QS_LENGTH_MAX         = 100
 PERPLEXITY_THRESHOLD_MAX  = 1000.0
@@ -103,6 +109,21 @@ EXTREME_LANG_CONF          = 0.85
 # (#3) LM-confident upright-Czech recovery past the fragile valid_ratio cap.
 LOWPPL_CZECH_CLEAR_MAX     = 180.0
 CZECH_CLEAR_GARBAGE_MAX    = 0.15
+
+# Fix 1: Linguistic Anchor Bypass
+ANCHOR_MIN_WORDS            = 2
+ANCHOR_WORD_LEN             = 3
+ANCHOR_VOWEL_RATIO          = 0.10
+
+# Fix 2: Inverted / Rotated Text Organic Penalties
+SUSPICIOUS_ROT_RATIO        = 0.65
+SUSPICIOUS_WQX_RATIO        = 0.15
+INVERTED_WEIRD_PENALTY      = 0.45
+# (#3 remaining hard cases)
+# P3 absolute-perplexity garbage route (ignores lang confidence; non-upright only).
+PPL_GARBAGE_ABSOLUTE        = 30000.0
+# P1 minimum ghost-token share for the broadened per-line inverted-scan route.
+GHOST_HITS_INVERTED_MIN     = 1
 
 [PIPELINE]
 METHOD        = layoutreader
