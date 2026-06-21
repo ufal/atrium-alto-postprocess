@@ -24,7 +24,7 @@ jobs:
       contents: read
       packages: read
       security-events: write
-    uses: ufal/atrium-project/.github/workflows/security.reusable.yml@main
+    uses: ufal/atrium-project/.github/workflows/security.reusable.yml@test
     secrets: inherit
     with:
       # The published image to scan/SBOM. para-config-path defaults to
