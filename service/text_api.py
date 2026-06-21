@@ -15,13 +15,19 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from text_inference import text_manager
 
-# FIX: Add the service directory to sys.path explicitly so 'text_inference'
-# can be imported whether run via uvicorn locally or via pytest from the root.
+# Add this file's own directory (service/) to sys.path BEFORE importing the
+# sibling `text_inference` module, so the bare import resolves in every launch
+# context: `python service/text_api.py` (the Docker entrypoint), `uvicorn
+# service.text_api:app`, and pytest importing this module as `service.text_api`
+# from the repo root. This bootstrap MUST run before the import below; the E402
+# suppression on that import keeps Ruff's import sorter (I001) from hoisting it
+# back above this code and re-breaking it (regression tracked in atrium-project#18).
 _current_dir = Path(__file__).resolve().parent
 if str(_current_dir) not in sys.path:
     sys.path.insert(0, str(_current_dir))
+
+from text_inference import text_manager  # noqa: E402
 
 
 @asynccontextmanager
