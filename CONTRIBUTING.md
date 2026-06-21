@@ -206,7 +206,7 @@ Always run basic validation locally before pushing:
 # 1. Python compilation check
 python -m compileall -q .
 
-# 2. Pre-commit hooks (runs black, isort, flake8, etc.)
+# 2. Pre-commit hooks (runs Ruff, etc.)
 pre-commit run --all-files
 
 ```

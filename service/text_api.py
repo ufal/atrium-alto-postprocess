@@ -125,9 +125,13 @@ async def process_document(
       category        (str)   – Clear | Noisy | Trash | Non-text | Empty
                                 Assigned dynamically using the unified penalty system.
     """
-    # ... [Rest of the file remains exactly the same] ...
+    # [FIX]: Add cross-repo standard 500 guard for missing file metadata
+    if not file.filename:
+        raise HTTPException(status_code=500, detail="Filename is missing from the upload.")
+    if not file.content_type:
+        raise HTTPException(status_code=500, detail="Content-Type is missing from the upload.")
 
-    filename = (file.filename or "").lower()
+    filename = file.filename.lower()
 
     if task_type == "auto":
         if filename.endswith(".xml"):

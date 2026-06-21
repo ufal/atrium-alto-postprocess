@@ -334,6 +334,19 @@ Open `http://localhost:8080` and navigate to the
 For further details on the LINDAT development workflow see the
 [LINDAT Common Development Guide](https://github.com/ufal/lindat-common/?tab=readme-ov-file#development).
 
+
+---
+
+## Hardware & Configuration Troubleshooting
+
+* **GLM-4v VRAM Requirements:** The GLM-4v Vision-Language Model requires massive GPU memory. You **must have a GPU
+with at least 48 GB of VRAM** (e.g., an NVIDIA RTX A6000 or a multi-GPU setup) to run the extraction pipeline
+successfully. Running this on consumer GPUs (like a 3090/4090) will likely result in Out-Of-Memory (OOM) crashes.
+* **Perplexity Threshold Coupling:** If you switch the underlying language model used for line evaluation (e.g.,
+from `distilgpt2` to `Qwen2.5`), you **must** recalibrate `PERPLEXITY_THRESHOLD_MAX` in `config_langID.txt`. Perplexity
+scales differ wildly between architectures; a threshold of `1000.0` might be overly permissive for Qwen but too strict
+for DistilGPT2.
+
 ---
 
 ## Contacts 📧
