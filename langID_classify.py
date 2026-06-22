@@ -40,7 +40,6 @@ from itertools import groupby
 from pathlib import Path
 
 import pandas as pd
-import torch
 from tqdm import tqdm
 
 from atrium_paradata import ParadataLogger
@@ -144,20 +143,18 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
     On fatal model-load failure it sets `gpu_dead` so waiting CPU workers can
     abort instead of polling an empty result dictionary forever.
     """
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"[GPU Engine] Initializing {model_name} on {device.upper()}...")
+    # ADD IT HERE
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig  # noqa: E402
 
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
+        quantization_config = BitsAndBytesConfig(load_in_4bit=True)
         model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype="auto",
-        ).to(device)
+            model_name, quantization_config=quantization_config, device_map="auto"
+        )
         model.eval()
         print(f"[GPU Engine] {model_name} ready. Waiting for text batches...")
     except Exception as e:
@@ -174,7 +171,7 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
                 break
 
             batch_id, texts = msg
-            ppls = calculate_perplexity_batch(texts, model, tokenizer, device)
+            ppls = calculate_perplexity_batch(texts, model, tokenizer, model.device)
             try:
                 result_dict[batch_id] = ppls
             except (BrokenPipeError, OSError) as e:
@@ -382,6 +379,7 @@ def process_and_write_batch_cpu(
             "pp_dedup": False,
             "pp_surrounded_trash": False,
             "pp_inverted_run": False,
+            "pp_page_context": False,  # <-- ADD THIS MISSING KEY
         }
         results.append(_row_from_dict(row_dict))
 
@@ -770,7 +768,7 @@ def main():
     result_dict = manager.dict()
     gpu_dead = manager.Event()  # (#6) shared liveness signal for the GPU worker
 
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: E402
 
     print(f"[Main] Ensuring {MODEL_NAME} is cached...")
     AutoTokenizer.from_pretrained(MODEL_NAME)
