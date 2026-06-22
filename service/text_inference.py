@@ -30,16 +30,19 @@ except ImportError:
 # Import the full quality-analysis toolkit from the main pipeline module.
 try:
     from text_util_langID import (
-        COMMON_LANGS,
+        analyze_rotation_signals,
         compute_garbage_density,
         compute_quality_score,
         compute_valid_ratio,
+        compute_vowel_ratio,
         compute_word_weird_ratio,
+        detect_fused_words,
         detect_gibberish_words,
         detect_letter_digit_letter,
         detect_mid_uppercase,
         detect_repeated_chars,
         detect_strange_symbols,
+        detect_wx_words,
         score_words_in_line,
     )
     from text_util_langID import categorize_line as _categorize_line_struct
@@ -47,7 +50,8 @@ try:
     _UTIL_AVAILABLE = True
 except ImportError as _err:
     logging.getLogger(__name__).warning(
-        "text_util_langID not found (%s); falling back to legacy utils.categorize_line.", _err
+        "text_util_langID not found (%s); falling back to legacy utils.categorize_line.",
+        _err,
     )
     _UTIL_AVAILABLE = False
     from utils import categorize_line as _legacy_categorize  # type: ignore[assignment]
@@ -84,7 +88,11 @@ class TextModelManager:
         try:
             # LAZY LOAD heavy ML libraries strictly inside this method
             import fasttext
-            from transformers import AutoModelForCausalLM, AutoTokenizer, LayoutLMv3ForTokenClassification
+            from transformers import (
+                AutoModelForCausalLM,
+                AutoTokenizer,
+                LayoutLMv3ForTokenClassification,
+            )
 
             # 1. LayoutReader (LayoutLMv3)
             layout_model_path = os.getenv("LAYOUT_MODEL_PATH", "hantian/layoutreader")
@@ -95,12 +103,31 @@ class TextModelManager:
             # 2. FastText language identification
             self.ft_model = fasttext.load_model(str(FASTTEXT_MODEL_PATH))
 
-            # 3. Perplexity model (Qwen2.5-0.5B by default; override with GPT2_MODEL_NAME, e.g. distilgpt2 for English-only)
+            # 3. Perplexity model (Qwen2.5-0.5B by default; override with GPT2_MODEL_NAME,
+            #    e.g. distilgpt2 for English-only collections).
+            #    BitsAndBytesConfig 4-bit quantization is only available on CUDA; on CPU-only
+            #    nodes we load the model in full precision so the service still starts.
             gpt2_path = os.getenv("GPT2_MODEL_NAME", "Qwen/Qwen2.5-0.5B")
             self.ppl_tokenizer = AutoTokenizer.from_pretrained(gpt2_path)
             self.ppl_tokenizer.pad_token = self.ppl_tokenizer.eos_token
-            self.ppl_model = AutoModelForCausalLM.from_pretrained(gpt2_path)
-            self.ppl_model.to(self.device)
+
+            if self.device == "cuda":
+                from transformers import BitsAndBytesConfig
+
+                quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+                self.ppl_model = AutoModelForCausalLM.from_pretrained(
+                    gpt2_path,
+                    quantization_config=quantization_config,
+                    device_map="auto",
+                )
+            else:
+                # CPU fallback: full precision, no quantization dependency
+                self.ppl_model = AutoModelForCausalLM.from_pretrained(
+                    gpt2_path,
+                    torch_dtype=torch.float32,
+                )
+                self.ppl_model.to(self.device)
+
             self.ppl_model.eval()
 
             self._models_loaded = True
@@ -129,42 +156,67 @@ def _classify_line(
     """
     Run the full unified classification pipeline on a single text line and
     return all quality metrics.
+
+    categorize_line signature (from text_util_langID):
+        categorize_line(qs, txt, wc, vowel_ratio, perplexity, *, weird_ratio=0.0,
+                        return_reason=False, valid_word_ratio=1.0, lang_score=1.0,
+                        orig_lang_score=1.0, gibberish_present=False,
+                        garbage_density=0.0, is_upright_czech=False,
+                        ghost_dominated=False)
     """
     # 1. Language Identification
     labels, scores = ft_model.predict([text.lower()], k=1)
     lang = labels[0][0].replace("__label__", "")
     lang_score = float(scores[0][0])
 
-    # 2. Extract Structural Metrics
+    # 2. Structural Metrics
     sym_count = detect_strange_symbols(text)
     upper_count = detect_mid_uppercase(text)
     rep_count = detect_repeated_chars(text)
     fuse_count = detect_letter_digit_letter(text)
     gibb_count = detect_gibberish_words(text)
+    wx_count = detect_wx_words(text)
+    fused_words = detect_fused_words(text)
     g_density = compute_garbage_density(text)
+    vowel_ratio = compute_vowel_ratio(text)
 
-    # 3. Weirdness and Quality Scores
+    wc = len(text.split())
+    cc = len(text)
+
+    # 3. Weirdness, validity, rotation
     word_scores = score_words_in_line(text)
     weird_ratio = compute_word_weird_ratio(word_scores)
-    # NOTE: compute_quality_score's current signature has no `symbol_ratio` term
-    # (removed upstream) and requires `weird_ratio`; the original call here used
-    # the stale signature and would TypeError at runtime. Fixed to match.
+    valid_ratio = compute_valid_ratio(text)
+    is_upright_czech, ghost_dominated = analyze_rotation_signals(text)
+
+    # 4. Quality score
     q_score = compute_quality_score(
-        valid_word_ratio=compute_valid_ratio(text),
+        valid_word_ratio=valid_ratio,
         perplexity=ppl,
-        text_length=len(text),
+        text_length=cc,
         weird_ratio=weird_ratio,
+        vowel_ratio=vowel_ratio,
         garbage_density=g_density,
+        lang_score=lang_score,
+        gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
+        fused_ratio=fused_words / max(wc, 1),
+        is_upright_czech=is_upright_czech,
     )
 
-    # 4. Unified Categorization Logic (passes weird_ratio to prevent flip-flopping)
-    categ = _categorize_line_struct(
-        ppl=ppl,
-        text_source=text,
-        lang=lang,
-        lang_score=lang_score,
+    # 5. Categorisation — positional args match the real signature exactly
+    categ, q_score = _categorize_line_struct(
+        q_score,  # qs
+        text,  # txt
+        wc,  # wc
+        vowel_ratio,  # vowel_ratio
+        ppl,  # perplexity
         weird_ratio=weird_ratio,
-        expected_langs=COMMON_LANGS,
+        valid_word_ratio=valid_ratio,
+        lang_score=lang_score,
+        gibberish_present=(gibb_count + wx_count) > 0,
+        garbage_density=g_density,
+        is_upright_czech=is_upright_czech,
+        ghost_dominated=ghost_dominated,
     )
 
     return {

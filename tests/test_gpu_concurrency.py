@@ -27,15 +27,18 @@ def test_cpu_worker_aborts_on_gpu_dead_signal():
     # Simulate a fatal OOM or model-load crash in the GPU worker
     gpu_dead.set()
 
-    # FIX: Inject the dummy model to prevent KeyError
+    # Inject the dummy model to prevent KeyError on worker_models["ft"]
     worker_models["ft"] = DummyFT()
 
-    # The CPU worker should intercept the event and immediately throw a RuntimeError
+    # meta tuples must be 7-element: (file_id, page_id, line_num, text, split_ws, split_we, original_text)
+    # The original_text field was added in the #3 patch and must match the unpacking in
+    # process_and_write_batch_cpu:
+    #   file_id, page_id, line_num, text_content, split_ws, split_we, original_text = meta[i]
     with pytest.raises(RuntimeError, match="GPU inference worker is down"):
         process_and_write_batch_cpu(
             batch_id="test_batch_1",
             lines=["Test line one"],
-            meta=[("file_1", "page_1", 1, "Test line one", "", "")],
+            meta=[("file_1", "page_1", 1, "Test line one", "", "", "Test line one")],
             out_dir=None,
             task_queue=task_queue,
             result_dict=result_dict,
