@@ -143,22 +143,37 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
     On fatal model-load failure it sets `gpu_dead` so waiting CPU workers can
     abort instead of polling an empty result dictionary forever.
     """
-    # ADD IT HERE
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig  # noqa: E402
+    import torch  # noqa: E402
+    from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: E402
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cpu":
+        # Running the LM on CPU is ~100-400x slower than on the A40 and is almost always
+        # a misconfiguration (CUDA_VISIBLE_DEVICES unset, NVIDIA driver / torch-build
+        # mismatch, or the GPU simply not visible to this spawned process). Surface it
+        # loudly instead of silently crawling for hours.
+        print(
+            "[GPU Engine] WARNING: CUDA is NOT available — falling back to CPU; "
+            "perplexity scoring will be extremely slow. Check the NVIDIA driver, "
+            "CUDA_VISIBLE_DEVICES, and that torch was built with CUDA support.",
+            flush=True,
+        )
+    print(f"[GPU Engine] Initializing {model_name} on {device.upper()}...", flush=True)
 
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
-        quantization_config = BitsAndBytesConfig(load_in_4bit=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name, quantization_config=quantization_config, device_map="auto"
-        )
+        # Explicit, deterministic full-precision upload to the GPU. The previous
+        # device_map="auto" + 4-bit bitsandbytes path placed layers non-deterministically
+        # (silent CPU/disk offload -> ~380x slowdown) and gained nothing for a 0.5B model
+        # on a 48GB GPU. This keeps the whole model on a single device (cuda:0).
+        model = AutoModelForCausalLM.from_pretrained(model_name, dtype="auto").to(device)
         model.eval()
-        print(f"[GPU Engine] {model_name} ready. Waiting for text batches...")
+        print(f"[GPU Engine] {model_name} ready. Waiting for text batches...", flush=True)
     except Exception as e:
-        print(f"[GPU Engine] Failed to load model: {e}")
+        print(f"[GPU Engine] Failed to load model: {e}", flush=True)
         if gpu_dead is not None:
             gpu_dead.set()  # (#6) signal CPU workers so they don't hang
         return
@@ -167,21 +182,21 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
         try:
             msg = task_queue.get(timeout=1.0)
             if msg == "STOP":
-                print("[GPU Engine] Received STOP signal. Shutting down.")
+                print("[GPU Engine] Received STOP signal. Shutting down.", flush=True)
                 break
 
             batch_id, texts = msg
-            ppls = calculate_perplexity_batch(texts, model, tokenizer, model.device)
+            ppls = calculate_perplexity_batch(texts, model, tokenizer, device)
             try:
                 result_dict[batch_id] = ppls
             except (BrokenPipeError, OSError) as e:
-                print(f"[GPU Engine] Dropped result for batch {batch_id}: {e}")
+                print(f"[GPU Engine] Dropped result for batch {batch_id}: {e}", flush=True)
                 continue
 
         except queue.Empty:
             continue
         except Exception as e:
-            print(f"[GPU Engine Error] Processing batch: {e}")
+            print(f"[GPU Engine Error] Processing batch: {e}", flush=True)
             if "msg" in locals() and msg != "STOP":
                 result_dict[msg[0]] = [0.0] * len(msg[1])
 
@@ -772,7 +787,7 @@ def main():
 
     print(f"[Main] Ensuring {MODEL_NAME} is cached...")
     AutoTokenizer.from_pretrained(MODEL_NAME)
-    AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype="auto")
+    AutoModelForCausalLM.from_pretrained(MODEL_NAME, dtype="auto")
     print("[Main] Cache OK.")
 
     gpu_process = mp.Process(target=gpu_inference_worker, args=(task_queue, result_dict, MODEL_NAME, gpu_dead))
@@ -814,7 +829,17 @@ def main():
     _ppl_component = "distilgpt2" if "distilgpt2" in MODEL_NAME.lower() else "qwen2.5_0.5b"
     logger.log_component(_ppl_component)
 
-    max_cores = min(mp.cpu_count(), WORKERS_MAX)
+    # Size the pool from the CPUs actually allocated to this process (SLURM cgroup /
+    # --cpus-per-task) rather than the node's total core count, and reserve one core for
+    # the GPU worker + manager so the GPU engine isn't starved while it initialises CUDA.
+    # Oversubscribing (e.g. 32 busy-polling workers on 16 allocated cores) can stall GPU
+    # startup for minutes and is a prime suspect for the perplexity worker never going
+    # "ready".
+    try:
+        available_cores = len(os.sched_getaffinity(0))
+    except AttributeError:  # sched_getaffinity is Linux-only
+        available_cores = mp.cpu_count()
+    max_cores = max(1, min(available_cores - 1, WORKERS_MAX))
     print(f"Starting {max_cores} CPU Document Processors...")
 
     total_processed = 0
