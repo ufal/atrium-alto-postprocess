@@ -935,8 +935,11 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
             ppl = torch.exp(seq_loss / num_tokens)
             return ppl.tolist()
     except Exception as e:
-        print(f"[Error] Batch PPL: {e}", file=sys.stderr)
-        return [0.0] * len(texts)
+        # A failed batch must NOT come back as perplexity 0.0 — downstream that reads as
+        # "very low perplexity" and silently promotes garbage to "Clear". Emit a high
+        # sentinel so the affected lines score as low quality and are visible in the CSV.
+        print(f"[Error] Batch PPL ({len(texts)} lines) failed: {e}", file=sys.stderr, flush=True)
+        return [99999.0] * len(texts)
 
 
 # ---------------------------------------------------------------------------

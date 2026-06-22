@@ -105,28 +105,15 @@ class TextModelManager:
 
             # 3. Perplexity model (Qwen2.5-0.5B by default; override with GPT2_MODEL_NAME,
             #    e.g. distilgpt2 for English-only collections).
-            #    BitsAndBytesConfig 4-bit quantization is only available on CUDA; on CPU-only
-            #    nodes we load the model in full precision so the service still starts.
+            #    Loaded in full precision and moved explicitly to a single device (no 4-bit
+            #    bitsandbytes / device_map="auto", which placed layers non-deterministically).
             gpt2_path = os.getenv("GPT2_MODEL_NAME", "Qwen/Qwen2.5-0.5B")
             self.ppl_tokenizer = AutoTokenizer.from_pretrained(gpt2_path)
             self.ppl_tokenizer.pad_token = self.ppl_tokenizer.eos_token
 
-            if self.device == "cuda":
-                from transformers import BitsAndBytesConfig
-
-                quantization_config = BitsAndBytesConfig(load_in_4bit=True)
-                self.ppl_model = AutoModelForCausalLM.from_pretrained(
-                    gpt2_path,
-                    quantization_config=quantization_config,
-                    device_map="auto",
-                )
-            else:
-                # CPU fallback: full precision, no quantization dependency
-                self.ppl_model = AutoModelForCausalLM.from_pretrained(
-                    gpt2_path,
-                    torch_dtype=torch.float32,
-                )
-                self.ppl_model.to(self.device)
+            ppl_dtype = "auto" if self.device == "cuda" else torch.float32
+            self.ppl_model = AutoModelForCausalLM.from_pretrained(gpt2_path, dtype=ppl_dtype)
+            self.ppl_model.to(self.device)
 
             self.ppl_model.eval()
 

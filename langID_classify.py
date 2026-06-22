@@ -146,18 +146,23 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
     import torch  # noqa: E402
     from transformers import AutoModelForCausalLM, AutoTokenizer  # noqa: E402
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    if device == "cpu":
-        # Running the LM on CPU is ~100-400x slower than on the A40 and is almost always
-        # a misconfiguration (CUDA_VISIBLE_DEVICES unset, NVIDIA driver / torch-build
-        # mismatch, or the GPU simply not visible to this spawned process). Surface it
-        # loudly instead of silently crawling for hours.
+    if not torch.cuda.is_available():
+        # Batch perplexity on CPU is ~100-400x slower (a multi-day ETA per collection), so
+        # a GPU-less node is never the intended target. Fail fast — set gpu_dead so the
+        # waiting CPU workers abort immediately — instead of silently crawling on CPU and
+        # burning the GPU allocation. Almost always means the node's GPU is bad or
+        # CUDA_VISIBLE_DEVICES / the driver is misconfigured (e.g. dll-3gpu3).
         print(
-            "[GPU Engine] WARNING: CUDA is NOT available — falling back to CPU; "
-            "perplexity scoring will be extremely slow. Check the NVIDIA driver, "
-            "CUDA_VISIBLE_DEVICES, and that torch was built with CUDA support.",
+            "[GPU Engine] FATAL: CUDA is NOT available to this process — aborting instead of "
+            "running perplexity on CPU. Check the NVIDIA driver, CUDA_VISIBLE_DEVICES, and "
+            "that torch was built with CUDA support, then re-submit on a healthy GPU node.",
             flush=True,
         )
+        if gpu_dead is not None:
+            gpu_dead.set()  # (#6) signal CPU workers so they abort immediately
+        return
+
+    device = "cuda"
     print(f"[GPU Engine] Initializing {model_name} on {device.upper()}...", flush=True)
 
     try:
@@ -196,9 +201,12 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
         except queue.Empty:
             continue
         except Exception as e:
+            # Don't bury a GPU failure as perplexity 0.0 — downstream that reads as "very
+            # low perplexity" and silently promotes garbage to "Clear". Use a high sentinel
+            # so affected lines score as low quality and stand out in the CSV instead.
             print(f"[GPU Engine Error] Processing batch: {e}", flush=True)
             if "msg" in locals() and msg != "STOP":
-                result_dict[msg[0]] = [0.0] * len(msg[1])
+                result_dict[msg[0]] = [99999.0] * len(msg[1])
 
 
 worker_models = {}
