@@ -150,12 +150,21 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     wx_count = detect_wx_words(text_content)
 
     rot_ratio = compute_rotatable_ratio(text_content)
-    # --- NEW: Compute unified rotation signals ---
     is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content)
 
     caps_header = is_all_caps_line(text_content)
     weird_ratio = compute_word_weird_ratio(score_words_in_line(text_content))
     valid_ratio = compute_valid_ratio(text_content)
+
+    # ALIGNMENT FIX: Two-tier Trust System over flat remapping
+    base_lang = _lang_base(original_lang)
+    if base_lang in known_bases:
+        if base_lang in expected_langs:
+            trust_lang_score = original_lang_score
+        else:
+            trust_lang_score = original_lang_score * 0.85
+    else:
+        trust_lang_score = original_lang_score * 0.50
 
     q_score = compute_quality_score(
         valid_word_ratio=valid_ratio,
@@ -164,7 +173,7 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
         weird_ratio=weird_ratio,
         vowel_ratio=vowel_ratio,
         garbage_density=g_density,
-        lang_score=original_lang_score,
+        lang_score=trust_lang_score,
         gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
         fused_ratio=fused_words / max(wc, 1),
         is_upright_czech=is_upright_czech,
@@ -180,7 +189,7 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
         weird_ratio=weird_ratio,
         return_reason=True,
         valid_word_ratio=valid_ratio,
-        lang_score=new_score,
+        lang_score=trust_lang_score,
         orig_lang_score=original_lang_score,
         gibberish_present=(gibb_count + wx_count) > 0,
         garbage_density=g_density,
@@ -217,10 +226,10 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
             "trash_threshold": reason in TRASH_REASONS,
             "noisy_threshold": reason == "noisy_threshold",
             "clear_threshold": reason == "clear_threshold",
-            # post-pass flags are recomputed by apply_document_postprocessing below
             "pp_dedup": False,
             "pp_surrounded_trash": False,
             "pp_inverted_run": False,
+            "pp_page_context": False,
         }
     )
     return out
@@ -242,6 +251,12 @@ def rescore_csv(in_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     if rename_map:
         old = old.rename(columns=rename_map)
 
+    # VYNUCENÝ FIX: Převedení lokátorů na int před porovnáváním
+    # Tímto zabráníme, aby apply_document_postprocessing lexikálně seřadil řádek "10" před řádek "2".
+    for col in ["page_num", "line_num"]:
+        if col in old.columns:
+            old[col] = pd.to_numeric(old[col], errors="coerce").fillna(0).astype(int)
+
     expected_langs, known_bases = _load_lang_config(os.getenv("LANGID_CONFIG", str(_ROOT / "config_langID.txt")))
 
     rows = []
@@ -255,11 +270,21 @@ def rescore_csv(in_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     new = pd.DataFrame(rows)
     # Re-run the document-level smoothing with the CURRENT helper (#3 A3).
     if not new.empty:
+        # Je potřeba i v new zajistit int formát, aby .sort_values() pracoval matematicky
+        for col in ["page_num", "line_num"]:
+            if col in new.columns:
+                new[col] = pd.to_numeric(new[col], errors="coerce").fillna(0).astype(int)
+
         new = apply_document_postprocessing(new)
         # Keep canonical column order where possible.
         cols = [c for c in CSV_HEADER if c in new.columns]
         cols += [c for c in new.columns if c not in cols]
         new = new[cols]
+
+    # Zarovnání masky pro diff, aby se porovnával správný řádek s řádkem
+    if not old.empty:
+        old = old.sort_values(by=["page_num", "line_num"], ascending=True)
+
     return old, new
 
 
