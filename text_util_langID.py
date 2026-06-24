@@ -23,6 +23,12 @@ from contextlib import contextmanager
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
+# Ablation Kill-Switch (Part B)
+# Inject rule names here via override_constants to disable them for ablation sweeps.
+# ---------------------------------------------------------------------------
+DISABLED_RULES: frozenset = frozenset()
+
+# ---------------------------------------------------------------------------
 # Configuration & Regular Expressions
 # ---------------------------------------------------------------------------
 
@@ -229,19 +235,7 @@ SUSPICIOUS_ROT_RATIO = _get_float("TEXT_UTILS", "SUSPICIOUS_ROT_RATIO", 0.65)
 SUSPICIOUS_WQX_RATIO = _get_float("TEXT_UTILS", "SUSPICIOUS_WQX_RATIO", 0.15)
 INVERTED_WEIRD_PENALTY = _get_float("TEXT_UTILS", "INVERTED_WEIRD_PENALTY", 0.45)
 
-# (#3 remaining hard cases)
-# P3 — absolute-perplexity garbage route: catches OCR scramble that FastText is
-#      *confidently* wrong about (e.g. "At . O/wvi" eng 0.99 / ppl 5e5), which the
-#      lang-gated hard-sweep and extreme-ppl routes let through.
-# P1 — broadened per-line inverted-scan trigger: an inverted line where only a
-#      minority of tokens are recognisable ghost flip-images (content words leave
-#      no ghost), so `ghost_dominated` (>= 0.5) misses it.
-# P4 — trailing fill-run characters stripped before the garbage-density override.
 PPL_GARBAGE_ABSOLUTE = _get_float("TEXT_UTILS", "PPL_GARBAGE_ABSOLUTE", 30000.0)
-# Minimum ghost flip-tokens for the per-line inverted route. A *count* (not a
-# share): rotated content words leave no ghost, so even a fully inverted prose line
-# carries only a couple of recognisable function-word flips. Safe because genuine
-# Czech/foreign prose contains zero ghost tokens (collisions are pruned).
 GHOST_HITS_INVERTED_MIN = _get_int("TEXT_UTILS", "GHOST_HITS_INVERTED_MIN", 1)
 TRAILING_FILL_CHARS = " ._:-<\u2013\u2014"
 
@@ -249,14 +243,6 @@ TRAILING_FILL_CHARS = " ._:-<\u2013\u2014"
 # Lexicon Integration for Rotation/Inversion detection
 # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# Inverted / mirrored-scan lexicon (#3 item 3)
-# ---------------------------------------------------------------------------
-# Ghost spellings are DERIVED from per-glyph transforms, not hand-typed (the old
-# MIR/ROT tables had 3 wrong entries: pouze, bude). Source words + the glyph maps
-# are the only thing maintained.
-
-# Left-right MIRROR images (reflection across a vertical axis).
 _MIRROR_GLYPH = {
     "b": "d",
     "d": "b",
@@ -278,10 +264,6 @@ _MIRROR_GLYPH = {
     "y": "y",
     "z": "z",
 }
-
-# 180-degree ROTATION images. Glyphs with no clean rotated letter-image (v, k,
-# f, …) are intentionally absent: a word containing one yields NO rotation ghost
-# instead of a fabricated match.
 _ROTATE_GLYPH = {
     "b": "q",
     "q": "b",
@@ -305,8 +287,6 @@ _ROTATE_GLYPH = {
 
 
 def _transform_word(w: str, glyph_map: dict) -> str | None:
-    """Image of *w* under a page flip: map each glyph, then reverse reading
-    order. None if any glyph has no clean letter-image under the transform."""
     out = []
     for ch in w:
         img = glyph_map.get(ch)
@@ -316,9 +296,6 @@ def _transform_word(w: str, glyph_map: dict) -> str | None:
     return "".join(reversed(out))
 
 
-# High-frequency Czech function words whose flipped images are reliable
-# inverted-scan fingerprints. ASCII/diacritic-free on purpose: a real diacritic
-# is a hard upright signal, handled separately.
 ROT_WHITELIST: frozenset = frozenset(
     {
         "po",
@@ -341,9 +318,6 @@ ROT_WHITELIST: frozenset = frozenset(
         "bude",
     }
 )
-
-# Flip-images that are themselves common real Czech words — pruned so upright
-# text is never read as its own ghost (e.g. mirror("on") == "no").
 _GHOST_REAL_WORD_COLLISIONS: frozenset = frozenset({"no", "bo"})
 
 
@@ -358,8 +332,6 @@ def _build_ghostlist() -> frozenset:
 
 ROT_GHOSTLIST: frozenset = _build_ghostlist()
 
-
-# Left-right mirror mapping + reversal
 MIR_PAIRS = {
     "po": "oq",
     "pod": "boq",
@@ -380,8 +352,6 @@ MIR_PAIRS = {
     "pouze": "ezouq",
     "bude": "ebud",
 }
-
-# True 180-degree rotation + reversal
 ROT_PAIRS = {
     "po": "od",
     "pod": "pod",
@@ -399,21 +369,11 @@ ROT_PAIRS = {
     "pouze": "ezond",
     "bude": "epuq",
 }
-
-# Unified Whitelist: Any real word from either dictionary
 ROT_WHITELIST = set(MIR_PAIRS.keys()).union(set(ROT_PAIRS.keys()))
 ROT_GHOSTLIST: frozenset = _build_ghostlist()
 
 
 def analyze_rotation_signals(text: str) -> tuple[bool, bool]:
-    """Returns (is_upright_czech, ghost_dominated).
-
-    is_upright_czech — HARD protective signal: a Czech diacritic OR a real
-        upright function word. When True the rotation penalty is bypassed and the
-        per-line `trash_inverted` route never fires.
-    ghost_dominated — genuine inverted-glyph density AND a
-        majority of word tokens are flip-images of real Czech words.
-    """
     words = [w.lower() for w in re.split(r"\W+", text) if w]
     if not words:
         return has_cz_diacs(text), False
@@ -429,10 +389,6 @@ def analyze_rotation_signals(text: str) -> tuple[bool, bool]:
 
 
 def ghost_word_share(text: str) -> tuple[int, float]:
-    """(#3 P1) Ghost-token count and share for a line — the inverted-glyph signal
-    that `analyze_rotation_signals` folds into `ghost_dominated`. Exposed so the
-    per-line categoriser can still catch inverted scans where only a minority of
-    tokens are recognisable flip-images (rotated content words leave no ghost)."""
     words = [w.lower() for w in re.split(r"\W+", text) if w]
     if not words:
         return 0, 0.0
@@ -451,12 +407,10 @@ def _is_mid_uppercase(core: str) -> bool:
     if core.rstrip(".") in ACADEMIC_TITLES:
         return False
 
-    # Check if it starts with 2+ caps and has lowers later (e.g. "MCDonald")
     caps_run = sum(1 for _ in itertools.takewhile(str.isupper, core))
     if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
         return True
 
-    # NEW: Catch actual mid-word uppercase (e.g., "ClAŕ", "neschopnýA")
     for i in range(1, len(core)):
         if core[i].isupper() and core[i - 1].islower():
             return True
@@ -708,7 +662,6 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     if RE_STAMP.search(clean_text) or "IVerc" in clean_text:
         return "Non-text", clean_text
 
-    # FIX 1: Linguistic Anchor Bypass
     tokens = clean_text.split()
     valid_long_words = sum(
         1
@@ -731,34 +684,22 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     if letters / n_chars < 0.3:
         return "Non-text", clean_text
 
-    tokens = clean_text.split()
     if SYM_LET_DIG_NONTEXT and len(tokens) == 1 and has_symbol_letter_digit(tokens[0]):
         return "Non-text", clean_text
 
     if len(tokens) >= ISOLATED_CHAR_MIN_TOKENS:
-        # 1. Isolate only tokens that actually contain letters
         alpha_tokens = [tok for tok in tokens if any(c.isalpha() for c in tok)]
-
         if alpha_tokens:
             valid_singles = frozenset(SINGLE_CHAR_ALLOWED)
-
-            # 2. Count tokens that are strictly 1 character long (after stripping)
             single_char_tokens = [
                 tok for tok in alpha_tokens if len(tok.strip(_STRIP_CHARS)) == 1 and tok.strip(_STRIP_CHARS).isalpha()
             ]
-
-            # 3. Identify how many of those singles are NOT valid Czech prepositions/conjunctions
             invalid_singles = [tok for tok in single_char_tokens if tok.strip(_STRIP_CHARS) not in valid_singles]
 
-            # THE TRAP TRIGGER:
-            # Rule A: The line contains absolutely no multi-letter words (e.g., "r C , A")
             is_pure_isolated = len(single_char_tokens) == len(alpha_tokens)
-
-            # Rule B: The density of invalid singles among ALPHABETIC tokens is too high
             high_isolated_ratio = (len(invalid_singles) / len(alpha_tokens)) >= ISOLATED_CHAR_RATIO_MAX
 
             if is_pure_isolated or high_isolated_ratio:
-                # FIX 1: Surgical spaced-typography rescue (e.g., "P r a z e")
                 run_length = 0
                 collapsed_spans = []
                 current_span = []
@@ -778,7 +719,6 @@ def pre_filter_line(line: str) -> tuple[str, str]:
 
                 rescued = False
                 for span in collapsed_spans:
-                    # If the collapsed span forms a valid phonetic structure, let it through to ML
                     if compute_vowel_ratio(span) > 0.15 and compute_garbage_density(span) < 0.20:
                         rescued = True
                         break
@@ -839,7 +779,6 @@ def score_word(word: str) -> float:
         if caps_run >= 2 and any(c.islower() for c in core[caps_run:]):
             has_caps_prefix = True
 
-    # --- FIX 1: Vowelless Anchor Penalty ---
     alpha_chars = [c for c in core if c.isalpha()]
     is_vowelless_long = (
         len(alpha_chars) >= 3
@@ -847,7 +786,6 @@ def score_word(word: str) -> float:
         and core.rstrip(".") not in ACADEMIC_TITLES
     )
 
-    # --- FIX 1b: Increased mid-uppercase penalty (0.10 -> 0.25) ---
     return min(
         1.0,
         0.40 * has_strange
@@ -868,15 +806,11 @@ def score_words_in_line(text: str) -> list[tuple[str, float]]:
     wqx_words = sum(1 for w in words if any(c in "wqxWQX" for c in w))
     wqx_ratio = wqx_words / len(words) if words else 0.0
 
-    # FIX 2b: Use config-driven thresholds for suspicious rotation
     is_suspicious_rot = rot_ratio > SUSPICIOUS_ROT_RATIO and wqx_ratio >= SUSPICIOUS_WQX_RATIO and not is_upright
 
-    # --- FIX 2: Ledger/Fragmentation Detection ---
-    # Count tokens that are purely digits OR extremely short (1-2 chars)
     frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
     frag_ratio = frag_count / len(words) if words else 0.0
 
-    # Flag the line if it is predominantly fragmented
     is_highly_fragmented = frag_ratio > 0.60 and len(words) >= 4
 
     results = []
@@ -885,11 +819,10 @@ def score_words_in_line(text: str) -> list[tuple[str, float]]:
         if (ghost_dom or is_suspicious_rot) and not is_upright:
             s = min(1.0, s + INVERTED_WEIRD_PENALTY)
 
-        # --- FIX 2b: Contextual penalty for fragments in ledgers ---
         if is_highly_fragmented:
             core = w.strip(_STRIP_CHARS)
             if core.isdigit() or len(core) <= 2:
-                s = min(1.0, s + 0.35)  # Drag down the overall line quality
+                s = min(1.0, s + 0.35)
 
         results.append((w, s))
 
@@ -936,9 +869,6 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
             ppl = torch.exp(seq_loss / num_tokens)
             return ppl.tolist()
     except Exception as e:
-        # A failed batch must NOT come back as perplexity 0.0 — downstream that reads as
-        # "very low perplexity" and silently promotes garbage to "Clear". Emit a high
-        # sentinel so the affected lines score as low quality and are visible in the CSV.
         print(f"[Error] Batch PPL ({len(texts)} lines) failed: {e}", file=sys.stderr, flush=True)
         return [99999.0] * len(texts)
 
@@ -949,27 +879,17 @@ def calculate_perplexity_batch(texts: list[str], model, tokenizer, device) -> li
 
 
 def _lm_confident_czech(is_upright_czech, ppl, garbage_density):
-    """(#3 Problem 2) True when an upright-Czech line is LM-confident and clean
-    enough to bypass the fragile valid_word_ratio Mostly-Readable cap. The
-    perplexity gate (clean Czech 58-153 vs NOISY guards >=203) and the diacritic
-    requirement (is_upright_czech) keep garbage out."""
     return is_upright_czech and ppl < LOWPPL_CZECH_CLEAR_MAX and garbage_density < CZECH_CLEAR_GARBAGE_MAX
 
 
 def _trailing_fill_rescued(text_source: str, valid_word_ratio: float, word_count: int) -> bool:
-    """(#3 P4) True when a line's low quality is driven *only* by a trailing fill-run
-    (dots/dashes/underscores used as form rules, e.g. "…se hlásiti.--------------" or
-    the header "Předmět; . .. <"). Strips the run and re-measures the real core. The
-    `core != text_source` guard means a fill-run was actually present, so inverted /
-    symbol garbage (no trailing fill — stripping changes nothing) is never rescued;
-    the diacritic / short-header gate keeps non-Czech symbol garbage out too."""
     if valid_word_ratio <= 0.0:
         return False
     core = text_source.rstrip(TRAILING_FILL_CHARS)
     if not core or core == text_source:
-        return False  # no trailing fill-run was present
+        return False
     if compute_garbage_density(core) >= CATEG_GARBAGE_DENSITY_HIGH:
-        return False  # interior garbage remains -> genuine trash
+        return False
     return has_cz_diacs(core) or (word_count <= 4 and len(text_source) <= 25)
 
 
@@ -991,84 +911,80 @@ def determine_category(
     if word_count == 0 or not text_source.strip():
         return "Empty", "empty"
 
-    # 1. Hard sweep: confident garbage leaking past the remap CAP. Keys off the
-    #    ORIGINAL FastText score (the signal the cap masks) + an LM that is also
-    #    lost. Folds to trash_threshold in the CSV via TRASH_REASONS.
-    if orig_lang_score < HARD_SWEEP_LANG_MAX and ppl > HARD_SWEEP_PPL_MIN:
-        return "Trash", "trash_hard_sweep"
-    # (#3 Problem 3) Extreme LM loss the lang-gated hard sweep misses (e.g.
-    # slk-labeled garbage at confidence >= 0.45). The orig-score gate spares
-    # readable OCR-degraded trusted text with genuinely high ppl.
-    if ppl >= PPL_EXTREME_MIN and orig_lang_score < EXTREME_LANG_CONF:
-        return "Trash", "trash_hard_sweep"
-    # (#3 P3) Absolute-perplexity garbage the lang-gated routes miss because
-    # FastText is confidently wrong on short OCR scramble ("At . O/wvi" eng 0.99 /
-    # ppl 5e5; "Kou Au md" ppl 2.7e5). Ignores lang confidence; the non-upright
-    # gate spares every diacritic/whitelist Czech line, and the ceiling sits far
-    # above any legitimate line (highest real ppl observed ~1e4).
-    if ppl >= PPL_GARBAGE_ABSOLUTE and not is_upright_czech:
-        return "Trash", "trash_hard_sweep"
+    # 1. Hard sweep
+    if "rule_hard_sweep" not in DISABLED_RULES:
+        if orig_lang_score < HARD_SWEEP_LANG_MAX and ppl > HARD_SWEEP_PPL_MIN:
+            return "Trash", "trash_hard_sweep"
+    if "rule_extreme_ppl" not in DISABLED_RULES:
+        if ppl >= PPL_EXTREME_MIN and orig_lang_score < EXTREME_LANG_CONF:
+            return "Trash", "trash_hard_sweep"
+    if "rule_absolute_ppl" not in DISABLED_RULES:
+        if ppl >= PPL_GARBAGE_ABSOLUTE and not is_upright_czech:
+            return "Trash", "trash_hard_sweep"
 
-    # 2. Inverted / mirrored scan: a line dominated by ghost flip-tokens, OR a
-    #    non-upright line that is densely rotatable, LM-lost, and carries at least a
-    #    minority of ghost function-words (catches inverted prose like
-    #    "noywqued noqnsoa es yasoq … onuauodo" whose content words leave no ghost).
-    if not is_upright_czech and (
-        ghost_dominated
-        or (
-            not has_cz_diacs(text_source)
-            and compute_rotatable_ratio(text_source) >= SUSPICIOUS_ROT_RATIO
-            and ppl >= PPL_INVERTED_MIN
-            and ghost_word_share(text_source)[0] >= GHOST_HITS_INVERTED_MIN
-        )
-    ):
-        return "Trash", "trash_inverted"
+    # 2. Inverted / mirrored scan
+    if "rule_inverted" not in DISABLED_RULES:
+        if not is_upright_czech and (
+            ghost_dominated
+            or (
+                not has_cz_diacs(text_source)
+                and compute_rotatable_ratio(text_source) >= SUSPICIOUS_ROT_RATIO
+                and ppl >= PPL_INVERTED_MIN
+                and ghost_word_share(text_source)[0] >= GHOST_HITS_INVERTED_MIN
+            )
+        ):
+            return "Trash", "trash_inverted"
 
-    # 3. All-caps vowel-less scramble.
-    if is_all_caps_line(text_source) and vr < 0.10:
-        return "Trash", "allcaps_novowel"
+    # 3. All-caps vowel-less scramble
+    # Evaluating vr < 0.10 first fail-fast is cheaper than checking is_all_caps_line
+    if "rule_allcaps" not in DISABLED_RULES:
+        if vr < 0.10 and is_all_caps_line(text_source):
+            return "Trash", "allcaps_novowel"
 
-    # 4. Overwhelming non-alphanumeric density.
-    if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
-        # (#3 P4): rescue archival headers ("Předmět; . .. <") and prose
-        # whose only density breach is a trailing fill-run ("…hlásiti.----------").
-        if _trailing_fill_rescued(text_source, valid_word_ratio, word_count):
-            pass  # Bypass this override and allow it to route naturally
-        else:
+    # 4. Overwhelming non-alphanumeric density
+    if "rule_garbage_density" not in DISABLED_RULES:
+        if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
+            if "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
+                text_source, valid_word_ratio, word_count
+            ):
+                pass  # Bypass this override and allow it to route naturally
+            else:
+                return "Trash", "trash_threshold"
+
+    # 5. Structural short-garbage route
+    if "rule_short_garbage" not in DISABLED_RULES:
+        if (
+            word_count <= ISOLATED_CHAR_MIN_TOKENS
+            and not has_cz_diacs(text_source)
+            and lang_score <= LANG_SCORE_REMAP
+            and (gibberish_present or weird_ratio > 0.0)
+        ):
             return "Trash", "trash_threshold"
 
-    # 5. Structural short-garbage route (e.g. "olie").
-    if (
-        word_count <= ISOLATED_CHAR_MIN_TOKENS
-        and not has_cz_diacs(text_source)
-        and lang_score <= LANG_SCORE_REMAP
-        and (gibberish_present or weird_ratio > 0.0)
-    ):
-        return "Trash", "trash_threshold"
+    # 6. High-confidence LM override
+    if "rule_lowppl_clear" not in DISABLED_RULES:
+        if ppl < LOWPPL_CLEAR_MAX and word_count >= 3:
+            if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+                return "Noisy", "noisy_threshold"
+            return "Clear", "lowppl_clear"
 
-    # 6. High-confidence LM override.
-    if ppl < LOWPPL_CLEAR_MAX and word_count >= 3:
-        if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
-            return "Noisy", "noisy_threshold"
-        return "Clear", "lowppl_clear"
-
-    # 7. Quality-score band routing.
+    # 7. Quality-score band routing
     if quality_score < CATEG_TRASH_SCORE_MAX:
-        # (#3 P4): same trailing-fill rescue on the QS boundary so a clean
-        # Czech line dragged just under 0.55 by a trailing fill-run lands in Noisy.
-        if _trailing_fill_rescued(text_source, valid_word_ratio, word_count):
+        if "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
+            text_source, valid_word_ratio, word_count
+        ):
             return "Noisy", "noisy_threshold"
         return "Trash", "trash_threshold"
 
-    # (#3) Short-fragment guard: hold a very short, NOISY fragment at Noisy even
-    # when its QS reaches the Clear band. Only fires when the fragment also carries
-    # noise, so clean short prose ("republiky československé") still reaches Clear.
-    # The LM-certain low-ppl fast-track above is intentionally exempt.
-    if CLEAR_BAND_WC_MIN and word_count < CLEAR_BAND_WC_MIN and (weird_ratio > 0.0 or garbage_density > 0.0):
-        return "Noisy", "noisy_threshold"
+    if "rule_short_fragment_noisy" not in DISABLED_RULES:
+        if CLEAR_BAND_WC_MIN and word_count < CLEAR_BAND_WC_MIN and (weird_ratio > 0.0 or garbage_density > 0.0):
+            return "Noisy", "noisy_threshold"
 
-    if valid_word_ratio < MOSTLY_READABLE_VALID_MIN and not _lm_confident_czech(is_upright_czech, ppl, garbage_density):
-        return "Noisy", "noisy_threshold"
+    if "rule_mostly_readable_noisy" not in DISABLED_RULES:
+        if valid_word_ratio < MOSTLY_READABLE_VALID_MIN and not _lm_confident_czech(
+            is_upright_czech, ppl, garbage_density
+        ):
+            return "Noisy", "noisy_threshold"
 
     return "Clear", "clear_threshold"
 
@@ -1093,25 +1009,29 @@ def categorize_line(
     words = txt.split()
 
     # --- FIX 1: Sneaky leaks (WQX & Rotation) ---
-    wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(wc, 1)
-    if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
-        qs = max(0.0, qs - 0.35)
-
-    # --- FIX 2: Vowelless/Acronym gibberish ("WVL A") ---
-    if is_all_caps_line(txt) and wc <= 3 and vowel_ratio < 0.30 and not is_upright_czech:
-        qs = max(0.0, qs - 0.35)
-
-    # --- FIX 3: Ledger / Table Fragmentation Loophole ---
-    if words:
-        frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
-        if (frag_count / len(words)) > 0.60 and len(words) >= 4:
+    if "penalty_wqx_rot" not in DISABLED_RULES:
+        wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(wc, 1)
+        if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
             qs = max(0.0, qs - 0.35)
 
-    # --- FIX 4: Isolated Mid-Uppercase Fragments ("ClAŕ") ---
-    if wc <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
-        qs = max(0.0, qs - 0.35)
+    # --- FIX 2: Vowelless/Acronym gibberish ("WVL A") ---
+    if "penalty_vowelless" not in DISABLED_RULES:
+        if wc <= 3 and vowel_ratio < 0.30 and not is_upright_czech:
+            if is_all_caps_line(txt):
+                qs = max(0.0, qs - 0.35)
 
-    # The heavily penalized `qs` now routes safely to determine_category
+    # --- FIX 3: Ledger / Table Fragmentation Loophole ---
+    if "penalty_ledger_fragmentation" not in DISABLED_RULES:
+        if words and len(words) >= 4:
+            frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
+            if (frag_count / len(words)) > 0.60:
+                qs = max(0.0, qs - 0.35)
+
+    # --- FIX 4: Isolated Mid-Uppercase Fragments ("ClAŕ") ---
+    if "penalty_mid_uppercase" not in DISABLED_RULES:
+        if wc <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
+            qs = max(0.0, qs - 0.35)
+
     categ, reason = determine_category(
         qs,
         txt,
@@ -1213,19 +1133,6 @@ def is_non_text(text: str) -> bool:
 
 @contextmanager
 def override_constants(values, modules=None):
-    """Temporarily override tunable module-level constants, then restore them.
-
-    ``values`` maps a constant NAME to a temporary value. For every module in
-    ``modules`` that defines that name, the attribute is swapped for the duration
-    of the ``with`` block and restored afterwards (even on exception). This lets
-    the offline re-scorer and the importance sweep evaluate a configuration by
-    calling the *real* production functions — no parallel reimplementation — while
-    still feeding them explicit constants.
-
-    ``modules`` defaults to this module only. Pass the extra modules that hold
-    their own copies (created by ``from text_util_langID import NAME``, e.g.
-    ``langID_classify``) so those copies are patched in lock-step.
-    """
     if modules is None:
         modules = (sys.modules[__name__],)
     saved: list[tuple[object, str, object]] = []
@@ -1255,9 +1162,6 @@ def compute_quality_score(
     length_max: float | None = None,
     is_upright_czech: bool = False,
 ) -> float:
-    # Resolve the perplexity/length caps from the (possibly overridden) module
-    # globals at call time so override_constants() can sweep them. An explicit
-    # argument still wins; existing callers that omit them get current defaults.
     if ppl_max is None:
         ppl_max = PERPLEXITY_THRESHOLD_MAX
     if length_max is None:
@@ -1274,6 +1178,10 @@ def compute_quality_score(
         + QS_WEIGHT_GIBBERISH
         + QS_WEIGHT_FUSED
     )
+
+    # ABLATION GUARD (Part A): Prevent zero division if all weights are artificially wiped out
+    if total_weight <= 0.0:
+        total_weight = 1.0
 
     norm_ppl = 1.0 - min(perplexity / ppl_max, 1.0)
     norm_len = min(text_length / length_max, 1.0)
