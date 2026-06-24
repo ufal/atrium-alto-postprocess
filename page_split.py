@@ -92,14 +92,14 @@ def split_alto_xml(input_file_path, output_dir):
     return len(pages)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Split multi-page ALTO XML files into single-page files.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("input_dir", help="Path to the directory containing ALTO XML files to process.")
     parser.add_argument("output_dir", help="Path to the directory where split files will be saved.")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not os.path.isdir(args.input_dir):
         print(f"Error: Input directory not found at '{args.input_dir}'")

@@ -187,12 +187,12 @@ def process_alto_files_with_alto_tools(directory_path, max_workers=8):
     return results, _total_inputs, _skips
 
 
-def main():
+def main(argv=None):
     # --- 1. Setup Argument Parser ---
     parser = argparse.ArgumentParser()
     parser.add_argument("input_folder", help="Folder containing ALTO XML files or subfolders with them")
     parser.add_argument("-o", "--output", default="alto_stats.csv", help="Output CSV file path")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # --- 2. Prepare Output File ---
     # Remove the output file if it already exists, so we start fresh
