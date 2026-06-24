@@ -11,10 +11,20 @@ Dropping Rule A might suddenly make Rule B highly critical, as Rule B now should
 the filtering load that Rule A previously handled.
 
 This module iteratively disables the least impactful rule and recalculates marginal
-coverage across the entire remaining set. It halts immediately if removing a rule
-violates the primary safety constraint: causing valid text to flip from `Clear`
-to `Trash`. The final output is the mathematically proven minimal set of rules
-required to maintain pipeline integrity.
+coverage across the entire remaining set. It halts as soon as the safest remaining
+removal would degrade agreement with the frozen ground-truth categories -- measured
+with the REAL signals ``evaluate_dataframe`` already returns: the per-line confusion
+matrix (true `Clear -> Trash`/`Clear -> Non-text` loss) and the macro-F1 against the
+stored categories. The final output is the minimal set of rules that can be dropped
+without moving any line away from its ground-truth category.
+
+NOTE on the previous metric: earlier versions gated elimination on an aggregate
+``min(clear_drop, trash_rise)`` rate proxy. That proxy only triggered when the Clear
+rate shrank AND the Trash rate grew at the same time, so it was blind to the dominant
+effects of dropping these rules -- `Trash -> Noisy/Clear` leakage (garbage surviving)
+and `Noisy -> Clear` promotion. With the proxy reading 0 for every rule, the loop
+eliminated all 15 and reported a "Minimal Rule Set: 0". That conclusion was a metric
+artifact, not a property of the engine; this version measures the real damage.
 """
 
 import argparse
@@ -54,17 +64,34 @@ CANDIDATE_RULES: Set[str] = {
 }
 
 
-def run_backward_elimination(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base_constants: Dict[str, Any]) -> None:
+def _clear_loss(metrics: Dict[str, Any]) -> int:
+    """True per-line `Clear -> Trash`/`Clear -> Non-text` count vs. the frozen ground
+    truth, from the confusion matrix evaluate_dataframe already builds."""
+    clear_row = metrics.get("confusion", {}).get("Clear", {})
+    return int(clear_row.get("Trash", 0)) + int(clear_row.get("Non-text", 0))
+
+
+def run_backward_elimination(
+    df: pd.DataFrame,
+    eval_kwargs: Dict[str, Any],
+    base_constants: Dict[str, Any],
+    macro_tol: float = 0.0,
+) -> None:
     """
     Runs the iterative greedy backward elimination algorithm.
 
-    At each step, it drops the rule that provides the smallest marginal classification
-    change, provided that dropping it does not corrupt previously clear text.
+    At each step it drops the rule whose removal does the least damage to agreement
+    with the stored ground-truth categories, and halts once even the safest removal
+    would (a) push any `Clear` line into `Trash`/`Non-text`, or (b) drop macro-F1 (vs.
+    the ground truth) by more than ``macro_tol``. With ``macro_tol == 0`` a rule is
+    pruned only if removing it changes nothing the ground truth cares about.
 
     Args:
         df: The cached dataset containing pre-calculated text features.
         eval_kwargs: Keyword arguments for the evaluation function.
         base_constants: Baseline configuration parameters.
+        macro_tol: Allowed marginal macro-F1 loss per elimination (default 0.0 =
+            strict). Calibrate on the full corpus; tiny tolerances absorb float noise.
     """
     active_rules: Set[str] = set(CANDIDATE_RULES)
     permanently_disabled: Set[str] = set()
@@ -83,6 +110,8 @@ def run_backward_elimination(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base
         # The baseline changes every iteration as we permanently disable rules
         with override_constants({"DISABLED_RULES": frozenset(permanently_disabled)}):
             current_baseline = evaluate_dataframe(df, base_constants, **eval_kwargs)
+        base_clear_loss = _clear_loss(current_baseline)
+        base_macro_f1 = float(current_baseline["macro_f1"])
 
         round_results: List[Dict[str, Any]] = []
 
@@ -94,28 +123,38 @@ def run_backward_elimination(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base
 
             flips = int(metrics["flip_rate"] * base_lines)
 
-            # Strict Asymmetric Cost: Check for catastrophic text destruction
-            clear_drop = max(0.0, current_baseline["clear_rate"] - metrics["clear_rate"])
-            trash_rise = max(0.0, metrics["trash_rate"] - current_baseline["trash_rate"])
-            destructive_cost = int(min(clear_drop, trash_rise) * base_lines)
-
-            round_results.append({"rule": candidate, "flips": flips, "cost": destructive_cost})
+            # REAL damage vs. ground truth (not the old min(clear_drop, trash_rise) proxy):
+            #   - clear_loss: true Clear -> Trash/Non-text transitions newly introduced
+            #   - macro_drop: marginal macro-F1 lost vs. the current baseline (>= 0,
+            #     because the baseline already matches ground truth so disabling a rule
+            #     can only add disagreements). This catches Trash-leakage the proxy missed.
+            clear_loss = max(0, _clear_loss(metrics) - base_clear_loss)
+            macro_drop = base_macro_f1 - float(metrics["macro_f1"])
+            round_results.append(
+                {
+                    "rule": candidate,
+                    "flips": flips,
+                    "clear_loss": clear_loss,
+                    "macro_drop": macro_drop,
+                    "costed_score": float(metrics["costed_score"]),
+                }
+            )
 
         # Step 3: Find the safest rule to eliminate
-        # Primary sort criteria: Must have the lowest destructive cost (ideally 0)
-        # Secondary sort criteria: Lowest overall marginal flips (least impact)
-        round_results.sort(key=lambda x: (x["cost"], x["flips"]))
+        # Sort by least real damage: no Clear-loss first, then least macro-F1 loss, then flips.
+        round_results.sort(key=lambda x: (x["clear_loss"], round(x["macro_drop"], 9), x["flips"]))
         weakest_link = round_results[0]
 
         # Step 4: The Kill-Switch Halt Condition
-        # If the absolute safest rule to drop STILL destroys valid text, we have
-        # hit the pareto-optimal frontier. We must halt elimination.
-        if weakest_link["cost"] > 0:
-            print(f"\n[HALT] Reached Pareto-Optimal Frontier at Iteration {iteration}.")
-            print("Cannot eliminate further rules without systematically destroying valid text.")
+        # Halt once even the safest removal degrades agreement with the ground truth:
+        # any Clear-loss, or a marginal macro-F1 drop beyond tolerance.
+        if weakest_link["clear_loss"] > 0 or weakest_link["macro_drop"] > macro_tol + 1e-9:
+            print(f"\n[HALT] Reached ground-truth-preserving frontier at Iteration {iteration}.")
+            print("Cannot eliminate further rules without moving lines away from their stored category.")
             print(
-                f"The weakest remaining rule (`{weakest_link['rule']}`) currently "
-                f"prevents {weakest_link['cost']:,} `Clear -> Trash` corruptions."
+                f"The safest remaining rule (`{weakest_link['rule']}`) still costs "
+                f"{weakest_link['clear_loss']:,} `Clear -> Trash/Non-text` and "
+                f"{weakest_link['macro_drop']:+.4f} macro-F1 if dropped."
             )
             break
 
@@ -126,7 +165,8 @@ def run_backward_elimination(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base
 
         print(
             f"Iter {iteration:02d} | [-] Dropped `{target_rule}` "
-            f"(Marginal Flips: {weakest_link['flips']:,}, Cost: {weakest_link['cost']})"
+            f"(Flips: {weakest_link['flips']:,}, Clear-loss: {weakest_link['clear_loss']}, "
+            f"Macro-F1 Δ: {weakest_link['macro_drop']:+.4f})"
         )
         iteration += 1
 
@@ -136,11 +176,11 @@ def run_backward_elimination(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base
     print(f"ELIMINATION COMPLETE (Finished in {elapsed_time:.2f} seconds)")
     print("=" * 60)
 
-    print(f"\nRules safely pruned as strictly redundant: {len(permanently_disabled)}")
+    print(f"\nRules safely pruned (zero ground-truth loss within tolerance): {len(permanently_disabled)}")
     for rule in sorted(permanently_disabled):
         print(f"  - {rule}")
 
-    print(f"\nMinimal Rule Set required for structural integrity: {len(active_rules)}")
+    print(f"\nMinimal Rule Set required to preserve the stored categories: {len(active_rules)}")
     for rule in sorted(active_rules):
         print(f"  + {rule}")
 
@@ -160,6 +200,16 @@ def main() -> None:
         type=str,
         default="../config_langID.txt",
         help="Path to the system configuration file (default: ../config_langID.txt).",
+    )
+    parser.add_argument(
+        "--macro-tol",
+        type=float,
+        default=0.0,
+        help=(
+            "Allowed marginal macro-F1 loss (vs. ground truth) per elimination. "
+            "0.0 (default) = strict: prune only rules whose removal changes nothing. "
+            "Raise it to permit small, deliberate accuracy trade-offs."
+        ),
     )
     args = parser.parse_args()
 
@@ -186,7 +236,7 @@ def main() -> None:
         print(f"Failed to parse config '{config_path}': {e}", file=sys.stderr)
         sys.exit(1)
 
-    run_backward_elimination(df, eval_kwargs, base_constants)
+    run_backward_elimination(df, eval_kwargs, base_constants, macro_tol=args.macro_tol)
 
 
 if __name__ == "__main__":

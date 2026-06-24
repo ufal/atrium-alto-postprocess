@@ -11,9 +11,19 @@ rules and evaluating the model against a cached dataset, it calculates:
 1. Feature Variance: Identifies continuous quality score weights that have zero
    signal variance in the dataset.
 2. Marginal Flips (LOO): The total number of document lines that change their
-   final categorization when a specific rule is removed.
-3. Destructive Cost: A strict asymmetric penalty applied when disabling a rule
-   causes genuine text to be falsely categorized as garbage (`Clear -> Trash`).
+   final categorization when a specific rule is removed. Because the baseline
+   reproduces the stored ground-truth categories (`flip_rate == 0` by
+   construction), every marginal flip is, by definition, a *newly introduced
+   disagreement with the ground truth* -- i.e. real damage, not free movement.
+3. Destructive Cost: The TRUE per-line count of `Clear -> Trash` / `Clear ->
+   Non-text` transitions, read straight from the confusion matrix that
+   ``evaluate_dataframe`` already computes against the frozen ground truth.
+   (Earlier versions used an aggregate ``min(clear_drop, trash_rise)`` rate
+   proxy that only fired when Clear shrank AND Trash grew at the same time; it
+   was blind to Trash->Noisy/Clear leakage and Noisy->Clear promotion, which is
+   why it scored every rule as "cost 0 / prune". We now use the real matrix.)
+4. Macro-F1 delta: How much agreement with the stored categories is lost when
+   the rule is disabled -- the accuracy cost the proxy ignored.
 """
 
 import argparse
@@ -57,16 +67,27 @@ RULES_TO_ABLATE: List[str] = [
 ]
 
 
-def format_decision(flips: int, destructive_cost: int, std_dev: Optional[float] = None) -> str:
+def format_decision(flips: int, clear_loss: int, macro_f1_drop: float, std_dev: Optional[float] = None) -> str:
+    # A genuinely prunable feature must change NOTHING vs. the ground truth.
     if std_dev is not None and std_dev < 0.005:
         return "**PRUNE** (Signal variance ≈ 0; feature absent from dataset)"
-    if flips == 0:
-        return "**PRUNE** (Fully redundant; zero marginal effect)"
-    if destructive_cost > 0:
-        return "**KEEP** (Critical safeguard: Destructive to valid text)"
+    if clear_loss > 0:
+        return f"**KEEP** (Critical safeguard: destroys valid text — {clear_loss:,} `Clear -> Trash/Non-text`)"
+    if flips == 0 and macro_f1_drop <= 1e-9:
+        return "**PRUNE** (Fully redundant; zero ground-truth change)"
     if flips > 100:
         return "**KEEP** (High Impact routing rule)"
-    return "**REVIEW** (Low Impact; consider pruning if complexity is high)"
+    # flips > 0 means disabling the rule moved lines away from the ground truth,
+    # even if no Clear was lost. That is real damage the old proxy hid as "cost 0".
+    return "**REVIEW** (Introduces ground-truth disagreements; weigh vs. complexity)"
+
+
+def true_clear_loss(metrics: Dict[str, Any]) -> int:
+    """True per-line count of `Clear -> Trash`/`Clear -> Non-text` transitions vs.
+    the frozen ground truth, read from the confusion matrix evaluate_dataframe
+    already builds. Replaces the old aggregate ``min(clear_drop, trash_rise)`` proxy."""
+    clear_row = metrics.get("confusion", {}).get("Clear", {})
+    return int(clear_row.get("Trash", 0)) + int(clear_row.get("Non-text", 0))
 
 
 def run_ablation(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base_constants: Dict[str, Any]) -> None:
@@ -84,7 +105,9 @@ def run_ablation(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base_constants: 
         "QS_WEIGHT_GARBAGE": "garbage_density",
     }
 
-    report_rows: List[Tuple[str, str, int, int, str]] = []
+    base_macro_f1 = float(base_metrics["macro_f1"])
+    # (name, flips, clear_loss, macro_f1_drop, costed_score, decision)
+    report_rows: List[Tuple[str, int, int, float, float, str]] = []
 
     # Phase 1: Continuous Signals
     for weight_name in QS_WEIGHT_NAMES:
@@ -95,13 +118,10 @@ def run_ablation(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base_constants: 
             metrics = evaluate_dataframe(df, base_constants, **eval_kwargs)
 
         flips = int(metrics["flip_rate"] * base_lines)
-        clear_drop = max(0.0, base_metrics["clear_rate"] - metrics["clear_rate"])
-        trash_rise = max(0.0, metrics["trash_rate"] - base_metrics["trash_rate"])
-        destructive_cost = int(min(clear_drop, trash_rise) * base_lines)
-
-        decision = format_decision(flips, destructive_cost, std_dev)
-        raw_cov = "(Continuous)"
-        report_rows.append((weight_name, raw_cov, flips, destructive_cost, decision))
+        clear_loss = true_clear_loss(metrics)
+        macro_drop = base_macro_f1 - float(metrics["macro_f1"])
+        decision = format_decision(flips, clear_loss, macro_drop, std_dev)
+        report_rows.append((weight_name, flips, clear_loss, macro_drop, float(metrics["costed_score"]), decision))
 
     # Phase 2: Binary Gateways
     for rule in RULES_TO_ABLATE:
@@ -109,23 +129,25 @@ def run_ablation(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base_constants: 
             metrics = evaluate_dataframe(df, base_constants, **eval_kwargs)
 
         flips = int(metrics["flip_rate"] * base_lines)
-        clear_drop = max(0.0, base_metrics["clear_rate"] - metrics["clear_rate"])
-        trash_rise = max(0.0, metrics["trash_rate"] - base_metrics["trash_rate"])
-        destructive_cost = int(min(clear_drop, trash_rise) * base_lines)
-
-        decision = format_decision(flips, destructive_cost)
-        raw_cov = "N/A (LOO)"
-        report_rows.append((rule, raw_cov, flips, destructive_cost, decision))
+        clear_loss = true_clear_loss(metrics)
+        macro_drop = base_macro_f1 - float(metrics["macro_f1"])
+        decision = format_decision(flips, clear_loss, macro_drop)
+        report_rows.append((rule, flips, clear_loss, macro_drop, float(metrics["costed_score"]), decision))
 
     # Phase 3: Markdown Render
     print("### System Ablation Study Results")
-    print(f"*Total Evaluation Corpus: {base_lines:,} lines*\n")
-    print("| Rule / Factor | Raw Coverage | Marginal Flips (LOO) | `Clear -> Trash` Cost | Decision |")
-    print("| --- | --- | --- | --- | --- |")
+    print(
+        f"*Total Evaluation Corpus: {base_lines:,} lines (baseline macro-F1 vs. ground truth: {base_macro_f1:.4f})*\n"
+    )
+    print(
+        "| Rule / Factor | Marginal Flips (LOO) | `Clear -> Trash/Non-text` (true) | Macro-F1 Δ | costed_score | Decision |"
+    )
+    print("| --- | --- | --- | --- | --- | --- |")
 
-    sorted_rows = sorted(report_rows, key=lambda x: (x[3] > 0, x[2]), reverse=True)
-    for row in sorted_rows:
-        print(f"| `{row[0]}` | {row[1]} | {row[2]:,} | {row[3]:,} | {row[4]} |")
+    # Most damaging first: real Clear-loss, then accuracy loss, then raw flips.
+    sorted_rows = sorted(report_rows, key=lambda r: (r[2], r[3], r[1]), reverse=True)
+    for name, flips, clear_loss, macro_drop, costed, decision in sorted_rows:
+        print(f"| `{name}` | {flips:,} | {clear_loss:,} | {macro_drop:+.4f} | {costed:.4f} | {decision} |")
 
 
 def main() -> None:
