@@ -19,6 +19,7 @@ import configparser
 import itertools
 import re
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -1210,6 +1211,36 @@ def is_non_text(text: str) -> bool:
     return False
 
 
+@contextmanager
+def override_constants(values, modules=None):
+    """Temporarily override tunable module-level constants, then restore them.
+
+    ``values`` maps a constant NAME to a temporary value. For every module in
+    ``modules`` that defines that name, the attribute is swapped for the duration
+    of the ``with`` block and restored afterwards (even on exception). This lets
+    the offline re-scorer and the importance sweep evaluate a configuration by
+    calling the *real* production functions — no parallel reimplementation — while
+    still feeding them explicit constants.
+
+    ``modules`` defaults to this module only. Pass the extra modules that hold
+    their own copies (created by ``from text_util_langID import NAME``, e.g.
+    ``langID_classify``) so those copies are patched in lock-step.
+    """
+    if modules is None:
+        modules = (sys.modules[__name__],)
+    saved: list[tuple[object, str, object]] = []
+    try:
+        for mod in modules:
+            for name, value in values.items():
+                if hasattr(mod, name):
+                    saved.append((mod, name, getattr(mod, name)))
+                    setattr(mod, name, value)
+        yield
+    finally:
+        for mod, name, old in reversed(saved):
+            setattr(mod, name, old)
+
+
 def compute_quality_score(
     valid_word_ratio: float,
     perplexity: float,
@@ -1220,10 +1251,18 @@ def compute_quality_score(
     lang_score: float | None = None,
     gibberish_ratio: float = 0.0,
     fused_ratio: float = 0.0,
-    ppl_max: float = PERPLEXITY_THRESHOLD_MAX,
-    length_max: float = QS_LENGTH_MAX,
+    ppl_max: float | None = None,
+    length_max: float | None = None,
     is_upright_czech: bool = False,
 ) -> float:
+    # Resolve the perplexity/length caps from the (possibly overridden) module
+    # globals at call time so override_constants() can sweep them. An explicit
+    # argument still wins; existing callers that omit them get current defaults.
+    if ppl_max is None:
+        ppl_max = PERPLEXITY_THRESHOLD_MAX
+    if length_max is None:
+        length_max = QS_LENGTH_MAX
+
     total_weight = (
         QS_WEIGHT_VALID_WORD
         + QS_WEIGHT_WEIRD

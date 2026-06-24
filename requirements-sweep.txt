@@ -1,0 +1,10 @@
+# Extra dependencies for the offline config-constant importance sweep
+# (tools/const_importance_sweep.py). NOT needed by the production pipeline or by
+# the test suite — install only when running a sweep.
+#
+#   pip install -r tools/requirements-sweep.txt
+#
+# pandas/numpy already come from requirements.txt.
+scikit-learn>=1.3      # RandomForest surrogate + permutation importance (sklearn backend)
+optuna>=3.4            # TPE/random search + fANOVA importance (optuna backend)
+matplotlib>=3.7        # optional: param_importance.png bar charts

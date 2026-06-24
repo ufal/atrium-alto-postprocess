@@ -2,32 +2,43 @@
 """
 tools/recategorize_from_csv.py
 ==============================
-Offline re-scorer for #3 calibration — re-runs the categorisation logic over an
-already-produced ``DOC_LINE_CATEG`` CSV **without** FastText or the GPU
-perplexity model, by reusing the stored signals:
+Offline re-scorer + evaluator for config-constant calibration (#3 / #5).
 
-    * ``perplex``                     — the GPU perplexity (frozen)
-    * ``original_lang`` / ``orig_lang_score`` — the raw FastText output (frozen)
-    * ``text`` / ``original_text``    — the cleaned and pre-repair lines
+It re-runs the categorisation logic over an already-produced ``DOC_LINE_CATEG``
+CSV **without** FastText or the GPU perplexity model, by reusing the stored
+signals:
 
-Everything downstream of those — ``remap_lang`` (now a CAP, #3 A1), the structural
-detectors, ``compute_quality_score``, the per-line ``categorize_line`` (now fed the
-post-cap score + gibberish flag, #3 A2/B), and the document-level
-``apply_document_postprocessing`` (now with the page-majority arm, #3 A3) — is
-recomputed with the CURRENT code. Because the heavy models are frozen, this lets
-you re-measure the effect of a calibration change on real output in seconds and on
-CPU only, with ZERO drift from production: the same `categorize_line` and the same
-`apply_document_postprocessing` helper are imported, not re-implemented.
+    * ``perplex``                              — the GPU perplexity (frozen)
+    * ``original_lang`` / ``orig_lang_score``  — the raw FastText output (frozen)
+    * ``text`` / ``original_text``             — the cleaned and pre-repair lines
 
-It is a throwaway measurement aid, not part of the pipeline.
+Everything downstream of those — ``remap_lang`` (the #3 A1 CAP), the structural
+detectors, ``compute_quality_score``, the per-line ``categorize_line`` and the
+document-level ``apply_document_postprocessing`` (#3 A3) — is recomputed with the
+CURRENT production code. There is exactly ONE scoring engine: the real functions
+imported from ``text_util_langID`` / ``langID_classify``. Different constant
+values are explored by temporarily overriding the module-level tunables with
+``text_util_langID.override_constants`` (see ``recategorize_dataframe``) — never a
+parallel re-implementation — so the offline numbers match production by
+construction. At the default config the re-score reproduces the stored ``categ``
+(``flip_rate`` ~ 0); see ``tests/test_recategorize_parity.py``.
+
+This is a measurement/calibration aid, not part of the production pipeline.
 
 Usage
 -----
-    # re-score one CSV, write the new version next to it and print a diff report
-    python tools/recategorize_from_csv.py data_samples/DOC_LINE_CATEG/CTX0001.csv
+    # diff report: re-score one CSV (or a dir) at the CURRENT config
+    python tools/recategorize_from_csv.py data_samples/DOC_LINE_CATEG/
 
-    # re-score a whole directory of per-document CSVs
-    python tools/recategorize_from_csv.py data_samples/DOC_LINE_CATEG/ --out /tmp/rescored
+    # re-score a whole directory into a SEPARATE output dir (inputs untouched)
+    python tools/recategorize_from_csv.py data_samples/DOC_LINE_CATEG/ \
+        --out data_samples/DOC_LINE_CATEG_recat
+
+    # apply a different constant set (config file and/or KEY=VALUE overrides)
+    python tools/recategorize_from_csv.py data_samples/DOC_LINE_CATEG/ \
+        --config config_langID.txt \
+        --override CATEG_TRASH_SCORE_MAX=0.45 CLEAN_PROSE_PPL_MAX=350.0 \
+        --out /tmp/rescored
 
     # report only (do not write re-scored CSVs)
     python tools/recategorize_from_csv.py data_samples/DOC_LINE_CATEG/ --report-only
@@ -35,21 +46,30 @@ Usage
 Caveats
 -------
 * Fast-track rows (Empty / Non-text written by ``pre_filter_line`` with
-  ``quality_score == 0`` and ``word_count == 0``) are passed through unchanged —
-  they never went through the scoring path, so re-scoring them would be wrong.
-* The re-scorer reflects ONLY logic reachable from the frozen signals. It cannot
+  ``word_count == 0``) are passed through unchanged — they never went through the
+  scoring path, so re-scoring them would be wrong. (Pre-filter-only constants
+  such as ANCHOR_* / ISOLATED_* therefore have no effect offline and are not
+  exposed as tunables.)
+* The re-scorer reflects ONLY logic reachable from the frozen signals; it cannot
   re-derive anything that depended on the live FastText label distribution beyond
-  the single stored top-1 guess (which is all the production path used anyway).
+  the stored top-1 guess (which is all the production path used anyway).
 """
 
 from __future__ import annotations
 
 import argparse
 import configparser
+import math
 import os
+import re
 import sys
+from collections import Counter
+from collections.abc import Iterable, Mapping
+from contextlib import nullcontext
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 import pandas as pd
 
 # Make the repo root importable when run as `python tools/recategorize_from_csv.py`.
@@ -57,12 +77,13 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+import langID_classify as _lc  # noqa: E402
+import text_util_langID as _tu  # noqa: E402
 from langID_classify import (  # noqa: E402
     CSV_HEADER,
     apply_document_postprocessing,
 )
 from text_util_langID import (  # noqa: E402
-    SHORT_PPL_CAP,
     TRASH_REASONS,
     _lang_base,
     analyze_rotation_signals,
@@ -80,11 +101,22 @@ from text_util_langID import (  # noqa: E402
     detect_repeated_chars,
     detect_wx_words,
     is_all_caps_line,
+    override_constants,
     remap_lang,
     score_words_in_line,
 )
 
-_NUMERIC = {"perplex", "orig_lang_score"}
+# Modules whose copies of the tunable constants must move in lock-step when a
+# trial overrides them: text_util_langID owns them; langID_classify imported its
+# own bindings via `from text_util_langID import *`.
+_CONST_MODULES = (_tu, _lc)
+
+OUTPUT_CATEGORY_ORDER = ("Empty", "Non-text", "Trash", "Noisy", "Clear")
+
+
+# ---------------------------------------------------------------------------
+# Faithful per-line / per-document re-scoring (the ONLY scoring engine)
+# ---------------------------------------------------------------------------
 
 
 def _load_lang_config(config_path: str):
@@ -113,7 +145,12 @@ def _is_fast_track(row) -> bool:
 
 
 def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
-    """Recompute one previously-scored line from its frozen signals."""
+    """Recompute one previously-scored line from its frozen signals.
+
+    Reads tunables through the live module (``_tu.SHORT_PPL_CAP``) and calls the
+    real ``compute_quality_score`` / ``categorize_line`` so a surrounding
+    ``override_constants`` block is honoured.
+    """
     text_content = str(row.get("text", "") or "")
     original_text = str(row.get("original_text", "") or "")
     wc = len(text_content.split())
@@ -137,8 +174,8 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
         ppl_val = float(row.get("perplex", 0.0) or 0.0)
     except (ValueError, TypeError):
         ppl_val = 0.0
-    if wc <= 2 and ppl_val > SHORT_PPL_CAP:
-        ppl_val = SHORT_PPL_CAP
+    if wc <= 2 and ppl_val > _tu.SHORT_PPL_CAP:
+        ppl_val = _tu.SHORT_PPL_CAP
 
     g_density = compute_garbage_density(original_text)
     vowel_ratio = compute_vowel_ratio(original_text)
@@ -235,8 +272,76 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     return out
 
 
-def rescore_csv(in_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Return (old_df, new_df) for one per-document CSV."""
+def _coerce_locators(df: pd.DataFrame) -> pd.DataFrame:
+    """Force page_num / line_num to int so ordering is numeric, not lexical."""
+    for col in ("page_num", "line_num"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+    return df
+
+
+def _recategorize_one_document(doc: pd.DataFrame, expected_langs, known_bases) -> pd.DataFrame:
+    """Re-score one document's rows then apply the real page post-processing.
+
+    Index is preserved so callers can realign with the input frame.
+    """
+    rows: list[dict] = []
+    index: list = []
+    for idx, r in doc.iterrows():
+        rd = r.to_dict()
+        index.append(idx)
+        rows.append(rd if _is_fast_track(rd) else _rescore_row(rd, expected_langs, known_bases))
+
+    new = pd.DataFrame(rows, index=index)
+    if new.empty:
+        return new
+    new = _coerce_locators(new)
+    # The real, byte-identical document smoothing (dedup / surrounded-trash /
+    # page-majority + inverted-run sweep). Honours any active override_constants.
+    return apply_document_postprocessing(new)
+
+
+def recategorize_dataframe(
+    df: pd.DataFrame,
+    constants: Mapping[str, Any] | None = None,
+    *,
+    expected_langs: list[str] | None = None,
+    known_bases: frozenset | None = None,
+) -> pd.DataFrame:
+    """Faithful, document-aware re-categorisation under an explicit constant set.
+
+    ``constants=None`` uses the live module defaults. Rows are grouped by ``file``
+    (one production document per group) and each group is re-scored and smoothed
+    independently, exactly like production. The returned frame preserves the input
+    row order/index.
+    """
+    if expected_langs is None or known_bases is None:
+        expected_langs, known_bases = _load_lang_config(os.getenv("LANGID_CONFIG", str(_ROOT / "config_langID.txt")))
+
+    work = _coerce_locators(df.copy())
+
+    applied = coerce_constants(dict(constants)) if constants else {}
+    if applied:
+        validate_constants(applied)
+
+    ctx = override_constants(applied, modules=_CONST_MODULES) if applied else nullcontext()
+    frames: list[pd.DataFrame] = []
+    with ctx:
+        if "file" in work.columns:
+            for _, doc in work.groupby("file", sort=False):
+                frames.append(_recategorize_one_document(doc, expected_langs, known_bases))
+        else:
+            frames.append(_recategorize_one_document(work, expected_langs, known_bases))
+
+    if not frames:
+        return work
+    result = pd.concat(frames)
+    # Realign to the original row order; keep only rows we actually processed.
+    return result.reindex(work.index)
+
+
+def rescore_csv(in_path: Path, constants: Mapping[str, Any] | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return (old_df, new_df) for one per-document CSV (diff-report helper)."""
     old = pd.read_csv(in_path, dtype=str, keep_default_na=False)
 
     # --- Normalize legacy schema to current CSV_HEADER ---
@@ -247,45 +352,406 @@ def rescore_csv(in_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
         rename_map["line"] = "line_num"
     elif "line_order" in old.columns and "line_num" not in old.columns:
         rename_map["line_order"] = "line_num"
-
     if rename_map:
         old = old.rename(columns=rename_map)
 
-    # VYNUCENÝ FIX: Převedení lokátorů na int před porovnáváním
-    # Tímto zabráníme, aby apply_document_postprocessing lexikálně seřadil řádek "10" před řádek "2".
-    for col in ["page_num", "line_num"]:
-        if col in old.columns:
-            old[col] = pd.to_numeric(old[col], errors="coerce").fillna(0).astype(int)
+    old = _coerce_locators(old)
 
-    expected_langs, known_bases = _load_lang_config(os.getenv("LANGID_CONFIG", str(_ROOT / "config_langID.txt")))
-
-    rows = []
-    for _, r in old.iterrows():
-        rd = r.to_dict()
-        if _is_fast_track(rd):
-            rows.append(rd)  # pass through untouched
-        else:
-            rows.append(_rescore_row(rd, expected_langs, known_bases))
-
-    new = pd.DataFrame(rows)
-    # Re-run the document-level smoothing with the CURRENT helper (#3 A3).
+    new = recategorize_dataframe(old, constants)
     if not new.empty:
-        # Je potřeba i v new zajistit int formát, aby .sort_values() pracoval matematicky
-        for col in ["page_num", "line_num"]:
-            if col in new.columns:
-                new[col] = pd.to_numeric(new[col], errors="coerce").fillna(0).astype(int)
-
-        new = apply_document_postprocessing(new)
-        # Keep canonical column order where possible.
         cols = [c for c in CSV_HEADER if c in new.columns]
         cols += [c for c in new.columns if c not in cols]
         new = new[cols]
 
-    # Zarovnání masky pro diff, aby se porovnával správný řádek s řádkem
     if not old.empty:
         old = old.sort_values(by=["page_num", "line_num"], ascending=True)
-
     return old, new
+
+
+# ---------------------------------------------------------------------------
+# Tunable inventory + defaults (read from the live modules — never hardcoded,
+# so the tool can never drift from config_langID.txt)
+# ---------------------------------------------------------------------------
+
+# Production compute_quality_score sums these NINE weights (the legacy symbol
+# weight was dropped in #3); validation/normalisation use the same set.
+QS_WEIGHT_NAMES = (
+    "QS_WEIGHT_VALID_WORD",
+    "QS_WEIGHT_WEIRD",
+    "QS_WEIGHT_PERPLEXITY",
+    "QS_WEIGHT_LENGTH",
+    "QS_WEIGHT_GARBAGE",
+    "QS_WEIGHT_VOWEL",
+    "QS_WEIGHT_LANG",
+    "QS_WEIGHT_GIBBERISH",
+    "QS_WEIGHT_FUSED",
+)
+
+# Everything below is read at call time inside compute_quality_score /
+# categorize_line / determine_category / score_words_in_line /
+# analyze_rotation_signals / apply_document_postprocessing, so overriding it
+# actually moves categories. Pre-filter-only knobs are deliberately excluded.
+_THRESHOLD_NAMES = (
+    "CATEG_TRASH_SCORE_MAX",
+    "CATEG_NOISY_SCORE_MAX",
+    "CATEG_GARBAGE_DENSITY_HIGH",
+    "ROT_RATIO_INVERTED_MIN",
+    "WEIRD_RATIO_INVERTED_MIN",
+    "PPL_INVERTED_MIN",
+    "PERPLEXITY_THRESHOLD_MAX",
+    "SHORT_PPL_CAP",
+    "CLEAN_PROSE_MIN_SCORE",
+    "CLEAN_PROSE_WEIRD_MAX",
+    "CLEAN_PROSE_PPL_MAX",
+    "CLEAN_PROSE_WC_MIN",
+    # (#3) hard-sweep / extreme- and absolute-perplexity trash routes
+    "HARD_SWEEP_LANG_MAX",
+    "HARD_SWEEP_PPL_MIN",
+    "PPL_EXTREME_MIN",
+    "EXTREME_LANG_CONF",
+    "PPL_GARBAGE_ABSOLUTE",
+    # (#3) low-ppl Clear + LM-confident-Czech recovery + mostly-readable cap
+    "LOWPPL_CLEAR_MAX",
+    "LOWPPL_CZECH_CLEAR_MAX",
+    "CZECH_CLEAR_GARBAGE_MAX",
+    "MOSTLY_READABLE_VALID_MIN",
+    "SHORT_NOISY_QS_PENALTY",
+    "WORD_W_PENALTY",
+    # (#3) rotation / inversion organic penalties + per-line route
+    "GHOST_DOMINATED_MIN_RATIO",
+    "SUSPICIOUS_ROT_RATIO",
+    "SUSPICIOUS_WQX_RATIO",
+    "INVERTED_WEIRD_PENALTY",
+    "GHOST_HITS_INVERTED_MIN",
+    "ROT_HIGH_LANG_CONF",
+    "LANG_SCORE_ROUGH",
+    # (#3 A3) page-level smoothing
+    "INVERTED_RUN_MIN",
+    "INVERTED_PAGE_MAJORITY",
+    "CLEAR_BAND_WC_MIN",
+)
+
+TUNABLE_CONSTANTS = QS_WEIGHT_NAMES + _THRESHOLD_NAMES
+
+# Constants that must stay integral.
+INT_CONSTANTS = frozenset({"CLEAN_PROSE_WC_MIN", "GHOST_HITS_INVERTED_MIN", "INVERTED_RUN_MIN", "CLEAR_BAND_WC_MIN"})
+
+
+def _live_default(name: str) -> float | int:
+    """Current value of a tunable, read from the live production modules."""
+    for mod in _CONST_MODULES:
+        if hasattr(mod, name):
+            return getattr(mod, name)
+    raise AttributeError(f"Tunable constant {name!r} is not defined on the production modules")
+
+
+# Live snapshot of the current config — the sweep's base point and the
+# re-scorer's defaults. Reflects config_langID.txt exactly (no hardcoded drift).
+DEFAULT_CONSTANTS: dict[str, float | int] = {name: _live_default(name) for name in TUNABLE_CONSTANTS}
+
+
+# ---------------------------------------------------------------------------
+# Config parsing
+# ---------------------------------------------------------------------------
+
+
+def _parse_scalar(value: str) -> float | int | bool | str:
+    raw = value.strip()
+    lowered = raw.lower()
+    if lowered in {"true", "yes", "on"}:
+        return True
+    if lowered in {"false", "no", "off"}:
+        return False
+    try:
+        if re.fullmatch(r"[+-]?\d+", raw):
+            return int(raw)
+        return float(raw)
+    except ValueError:
+        return raw
+
+
+def read_config_constants(config_path: Path | str | None) -> dict[str, Any]:
+    """Read tunable constants from a config_langID.txt-style INI file.
+
+    Interpolation is disabled because the config may contain literal ``%``
+    characters (punctuation/symbol strings). All sections are scanned
+    case-sensitively and only known tunable constants are extracted; anything
+    absent falls back to the live module default.
+    """
+    constants = dict(DEFAULT_CONSTANTS)
+    if config_path is None:
+        return constants
+    if not Path(config_path).exists():
+        raise FileNotFoundError(f"Config file does not exist: {config_path}")
+
+    parser = configparser.ConfigParser(
+        interpolation=None,
+        inline_comment_prefixes=("#", ";"),
+        strict=False,
+    )
+    parser.optionxform = str
+    parser.read(config_path, encoding="utf-8")
+
+    known = set(TUNABLE_CONSTANTS)
+    for section in parser.sections():
+        for key, value in parser.items(section, raw=True):
+            if key in known:
+                constants[key] = _parse_scalar(value)
+    return constants
+
+
+def parse_overrides(overrides: Iterable[str]) -> dict[str, Any]:
+    parsed: dict[str, Any] = {}
+    for item in overrides:
+        if "=" not in item:
+            raise ValueError(f"Invalid override {item!r}; expected KEY=VALUE")
+        key, value = item.split("=", 1)
+        key = key.strip()
+        if key not in TUNABLE_CONSTANTS:
+            raise ValueError(f"Unknown tunable constant {key!r}. Known constants: {', '.join(TUNABLE_CONSTANTS)}")
+        parsed[key] = _parse_scalar(value)
+    return parsed
+
+
+def coerce_constants(constants: Mapping[str, Any]) -> dict[str, Any]:
+    """Coerce int constants to int and the remaining tunables to float."""
+    out = dict(constants)
+    for key in INT_CONSTANTS:
+        if key in out:
+            out[key] = int(out[key])
+    for key in TUNABLE_CONSTANTS:
+        if key in INT_CONSTANTS or key not in out:
+            continue
+        out[key] = float(out[key])
+    return out
+
+
+def validate_constants(constants: Mapping[str, Any]) -> None:
+    """Fail fast for logically invalid configurations."""
+
+    def _g(name):
+        return float(constants[name]) if name in constants else float(_live_default(name))
+
+    if _g("CATEG_TRASH_SCORE_MAX") >= _g("CATEG_NOISY_SCORE_MAX"):
+        raise ValueError("Invalid constants: CATEG_TRASH_SCORE_MAX must be < CATEG_NOISY_SCORE_MAX")
+    if _g("CLEAN_PROSE_MIN_SCORE") >= _g("CATEG_NOISY_SCORE_MAX"):
+        raise ValueError("Invalid constants: CLEAN_PROSE_MIN_SCORE must be < CATEG_NOISY_SCORE_MAX")
+    if _g("SHORT_PPL_CAP") >= _g("PERPLEXITY_THRESHOLD_MAX"):
+        raise ValueError("Invalid constants: SHORT_PPL_CAP must be < PERPLEXITY_THRESHOLD_MAX")
+    if sum(_g(name) for name in QS_WEIGHT_NAMES) <= 0:
+        raise ValueError("Invalid constants: sum(QS_WEIGHT_*) must be positive")
+
+
+# ---------------------------------------------------------------------------
+# Data loading + helpers
+# ---------------------------------------------------------------------------
+
+
+def csv_paths(input_dir: Path, recursive: bool = False) -> list[Path]:
+    pattern = "**/*.csv" if recursive else "*.csv"
+    return sorted(p for p in input_dir.glob(pattern) if p.is_file())
+
+
+def load_csvs(input_dir: Path, recursive: bool = False) -> pd.DataFrame:
+    """Concatenate per-document CSVs, preserving a ``file`` column for grouping.
+
+    Read as strings with NA disabled so the offline path sees the same raw cell
+    values that ``rescore_csv`` does (consistent dtype/NA handling).
+    """
+    paths = csv_paths(input_dir, recursive=recursive)
+    if not paths:
+        raise FileNotFoundError(f"No CSV files found in {input_dir}")
+
+    frames: list[pd.DataFrame] = []
+    for path in paths:
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df["_source_file"] = str(path.relative_to(input_dir))
+        if "file" not in df.columns:
+            df["file"] = path.stem
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True)
+
+
+def normalize_category(value: Any) -> str:
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return ""
+    raw = str(value).strip()
+    lowered = raw.lower().replace("_", "-")
+    mapping = {
+        "empty": "Empty",
+        "non-text": "Non-text",
+        "nontext": "Non-text",
+        "trash": "Trash",
+        "noisy": "Noisy",
+        "clear": "Clear",
+    }
+    return mapping.get(lowered, raw)
+
+
+# ---------------------------------------------------------------------------
+# Metrics
+# ---------------------------------------------------------------------------
+
+
+def confusion_matrix_dict(original: Iterable[Any], predicted: Iterable[Any]) -> dict[str, dict[str, int]]:
+    orig = [normalize_category(v) for v in original]
+    pred = [normalize_category(v) for v in predicted]
+    labels = sorted(set(orig) | set(pred) | set(OUTPUT_CATEGORY_ORDER))
+    table = pd.crosstab(
+        pd.Series(orig, name="original"),
+        pd.Series(pred, name="predicted"),
+        dropna=False,
+    )
+    result: dict[str, dict[str, int]] = {}
+    for row_label in labels:
+        result[row_label] = {}
+        for col_label in labels:
+            result[row_label][col_label] = int(
+                table.loc[row_label, col_label] if row_label in table.index and col_label in table.columns else 0
+            )
+    return result
+
+
+def f1_scores(confusion: dict[str, dict[str, int]]) -> dict[str, Any]:
+    labels = list(confusion.keys())
+    per_label: dict[str, float] = {}
+    supports: dict[str, int] = {}
+    for label in labels:
+        tp = confusion[label].get(label, 0)
+        fp = sum(confusion[row].get(label, 0) for row in labels) - tp
+        fn = sum(confusion[label].values()) - tp
+        precision = tp / (tp + fp) if tp + fp else 0.0
+        recall = tp / (tp + fn) if tp + fn else 0.0
+        f1 = (2.0 * precision * recall / (precision + recall)) if precision + recall else 0.0
+        per_label[label] = f1
+        supports[label] = sum(confusion[label].values())
+    total = sum(supports.values())
+    macro_f1 = sum(per_label.values()) / len(per_label) if per_label else 0.0
+    weighted_f1 = sum(per_label[label] * supports[label] for label in labels) / total if total else 0.0
+    return {
+        "macro_f1": float(macro_f1),
+        "weighted_f1": float(weighted_f1),
+        "per_class_f1": per_label,
+        "per_class_support": supports,
+    }
+
+
+def kl_divergence_from_counts(baseline_counts: dict[str, int], new_counts: dict[str, int]) -> float:
+    labels = sorted(set(baseline_counts) | set(new_counts) | set(OUTPUT_CATEGORY_ORDER))
+    p = np.array([baseline_counts.get(label, 0) for label in labels], dtype="float64")
+    q = np.array([new_counts.get(label, 0) for label in labels], dtype="float64")
+    if p.sum() == 0 or q.sum() == 0:
+        return 0.0
+    eps = 1e-12
+    p = p / p.sum()
+    q = q / q.sum()
+    return float(np.sum((p + eps) * np.log((p + eps) / (q + eps))))
+
+
+def costed_flip_score(original: Iterable[Any], predicted: Iterable[Any]) -> float:
+    """Operationally weighted per-line penalty; high cost to losing usable text."""
+    cost = {
+        ("Clear", "Trash"): 3.0,
+        ("Clear", "Non-text"): 3.0,
+        ("Clear", "Noisy"): 1.0,
+        ("Noisy", "Trash"): 2.0,
+        ("Noisy", "Non-text"): 2.0,
+        ("Noisy", "Clear"): 0.5,
+        ("Trash", "Clear"): 2.0,
+        ("Trash", "Noisy"): 1.0,
+        ("Non-text", "Clear"): 2.0,
+        ("Empty", "Clear"): 2.0,
+    }
+    total = 0.0
+    count = 0
+    for old_raw, new_raw in zip(original, predicted, strict=False):
+        old = normalize_category(old_raw)
+        new = normalize_category(new_raw)
+        if old != new:
+            total += cost.get((old, new), 1.0)
+        count += 1
+    return float(total / count) if count else 0.0
+
+
+def _metrics_from_labels(original: np.ndarray, predicted: np.ndarray) -> dict[str, Any]:
+    total = len(original)
+    flip_count = int(np.sum(original != predicted))
+    flip_rate = float(flip_count / total) if total else 0.0
+    baseline_counts = Counter(original)
+    predicted_counts = Counter(predicted)
+    confusion = confusion_matrix_dict(original, predicted)
+    f1 = f1_scores(confusion)
+    kl = kl_divergence_from_counts(dict(baseline_counts), dict(predicted_counts))
+    cost = costed_flip_score(original, predicted)
+    category_rates = {
+        label: float(predicted_counts.get(label, 0) / total) if total else 0.0 for label in OUTPUT_CATEGORY_ORDER
+    }
+    return {
+        "line_count": int(total),
+        "flip_count": flip_count,
+        "flip_rate": flip_rate,
+        "category_counts": dict(predicted_counts),
+        "category_rates": category_rates,
+        "trash_rate": category_rates.get("Trash", 0.0),
+        "clear_rate": category_rates.get("Clear", 0.0),
+        "baseline_category_counts": dict(baseline_counts),
+        "confusion": confusion,
+        "macro_f1": f1["macro_f1"],
+        "weighted_f1": f1["weighted_f1"],
+        "per_class_f1": f1["per_class_f1"],
+        "per_class_support": f1["per_class_support"],
+        "kl_divergence": kl,
+        "costed_score": cost,
+    }
+
+
+def evaluate_dataframe(
+    df: pd.DataFrame,
+    constants: Mapping[str, Any] | None = None,
+    *,
+    original_category_column: str = "categ",
+    expected_langs: list[str] | None = None,
+    known_bases: frozenset | None = None,
+) -> dict[str, Any]:
+    """Faithfully re-categorise ``df`` under ``constants`` and score it against the
+    stored categories. The evaluation runs the real production engine
+    (document-aware, with page post-processing), so at the default config the
+    flip_rate is ~0 by construction.
+    """
+    if original_category_column in df.columns:
+        original = df[original_category_column].map(normalize_category).to_numpy()
+    elif "orig_categ" in df.columns:
+        original = df["orig_categ"].map(normalize_category).to_numpy()
+    else:
+        original = None
+
+    predicted_df = recategorize_dataframe(df, constants, expected_langs=expected_langs, known_bases=known_bases)
+    predicted = predicted_df["categ"].map(normalize_category).to_numpy()
+
+    if original is None:
+        original = predicted.copy()
+    return _metrics_from_labels(original, predicted)
+
+
+def evaluate_per_document(
+    df: pd.DataFrame,
+    constants: Mapping[str, Any] | None = None,
+    *,
+    original_category_column: str = "categ",
+) -> dict[str, dict[str, Any]]:
+    """Per-document metrics (importance can be collection-specific)."""
+    group_col = "file" if "file" in df.columns else ("_source_file" if "_source_file" in df.columns else None)
+    if group_col is None:
+        return {"<all>": evaluate_dataframe(df, constants, original_category_column=original_category_column)}
+    out: dict[str, dict[str, Any]] = {}
+    for name, doc in df.groupby(group_col, sort=True):
+        out[str(name)] = evaluate_dataframe(doc, constants, original_category_column=original_category_column)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Diff report (CLI)
+# ---------------------------------------------------------------------------
 
 
 def _category_counts(df: pd.DataFrame):
@@ -324,14 +790,52 @@ def _report(in_path: Path, old: pd.DataFrame, new: pd.DataFrame) -> int:
     return changed
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(description="Offline re-scorer for #3 calibration.")
-    ap.add_argument("path", help="DOC_LINE_CATEG CSV file or a directory of them")
-    ap.add_argument("--out", help="output file/dir (default: overwrite in place)")
-    ap.add_argument("--report-only", action="store_true", help="print the diff report but do not write re-scored CSVs")
-    args = ap.parse_args(argv)
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 
-    in_path = Path(args.path)
+
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(
+        description=(
+            "Faithfully re-categorise DOC_LINE_CATEG CSVs under a chosen constant set "
+            "(no GPU/model inference). Inputs are read-only; revised CSVs go to --out."
+        )
+    )
+    ap.add_argument("path", nargs="?", help="CSV file or directory of per-document CSVs")
+    ap.add_argument("--input-dir", dest="input_dir", help="Alias for the positional path (a directory).")
+    ap.add_argument("--out", "--output-dir", dest="out", help="Output file/dir (default: overwrite in place).")
+    ap.add_argument("--config", help="config_langID.txt-style INI to source constants from.")
+    ap.add_argument(
+        "--override",
+        nargs="*",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Override individual constants, e.g. CATEG_TRASH_SCORE_MAX=0.45.",
+    )
+    ap.add_argument("--report-only", action="store_true", help="Print the diff report but do not write CSVs.")
+    return ap
+
+
+def _resolve_constants(args) -> dict[str, Any] | None:
+    if not args.config and not args.override:
+        return None
+    constants = read_config_constants(Path(args.config)) if args.config else dict(DEFAULT_CONSTANTS)
+    constants.update(parse_overrides(args.override))
+    constants = coerce_constants(constants)
+    validate_constants(constants)
+    return constants
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+
+    raw_path = args.path or args.input_dir
+    if not raw_path:
+        print("error: provide a CSV path or --input-dir", file=sys.stderr)
+        return 2
+    in_path = Path(raw_path)
+
     if in_path.is_dir():
         csvs = sorted(in_path.glob("*.csv"))
     else:
@@ -340,11 +844,17 @@ def main(argv=None):
         print(f"No CSV files found at {in_path}", file=sys.stderr)
         return 1
 
+    constants = _resolve_constants(args)
+    if constants:
+        print(
+            f"Applying {sum(1 for k in constants if constants[k] != DEFAULT_CONSTANTS.get(k))} non-default constant(s)."
+        )
+
     total_changed = 0
     grand_old: dict = {}
     grand_new: dict = {}
     for csv_path in csvs:
-        old, new = rescore_csv(csv_path)
+        old, new = rescore_csv(csv_path, constants)
         total_changed += _report(csv_path, old, new)
         for k, v in _category_counts(old).items():
             grand_old[k] = grand_old.get(k, 0) + v
@@ -365,8 +875,7 @@ def main(argv=None):
 
     if len(csvs) > 1:
         print("\n=== GRAND TOTAL ===")
-        cats = sorted(set(grand_old) | set(grand_new))
-        for c in cats:
+        for c in sorted(set(grand_old) | set(grand_new)):
             b, a = grand_old.get(c, 0), grand_new.get(c, 0)
             print(f"  {c:<10} {b:>7} {a:>7} {a - b:>+7}")
         print(f"  total lines changed category: {total_changed}")
