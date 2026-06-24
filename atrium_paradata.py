@@ -337,6 +337,7 @@ def merge_run_paradata(
     out_path: str,
     pipeline: Optional[str] = None,
     method: Optional[str] = None,
+    skipped_stages: Optional[List[str]] = None,  # (#6) NEW
 ) -> str:
     """Merge per-stage paradata JSONs of ONE end-to-end run into one summary.
 
@@ -400,7 +401,13 @@ def merge_run_paradata(
                 "license": data.get("license"),
                 "input_files_total": stats.get("input_files_total"),
                 "successfully_processed": stats.get("successfully_processed"),
-                "skipped_files": stats.get("skipped_files"),
+                "skipped_stages": skipped_stages or [],
+                "license_note": (
+                    "Effective license/intermediate_formats reflect EXECUTED stages only; "
+                    "skipped: " + ", ".join(skipped_stages)
+                )
+                if skipped_stages
+                else "",
             }
         )
 

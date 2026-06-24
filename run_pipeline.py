@@ -22,9 +22,28 @@ which this orchestrator sets to the SELECTED method's output directory. Without
 this, langID_classify always read the LayoutReader dir and silently ignored
 alto-tools / glm output.
 
+Stage skipping (#6)
+-------------------
+Any stage can be skipped with --skip-<stage> where <stage> is one of
+split|stats|extract|classify|aggregate (each also settable as [PIPELINE].SKIP_<STAGE>).
+--start-from <stage> is a convenience that skips every EARLIER stage. A skipped
+stage's outputs must already exist on disk; run_pipeline prints a non-fatal
+warning if they are missing. Because a skipped stage emits no paradata, the merged
+run summary lists `skipped_stages` and its license / intermediate_formats reflect
+only the stages that actually ran.
+
 Configuration
 -------------
 Every setting is read from config_langID.txt. Precedence: CLI flag > config > default.
+
+Usage
+-----
+  python3 run_pipeline.py                        # all settings from config ([PIPELINE].METHOD)
+  python3 run_pipeline.py --method glm           # override just the extraction backend
+  python3 run_pipeline.py --skip-split           # PAGE_ALTO already populated
+  python3 run_pipeline.py --skip-extract         # PAGE_TXT* already populated (avoids model load)
+  python3 run_pipeline.py --start-from classify  # run classify + aggregate only
+  python3 run_pipeline.py --dry-run              # print the resolved plan, run nothing
 """
 
 from __future__ import annotations
@@ -43,6 +62,9 @@ from atrium_paradata import merge_run_paradata
 
 CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
 
+# Canonical stage order; the keys also drive --skip-<key> / [PIPELINE].SKIP_<KEY>.
+STAGE_ORDER = ["split", "stats", "extract", "classify", "aggregate"]
+
 # method -> (script, [EXTRACT] output-dir key, default output dir)
 EXTRACT_METHODS = {
     "alto-tools": ("extract_ALTO_2_TXT.py", "OUTPUT_TXT", "./data_samples/PAGE_TXT"),
@@ -57,6 +79,8 @@ _DEFAULTS = {
     "skip_split": False,
     "paradata_dir": "paradata",
     "input_csv": "test_alto_stats.csv",
+    "categ_dir": "data_samples/DOC_LINE_CATEG",
+    "stats_dir": "data_samples/DOC_LINE_STATS",
 }
 
 
@@ -81,10 +105,28 @@ def _cfg_getbool(cfg, section, key, default):
 def _resolve_extract_outdir(method: str, cfg: configparser.ConfigParser) -> str:
     """The text-output directory the chosen extraction method writes to.
 
-    Used to point the classify stage at the right text source (#4).
+    Used to point the classify stage at the right text source (#4) and to check
+    the extract stage's output when it is skipped (#6).
     """
     _script, key, default = EXTRACT_METHODS[method]
     return (_cfg_get(cfg, "EXTRACT", key, default) or default).strip()
+
+
+def _resolve_skips(args, cfg: configparser.ConfigParser) -> Dict[str, bool]:
+    """Per-stage skip map: CLI --skip-<stage> OR [PIPELINE].SKIP_<STAGE>.
+
+    --start-from <stage> additionally forces every EARLIER stage to be skipped.
+    getattr() keeps this robust to partial argparse Namespaces used in unit tests.
+    """
+    skip = {
+        s: bool(getattr(args, f"skip_{s}", False)) or _cfg_getbool(cfg, "PIPELINE", f"SKIP_{s.upper()}", False)
+        for s in STAGE_ORDER
+    }
+    start_from = getattr(args, "start_from", None)
+    if start_from:
+        for s in STAGE_ORDER[: STAGE_ORDER.index(start_from)]:
+            skip[s] = True
+    return skip
 
 
 def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
@@ -93,20 +135,37 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
     if method not in EXTRACT_METHODS:
         raise SystemExit(f"Unknown extraction method '{method}'. Choose one of: {', '.join(EXTRACT_METHODS)}.")
 
-    input_dir = args.input_dir or _cfg_get(cfg, "PIPELINE", "INPUT_DIR", _DEFAULTS["input_dir"])
-    page_alto = args.page_alto_dir or _cfg_get(cfg, "PIPELINE", "PAGE_ALTO_DIR", _DEFAULTS["page_alto_dir"])
-    paradata_dir = args.paradata_dir or _cfg_get(cfg, "PIPELINE", "PARADATA_DIR", _DEFAULTS["paradata_dir"])
-    input_csv = args.input_csv or _cfg_get(cfg, "EXTRACT", "INPUT_CSV", _DEFAULTS["input_csv"])
-    skip_split = args.skip_split or _cfg_getbool(cfg, "PIPELINE", "SKIP_SPLIT", _DEFAULTS["skip_split"])
+    input_dir = (args.input_dir or _cfg_get(cfg, "PIPELINE", "INPUT_DIR", _DEFAULTS["input_dir"])).strip()
+    page_alto = (args.page_alto_dir or _cfg_get(cfg, "PIPELINE", "PAGE_ALTO_DIR", _DEFAULTS["page_alto_dir"])).strip()
+    paradata_dir = (args.paradata_dir or _cfg_get(cfg, "PIPELINE", "PARADATA_DIR", _DEFAULTS["paradata_dir"])).strip()
+    input_csv = (args.input_csv or _cfg_get(cfg, "EXTRACT", "INPUT_CSV", _DEFAULTS["input_csv"])).strip()
+    text_dir = _resolve_extract_outdir(method, cfg)
+    categ_dir = (
+        _cfg_get(cfg, "CLASSIFY", "OUTPUT_LINES_LOG", _DEFAULTS["categ_dir"]) or _DEFAULTS["categ_dir"]
+    ).strip()
+    stats_dir = (_cfg_get(cfg, "AGGREGATE", "OUTPUT_DOC_DIR", _DEFAULTS["stats_dir"]) or _DEFAULTS["stats_dir"]).strip()
+
+    skip = _resolve_skips(args, cfg)
 
     return {
         "method": method,
-        "input_dir": input_dir.strip(),
-        "page_alto_dir": page_alto.strip(),
-        "paradata_dir": paradata_dir.strip(),
-        "input_csv": input_csv.strip(),
-        "skip_split": skip_split,
-        "text_dir": _resolve_extract_outdir(method, cfg),
+        "input_dir": input_dir,
+        "page_alto_dir": page_alto,
+        "paradata_dir": paradata_dir,
+        "input_csv": input_csv,
+        "text_dir": text_dir,
+        "skip": skip,
+        # Back-compat: callers/tests that read settings["skip_split"] still work.
+        "skip_split": skip["split"],
+        "start_from": getattr(args, "start_from", None),
+        # Resolved output location per stage (used for the pre-flight existence check).
+        "outputs": {
+            "split": page_alto,
+            "stats": input_csv,
+            "extract": text_dir,
+            "classify": categ_dir,
+            "aggregate": stats_dir,
+        },
     }
 
 
@@ -114,6 +173,16 @@ def _snapshot(paradata_dir: Path) -> set:
     if not paradata_dir.exists():
         return set()
     return {p.name for p in paradata_dir.glob("*.json")}
+
+
+def _output_present(path: str) -> bool:
+    """True if a stage output already exists: a non-empty file or non-empty dir."""
+    p = Path(path)
+    if not p.exists():
+        return False
+    if p.is_dir():
+        return any(p.iterdir())
+    return p.stat().st_size > 0
 
 
 def _run_stage(name: str, cmd: List[str], paradata_dir: Path) -> List[str]:
@@ -134,47 +203,45 @@ def _run_stage(name: str, cmd: List[str], paradata_dir: Path) -> List[str]:
 
 
 def build_plan(settings: Dict, config_path: str) -> List[Dict]:
+    """All five stages in order, each tagged with its skip flag (no filtering)."""
     py = sys.executable or "python3"
     extract_script = EXTRACT_METHODS[settings["method"]][0]
 
-    plan: List[Dict] = []
-    if not settings["skip_split"]:
-        plan.append(
-            {
-                "name": "1. page_split (ALTO -> PAGE_ALTO)",
-                "cmd": [py, "page_split.py", settings["input_dir"], settings["page_alto_dir"]],
-                "logged": False,
-            }
-        )
-    plan.append(
+    stages: List[Dict] = [
         {
+            "key": "split",
+            "name": "1. page_split (ALTO -> PAGE_ALTO)",
+            "cmd": [py, "page_split.py", settings["input_dir"], settings["page_alto_dir"]],
+            "logged": False,
+        },
+        {
+            "key": "stats",
             "name": "2. alto_stats_create (PAGE_ALTO -> stats.csv)",
             "cmd": [py, "alto_stats_create.py", settings["page_alto_dir"], "-o", settings["input_csv"]],
             "logged": True,
-        }
-    )
-    plan.append(
+        },
         {
+            "key": "extract",
             "name": f"3. extract text [{settings['method']}] (stats.csv -> {settings['text_dir']})",
             "cmd": [py, extract_script],
             "logged": True,
-        }
-    )
-    plan.append(
+        },
         {
+            "key": "classify",
             "name": "4. langID_classify (PAGE_TXT* -> DOC_LINE_CATEG)",
             "cmd": [py, "langID_classify.py"],
             "logged": True,
-        }
-    )
-    plan.append(
+        },
         {
+            "key": "aggregate",
             "name": "5. langID_aggregate_STAT (DOC_LINE_CATEG -> DOC_LINE_STATS)",
             "cmd": [py, "langID_aggregate_STAT.py", "--config", config_path],
             "logged": True,
-        }
-    )
-    return plan
+        },
+    ]
+    for st in stages:
+        st["skip"] = settings["skip"][st["key"]]
+    return stages
 
 
 def main() -> int:
@@ -194,10 +261,35 @@ def main() -> int:
     ap.add_argument("--input-dir", default=None, help="Override [PIPELINE].INPUT_DIR (document-level ALTO XMLs).")
     ap.add_argument("--page-alto-dir", default=None, help="Override [PIPELINE].PAGE_ALTO_DIR (per-page ALTO dir).")
     ap.add_argument("--input-csv", default=None, help="Override [EXTRACT].INPUT_CSV (page-stats CSV).")
-    ap.add_argument(
-        "--skip-split", action="store_true", help="Force-skip page_split (also settable via [PIPELINE].SKIP_SPLIT)."
-    )
     ap.add_argument("--paradata-dir", default=None, help="Override [PIPELINE].PARADATA_DIR.")
+
+    # --- Stage skipping / starting points (#6) ---
+    ap.add_argument(
+        "--start-from",
+        choices=STAGE_ORDER,
+        default=None,
+        help="Run from this stage onward; skip every earlier stage (e.g. 'classify').",
+    )
+    ap.add_argument(
+        "--skip-split", action="store_true", help="Skip page_split (also [PIPELINE].SKIP_SPLIT). PAGE_ALTO ready."
+    )
+    ap.add_argument(
+        "--skip-stats",
+        action="store_true",
+        help="Skip alto_stats_create (also [PIPELINE].SKIP_STATS). stats CSV ready.",
+    )
+    ap.add_argument(
+        "--skip-extract",
+        action="store_true",
+        help="Skip text extraction (also [PIPELINE].SKIP_EXTRACT). Main use: PAGE_TXT* ready; avoids model load.",
+    )
+    ap.add_argument(
+        "--skip-classify", action="store_true", help="Skip langID_classify (also [PIPELINE].SKIP_CLASSIFY)."
+    )
+    ap.add_argument(
+        "--skip-aggregate", action="store_true", help="Skip langID_aggregate_STAT (also [PIPELINE].SKIP_AGGREGATE)."
+    )
+
     ap.add_argument(
         "--summary-out",
         default=None,
@@ -219,28 +311,48 @@ def main() -> int:
     os.environ["LANGID_CONFIG"] = config_path
     os.environ["LANGID_TEXT_DIR"] = settings["text_dir"]
 
+    run_count = sum(1 for st in plan if not st["skip"])
+    skip_count = len(plan) - run_count
+
     cfg_note = config_path if Path(config_path).exists() else f"{config_path} (missing - using defaults)"
     print(f"Config: {cfg_note}")
-    print(f"Pipeline plan ({len(plan)} stages, extraction method='{settings['method']}'):")
-    for stage in plan:
-        tag = "[paradata]" if stage["logged"] else "[no log]  "
-        print(f"  {tag} {stage['name']}")
+    start_note = f", start-from='{settings['start_from']}'" if settings["start_from"] else ""
+    print(
+        f"Pipeline plan ({run_count} to run, {skip_count} skipped, "
+        f"extraction method='{settings['method']}'{start_note}):"
+    )
+    for st in plan:
+        run_tag = "[skip]" if st["skip"] else "[run] "
+        log_tag = "[paradata]" if st["logged"] else "[no log]  "
+        print(f"  {run_tag} {log_tag} {st['name']}")
     print(
         f"Resolved settings: input_dir={settings['input_dir']} "
         f"page_alto_dir={settings['page_alto_dir']} input_csv={settings['input_csv']} "
-        f"text_dir={settings['text_dir']} "
-        f"skip_split={settings['skip_split']} paradata_dir={settings['paradata_dir']}"
+        f"text_dir={settings['text_dir']} paradata_dir={settings['paradata_dir']}"
     )
+
+    # Pre-flight: a skipped stage's output must already exist for downstream stages.
+    for st in plan:
+        if st["skip"] and not _output_present(settings["outputs"][st["key"]]):
+            print(
+                f"  ! WARNING: stage '{st['key']}' is skipped but its output "
+                f"'{settings['outputs'][st['key']]}' is missing/empty; later stages may fail.",
+                file=sys.stderr,
+            )
 
     if args.dry_run:
         print("\nDry run - nothing executed.")
         return 0
 
     collected: List[str] = []
+    skipped_names = [st["name"] for st in plan if st["skip"]]
     run_started = time.strftime("%y%m%d-%H%M%S")
     try:
-        for stage in plan:
-            collected.extend(_run_stage(stage["name"], stage["cmd"], paradata_dir))
+        for st in plan:
+            if st["skip"]:
+                print(f"\n-- SKIPPED: {st['name']}")
+                continue
+            collected.extend(_run_stage(st["name"], st["cmd"], paradata_dir))
     except RuntimeError as exc:
         print(f"\nx Pipeline aborted: {exc}", file=sys.stderr)
         if collected:
@@ -250,6 +362,8 @@ def main() -> int:
 
     if not collected:
         print("\nNo paradata logs were produced; nothing to merge.")
+        if skipped_names:
+            print(f"  Skipped stages: {', '.join(skipped_names)}")
         return 0
 
     summary_out = args.summary_out or str(paradata_dir / f"{run_started}_pipeline-run.json")
@@ -258,6 +372,7 @@ def main() -> int:
         out_path=summary_out,
         pipeline="alto-postprocess",
         method=settings["method"],
+        skipped_stages=skipped_names,
     )
 
     data = json.loads(Path(merged).read_text(encoding="utf-8"))
@@ -266,6 +381,9 @@ def main() -> int:
     fmts = ", ".join(f"{k}x{v}" for k, v in data["intermediate_formats"].items()) or "-"
     print(f"  Intermediate formats     : {fmts}")
     print(f"  Total duration           : {data['total_duration_seconds']} s")
+    if skipped_names:
+        print(f"  Skipped stages           : {', '.join(skipped_names)}")
+        print("  NOTE: license/formats above reflect EXECUTED stages only.")
     print(f"  Run summary              : {merged}\n{'=' * 78}")
     return 0
 

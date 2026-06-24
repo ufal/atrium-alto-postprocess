@@ -28,9 +28,15 @@ _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR.parent))
 
-from recategorize_from_csv import _load_lang_config, evaluate_dataframe, load_csvs, read_config_constants  # noqa: E402
+from recategorize_from_csv import (  # noqa: E402
+    QS_WEIGHT_NAMES,
+    _load_lang_config,
+    evaluate_dataframe,
+    load_csvs,
+    read_config_constants,
+)  # noqa: E402
 
-from text_util_langID import QS_WEIGHT_NAMES, override_constants  # noqa: E402
+from text_util_langID import override_constants  # noqa: E402
 
 RULES_TO_ABLATE: List[str] = [
     "rule_hard_sweep",
@@ -83,7 +89,7 @@ def run_ablation(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base_constants: 
     # Phase 1: Continuous Signals
     for weight_name in QS_WEIGHT_NAMES:
         col = feature_map.get(weight_name)
-        std_dev = df[col].std() if col and col in df.columns else None
+        std_dev = pd.to_numeric(df[col], errors="coerce").std() if col and col in df.columns else None
 
         with override_constants({weight_name: 0.0}):
             metrics = evaluate_dataframe(df, base_constants, **eval_kwargs)
