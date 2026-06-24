@@ -129,5 +129,12 @@ GHOST_HITS_INVERTED_MIN     = 1
 METHOD        = layoutreader
 INPUT_DIR     = data_samples/ALTO
 PAGE_ALTO_DIR = data_samples/PAGE_ALTO
-SKIP_SPLIT    = false
 PARADATA_DIR  = paradata
+# Per-stage skip flags (#6): skip a stage whose outputs already exist. CLI
+# --skip-<stage> / --start-from override these. A skipped stage's outputs must
+# already be present on disk for the downstream stages to run.
+SKIP_SPLIT     = false
+SKIP_STATS     = false
+SKIP_EXTRACT   = false
+SKIP_CLASSIFY  = false
+SKIP_AGGREGATE = false
