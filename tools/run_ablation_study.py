@@ -57,7 +57,6 @@ RULES_TO_ABLATE: List[str] = [
     "rule_garbage_density",
     "rule_short_garbage",
     "rule_lowppl_clear",
-    "rule_short_fragment_noisy",
     "rule_mostly_readable_noisy",
     "rule_trailing_fill_rescue",
     "penalty_wqx_rot",

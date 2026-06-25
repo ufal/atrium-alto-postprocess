@@ -3,11 +3,10 @@ tests/test_categorization_routes.py
 ===================================
 Unit coverage for the #3 categorisation routes: the inverted/mirror lexicon and
 its derivation, analyze_rotation_signals (gate behaviour), the per-line
-trash_inverted route + non-diacritics hard gate, and the short-fragment Clear
-guard. All pure-Python — no torch/fasttext/GPU.
+trash_inverted route + non-diacritics hard gate, and the low-ppl Clear
+fast-track. All pure-Python — no torch/fasttext/GPU.
 """
 
-import text_util_langID as tul
 from text_util_langID import (
     _MIRROR_GLYPH,
     _ROTATE_GLYPH,
@@ -53,30 +52,31 @@ class TestTrashInvertedGate:
         assert reason != "trash_inverted" and cat != "Trash"
 
 
-class TestClearBandGuard:
-    def test_disabled_by_default(self, monkeypatch):
-        monkeypatch.setattr(tul, "CLEAR_BAND_WC_MIN", 0)
-        cat, _ = categorize_line(0.92, "značky.", 1, 0.4, 200.0, garbage_density=0.14)
-        assert cat == "Clear"
+class TestLowPplFastTrack:
+    """The low-ppl Clear fast-track (rule_lowppl_clear): LM-confident text
+    (ppl < LOWPPL_CLEAR_MAX, word_count >= 3) is promoted straight to Clear,
+    independent of the score band. Replaces the retired CLEAR_BAND_WC_MIN /
+    rule_short_fragment_noisy guard (#5)."""
 
-    def test_holds_short_noisy_fragment(self, monkeypatch):
-        monkeypatch.setattr(tul, "CLEAR_BAND_WC_MIN", 3)
-        # FIX: Unpack 3 values
-        cat, _, reason = categorize_line(0.92, "značky.", 1, 0.4, 200.0, garbage_density=0.14, return_reason=True)
-        assert cat == "Noisy" and reason == "noisy_threshold"
-
-    def test_spares_clean_short_prose(self, monkeypatch):
-        monkeypatch.setattr(tul, "CLEAR_BAND_WC_MIN", 3)
-        cat, _ = categorize_line(0.92, "republiky československé", 2, 0.4, 200.0, weird_ratio=0.0, garbage_density=0.0)
-        assert cat == "Clear"
-
-    def test_exempts_lowppl_fasttrack(self, monkeypatch):
-        monkeypatch.setattr(tul, "CLEAR_BAND_WC_MIN", 3)
-        # FIX: Unpack 3 values
+    def test_lowppl_multiword_promoted_to_clear(self):
         cat, _, reason = categorize_line(
             0.95, "krátký čistý text", 3, 0.4, 30.0, garbage_density=0.1, return_reason=True
         )
         assert cat == "Clear" and reason == "lowppl_clear"
+
+    def test_short_fragment_no_longer_held_noisy(self):
+        # A short borderline-garbagey fragment is no longer demoted by a hard
+        # word-count gate; with the guard retired it follows the score band.
+        cat, _, reason = categorize_line(0.92, "značky.", 1, 0.4, 200.0, garbage_density=0.14, return_reason=True)
+        assert cat == "Clear" and reason != "lowppl_clear"
+
+    def test_lowppl_low_valid_ratio_capped_to_noisy(self):
+        # ppl < LOWPPL_CLEAR_MAX and wc >= 3, but valid_word_ratio below the
+        # mostly-readable floor -> the fast-track caps to Noisy, not Clear.
+        cat, _, reason = categorize_line(
+            0.80, "slovo bez bez diakritiky", 4, 0.4, 30.0, return_reason=True, valid_word_ratio=0.50
+        )
+        assert cat == "Noisy" and reason == "noisy_threshold"
 
 
 class TestGhostlist:

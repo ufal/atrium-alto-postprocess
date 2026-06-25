@@ -104,11 +104,6 @@ SEARCH_SPACE: dict[str, dict[str, Any]] = {
     # Perplexity normalisation
     "PERPLEXITY_THRESHOLD_MAX": {"type": "float", "low": 500.0, "high": 2000.0},
     "SHORT_PPL_CAP": {"type": "float", "low": 300.0, "high": 950.0},
-    # Clean-prose gates (legacy; retained for continuity)
-    "CLEAN_PROSE_MIN_SCORE": {"type": "float", "low": 0.50, "high": 0.84},
-    "CLEAN_PROSE_WEIRD_MAX": {"type": "float", "low": 0.03, "high": 0.20},
-    "CLEAN_PROSE_PPL_MAX": {"type": "float", "low": 150.0, "high": 700.0},
-    "CLEAN_PROSE_WC_MIN": {"type": "int", "low": 2, "high": 6},
     # (#3) hard-sweep / extreme- and absolute-perplexity trash routes
     "HARD_SWEEP_LANG_MAX": {"type": "float", "low": 0.20, "high": 0.70},
     "HARD_SWEEP_PPL_MIN": {"type": "float", "low": 500.0, "high": 3000.0},
@@ -133,7 +128,15 @@ SEARCH_SPACE: dict[str, dict[str, Any]] = {
     # (#3 A3) page-level smoothing
     "INVERTED_RUN_MIN": {"type": "int", "low": 2, "high": 8},
     "INVERTED_PAGE_MAJORITY": {"type": "float", "low": 0.40, "high": 0.80},
-    "CLEAR_BAND_WC_MIN": {"type": "int", "low": 0, "high": 5},
+    # (#5) page-context smoothing thresholds (ranges bracket the config defaults)
+    "SURROUNDED_TRASH_QS_MARGIN": {"type": "float", "low": 0.05, "high": 0.30},
+    "PAGE_GARBAGE_CLEAR_MAX": {"type": "float", "low": 0.0, "high": 0.20},
+    "PAGE_GARBAGE_LANG_MAX": {"type": "float", "low": 0.30, "high": 0.70},
+    "PAGE_GARBAGE_MEDIAN_QS_MAX": {"type": "float", "low": 0.40, "high": 0.70},
+    "PAGE_GARBAGE_NOISY_QS_MAX": {"type": "float", "low": 0.65, "high": 0.90},
+    "PAGE_CLEAN_CLEAR_MIN": {"type": "float", "low": 0.45, "high": 0.80},
+    "PAGE_CLEAN_MEDIAN_QS_MIN": {"type": "float", "low": 0.65, "high": 0.90},
+    "PAGE_CLEAN_RECOVER_QS_MIN": {"type": "float", "low": 0.30, "high": 0.60},
 }
 
 _missing = [name for name in TUNABLE_CONSTANTS if name not in SEARCH_SPACE]
@@ -159,15 +162,19 @@ EDGE_PARAMS = [
     "INVERTED_PAGE_MAJORITY",
     "ROT_HIGH_LANG_CONF",
     "LANG_SCORE_ROUGH",
+    "SURROUNDED_TRASH_QS_MARGIN",
+    "PAGE_GARBAGE_CLEAR_MAX",
+    "PAGE_GARBAGE_LANG_MAX",
+    "PAGE_GARBAGE_MEDIAN_QS_MAX",
+    "PAGE_GARBAGE_NOISY_QS_MAX",
+    "PAGE_CLEAN_CLEAR_MIN",
+    "PAGE_CLEAN_MEDIAN_QS_MIN",
+    "PAGE_CLEAN_RECOVER_QS_MIN",
 ]
 THRESHOLD_PARAMS = [
     "CATEG_TRASH_SCORE_MAX",
     "CATEG_NOISY_SCORE_MAX",
     "CATEG_GARBAGE_DENSITY_HIGH",
-    "CLEAN_PROSE_MIN_SCORE",
-    "CLEAN_PROSE_WEIRD_MAX",
-    "CLEAN_PROSE_PPL_MAX",
-    "CLEAN_PROSE_WC_MIN",
     "LOWPPL_CLEAR_MAX",
     "LOWPPL_CZECH_CLEAR_MAX",
     "CZECH_CLEAR_GARBAGE_MAX",

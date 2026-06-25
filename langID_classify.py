@@ -50,11 +50,19 @@ from text_util_langID import (
     INVERTED_PAGE_MAJORITY,
     INVERTED_RUN_MIN,
     LANG_SCORE_ROUGH,
+    PAGE_CLEAN_CLEAR_MIN,
+    PAGE_CLEAN_MEDIAN_QS_MIN,
+    PAGE_CLEAN_RECOVER_QS_MIN,
+    PAGE_GARBAGE_CLEAR_MAX,
+    PAGE_GARBAGE_LANG_MAX,
+    PAGE_GARBAGE_MEDIAN_QS_MAX,
+    PAGE_GARBAGE_NOISY_QS_MAX,
     PERPLEXITY_THRESHOLD_MAX,
     PPL_INVERTED_MIN,
     ROT_HIGH_LANG_CONF,
     ROT_RATIO_INVERTED_MIN,
     SHORT_PPL_CAP,
+    SURROUNDED_TRASH_QS_MARGIN,
     TRASH_REASONS,
     _lang_base,
     analyze_rotation_signals,
@@ -510,7 +518,7 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
             & (prev2_cat == "Trash")
             & (next2_cat == "Trash")
             & (df["categ"] == "Noisy")
-            & (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + 0.15)
+            & (df["quality_score"].astype(float) < CATEG_TRASH_SCORE_MAX + SURROUNDED_TRASH_QS_MARGIN)
         )
         df.loc[surrounded_by_trash, "categ"] = "Trash"
         df.loc[surrounded_by_trash, "pp_surrounded_trash"] = True
@@ -538,19 +546,24 @@ def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
         decent_lang_ratio = is_trusted.mean()
 
         # Symmetric Rule 1: Page is heavily garbage (Pull borderline Noisy down)
-        if clear_ratio <= 0.05 and decent_lang_ratio < 0.50 and median_qs < 0.55:
+        if (
+            clear_ratio <= PAGE_GARBAGE_CLEAR_MAX
+            and decent_lang_ratio < PAGE_GARBAGE_LANG_MAX
+            and median_qs < PAGE_GARBAGE_MEDIAN_QS_MAX
+        ):
             sus_idx = page_scoreable[
-                (page_scoreable["categ"] == "Noisy") & (page_scoreable["quality_score"].astype(float) < 0.80)
+                (page_scoreable["categ"] == "Noisy")
+                & (page_scoreable["quality_score"].astype(float) < PAGE_GARBAGE_NOISY_QS_MAX)
             ].index
             if len(sus_idx) > 0:
                 df.loc[sus_idx, "categ"] = "Trash"
                 df.loc[sus_idx, "pp_page_context"] = True
 
         # Symmetric Rule 2: Page is predominantly clean (Promote edge-case recoverable Trash)
-        elif clear_ratio > 0.60 and median_qs > 0.80:
+        elif clear_ratio > PAGE_CLEAN_CLEAR_MIN and median_qs > PAGE_CLEAN_MEDIAN_QS_MIN:
             sus_idx = page_scoreable[
                 (page_scoreable["categ"] == "Trash")
-                & (page_scoreable["quality_score"].astype(float) >= 0.45)
+                & (page_scoreable["quality_score"].astype(float) >= PAGE_CLEAN_RECOVER_QS_MIN)
                 & is_trusted
             ].index
             if len(sus_idx) > 0:

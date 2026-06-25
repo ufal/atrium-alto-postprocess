@@ -95,7 +95,7 @@ NOISY = [
         223.00,
         0.9191,
         "Noisy",
-        "short readable Czech; Clear unless CLEAR_BAND_WC_MIN>=3 holds it (noise: trailing '.')",
+        "short readable Czech; expected Noisy on the trailing '.' + 2-word fragment",
     ),
     ("statků v Praze.", 644.00, 1.0000, "Noisy", "3-word clean fragment, must not be Trashed by short/rot penalties"),
 ]

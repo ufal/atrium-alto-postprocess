@@ -121,13 +121,6 @@ WEIRD_RATIO_INVERTED_MIN = _get_float("TEXT_UTILS", "WEIRD_RATIO_INVERTED_MIN", 
 PPL_INVERTED_MIN = _get_float("TEXT_UTILS", "PPL_INVERTED_MIN", 200.0)
 ROT_HIGH_LANG_CONF = _get_float("TEXT_UTILS", "ROT_HIGH_LANG_CONF", 0.90)
 
-# Near-boundary promotion
-CLEAN_PROSE_MIN_SCORE = _get_float("TEXT_UTILS", "CLEAN_PROSE_MIN_SCORE", 0.65)
-CLEAN_PROSE_WEIRD_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_WEIRD_MAX", 0.08)
-CLEAN_PROSE_PPL_MAX = _get_float("TEXT_UTILS", "CLEAN_PROSE_PPL_MAX", 400.0)
-CLEAN_PROSE_WC_MIN = _config.getint("TEXT_UTILS", "CLEAN_PROSE_WC_MIN", fallback=4)
-CLEAR_BAND_WC_MIN = _get_int("TEXT_UTILS", "CLEAR_BAND_WC_MIN", 0)
-
 # (#3 Phase 2) override + structural-route thresholds, now config-driven.
 LOWPPL_CLEAR_MAX = _get_float("TEXT_UTILS", "LOWPPL_CLEAR_MAX", 50.0)
 HARD_SWEEP_LANG_MAX = _get_float("TEXT_UTILS", "HARD_SWEEP_LANG_MAX", 0.45)
@@ -140,6 +133,19 @@ WORD_W_PENALTY = _get_float("TEXT_UTILS", "WORD_W_PENALTY", 0.20)
 # tests share one tunable source of truth.
 INVERTED_RUN_MIN = _get_int("TEXT_UTILS", "INVERTED_RUN_MIN", 4)
 INVERTED_PAGE_MAJORITY = _get_float("TEXT_UTILS", "INVERTED_PAGE_MAJORITY", 0.60)
+
+# (#5) Page-context smoothing thresholds — promoted from inline literals in
+# apply_document_postprocessing so they are config-driven, parity-overridable,
+# and visible to the importance sweep. Defaults equal the previous literals, so
+# the categoriser's output is unchanged.
+SURROUNDED_TRASH_QS_MARGIN = _get_float("TEXT_UTILS", "SURROUNDED_TRASH_QS_MARGIN", 0.15)
+PAGE_GARBAGE_CLEAR_MAX = _get_float("TEXT_UTILS", "PAGE_GARBAGE_CLEAR_MAX", 0.05)
+PAGE_GARBAGE_LANG_MAX = _get_float("TEXT_UTILS", "PAGE_GARBAGE_LANG_MAX", 0.50)
+PAGE_GARBAGE_MEDIAN_QS_MAX = _get_float("TEXT_UTILS", "PAGE_GARBAGE_MEDIAN_QS_MAX", 0.55)
+PAGE_GARBAGE_NOISY_QS_MAX = _get_float("TEXT_UTILS", "PAGE_GARBAGE_NOISY_QS_MAX", 0.80)
+PAGE_CLEAN_CLEAR_MIN = _get_float("TEXT_UTILS", "PAGE_CLEAN_CLEAR_MIN", 0.60)
+PAGE_CLEAN_MEDIAN_QS_MIN = _get_float("TEXT_UTILS", "PAGE_CLEAN_MEDIAN_QS_MIN", 0.80)
+PAGE_CLEAN_RECOVER_QS_MIN = _get_float("TEXT_UTILS", "PAGE_CLEAN_RECOVER_QS_MIN", 0.45)
 
 # Trash routes inside determine_category that all fold to the single
 # `trash_threshold` diagnostic boolean (keeps "exactly one categoriser flag True"
@@ -975,10 +981,6 @@ def determine_category(
         ):
             return "Noisy", "noisy_threshold"
         return "Trash", "trash_threshold"
-
-    if "rule_short_fragment_noisy" not in DISABLED_RULES:
-        if CLEAR_BAND_WC_MIN and word_count < CLEAR_BAND_WC_MIN and (weird_ratio > 0.0 or garbage_density > 0.0):
-            return "Noisy", "noisy_threshold"
 
     if "rule_mostly_readable_noisy" not in DISABLED_RULES:
         if valid_word_ratio < MOSTLY_READABLE_VALID_MIN and not _lm_confident_czech(

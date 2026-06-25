@@ -37,7 +37,7 @@ Usage
     # apply a different constant set (config file and/or KEY=VALUE overrides)
     python tools/recategorize_from_csv.py data_samples/DOC_LINE_CATEG/ \
         --config config_langID.txt \
-        --override CATEG_TRASH_SCORE_MAX=0.45 CLEAN_PROSE_PPL_MAX=350.0 \
+        --override CATEG_TRASH_SCORE_MAX=0.45 LOWPPL_CLEAR_MAX=60.0 \
         --out /tmp/rescored
 
     # report only (do not write re-scored CSVs)
@@ -400,10 +400,6 @@ _THRESHOLD_NAMES = (
     "PPL_INVERTED_MIN",
     "PERPLEXITY_THRESHOLD_MAX",
     "SHORT_PPL_CAP",
-    "CLEAN_PROSE_MIN_SCORE",
-    "CLEAN_PROSE_WEIRD_MAX",
-    "CLEAN_PROSE_PPL_MAX",
-    "CLEAN_PROSE_WC_MIN",
     # (#3) hard-sweep / extreme- and absolute-perplexity trash routes
     "HARD_SWEEP_LANG_MAX",
     "HARD_SWEEP_PPL_MIN",
@@ -428,13 +424,21 @@ _THRESHOLD_NAMES = (
     # (#3 A3) page-level smoothing
     "INVERTED_RUN_MIN",
     "INVERTED_PAGE_MAJORITY",
-    "CLEAR_BAND_WC_MIN",
+    # (#5) page-context smoothing thresholds
+    "SURROUNDED_TRASH_QS_MARGIN",
+    "PAGE_GARBAGE_CLEAR_MAX",
+    "PAGE_GARBAGE_LANG_MAX",
+    "PAGE_GARBAGE_MEDIAN_QS_MAX",
+    "PAGE_GARBAGE_NOISY_QS_MAX",
+    "PAGE_CLEAN_CLEAR_MIN",
+    "PAGE_CLEAN_MEDIAN_QS_MIN",
+    "PAGE_CLEAN_RECOVER_QS_MIN",
 )
 
 TUNABLE_CONSTANTS = QS_WEIGHT_NAMES + _THRESHOLD_NAMES
 
 # Constants that must stay integral.
-INT_CONSTANTS = frozenset({"CLEAN_PROSE_WC_MIN", "GHOST_HITS_INVERTED_MIN", "INVERTED_RUN_MIN", "CLEAR_BAND_WC_MIN"})
+INT_CONSTANTS = frozenset({"GHOST_HITS_INVERTED_MIN", "INVERTED_RUN_MIN"})
 
 
 def _live_default(name: str) -> float | int:
@@ -534,8 +538,6 @@ def validate_constants(constants: Mapping[str, Any]) -> None:
 
     if _g("CATEG_TRASH_SCORE_MAX") >= _g("CATEG_NOISY_SCORE_MAX"):
         raise ValueError("Invalid constants: CATEG_TRASH_SCORE_MAX must be < CATEG_NOISY_SCORE_MAX")
-    if _g("CLEAN_PROSE_MIN_SCORE") >= _g("CATEG_NOISY_SCORE_MAX"):
-        raise ValueError("Invalid constants: CLEAN_PROSE_MIN_SCORE must be < CATEG_NOISY_SCORE_MAX")
     if _g("SHORT_PPL_CAP") >= _g("PERPLEXITY_THRESHOLD_MAX"):
         raise ValueError("Invalid constants: SHORT_PPL_CAP must be < PERPLEXITY_THRESHOLD_MAX")
     if sum(_g(name) for name in QS_WEIGHT_NAMES) <= 0:
