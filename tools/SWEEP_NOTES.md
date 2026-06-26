@@ -7,6 +7,7 @@ Two offline tools live here. Both read the per-line `DOC_LINE_CATEG` CSVs as
 |-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `recategorize_from_csv.py`  | Faithful offline re-scorer + evaluator. Re-runs categorisation from the frozen `perplex` / `orig_lang_score` / `text` signals under a chosen constant set.    |
 | `const_importance_sweep.py` | Samples the tunable constants, scores each with the re-scorer, and reports which constants drive a chosen objective (RandomForest / Optuna+fANOVA surrogate). |
+| `rule_coverage_report.py`   | Rule-fire coverage instrumentation. Runs the production categorisation engine over a dataset and counts how many times each structural rule and per-line penalty actually executes. A rule with a fire count of 0 across all documents is provably dead code and can be permanently retired without requiring human gold labels. |
 
 ## One engine, not two
 

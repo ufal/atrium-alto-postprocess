@@ -395,6 +395,8 @@ _THRESHOLD_NAMES = (
     "CATEG_TRASH_SCORE_MAX",
     "CATEG_NOISY_SCORE_MAX",
     "CATEG_GARBAGE_DENSITY_HIGH",
+    # (B2) separate QS normalisation scale, decoupled from the hard gate above
+    "QS_GARBAGE_NORM_MAX",
     "ROT_RATIO_INVERTED_MIN",
     "WEIRD_RATIO_INVERTED_MIN",
     "PPL_INVERTED_MIN",

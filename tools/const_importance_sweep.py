@@ -97,6 +97,8 @@ SEARCH_SPACE: dict[str, dict[str, Any]] = {
     "CATEG_TRASH_SCORE_MAX": {"type": "float", "low": 0.30, "high": 0.65},
     "CATEG_NOISY_SCORE_MAX": {"type": "float", "low": 0.70, "high": 0.97},
     "CATEG_GARBAGE_DENSITY_HIGH": {"type": "float", "low": 0.15, "high": 0.60},
+    # (B2) QS normalisation scale — independently sweepable from the hard gate above
+    "QS_GARBAGE_NORM_MAX": {"type": "float", "low": 0.15, "high": 0.60},
     # Rotation / inversion gates
     "ROT_RATIO_INVERTED_MIN": {"type": "float", "low": 0.35, "high": 0.80},
     "WEIRD_RATIO_INVERTED_MIN": {"type": "float", "low": 0.15, "high": 0.60},
@@ -145,6 +147,7 @@ if _missing:  # pragma: no cover - guards future drift between the two files
 
 EDGE_PARAMS = [
     "CATEG_GARBAGE_DENSITY_HIGH",
+    "QS_GARBAGE_NORM_MAX",  # (B2) QS-scale counterpart of the garbage hard gate
     "ROT_RATIO_INVERTED_MIN",
     "WEIRD_RATIO_INVERTED_MIN",
     "PPL_INVERTED_MIN",
@@ -175,6 +178,7 @@ THRESHOLD_PARAMS = [
     "CATEG_TRASH_SCORE_MAX",
     "CATEG_NOISY_SCORE_MAX",
     "CATEG_GARBAGE_DENSITY_HIGH",
+    "QS_GARBAGE_NORM_MAX",  # (B2) QS normalisation scale
     "LOWPPL_CLEAR_MAX",
     "LOWPPL_CZECH_CLEAR_MAX",
     "CZECH_CLEAR_GARBAGE_MAX",

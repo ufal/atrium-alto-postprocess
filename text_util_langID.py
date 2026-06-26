@@ -29,6 +29,44 @@ from pathlib import Path
 DISABLED_RULES: frozenset = frozenset()
 
 # ---------------------------------------------------------------------------
+# Rule-Fire Coverage Instrumentation (Increment B5)
+# When RULE_FIRE_COUNTS is not None (i.e. inside a rule_fire_capture() block),
+# every _fire(name) call increments the counter for that rule.  Outside a capture
+# block _fire() is a no-op so there is zero overhead during normal production runs.
+# ---------------------------------------------------------------------------
+RULE_FIRE_COUNTS: dict | None = None
+
+
+def _fire(name: str) -> None:
+    """Register a single rule execution against the active capture context."""
+    if RULE_FIRE_COUNTS is not None:
+        RULE_FIRE_COUNTS[name] = RULE_FIRE_COUNTS.get(name, 0) + 1
+
+
+@contextmanager
+def rule_fire_capture():
+    """Context manager that enables rule-fire counting for the enclosed block.
+
+    Yields the live counts dict so callers can inspect it after (or during)
+    the run.  Nested calls stack correctly: the outer context is restored on
+    exit, so existing sweep harnesses that call rule_fire_capture() inside
+    override_constants() are safe.
+
+    Usage::
+
+        with rule_fire_capture() as counts:
+            recategorize_dataframe(df, ...)
+        print(counts)  # {'rule_hard_sweep': 12, 'penalty_wqx_rot': 0, ...}
+    """
+    global RULE_FIRE_COUNTS
+    prev, RULE_FIRE_COUNTS = RULE_FIRE_COUNTS, {}
+    try:
+        yield RULE_FIRE_COUNTS
+    finally:
+        RULE_FIRE_COUNTS = prev
+
+
+# ---------------------------------------------------------------------------
 # Configuration & Regular Expressions
 # ---------------------------------------------------------------------------
 
@@ -113,6 +151,13 @@ CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.55)
 CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.85)
 
 CATEG_GARBAGE_DENSITY_HIGH = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH", 0.35)
+
+# (B2) Separate scale for normalising garbage_density inside compute_quality_score.
+# Previously the same constant (CATEG_GARBAGE_DENSITY_HIGH) was reused at both the
+# hard gate (rule_garbage_density) and the three QS-normalisation sites, making
+# the two effects inseparable in the importance sweep.
+# Default 0.35 == CATEG_GARBAGE_DENSITY_HIGH → bit-identical output at default config.
+QS_GARBAGE_NORM_MAX = _get_float("TEXT_UTILS", "QS_GARBAGE_NORM_MAX", 0.35)
 
 
 # Inverted / 180°-rotated scan detection
@@ -920,12 +965,15 @@ def determine_category(
     # 1. Hard sweep
     if "rule_hard_sweep" not in DISABLED_RULES:
         if orig_lang_score < HARD_SWEEP_LANG_MAX and ppl > HARD_SWEEP_PPL_MIN:
+            _fire("rule_hard_sweep")
             return "Trash", "trash_hard_sweep"
     if "rule_extreme_ppl" not in DISABLED_RULES:
         if ppl >= PPL_EXTREME_MIN and orig_lang_score < EXTREME_LANG_CONF:
+            _fire("rule_extreme_ppl")
             return "Trash", "trash_hard_sweep"
     if "rule_absolute_ppl" not in DISABLED_RULES:
         if ppl >= PPL_GARBAGE_ABSOLUTE and not is_upright_czech:
+            _fire("rule_absolute_ppl")
             return "Trash", "trash_hard_sweep"
 
     # 2. Inverted / mirrored scan
@@ -939,12 +987,14 @@ def determine_category(
                 and ghost_word_share(text_source)[0] >= GHOST_HITS_INVERTED_MIN
             )
         ):
+            _fire("rule_inverted")
             return "Trash", "trash_inverted"
 
     # 3. All-caps vowel-less scramble
     # Evaluating vr < 0.10 first fail-fast is cheaper than checking is_all_caps_line
     if "rule_allcaps" not in DISABLED_RULES:
         if vr < 0.10 and is_all_caps_line(text_source):
+            _fire("rule_allcaps")
             return "Trash", "allcaps_novowel"
 
     # 4. Overwhelming non-alphanumeric density
@@ -955,6 +1005,7 @@ def determine_category(
             ):
                 pass  # Bypass this override and allow it to route naturally
             else:
+                _fire("rule_garbage_density")
                 return "Trash", "trash_threshold"
 
     # 5. Structural short-garbage route
@@ -965,13 +1016,16 @@ def determine_category(
             and lang_score <= LANG_SCORE_REMAP
             and (gibberish_present or weird_ratio > 0.0)
         ):
+            _fire("rule_short_garbage")
             return "Trash", "trash_threshold"
 
     # 6. High-confidence LM override
     if "rule_lowppl_clear" not in DISABLED_RULES:
         if ppl < LOWPPL_CLEAR_MAX and word_count >= 3:
             if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
+                _fire("rule_lowppl_clear")
                 return "Noisy", "noisy_threshold"
+            _fire("rule_lowppl_clear")
             return "Clear", "lowppl_clear"
 
     # 7. Quality-score band routing
@@ -979,6 +1033,7 @@ def determine_category(
         if "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
             text_source, valid_word_ratio, word_count
         ):
+            _fire("rule_trailing_fill_rescue")
             return "Noisy", "noisy_threshold"
         return "Trash", "trash_threshold"
 
@@ -986,6 +1041,7 @@ def determine_category(
         if valid_word_ratio < MOSTLY_READABLE_VALID_MIN and not _lm_confident_czech(
             is_upright_czech, ppl, garbage_density
         ):
+            _fire("rule_mostly_readable_noisy")
             return "Noisy", "noisy_threshold"
 
     return "Clear", "clear_threshold"
@@ -1014,12 +1070,14 @@ def categorize_line(
     if "penalty_wqx_rot" not in DISABLED_RULES:
         wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(wc, 1)
         if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
+            _fire("penalty_wqx_rot")
             qs = max(0.0, qs - 0.35)
 
     # --- FIX 2: Vowelless/Acronym gibberish ("WVL A") ---
     if "penalty_vowelless" not in DISABLED_RULES:
         if wc <= 3 and vowel_ratio < 0.30 and not is_upright_czech:
             if is_all_caps_line(txt):
+                _fire("penalty_vowelless")
                 qs = max(0.0, qs - 0.35)
 
     # --- FIX 3: Ledger / Table Fragmentation Loophole ---
@@ -1027,11 +1085,13 @@ def categorize_line(
         if words and len(words) >= 4:
             frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
             if (frag_count / len(words)) > 0.60:
+                _fire("penalty_ledger_fragmentation")
                 qs = max(0.0, qs - 0.35)
 
     # --- FIX 4: Isolated Mid-Uppercase Fragments ("ClAŕ") ---
     if "penalty_mid_uppercase" not in DISABLED_RULES:
         if wc <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
+            _fire("penalty_mid_uppercase")
             qs = max(0.0, qs - 0.35)
 
     categ, reason = determine_category(
@@ -1190,10 +1250,10 @@ def compute_quality_score(
     norm_weird = 1.0 - min(weird_ratio, 1.0)
 
     active_garbage_weight = QS_WEIGHT_GARBAGE
-    if text_length <= 12 and weird_ratio == 0.0 and garbage_density < max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9):
+    if text_length <= 12 and weird_ratio == 0.0 and garbage_density < max(QS_GARBAGE_NORM_MAX, 1e-9):
         active_garbage_weight = active_garbage_weight / 2.0
 
-    norm_garbage = 1.0 - min(garbage_density / max(CATEG_GARBAGE_DENSITY_HIGH, 1e-9), 1.0)
+    norm_garbage = 1.0 - min(garbage_density / max(QS_GARBAGE_NORM_MAX, 1e-9), 1.0)
 
     vr = vowel_ratio
     if vr < VOWEL_RATIO_LOW:
@@ -1226,7 +1286,7 @@ def compute_quality_score(
     base_score = base_score / total_weight
 
     short_penalty = 0.0
-    if text_length <= 12 and (weird_ratio > 0.0 or garbage_density >= CATEG_GARBAGE_DENSITY_HIGH):
+    if text_length <= 12 and (weird_ratio > 0.0 or garbage_density >= QS_GARBAGE_NORM_MAX):
         short_penalty = SHORT_NOISY_QS_PENALTY
 
     final_score = max(0.0, base_score - short_penalty)

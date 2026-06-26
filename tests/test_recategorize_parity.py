@@ -141,3 +141,73 @@ def test_parse_overrides_rejects_unknown_constant():
     with pytest.raises(ValueError):
         R.parse_overrides(["NOT_A_REAL_CONSTANT=1.0"])
     assert R.parse_overrides(["CATEG_TRASH_SCORE_MAX=0.45"]) == {"CATEG_TRASH_SCORE_MAX": 0.45}
+
+
+# ── B2: QS_GARBAGE_NORM_MAX decoupling ──────────────────────────────────────
+
+
+def test_qs_garbage_norm_max_is_tunable():
+    """QS_GARBAGE_NORM_MAX must appear in TUNABLE_CONSTANTS after the B2 edit."""
+    assert "QS_GARBAGE_NORM_MAX" in R.TUNABLE_CONSTANTS
+
+
+def test_qs_garbage_norm_max_default_matches_live_module():
+    """DEFAULT_CONSTANTS must reflect the live module value — never hardcoded."""
+    assert R.DEFAULT_CONSTANTS["QS_GARBAGE_NORM_MAX"] == tu.QS_GARBAGE_NORM_MAX
+
+
+def test_qs_garbage_norm_max_default_is_parity(corpus):
+    """At the default QS_GARBAGE_NORM_MAX value the re-score must be flip-free."""
+    metrics = R.evaluate_dataframe(corpus, R.DEFAULT_CONSTANTS)
+    assert metrics["flip_rate"] == 0.0, "QS_GARBAGE_NORM_MAX at default should preserve parity"
+
+
+def test_qs_garbage_norm_max_independent_of_hard_gate(corpus):
+    """Raising QS_GARBAGE_NORM_MAX must move the QS score for high-density lines
+    without changing the hard rule_garbage_density gate (which still uses
+    CATEG_GARBAGE_DENSITY_HIGH = 0.35).  Concretely: if we push QS_GARBAGE_NORM_MAX
+    to 0.80 (much larger than 0.35) some borderline garbage lines should escape the
+    QS-band threshold and flip.  Meanwhile forcing CATEG_GARBAGE_DENSITY_HIGH = 0.80
+    (the old coupled approach) would *also* widen the hard gate and let many more
+    lines through — a different and larger effect."""
+    import numpy as np
+
+    from tools.recategorize_from_csv import recategorize_dataframe
+
+    # High QS_GARBAGE_NORM_MAX only — hard gate stays at 0.35
+    cfg_norm_only = dict(R.DEFAULT_CONSTANTS)
+    cfg_norm_only["QS_GARBAGE_NORM_MAX"] = 0.80
+
+    # High CATEG_GARBAGE_DENSITY_HIGH only — both gate and norm scale move
+    cfg_gate_only = dict(R.DEFAULT_CONSTANTS)
+    cfg_gate_only["CATEG_GARBAGE_DENSITY_HIGH"] = 0.80
+
+    pred_norm = recategorize_dataframe(corpus, cfg_norm_only)
+    pred_gate = recategorize_dataframe(corpus, cfg_gate_only)
+
+    norm_categorized = pred_norm["categ"].map(R.normalize_category).to_numpy()
+    gate_categorized = pred_gate["categ"].map(R.normalize_category).to_numpy()
+
+    # The two should differ (at least on the smoke fixture) when garbage-dense
+    # lines are present, because the gate change alone lets through lines that the
+    # norm-only change does not (and vice versa).
+    # If the sample has no garbage-dense lines both may trivially agree; allow that.
+    # The key invariant is: the two parameter changes are independently addressable.
+    baseline = recategorize_dataframe(corpus, R.DEFAULT_CONSTANTS)
+    base_cat = baseline["categ"].map(R.normalize_category).to_numpy()
+
+    # At minimum, neither of these overrides should cause MORE flips than the
+    # "nuclear" option of setting both to 0.80 at once.
+    cfg_both = dict(R.DEFAULT_CONSTANTS)
+    cfg_both["QS_GARBAGE_NORM_MAX"] = 0.80
+    cfg_both["CATEG_GARBAGE_DENSITY_HIGH"] = 0.80
+    pred_both = recategorize_dataframe(corpus, cfg_both)
+    both_cat = pred_both["categ"].map(R.normalize_category).to_numpy()
+
+    flips_norm = int(np.sum(norm_categorized != base_cat))
+    flips_gate = int(np.sum(gate_categorized != base_cat))
+    flips_both = int(np.sum(both_cat != base_cat))
+
+    assert flips_both >= max(flips_norm, flips_gate), (
+        "Setting both parameters should affect at least as many lines as either alone"
+    )

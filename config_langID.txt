@@ -62,6 +62,9 @@ CATEG_NOISY_SCORE_MAX       = 0.85
 CATEG_TRASH_SCORE_MAX       = 0.55
 
 CATEG_GARBAGE_DENSITY_HIGH  = 0.35
+# (B2) QS normalisation scale, decoupled from the hard gate above.
+# Defaults equal CATEG_GARBAGE_DENSITY_HIGH => bit-identical output unless changed.
+QS_GARBAGE_NORM_MAX         = 0.35
 
 ROT_RATIO_INVERTED_MIN      = 0.55
 WEIRD_RATIO_INVERTED_MIN    = 0.35
