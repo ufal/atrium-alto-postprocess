@@ -34,6 +34,7 @@ LICENSE_RANK: Dict[str, int] = {
     "MPL 2.0": 2,
     "LGPL-3.0": 3,
     "GPL-3.0": 4,
+    "AGPL-3.0": 4,
     "CC BY 4.0": 1,
     "CC BY-SA 4.0": 3,
     "CC BY-NC 4.0": 5,
@@ -50,6 +51,7 @@ LICENSE_URL: Dict[str, str] = {
     "MPL 2.0": "https://www.mozilla.org/en-US/MPL/2.0/",
     "LGPL-3.0": "https://www.gnu.org/licenses/lgpl-3.0.html",
     "GPL-3.0": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "AGPL-3.0": "https://www.gnu.org/licenses/agpl-3.0.html",
     "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/",
     "CC BY-SA 4.0": "https://creativecommons.org/licenses/by-sa/4.0/",
     "CC BY-NC 4.0": "https://creativecommons.org/licenses/by-nc/4.0/",
@@ -57,7 +59,7 @@ LICENSE_URL: Dict[str, str] = {
     "glm-4": "https://huggingface.co/THUDM/glm-4v-9b/blob/main/LICENSE",
 }
 
-_SHARE_ALIKE = {"CC BY-SA 4.0", "CC BY-NC-SA 4.0", "GPL-3.0", "LGPL-3.0", "MPL 2.0"}
+_SHARE_ALIKE = {"CC BY-SA 4.0", "CC BY-NC-SA 4.0", "GPL-3.0", "AGPL-3.0", "LGPL-3.0", "MPL 2.0"}
 _NON_COMMERCIAL = {"CC BY-NC 4.0", "CC BY-NC-SA 4.0", "glm-4"}
 
 _ALIASES: Dict[str, str] = {
@@ -71,6 +73,11 @@ _ALIASES: Dict[str, str] = {
     "gpl-3.0": "GPL-3.0",
     "gpl 3.0": "GPL-3.0",
     "gpl-3.0 license": "GPL-3.0",
+    "agpl-3.0": "AGPL-3.0",
+    "agpl 3.0": "AGPL-3.0",
+    "agpl-3.0 license": "AGPL-3.0",
+    "agplv3": "AGPL-3.0",
+    "gnu affero general public license v3.0": "AGPL-3.0",
     "cc0": "CC0",
     "public domain": "Public Domain",
     "cc by 4.0": "CC BY 4.0",
@@ -103,7 +110,7 @@ def resolve_effective_license(
     catalogue: List[Dict[str, object]] = []
     unknown: List[str] = []
     best_rank = -1
-    best_license = "MIT"  # safe permissive default if nothing supplied
+    best_license = "MIT"
 
     for name, raw_lic in components_used:
         lic = normalise_license(raw_lic)
@@ -171,10 +178,9 @@ def merge_effective_licenses(
     Merge several per-tool license resolutions into one effective license.
 
     (#12) The union of components across blocks is DEDUPLICATED on
-    (name, license) before resolving. Always-on components (e.g. alto_tools,
-    fasttext) otherwise repeat once per stage, inflating the component catalogue
-    and the "most restrictive among N component(s)" note without changing the
-    computed license. Deduping makes the reported count match the unique set.
+    (name, license) before resolving. Always-on components otherwise repeat once
+    per stage, inflating the component catalogue. Deduping ensures the reported
+    count reflects the unique set.
     """
     seen: set = set()
     union: List[Tuple[str, str]] = []
