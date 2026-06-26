@@ -2,50 +2,25 @@
 """
 tools/const_importance_sweep.py
 ===============================
-Surrogate-based config-constant importance sweep for ATRIUM ALTO post-processing
+Surrogate-based and model-free config-constant importance sweep for ATRIUM ALTO post-processing
 (issue #5).
 
 It samples the tunable ``[TEXT_UTILS]`` constants, re-categorises the cached
-per-line CSV features for each sample, and fits a lightweight surrogate to learn
-which constants most control the chosen objective.
+per-line CSV features for each sample, and evaluates which constants most control
+the chosen objective.
 
 Faithful evaluator
 ------------------
 Every trial is scored by ``recategorize_from_csv.evaluate_dataframe``, which runs
 the REAL production engine (``compute_quality_score`` / ``categorize_line`` /
 ``apply_document_postprocessing``) under ``override_constants`` — there is no
-parallel re-implementation. Consequently the baseline (current config) sits at
-flip_rate == 0 by construction, and importances describe the production pipeline,
-not a surrogate of a surrogate.
+parallel re-implementation.
 
 Methodology notes
 -----------------
-* Importance (fANOVA / MDI / permutation) is only meaningful over a (quasi-)
-  uniform sample, so the default Optuna sampler here is **random**. TPE is for
-  *optimisation* (finding a good config), not importance: fANOVA on a
-  TPE-concentrated study is biased, so this tool warns when you combine them.
-* The sklearn surrogate reports **out-of-bag R²** (held-out), not just train R².
-* fANOVA / MDI are skipped for a single-parameter study (importance is trivially
-  100% and uninformative).
-* ``QS_WEIGHT_*`` are frozen by default: prior sweeps showed the linear weight
-  composition has low practical influence vs. the category thresholds and the
-  garbage/inversion/hard-sweep gates. Enable with ``--include-qs-weights``.
-* Sub-sampling is by **document** (``--sample-docs``), never by line: the page
-  post-processing needs whole pages, so splitting a document would corrupt it.
-
-Examples
---------
-    # sklearn surrogate, no extra deps, importance over the threshold/edge set
-    python tools/const_importance_sweep.py \
-        --input-dir data_samples/DOC_LINE_CATEG \
-        --config config_langID.txt --output-dir sweep_out \
-        --backend sklearn --metric macro_f1 --n-trials 400
-
-    # Optuna + fANOVA (random sampling for unbiased importance)
-    python tools/const_importance_sweep.py \
-        --input-dir data_samples/DOC_LINE_CATEG \
-        --config config_langID.txt --output-dir sweep_out \
-        --backend optuna --sampler random --n-trials 400 --storage sqlite:///sweep.db
+* The sklearn backend uses Random Forests + permutation importance on out-of-bag R².
+* Optuna uses fANOVA on a random quasi-uniform sample.
+* SALib backends (Morris/Sobol) evaluate global sensitivity and interaction coupling.
 """
 
 from __future__ import annotations
@@ -77,49 +52,35 @@ from recategorize_from_csv import (  # noqa: E402
     validate_constants,
 )
 
-# recategorize_from_csv pulls in pandas/numpy + the (import-light) production
-# modules, but NO Torch/Transformers/FastText at module load, so this top-level
-# import stays cheap.
-
 OBJECTIVE_METRICS = ("flip_rate", "macro_f1", "weighted_f1", "trash_rate", "clear_rate", "costed_score")
 QS_WEIGHT_PARAMS = set(QS_WEIGHT_NAMES)
 
 # ---------------------------------------------------------------------------
-# Search space (covers every tunable in recategorize_from_csv.TUNABLE_CONSTANTS,
-# including the #3 hard-sweep / extreme-ppl / inversion routes the old sweep
-# never varied). Ranges bracket the current config defaults.
+# Search space
 # ---------------------------------------------------------------------------
 
 SEARCH_SPACE: dict[str, dict[str, Any]] = {
-    # QS weights (frozen unless --include-qs-weights)
     **{name: {"type": "float", "low": 0.01, "high": 0.40} for name in QS_WEIGHT_NAMES},
-    # Category boundaries
     "CATEG_TRASH_SCORE_MAX": {"type": "float", "low": 0.30, "high": 0.65},
     "CATEG_NOISY_SCORE_MAX": {"type": "float", "low": 0.70, "high": 0.97},
     "CATEG_GARBAGE_DENSITY_HIGH": {"type": "float", "low": 0.15, "high": 0.60},
-    # (B2) QS normalisation scale — independently sweepable from the hard gate above
     "QS_GARBAGE_NORM_MAX": {"type": "float", "low": 0.15, "high": 0.60},
-    # Rotation / inversion gates
     "ROT_RATIO_INVERTED_MIN": {"type": "float", "low": 0.35, "high": 0.80},
     "WEIRD_RATIO_INVERTED_MIN": {"type": "float", "low": 0.15, "high": 0.60},
     "PPL_INVERTED_MIN": {"type": "float", "low": 50.0, "high": 500.0},
-    # Perplexity normalisation
     "PERPLEXITY_THRESHOLD_MAX": {"type": "float", "low": 500.0, "high": 2000.0},
     "SHORT_PPL_CAP": {"type": "float", "low": 300.0, "high": 950.0},
-    # (#3) hard-sweep / extreme- and absolute-perplexity trash routes
     "HARD_SWEEP_LANG_MAX": {"type": "float", "low": 0.20, "high": 0.70},
     "HARD_SWEEP_PPL_MIN": {"type": "float", "low": 500.0, "high": 3000.0},
     "PPL_EXTREME_MIN": {"type": "float", "low": 1500.0, "high": 6000.0},
     "EXTREME_LANG_CONF": {"type": "float", "low": 0.60, "high": 0.95},
     "PPL_GARBAGE_ABSOLUTE": {"type": "float", "low": 10000.0, "high": 60000.0},
-    # (#3) low-ppl Clear + LM-confident-Czech recovery + mostly-readable cap
     "LOWPPL_CLEAR_MAX": {"type": "float", "low": 20.0, "high": 120.0},
     "LOWPPL_CZECH_CLEAR_MAX": {"type": "float", "low": 80.0, "high": 300.0},
     "CZECH_CLEAR_GARBAGE_MAX": {"type": "float", "low": 0.05, "high": 0.30},
     "MOSTLY_READABLE_VALID_MIN": {"type": "float", "low": 0.70, "high": 0.95},
     "SHORT_NOISY_QS_PENALTY": {"type": "float", "low": 0.05, "high": 0.40},
     "WORD_W_PENALTY": {"type": "float", "low": 0.05, "high": 0.40},
-    # (#3) rotation / inversion organic penalties + per-line route
     "GHOST_DOMINATED_MIN_RATIO": {"type": "float", "low": 0.30, "high": 0.80},
     "SUSPICIOUS_ROT_RATIO": {"type": "float", "low": 0.45, "high": 0.85},
     "SUSPICIOUS_WQX_RATIO": {"type": "float", "low": 0.05, "high": 0.40},
@@ -127,10 +88,8 @@ SEARCH_SPACE: dict[str, dict[str, Any]] = {
     "GHOST_HITS_INVERTED_MIN": {"type": "int", "low": 1, "high": 3},
     "ROT_HIGH_LANG_CONF": {"type": "float", "low": 0.80, "high": 0.98},
     "LANG_SCORE_ROUGH": {"type": "float", "low": 0.30, "high": 0.60},
-    # (#3 A3) page-level smoothing
     "INVERTED_RUN_MIN": {"type": "int", "low": 2, "high": 8},
     "INVERTED_PAGE_MAJORITY": {"type": "float", "low": 0.40, "high": 0.80},
-    # (#5) page-context smoothing thresholds (ranges bracket the config defaults)
     "SURROUNDED_TRASH_QS_MARGIN": {"type": "float", "low": 0.05, "high": 0.30},
     "PAGE_GARBAGE_CLEAR_MAX": {"type": "float", "low": 0.0, "high": 0.20},
     "PAGE_GARBAGE_LANG_MAX": {"type": "float", "low": 0.30, "high": 0.70},
@@ -142,12 +101,12 @@ SEARCH_SPACE: dict[str, dict[str, Any]] = {
 }
 
 _missing = [name for name in TUNABLE_CONSTANTS if name not in SEARCH_SPACE]
-if _missing:  # pragma: no cover - guards future drift between the two files
+if _missing:
     raise RuntimeError(f"SEARCH_SPACE is missing ranges for tunables: {_missing}")
 
 EDGE_PARAMS = [
     "CATEG_GARBAGE_DENSITY_HIGH",
-    "QS_GARBAGE_NORM_MAX",  # (B2) QS-scale counterpart of the garbage hard gate
+    "QS_GARBAGE_NORM_MAX",
     "ROT_RATIO_INVERTED_MIN",
     "WEIRD_RATIO_INVERTED_MIN",
     "PPL_INVERTED_MIN",
@@ -178,7 +137,7 @@ THRESHOLD_PARAMS = [
     "CATEG_TRASH_SCORE_MAX",
     "CATEG_NOISY_SCORE_MAX",
     "CATEG_GARBAGE_DENSITY_HIGH",
-    "QS_GARBAGE_NORM_MAX",  # (B2) QS normalisation scale
+    "QS_GARBAGE_NORM_MAX",
     "LOWPPL_CLEAR_MAX",
     "LOWPPL_CZECH_CLEAR_MAX",
     "CZECH_CLEAR_GARBAGE_MAX",
@@ -266,8 +225,6 @@ def normalize_importances(importances: dict[str, float]) -> dict[str, float]:
 
 
 def maybe_sample_documents(df: pd.DataFrame, *, sample_docs: int | None, seed: int) -> pd.DataFrame:
-    """Sub-sample whole documents (never individual lines — that would corrupt the
-    page-level post-processing)."""
     if not sample_docs or sample_docs <= 0 or "file" not in df.columns:
         return df
     files = df["file"].drop_duplicates().tolist()
@@ -287,7 +244,6 @@ def write_trials_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def save_importance_plot(output_dir: Path, importances: dict[str, float], title: str) -> None:
-    """Best-effort bar chart; silently skips if matplotlib is unavailable."""
     try:
         import matplotlib.pyplot as plt
     except Exception:
@@ -355,14 +311,11 @@ def run_sklearn_backend(
             print(f"[sklearn] completed {len(rows)}/{n_trials} valid trials")
 
     if len(rows) < max(10, len(params)):
-        raise RuntimeError(
-            f"Only produced {len(rows)} valid trials after {attempts} attempts; check search-space constraints."
-        )
+        raise RuntimeError(f"Only produced {len(rows)} valid trials after {attempts} attempts.")
 
     x = np.asarray(x_values, dtype="float64")
     y = np.asarray(y_values, dtype="float64")
 
-    # bootstrap + oob_score so we can report a HELD-OUT R², not just train fit.
     rf = RandomForestRegressor(
         n_estimators=256,
         min_samples_leaf=2,
@@ -440,11 +393,7 @@ def run_optuna_backend(
         sampler = optuna.samplers.RandomSampler(seed=seed)
     elif sampler_name == "tpe":
         sampler = optuna.samplers.TPESampler(seed=seed, multivariate=True)
-        print(
-            "[optuna] WARNING: TPE concentrates trials near the optimum, which BIASES "
-            "fANOVA importance. Use --sampler random for importance; reserve TPE for "
-            "optimisation (finding a good config)."
-        )
+        print("[optuna] WARNING: TPE biases fANOVA importance. Use random for unbiased importances.")
     else:
         raise ValueError(f"Unsupported sampler: {sampler_name}")
 
@@ -492,17 +441,24 @@ def run_optuna_backend(
     }
 
     if len(params) < 2:
-        print("[optuna] WARNING: <2 swept params — fANOVA is trivially 100%; skipping importance.")
+        print("[optuna] WARNING: <2 swept params — skipping importance.")
         result["importance_skipped"] = "single-parameter study"
     else:
-        fanova = normalize_importances(
-            get_param_importances(study, evaluator=FanovaImportanceEvaluator(n_trees=64, seed=seed))
-        )
-        save_json(output_dir / "param_importance.json", fanova)
-        save_importance_plot(output_dir, fanova, f"fANOVA importance ({metric}, {sampler_name})")
-        result["fanova_importance"] = fanova
-        if sampler_name == "tpe":
-            result["importance_warning"] = "fANOVA computed on a TPE-biased study; treat as unreliable."
+        try:
+            fanova = normalize_importances(
+                get_param_importances(study, evaluator=FanovaImportanceEvaluator(n_trees=64, seed=seed))
+            )
+            save_json(output_dir / "param_importance.json", fanova)
+            save_importance_plot(output_dir, fanova, f"fANOVA importance ({metric}, {sampler_name})")
+            result["fanova_importance"] = fanova
+        except RuntimeError as e:
+            if "zero total variance" in str(e).lower():
+                print(
+                    f"[optuna] WARNING: fANOVA failed ({e}). Metric likely didn't change across trials. Skipping importance."
+                )
+                result["importance_skipped"] = "zero variance"
+            else:
+                raise
 
     rows = []
     for t in complete:
@@ -535,6 +491,161 @@ def run_optuna_backend(
 
 
 # ---------------------------------------------------------------------------
+# SALib backend (Morris / Sobol)
+# ---------------------------------------------------------------------------
+
+
+def _salib_problem(params: list[str]) -> dict[str, Any]:
+    return {
+        "num_vars": len(params),
+        "names": list(params),
+        "bounds": [[SEARCH_SPACE[n]["low"], SEARCH_SPACE[n]["high"]] for n in params],
+    }
+
+
+def _constants_from_row(row: list[float], base_constants: dict[str, Any], params: list[str]) -> dict[str, Any]:
+    constants = dict(base_constants)
+    for i, name in enumerate(params):
+        spec = SEARCH_SPACE[name]
+        val = row[i]
+        if spec["type"] == "int":
+            constants[name] = int(round(val))
+        else:
+            constants[name] = float(val)
+    return coerce_constants(constants)
+
+
+def _repair_constraints(constants: dict[str, Any]) -> dict[str, Any]:
+    """Repair the two known ordering constraints to avoid validation failures."""
+    if "CATEG_TRASH_SCORE_MAX" in constants and "CATEG_NOISY_SCORE_MAX" in constants:
+        constants["CATEG_NOISY_SCORE_MAX"] = max(
+            constants["CATEG_NOISY_SCORE_MAX"], constants["CATEG_TRASH_SCORE_MAX"] + 0.01
+        )
+    if "SHORT_PPL_CAP" in constants and "PERPLEXITY_THRESHOLD_MAX" in constants:
+        constants["PERPLEXITY_THRESHOLD_MAX"] = max(
+            constants["PERPLEXITY_THRESHOLD_MAX"], constants["SHORT_PPL_CAP"] + 1.0
+        )
+    return constants
+
+
+def run_morris_backend(
+    *, data, base_constants, params, output_dir, n_trials, seed, metric, direction, eval_kwargs
+) -> dict[str, Any]:
+    try:
+        from SALib.analyze import morris as morris_analyze
+        from SALib.sample import morris as morris_sample
+    except ImportError as exc:
+        raise RuntimeError("The morris backend requires SALib.") from exc
+
+    problem = _salib_problem(params)
+    # N is the morris-r parameter (trajectories). Total evals = r * (D + 1)
+    X = morris_sample.sample(problem, N=n_trials, num_levels=4, seed=seed)
+    Y = np.zeros([X.shape[0]])
+
+    rows = []
+    print(f"[morris] Evaluating {len(X)} samples...")
+    for i, row_vals in enumerate(X):
+        constants = _constants_from_row(row_vals, base_constants, params)
+        constants = _repair_constraints(constants)
+
+        metrics = evaluate_dataframe(data, constants, **eval_kwargs)
+        y = objective_value(metrics, metric)
+        if direction == "minimize":
+            y = -y  # SALib treats higher variance as higher sensitivity
+
+        Y[i] = y
+        rows.append(
+            {
+                "trial": i,
+                "objective": objective_value(metrics, metric),
+                "metric": metric,
+                **{name: constants[name] for name in params},
+            }
+        )
+
+    Si = morris_analyze.analyze(problem, X, Y, conf_level=0.95, print_to_console=False, num_levels=4)
+    mu_star = normalize_importances({name: float(v) for name, v in zip(params, Si["mu_star"], strict=True)})
+
+    save_json(output_dir / "param_importance.json", mu_star)
+    save_importance_plot(output_dir, mu_star, f"Morris mu* importance ({metric})")
+    write_trials_csv(output_dir / "trials.csv", rows)
+
+    return {
+        "backend": "morris",
+        "metric": metric,
+        "direction": direction,
+        "n_trials": len(X),
+        "n_params": len(params),
+        "morris_importance": mu_star,
+    }
+
+
+def run_sobol_backend(
+    *, data, base_constants, params, output_dir, n_trials, seed, metric, direction, eval_kwargs
+) -> dict[str, Any]:
+    try:
+        from SALib.analyze import sobol as sobol_analyze
+        from SALib.sample import sobol as sobol_sample
+    except ImportError as exc:
+        raise RuntimeError("The sobol backend requires SALib.") from exc
+
+    # Filter to constraint-free params (hold dependent params at baseline)
+    constrained = {"CATEG_TRASH_SCORE_MAX", "CATEG_NOISY_SCORE_MAX", "SHORT_PPL_CAP", "PERPLEXITY_THRESHOLD_MAX"}
+    free_params = [p for p in params if p not in constrained]
+    if not free_params:
+        raise ValueError("No constraint-free parameters available for Sobol.")
+
+    problem = _salib_problem(free_params)
+
+    # Set numpy seed manually if deterministic output is expected.
+    np.random.seed(seed)
+
+    # n_trials is N. Total evals = N * (D + 2) for first/total order
+    X = sobol_sample.sample(problem, n_trials, calc_second_order=False)
+    Y = np.zeros([X.shape[0]])
+
+    rows = []
+    print(f"[sobol] Evaluating {len(X)} constraint-free samples...")
+    for i, row_vals in enumerate(X):
+        constants = _constants_from_row(row_vals, base_constants, free_params)
+
+        metrics = evaluate_dataframe(data, constants, **eval_kwargs)
+        y = objective_value(metrics, metric)
+        if direction == "minimize":
+            y = -y
+
+        Y[i] = y
+        rows.append(
+            {
+                "trial": i,
+                "objective": objective_value(metrics, metric),
+                "metric": metric,
+                **{name: constants[name] for name in free_params},
+            }
+        )
+
+    Si = sobol_analyze.analyze(problem, Y, calc_second_order=False, print_to_console=False)
+
+    st_importance = normalize_importances({name: float(v) for name, v in zip(free_params, Si["ST"], strict=True)})
+    s1_importance = normalize_importances({name: float(v) for name, v in zip(free_params, Si["S1"], strict=True)})
+
+    save_json(output_dir / "param_importance.json", st_importance)
+    save_json(output_dir / "S1_importance.json", s1_importance)
+    save_importance_plot(output_dir, st_importance, f"Sobol ST importance ({metric})")
+    write_trials_csv(output_dir / "trials.csv", rows)
+
+    return {
+        "backend": "sobol",
+        "metric": metric,
+        "direction": direction,
+        "n_trials": len(X),
+        "n_params": len(free_params),
+        "sobol_ST": st_importance,
+        "sobol_S1": s1_importance,
+    }
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -544,8 +655,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--input-dir", type=Path, required=True)
     p.add_argument("--config", type=str, default=None, help="config_langID.txt to source the base config from.")
     p.add_argument("--output-dir", type=Path, required=True)
-    p.add_argument("--backend", choices=("sklearn", "optuna"), default="sklearn")
+    p.add_argument("--backend", choices=("sklearn", "optuna", "morris", "sobol"), default="sklearn")
     p.add_argument("--n-trials", type=int, default=400)
+    p.add_argument("--morris-r", type=int, default=10, help="Number of trajectories for Morris.")
+    p.add_argument("--sobol-n", type=int, default=256, help="Base N for Sobol (N * (D+2) evals).")
     p.add_argument("--top-param", type=str, nargs="*", help="Sweep only these constants.")
     p.add_argument("--storage", type=str, default=None, help="Optuna storage URL (e.g. sqlite:///sweep.db).")
     p.add_argument("--profile", choices=("default", "full", "edge", "thresholds"), default="default")
@@ -557,16 +670,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--metric", choices=OBJECTIVE_METRICS, default="macro_f1")
     p.add_argument("--direction", choices=("maximize", "minimize"), default=None)
     p.add_argument("--recursive", action="store_true")
-    p.add_argument(
-        "--sample-docs", type=int, default=None, help="Sub-sample to ~this many whole documents (never splits a page)."
-    )
+    p.add_argument("--sample-docs", type=int, default=None, help="Sub-sample to ~this many whole documents.")
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument(
-        "--sampler",
-        choices=("random", "tpe"),
-        default="random",
-        help="Optuna sampler. 'random' for unbiased importance (default); 'tpe' for optimisation only.",
-    )
+    p.add_argument("--sampler", choices=("random", "tpe"), default="random", help="Optuna sampler.")
     p.add_argument("--study-name", type=str, default="const_importance")
     return p
 
@@ -587,13 +693,12 @@ def main(argv=None):
     print(f"Running sweep | profile={args.profile} | backend={args.backend} | metric={args.metric} ({direction})")
     print(f"Sweeping {len(params)} parameter(s): {params}")
     print(f"Loading CSVs from {args.input_dir} ...")
+
     data = load_csvs(args.input_dir, recursive=args.recursive)
     data = maybe_sample_documents(data, sample_docs=args.sample_docs, seed=args.seed)
     n_docs = data["file"].nunique() if "file" in data.columns else 1
     print(f"Loaded {len(data):,} lines across {n_docs} document(s)")
 
-    # Resolve language config once; thread it through every trial (avoids a
-    # configparser read per evaluation).
     expected_langs, known_bases = _load_lang_config(args.config or str(Path("config_langID.txt")))
     eval_kwargs = {"expected_langs": expected_langs, "known_bases": known_bases}
 
@@ -603,14 +708,11 @@ def main(argv=None):
     save_json(args.output_dir / "base_config.json", base_constants)
     save_json(args.output_dir / "search_space.json", {name: SEARCH_SPACE[name] for name in params})
     print(
-        f"Baseline (current config): flip_rate={baseline_metrics['flip_rate']:.4f} "
-        f"macro_f1={baseline_metrics['macro_f1']:.4f}  (expect flip_rate≈0 — faithful engine)"
+        f"Baseline (current config): flip_rate={baseline_metrics['flip_rate']:.4f} macro_f1={baseline_metrics['macro_f1']:.4f}"
     )
+
     if baseline_metrics["flip_rate"] > 1e-9:
-        print(
-            "[WARNING] baseline flip_rate is not ~0 — the re-score is drifting from the stored "
-            "labels; importances may be confounded. Investigate before trusting results."
-        )
+        print("[WARNING] baseline flip_rate is not ~0 — importances may be confounded.")
 
     common = dict(
         data=data,
@@ -623,12 +725,19 @@ def main(argv=None):
         direction=direction,
         eval_kwargs=eval_kwargs,
     )
+
     if args.backend == "sklearn":
         result = run_sklearn_backend(**common)
-    else:
+    elif args.backend == "optuna":
         result = run_optuna_backend(
             **common, sampler_name=args.sampler, storage=args.storage, study_name=args.study_name
         )
+    elif args.backend == "morris":
+        common["n_trials"] = args.morris_r
+        result = run_morris_backend(**common)
+    elif args.backend == "sobol":
+        common["n_trials"] = args.sobol_n
+        result = run_sobol_backend(**common)
 
     save_json(args.output_dir / "sweep_summary.json", result)
     print(json.dumps(result, indent=2, ensure_ascii=False))

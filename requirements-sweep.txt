@@ -8,3 +8,4 @@
 scikit-learn>=1.3      # RandomForest surrogate + permutation importance (sklearn backend)
 optuna>=3.4            # TPE/random search + fANOVA importance (optuna backend)
 matplotlib>=3.7        # optional: param_importance.png bar charts
+SALib>=1.4.0           # Morris screening + Sobol global sensitivity (model-free backends)

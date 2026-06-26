@@ -20,15 +20,16 @@ never runs. That is the only gold-free, config-independent retirement criterion.
 
 ## Coverage columns
 
-| Column          | Source                                          | Meaning |
-|-----------------|--------------------------------------------------|---------|
-| `fire_count`    | `rule_fire_capture()` over one recategorize pass | raw execution count |
-| `fire_rate`     | `fire_count / n_scored_lines`                   | fraction of scored lines that triggered this rule |
-| `decisive_count`| LOO: `evaluate_dataframe` with `DISABLED_RULES={rule}` | lines whose category changes vs. stored categ when rule is removed |
-| `clear_loss`    | confusion["Clear"]["Trash"] + ["Non-text"] in LOO run | valid text destroyed if rule removed |
-| `class`         | derived                                          | DEAD / REDUNDANT-HERE / LOAD-BEARING |
+| Column           | Source                                                 | Meaning                                                            |
+|------------------|--------------------------------------------------------|--------------------------------------------------------------------|
+| `fire_count`     | `rule_fire_capture()` over one recategorize pass       | raw execution count                                                |
+| `fire_rate`      | `fire_count / n_scored_lines`                          | fraction of scored lines that triggered this rule                  |
+| `decisive_count` | LOO: `evaluate_dataframe` with `DISABLED_RULES={rule}` | lines whose category changes vs. stored categ when rule is removed |
+| `clear_loss`     | confusion["Clear"]["Trash"] + ["Non-text"] in LOO run  | valid text destroyed if rule removed                               |
+| `class`          | derived                                                | DEAD / REDUNDANT-HERE / LOAD-BEARING                               |
 
 ## Classification logic
+
 
 ```
 fire_count == 0                        → DEAD           (unreachable; retire candidate)
@@ -56,6 +57,16 @@ A rule may be permanently deleted **only when all of these hold**:
    instrumentation; the commit message cites the full-corpus `fire_count` and
    the run provenance (date, corpus version, cluster job ID).
 
+## Findings (Issue #5 Full Corpus Run)
+
+During the #5 configuration map, `rule_coverage_report.py` was executed against the complete corpus.
+
+* **Result: 0 DEAD rules.**
+* 11 rules were `LOAD-BEARING`.
+* 3 rules (`rule_allcaps`, `rule_garbage_density`, `rule_inverted`) were `REDUNDANT-HERE`.
+
+**Conclusion:** No rule is unreachable. The greedy ablation study mislabeled the 3 structural guards as "PRUNE (fully redundant)" because they showed 0 LOO flips, but coverage proved they *do* fire (2, 20, and 7 times respectively). They are entangled, not dead. Under the gold-free criterion, **nothing is retired**. All 14 rules remain.
+
 ## Running the tool
 
 ```bash
@@ -77,51 +88,22 @@ python tools/rule_coverage_report.py \
     --skip-loo
 ```
 
-The `--output` flag writes a `rule_coverage.json` file (see schema below) that
-can be committed as evidence alongside a retirement PR.
-
-## JSON output schema
-
-```json
-{
-  "input": "<path>",
-  "n_lines": 12345,
-  "n_scored": 10234,
-  "rules": {
-    "rule_hard_sweep": {
-      "fire_count": 42,
-      "fire_rate": 0.004105,
-      "decisive_count": 38,
-      "clear_loss": 0,
-      "class": "LOAD-BEARING"
-    },
-    "penalty_vowelless": {
-      "fire_count": 0,
-      "fire_rate": 0.0,
-      "decisive_count": 0,
-      "clear_loss": 0,
-      "class": "DEAD"
-    }
-  }
-}
-```
-
 ## Relationship to the ablation study
 
-| Tool                       | Question answered                                          | Needs gold? |
-|----------------------------|------------------------------------------------------------|-------------|
-| `run_ablation_study.py`    | Which rules are *decisive* on the self-labelled corpus?    | No (self-referential) |
-| `rule_coverage_report.py`  | Which rules *ever execute*? Is a rule reachable dead code? | No (structural) |
-| *(future)* `build_label_queue.py` | Which lines should a human label to break self-reference? | — |
+| Tool                              | Question answered                                          | Needs gold?           |
+|-----------------------------------|------------------------------------------------------------|-----------------------|
+| `run_ablation_study.py`           | Which rules are *decisive* on the self-labelled corpus?    | No (self-referential) |
+| `rule_coverage_report.py`         | Which rules *ever execute*? Is a rule reachable dead code? | No (structural)       |
+| *(future)* `build_label_queue.py` | Which lines should a human label to break self-reference?  | —                     |
 
 The three tools are complementary. A rule can be:
 
-- **Decisive but low-coverage**: fires rarely but changes critical outcomes
-  when it does → keep.
-- **High-coverage but non-decisive**: fires often but is always masked by an
-  earlier rule → REDUNDANT-HERE; keep (entanglement; not safe to delete).
-- **Zero coverage**: never fires → DEAD → retirement candidate after full-corpus
-  confirmation.
+* **Decisive but low-coverage**: fires rarely but changes critical outcomes
+when it does → keep.
+* **High-coverage but non-decisive**: fires often but is always masked by an
+earlier rule → REDUNDANT-HERE; keep (entanglement; not safe to delete).
+* **Zero coverage**: never fires → DEAD → retirement candidate after full-corpus
+confirmation.
 
 ## Hook points for B1 (gold set — deferred)
 
