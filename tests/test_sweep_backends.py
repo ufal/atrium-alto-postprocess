@@ -74,12 +74,14 @@ def mock_sweep_env(tmp_path):
 
 
 def test_sklearn_backend(mock_sweep_env):
+    pytest.importorskip("sklearn")
     res = run_sklearn_backend(**mock_sweep_env)
     assert res["backend"] == "sklearn"
     assert "mdi_importance" in res
 
 
 def test_optuna_backend(mock_sweep_env):
+    pytest.importorskip("optuna")
     mock_sweep_env["sampler_name"] = "random"
     mock_sweep_env["storage"] = None
     mock_sweep_env["study_name"] = "test"
