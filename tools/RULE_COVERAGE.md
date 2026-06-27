@@ -30,12 +30,12 @@ never runs. That is the only gold-free, config-independent retirement criterion.
 
 ## Classification logic
 
-
 ```
-fire_count == 0                        → DEAD           (unreachable; retire candidate)
+fire_count == 0 → DEAD (unreachable; retire candidate)
 fire_count > 0 AND decisive_count == 0 → REDUNDANT-HERE (entanglement; keep)
-decisive_count > 0                     → LOAD-BEARING   (always keep)
+decisive_count > 0 → LOAD-BEARING (always keep)
 ```
+
 
 `REDUNDANT-HERE` means the rule fires but is currently masked by an overlapping
 rule in production order. It is **not safe to delete** even with `decisive_count
@@ -98,17 +98,17 @@ python tools/rule_coverage_report.py \
 
 The three tools are complementary. A rule can be:
 
-* **Decisive but low-coverage**: fires rarely but changes critical outcomes
+- Decisive but low-coverage: fires rarely but changes critical outcomes
 when it does → keep.
-* **High-coverage but non-decisive**: fires often but is always masked by an
+- High-coverage but non-decisive: fires often but is always masked by an
 earlier rule → REDUNDANT-HERE; keep (entanglement; not safe to delete).
-* **Zero coverage**: never fires → DEAD → retirement candidate after full-corpus
+- Zero coverage: never fires → DEAD → retirement candidate after full-corpus
 confirmation.
 
 ## Hook points for B1 (gold set — deferred)
 
-When a gold label set becomes available, `evaluate_dataframe` gains an optional
-`gold_column` path that scores **only labeled rows** against the human label
-instead of the self-generated `categ`. The coverage report can then be re-run
-with `--gold-column` to produce `decisive_count_gold` and `clear_loss_gold`
+When a gold label set becomes available, evaluate_dataframe gains an optional
+gold_column path that scores only labeled rows against the human label
+instead of the self-generated categ. The coverage report can then be re-run
+with --gold-column to produce decisive_count_gold and clear_loss_gold
 columns, converting the retirement criterion from structural to correctness-based.
