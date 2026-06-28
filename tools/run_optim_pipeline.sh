@@ -54,16 +54,16 @@ python tools/const_importance_sweep.py \
 # ---------------------------------------------------------
 # 3. Optuna (fANOVA)
 # ---------------------------------------------------------
-echo ""
-echo "[3/6] Running Optuna (fANOVA) Sweep..."
-python tools/const_importance_sweep.py \
-    --input-dir "$INPUT_DIR" \
-    --config "$CONFIG" \
-    --output-dir "$OUT_BASE/optuna_sweep" \
-    --backend optuna \
-    --sampler random \
-    --metric macro_f1 \
-    --n-trials "$TRIALS"
+#echo ""
+#echo "[3/6] Running Optuna (fANOVA) Sweep..."
+#python tools/const_importance_sweep.py \
+#    --input-dir "$INPUT_DIR" \
+#    --config "$CONFIG" \
+#    --output-dir "$OUT_BASE/optuna_sweep" \
+#    --backend optuna \
+#    --sampler random \
+#    --metric macro_f1 \
+#    --n-trials "$TRIALS"
 
 # ---------------------------------------------------------
 # 4. SALib Morris (Screening & Interaction)
