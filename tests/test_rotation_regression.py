@@ -2,6 +2,7 @@ import pytest
 
 from tests.calibration_fixtures import CLEAR, ROT_FALSE_POSITIVE_GUARDS, TRASH_INVERTED
 from text_util_langID import (
+    LANG_REMAP_ALWAYS,
     LANG_SCORE_REMAP,
     analyze_rotation_signals,
     categorize_line,
@@ -40,9 +41,16 @@ def _process_mocked_line(text: str, ppl: float, orig_lang_score: float) -> str:
     gibb_count = detect_gibberish_words(clean_text)
     fused_count = detect_fused_words(clean_text)
 
-    # Simulate remap_lang() which caps unknown/foreign language predictions
+    # Simulate remap_lang(): unconditional when LANG_REMAP_ALWAYS is true
+    # (#3 2026-07-02: "the original lang score should not matter"), otherwise
+    # a ceiling (only capped down when the original exceeds LANG_SCORE_REMAP).
     # In production, an inverted string like 'oueussd' without diacritics is predicted as foreign/Latn
-    lang_score = min(orig_lang_score, LANG_SCORE_REMAP) if not is_upright else orig_lang_score
+    if is_upright:
+        lang_score = orig_lang_score
+    elif LANG_REMAP_ALWAYS or orig_lang_score > LANG_SCORE_REMAP:
+        lang_score = LANG_SCORE_REMAP
+    else:
+        lang_score = orig_lang_score
 
     qs = compute_quality_score(
         valid_word_ratio=valid_ratio,

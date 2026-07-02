@@ -7,6 +7,7 @@ Unit tests for text_util_langID.py  —  all pure-Python, zero ML dependencies.
 from langID_classify import CSV_HEADER, _fast_track_row, _row_from_dict
 from text_util_langID import (
     CATEG_NOISY_SCORE_MAX,
+    LANG_REMAP_ALWAYS,
     categorize_line,
     compute_garbage_density,
     compute_quality_score,
@@ -21,6 +22,7 @@ from text_util_langID import (
     detect_repeated_chars,
     detect_strange_symbols,
     detect_wx_words,
+    override_constants,
     pre_filter_line,
     remap_lang,
     score_word,
@@ -193,36 +195,76 @@ class TestDetectWxWords:
         assert detect_wx_words("wwx") >= 1
 
 
-class TestLangRemapCap:
-    """(#3 A1) remap_lang now CAPS non-trusted scores instead of flooring them."""
+class TestLangRemap:
+    """(#3 2026-07-02 calibration) remap_lang's fixed 0.75/0.50 assignment is
+    gated by the LANG_REMAP_ALWAYS config toggle. true (default) — DanaKriv:
+    "the original lang score should not matter." false — restores the prior
+    #3 A1 "cap, don't inflate a weak guess" behaviour without a code change,
+    since this exact call has already flipped once before in the thread."""
 
     def test_known_base_preserved(self):
         lbl, sc = remap_lang("deu_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
         assert lbl == "deu_Latn"
         assert sc == 0.4
 
-    def test_unknown_latin_weak_score_not_inflated(self):
-        # Old behaviour floored 0.4 -> 0.75; the cap must leave a weak guess weak.
-        lbl, sc = remap_lang("fra_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
-        assert lbl == "ces_Latn"
-        assert sc == 0.4
-
-    def test_unknown_latin_confident_score_capped(self):
-        # A confident foreign guess on Czech data is capped down to LANG_SCORE_REMAP.
-        lbl, sc = remap_lang("dan_Latn", 0.96, frozenset(["deu", "eng"]), "ces")
-        assert lbl == "ces_Latn"
-        assert sc <= 0.75
-
-    def test_non_latin_capped_harder(self):
-        # Non-Latin scripts are capped to LANG_SCORE_REMAP_FAR (0.50).
-        lbl, sc = remap_lang("kor_Hang", 0.90, frozenset(["deu", "eng"]), "ces")
-        assert lbl == "ces_Hang"
-        assert sc <= 0.50
-
     def test_slk_relabelled_but_score_preserved(self):
         lbl, sc = remap_lang("slk_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
         assert lbl == "ces_Latn"
         assert sc == 0.4
+
+    # -- LANG_REMAP_ALWAYS = true (default): the original score never matters --
+
+    def test_default_is_always_on(self):
+        assert LANG_REMAP_ALWAYS is True
+
+    def test_unknown_latin_weak_score_set_to_remap(self):
+        # The original score must NOT matter: a weak guess is still set to 0.75.
+        lbl, sc = remap_lang("fra_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Latn"
+        assert sc == 0.75
+
+    def test_unknown_latin_confident_score_set_to_remap(self):
+        # A confident foreign guess on Czech data is also fixed at LANG_SCORE_REMAP.
+        lbl, sc = remap_lang("dan_Latn", 0.96, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Latn"
+        assert sc == 0.75
+
+    def test_non_latin_set_to_remap_far(self):
+        # Non-Latin scripts are fixed at LANG_SCORE_REMAP_FAR (0.50), regardless
+        # of the original confidence.
+        lbl, sc = remap_lang("kor_Hang", 0.90, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Hang"
+        assert sc == 0.50
+
+        lbl, sc = remap_lang("kor_Hang", 0.05, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Hang"
+        assert sc == 0.50
+
+    # -- LANG_REMAP_ALWAYS = false: cap, don't inflate (the #3 A1 behaviour) --
+
+    def test_toggle_off_weak_latin_score_left_alone(self):
+        with override_constants({"LANG_REMAP_ALWAYS": False}):
+            lbl, sc = remap_lang("fra_Latn", 0.4, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Latn"
+        assert sc == 0.4
+
+    def test_toggle_off_confident_latin_score_still_capped(self):
+        with override_constants({"LANG_REMAP_ALWAYS": False}):
+            lbl, sc = remap_lang("dan_Latn", 0.96, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Latn"
+        assert sc == 0.75
+
+    def test_toggle_off_weak_non_latin_score_left_alone(self):
+        with override_constants({"LANG_REMAP_ALWAYS": False}):
+            lbl, sc = remap_lang("kor_Hang", 0.05, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Hang"
+        assert sc == 0.05
+
+    def test_toggle_off_confident_non_latin_score_still_capped(self):
+        with override_constants({"LANG_REMAP_ALWAYS": False}):
+            lbl, sc = remap_lang("kor_Hang", 0.90, frozenset(["deu", "eng"]), "ces")
+        assert lbl == "ces_Hang"
+        assert sc == 0.50
 
 
 # ════════════════════════════════════════════════════════════════════════════

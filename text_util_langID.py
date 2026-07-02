@@ -203,6 +203,18 @@ SHORT_NOISY_QS_PENALTY = _get_float("TEXT_UTILS", "SHORT_NOISY_QS_PENALTY", 0.20
 
 LANG_SCORE_REMAP = _get_float("TEXT_UTILS", "LANG_SCORE_REMAP", 0.75)
 LANG_SCORE_REMAP_FAR = _get_float("TEXT_UTILS", "LANG_SCORE_REMAP_FAR", 0.50)
+# (#3 2026-07-02 calibration - Extra) On/off switch for DanaKriv's "the original
+# lang score should not matter" ask. true (default): remap_lang() unconditionally
+# assigns LANG_SCORE_REMAP/LANG_SCORE_REMAP_FAR to every remapped row. false:
+# restores the prior #3 A1 "cap, don't inflate" behaviour -- the fixed value is
+# only assigned when the original score exceeds the cap; a weaker original guess
+# is left untouched. Config-only switch so this doesn't require a code change.
+LANG_REMAP_ALWAYS = _get_str("TEXT_UTILS", "LANG_REMAP_ALWAYS", "true").strip().lower() in (
+    "true",
+    "1",
+    "yes",
+    "on",
+)
 SINGLE_CHAR_ALLOWED = _get_str("TEXT_UTILS", "SINGLE_CHAR_ALLOWED", "aAiIuUvVzZkKsS")
 SHORT_VALID_WORDS = _get_csv_set(
     "TEXT_UTILS",
@@ -502,8 +514,23 @@ def remap_lang(
     new_label = default_lang + suffix
     if base == "slk":
         return new_label, score
+    # (#3 2026-07-02 calibration) DanaKriv: "Remapped lang score should be
+    # always 0.75 or 0.5 (the original lang score should not matter)" —
+    # unconditional assignment, not a ceiling, when LANG_REMAP_ALWAYS is true
+    # (the default). A prior pass (#3 A1) changed this from an unconditional
+    # floor to a `min(score, cap)` ceiling so a weak foreign guess wouldn't be
+    # inflated; DanaKriv's note reverses that, explicitly re-stating the
+    # original ask from earlier in the thread ("the languages, except for
+    # trusted, should have score 0.75"). LANG_REMAP_ALWAYS=false restores that
+    # intermediate cap behaviour without a code change, for exactly this kind
+    # of back-and-forth. The unremapped `orig_lang_score` is untouched either
+    # way and still drives the hard-sweep / wqx_rot / vowelless gates in
+    # determine_category, so this only affects the QS_WEIGHT_LANG component
+    # and the stored lang_score.
     cap = remap_floor if suffix == "_Latn" else LANG_SCORE_REMAP_FAR
-    return new_label, min(score, cap)
+    if LANG_REMAP_ALWAYS or score > cap:
+        return new_label, cap
+    return new_label, score
 
 
 def _has_repeated_run(core: str) -> bool:
@@ -1085,32 +1112,16 @@ def determine_category(
     rot_ratio = compute_rotatable_ratio(text_source)
     words = text_source.split()
 
-    thresh_trash = CATEG_TRASH_SCORE_MAX + 0.35
-
-    # --- Strict thresholds replacing legacy cumulative penalties ---
-    if "rule_wqx_rot" not in DISABLED_RULES:
-        wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(word_count, 1)
-        if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
-            _fire("rule_wqx_rot")
-            return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
-
-    if "rule_vowelless" not in DISABLED_RULES:
-        if word_count <= 3 and vr < 0.30 and not is_upright_czech:
-            if is_all_caps_line(text_source):
-                _fire("rule_vowelless")
-                return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
-
-    if "rule_ledger_fragmentation" not in DISABLED_RULES:
-        if words and len(words) >= 4:
-            frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
-            if (frag_count / len(words)) > 0.60:
-                _fire("rule_ledger_fragmentation")
-                return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
-
-    if "rule_mid_uppercase" not in DISABLED_RULES:
-        if word_count <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
-            _fire("rule_mid_uppercase")
-            return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
+    # (#3 2026-07-02 calibration) rule_wqx_rot / rule_vowelless /
+    # rule_ledger_fragmentation / rule_mid_uppercase used to short-circuit here,
+    # ahead of rules 1-6 and ahead of the `forgiven` computation below. That made
+    # the "moved down" copies of these same rules (right before the QS-band
+    # routing, guarded by `check_rescues()`) unreachable dead code, so a forgiven
+    # short-abbreviation/numbered-headline line that also happened to match one
+    # of these four conditions was hard-routed to Trash with no chance of rescue
+    # — exactly the DanaKriv-flagged failure mode (e.g. "mm", "2, Popis nálezu
+    # i - 3", "7, Plánky 1 - 2" all tripped this in practice). Removed here; the
+    # single authoritative check now lives immediately before QS-band routing.
 
     # 1. Hard sweep
     if "rule_hard_sweep" not in DISABLED_RULES:

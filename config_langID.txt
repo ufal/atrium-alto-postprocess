@@ -78,6 +78,13 @@ CLEAR_BAND_WC_MIN           = 0
 
 LANG_SCORE_REMAP             = 0.75
 LANG_SCORE_REMAP_FAR        = 0.50
+# (#3 2026-07-02 calibration - Extra) true: remap_lang() always assigns
+# LANG_SCORE_REMAP/LANG_SCORE_REMAP_FAR to a remapped row, regardless of the
+# original FastText confidence (DanaKriv: "the original lang score should not
+# matter"). false: only assigns it when the original score is ABOVE the cap
+# (the prior #3 A1 "cap, don't inflate a weak guess" behaviour) -- a config
+# toggle rather than a code change, since this exact call has flipped twice.
+LANG_REMAP_ALWAYS           = true
 SINGLE_CHAR_ALLOWED         = aAiIuUvVzZkKsS
 SHORT_VALID_WORDS           = a,i,k,o,s,u,v,z,se,si,po,na,za,ze,do,od,ke,ku,ve,ní,mi,ti,by,je,to,co,ač,my,ty,on,ji,jí,už,až
 REPEAT_ALLOWED_CHARS        = oOuU

@@ -35,10 +35,13 @@ if str(_TOOLS) not in sys.path:
 from recategorize_from_csv import _load_lang_config, _rescore_row  # noqa: E402
 
 from tests.calibration_fixtures import (  # noqa: E402
+    ALLCAPS_HEADLINE,
     CLEAR,
+    HEADLINE_NUMBERED,
     NOISY,
     NON_TEXT,
     ROT_FALSE_POSITIVE_GUARDS,
+    SHORT_EXCEPTIONS,
     TRASH_GARBAGE,
 )
 from text_util_langID import pre_filter_line  # noqa: E402
@@ -96,3 +99,28 @@ def test_numeric_stamp_content_filtered(text, ppl, ls, exp, note):
 @pytest.mark.parametrize("text,ppl,ls,exp,note", ROT_FALSE_POSITIVE_GUARDS)
 def test_high_rot_clean_czech_never_trashed(text, ppl, ls, exp, note):
     assert _categ(text, ppl, ls) != "Trash", note
+
+
+# ---------------------------------------------------------------------------
+# (#3 2026-07-02 DanaKriv calibration pass) forgiven-headline floor + the
+# all-caps headline guard. Locked as `!= Trash` / `== Process`, mirroring the
+# conservative style above: the 0.80 boundary may legitimately lift some of
+# these further to Clear, and the invariant under test is the floor, not the
+# exact band.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("text,ppl,ls,exp,note", HEADLINE_NUMBERED)
+def test_headline_numbered_never_trashed(text, ppl, ls, exp, note):
+    assert _categ(text, ppl, ls) != "Trash", note
+
+
+@pytest.mark.parametrize("text,ppl,ls,exp,note", SHORT_EXCEPTIONS)
+def test_short_exceptions_never_trashed(text, ppl, ls, exp, note):
+    assert _categ(text, ppl, ls) != "Trash", note
+
+
+@pytest.mark.parametrize("text,ppl,ls,exp,note", ALLCAPS_HEADLINE)
+def test_allcaps_headline_word_is_scored(text, ppl, ls, exp, note):
+    cat, _ = pre_filter_line(text)
+    assert cat == "Process", note
