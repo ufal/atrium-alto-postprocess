@@ -83,7 +83,6 @@ from tools.recategorize_from_csv import (  # noqa: E402
 # ---------------------------------------------------------------------------
 RULES: list[str] = sorted(
     [
-        # determine_category rules
         "rule_hard_sweep",
         "rule_extreme_ppl",
         "rule_absolute_ppl",
@@ -94,11 +93,11 @@ RULES: list[str] = sorted(
         "rule_short_garbage",
         "rule_lowppl_clear",
         "rule_mostly_readable_noisy",
-        # categorize_line penalties
-        "penalty_wqx_rot",
-        "penalty_vowelless",
-        "penalty_ledger_fragmentation",
-        "penalty_mid_uppercase",
+        "rule_wqx_rot",
+        "rule_vowelless",
+        "rule_ledger_fragmentation",
+        "rule_mid_uppercase",
+        "rule_forgiven_headline",
     ]
 )
 
@@ -307,8 +306,7 @@ def _print_table(results: dict[str, dict], n_scored: int) -> None:
     print(sep)
 
     for section_label, section_rules in [
-        ("— determine_category —", _DETERMINE_RULES),
-        ("— categorize_line penalties —", _PENALTY_RULES),
+        ("— determine_category rules —", RULES),
     ]:
         print(f"\n  {section_label}")
         for rule in section_rules:

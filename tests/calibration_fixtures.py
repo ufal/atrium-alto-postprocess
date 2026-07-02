@@ -187,4 +187,75 @@ ROT_FALSE_POSITIVE_GUARDS = [
     ),
 ]
 
-ALL_FIXTURES = CLEAR + NOISY + TRASH_GARBAGE + TRASH_INVERTED + NON_TEXT + ROT_FALSE_POSITIVE_GUARDS
+# ── HEADLINE_NUMBERED: short numbered headlines/captions, real           ──
+# ── CTX199603106 lines from the 2026-07-02 DanaKriv review. ──────────────
+HEADLINE_NUMBERED = [
+    (
+        "2, Popis nálezu i - 3",
+        268.00,
+        0.9790,
+        "Noisy",
+        "(#3 DanaKriv) numbered caption — forgiven-headline floor rescues it from Trash",
+    ),
+    (
+        "4. Literatura 5",
+        334.00,
+        0.3869,
+        "Noisy",
+        "(#3 DanaKriv) numbered TOC heading — forgiven-headline floor rescues it from Trash",
+    ),
+    (
+        "7, Plánky 1 - 2",
+        153.00,
+        0.6903,
+        "Noisy",
+        "(#3 DanaKriv) numbered caption — forgiven-headline floor rescues it from Trash",
+    ),
+    (
+        "Plánek č. 1",
+        82.00,
+        1.0000,
+        "Noisy",
+        "(#3 DanaKriv) numbered caption with abbreviation — forgiven-headline floor",
+    ),
+]
+
+# ── SHORT_EXCEPTIONS: bare domain abbreviations/units, 2026-07-02 review. ─
+SHORT_EXCEPTIONS = [
+    ("mm", 900.0, 0.50, "Noisy", "(#3 DanaKriv) bare unit — forgiven-headline floor escapes the <4-chars gate"),
+    ("cm", 900.0, 0.50, "Noisy", "(#3 DanaKriv) bare unit — forgiven-headline floor escapes the <4-chars gate"),
+    ("Tb.", 900.0, 0.50, "Noisy", "(#3 DanaKriv) bare abbreviation — forgiven-headline floor"),
+    (
+        "č.neg.",
+        900.0,
+        0.50,
+        "Clear",
+        "(#3 DanaKriv) bare abbreviation — already escapes via the literal METADATA_MARKERS "
+        "entry and its high valid_word_ratio lands it Clear, not just Noisy",
+    ),
+    ("č, neg.", 900.0, 0.50, "Noisy", "(#3 DanaKriv) spaced/comma abbreviation variant — forgiven-headline floor"),
+]
+
+# ── ALLCAPS_HEADLINE: single all-caps vowel-bearing word, 2026-07-02. ─────
+ALLCAPS_HEADLINE = [
+    ("LITERATURA", None, None, "Process", "(#3 DanaKriv) all-caps headline word — scored, not hard-routed Non-text"),
+    (
+        "ARCHEOLOGIE",
+        None,
+        None,
+        "Process",
+        "(#3 DanaKriv) all-caps headline word — scored, not hard-routed Non-text",
+    ),
+]
+
+ALL_FIXTURES = (
+    CLEAR
+    + NOISY
+    + TRASH_GARBAGE
+    + TRASH_INVERTED
+    + NON_TEXT
+    + ROT_FALSE_POSITIVE_GUARDS
+    + HEADLINE_NUMBERED
+    + SHORT_EXCEPTIONS
+    + ALLCAPS_HEADLINE
+)

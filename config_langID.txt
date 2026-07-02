@@ -58,7 +58,7 @@ QS_WEIGHT_LANG        = 0.05
 QS_WEIGHT_GIBBERISH   = 0.04
 QS_WEIGHT_FUSED       = 0.03
 
-CATEG_NOISY_SCORE_MAX       = 0.85
+CATEG_NOISY_SCORE_MAX       = 0.80
 CATEG_TRASH_SCORE_MAX       = 0.55
 
 CATEG_GARBAGE_DENSITY_HIGH  = 0.35
@@ -87,6 +87,15 @@ VOWEL_RATIO_HIGH            = 0.70
 ACADEMIC_TITLES             = PhDr,MUDr,JUDr,MVDr,RNDr,PaedDr,CSc,DrSc,Ing,Mgr,Bc,PhD,DiS,prof,doc
 LDL_ALLOWED_FOLLOW          = .,/:%-;?)=
 LDL_UNITS                   = m,cm,mm,g,kg,km,ha,l,ml
+# (#3 2026-07-02 calibration) is_forgiven_headline: bare unit/abbreviation
+# tokens and short numbered headlines/captions get a Trash/Non-text -> Noisy
+# floor instead of falling through the ordinary valid-word-ratio scoring.
+SHORT_EXCEPTION_TOKENS       = mm,cm,m,g,kg,km,ha,l,ml,tb,neg,obr,str,č,čneg
+HEADLINE_MAX_WORDS          = 8
+# Pure-digit tokens longer than this are treated as GARBAGE, not harmless
+# structural numbering — keeps archive/stamp codes (e.g. "6694", "1920")
+# from being swept up as forgiven captions.
+HEADLINE_MAX_DIGITS         = 2
 GARBAGE_KEEP_CHARS          =
 FUSED_VOWEL_RUN_MIN         = 3
 WX_REPEAT_MIN               = 2

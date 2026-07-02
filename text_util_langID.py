@@ -148,7 +148,7 @@ QS_WEIGHT_LENGTH = _get_float("TEXT_UTILS", "QS_WEIGHT_LENGTH", 0.02)
 QS_WEIGHT_GARBAGE = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE", 0.18)
 
 CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.55)
-CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.85)
+CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.80)
 
 CATEG_GARBAGE_DENSITY_HIGH = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH", 0.35)
 
@@ -222,6 +222,17 @@ ACADEMIC_TITLES = _get_csv_set(
 
 LDL_ALLOWED_FOLLOW = frozenset(_get_str("TEXT_UTILS", "LDL_ALLOWED_FOLLOW", ".,/:%-;?)="))
 LDL_UNITS = _get_csv_set("TEXT_UTILS", "LDL_UNITS", "m,cm,mm,g,kg,km,ha,l,ml")
+
+# (#3 2026-07-02 calibration) is_forgiven_headline tunables — see that function
+# for the full token-classification contract.
+SHORT_EXCEPTION_TOKENS = _get_csv_set(
+    "TEXT_UTILS",
+    "SHORT_EXCEPTION_TOKENS",
+    "mm,cm,m,g,kg,km,ha,l,ml,tb,neg,obr,str,č,čneg",
+)
+HEADLINE_MAX_WORDS = _get_int("TEXT_UTILS", "HEADLINE_MAX_WORDS", 8)
+HEADLINE_MAX_DIGITS = _get_int("TEXT_UTILS", "HEADLINE_MAX_DIGITS", 2)
+
 GARBAGE_KEEP_CHARS = frozenset(_get_str("TEXT_UTILS", "GARBAGE_KEEP_CHARS", "")) | {" "}
 FUSED_VOWEL_RUN_MIN = _get_int("TEXT_UTILS", "FUSED_VOWEL_RUN_MIN", 3)
 WX_REPEAT_MIN = _get_int("TEXT_UTILS", "WX_REPEAT_MIN", 2)
@@ -699,6 +710,9 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     if any(marker.lower() in clean_text.lower() for marker in METADATA_MARKERS):
         return "Process", clean_text
 
+    if is_forgiven_headline(clean_text, compute_garbage_density(clean_text)):
+        return "Process", clean_text
+
     if clean_text.startswith('"') and not clean_text.endswith('"'):
         clean_text += '"'
     elif clean_text.endswith('"') and not clean_text.startswith('"'):
@@ -944,6 +958,112 @@ def _trailing_fill_rescued(text_source: str, valid_word_ratio: float, word_count
     return has_cz_diacs(core) or (word_count <= 4 and len(text_source) <= 25)
 
 
+def is_forgiven_headline(text: str, garbage_density: float) -> bool:
+    """(#3 2026-07-02 calibration) Recognise short numbered headlines/captions
+    (``"2, Popis nálezu i - 3"``, ``"Plánek č. 1"``) and bare domain
+    abbreviations (``mm``, ``Tb.``, ``č.neg.``) that would otherwise mis-route
+    to Trash/Non-text purely because the digits/symbols around one or two real
+    words drag ``valid_word_ratio`` down.
+
+    Every token is classified as one of:
+      * NUMBERING  — a pure digit (short numbering only, see
+        ``HEADLINE_MAX_DIGITS``) or a roman numeral. Supplies *context*.
+      * ABBREV     — a known unit/abbreviation (``SHORT_EXCEPTION_TOKENS``), an
+        academic title, or a ``METADATA_MARKERS`` marker. Supplies both
+        *content* and *context* (a bare ``mm`` line qualifies on its own).
+      * FUNCTION   — a whitelisted short Czech word (``SHORT_VALID_WORDS`` /
+        ``SINGLE_CHAR_ALLOWED``). Real *content*, but no context by itself.
+      * CLEAN WORD — passes the same acceptance test as ``compute_valid_ratio``'s
+        inner branch, plus a vowel-bearing check. Real *content*, no context.
+        Multi-token lines only: a single bare "clean-looking" word is exactly the
+        profile of an inverted-scan / short-garbage token (``oueussd``, ``olie``)
+        that rule_inverted / rule_short_garbage exist to catch.
+      * STRUCTURAL — pure punctuation: no information either way.
+      * GARBAGE    — anything else, and disqualifies the whole line.
+
+    A line is forgiven only when it carries BOTH real *content* (a clean word,
+    abbreviation, or function word) AND genuine numbering/abbreviation *context*
+    (a digit, roman numeral, or domain abbreviation). Requiring the context term
+    is what keeps a bare short prose fragment (``"popel dřevo kůstky"``) — no
+    numbering, no abbreviation — out of the forgiveness path; those must route on
+    their own quality score, exactly as before this pass. Every DanaKriv example
+    carries such context (``2, ...``, ``4. ...``, ``Plánek č. 1``, ``mm``).
+
+    Deliberately tight: a single OCR-mangled token (``oAOrt``, ``vyt1ačená``)
+    or an over-long digit run (an archive/stamp code, not a caption number)
+    disqualifies the line, so genuine garbage is never rescued.
+    """
+    tokens = text.split()
+    if not tokens or len(tokens) > HEADLINE_MAX_WORDS:
+        return False
+    if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
+        return False
+
+    multi_token = len(tokens) >= 2
+    has_content = False  # a clean word, abbreviation, or function word
+    has_context = False  # numbering (digit / roman) or a domain abbreviation
+    for tok in tokens:
+        core = tok.strip(_STRIP_CHARS)
+
+        # STRUCTURAL — pure punctuation (no alnum at all) carries no
+        # information either way.
+        if not core or not any(c.isalnum() for c in core):
+            continue
+        # NUMBERING — short numbering only; longer digit runs are archive/stamp
+        # codes, not caption numbers.
+        if core.isdigit():
+            if len(core) > HEADLINE_MAX_DIGITS:
+                return False
+            has_context = True
+            continue
+
+        normalized = core.lower().replace(".", "").replace(",", "")
+
+        # ABBREV — a domain unit/marker/title supplies both content and context,
+        # so a bare "mm" / "Tb." / "č.neg." line qualifies on its own.
+        if (
+            normalized in SHORT_EXCEPTION_TOKENS
+            or core.rstrip(".") in ACADEMIC_TITLES
+            or any(marker.lower() in tok.lower() for marker in METADATA_MARKERS)
+        ):
+            has_content = True
+            has_context = True
+            continue
+
+        # NUMBERING — roman numeral (checked after ABBREV so real abbreviations
+        # built only of I/V/X/L/C/D/M aren't misread as numbering). A lone
+        # ambiguous glyph ("v", "i", "l", ...) is a Czech function word, not a
+        # numeral, so genuine roman numbering needs at least two glyphs.
+        if len(core.rstrip(".")) >= 2 and RE_ROMAN_NUMERAL.match(core):
+            has_context = True
+            continue
+
+        # FUNCTION — a whitelisted short Czech word / single char is real
+        # content, but is NOT numbering/abbreviation context on its own.
+        if core.lower() in SHORT_VALID_WORDS or core in SINGLE_CHAR_ALLOWED:
+            has_content = True
+            continue
+
+        # CLEAN WORD — multi-token lines only (see docstring).
+        if multi_token:
+            alpha = sum(c.isalpha() for c in core)
+            has_strange = any(not c.isalnum() and c not in ALLOWED_INTERNAL for c in core)
+            if (
+                len(core) >= 3
+                and alpha / len(core) >= 0.70
+                and not has_strange
+                and not _is_mid_uppercase(core)
+                and compute_vowel_ratio(core) > 0.0
+            ):
+                has_content = True
+                continue
+
+        # GARBAGE
+        return False
+
+    return has_content and has_context
+
+
 def determine_category(
     quality_score: float,
     text_source: str,
@@ -961,6 +1081,36 @@ def determine_category(
 ) -> tuple[str, str]:
     if word_count == 0 or not text_source.strip():
         return "Empty", "empty"
+
+    rot_ratio = compute_rotatable_ratio(text_source)
+    words = text_source.split()
+
+    thresh_trash = CATEG_TRASH_SCORE_MAX + 0.35
+
+    # --- Strict thresholds replacing legacy cumulative penalties ---
+    if "rule_wqx_rot" not in DISABLED_RULES:
+        wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(word_count, 1)
+        if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
+            _fire("rule_wqx_rot")
+            return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
+
+    if "rule_vowelless" not in DISABLED_RULES:
+        if word_count <= 3 and vr < 0.30 and not is_upright_czech:
+            if is_all_caps_line(text_source):
+                _fire("rule_vowelless")
+                return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
+
+    if "rule_ledger_fragmentation" not in DISABLED_RULES:
+        if words and len(words) >= 4:
+            frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
+            if (frag_count / len(words)) > 0.60:
+                _fire("rule_ledger_fragmentation")
+                return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
+
+    if "rule_mid_uppercase" not in DISABLED_RULES:
+        if word_count <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
+            _fire("rule_mid_uppercase")
+            return ("Trash", "trash_threshold") if quality_score < thresh_trash else ("Noisy", "noisy_threshold")
 
     # 1. Hard sweep
     if "rule_hard_sweep" not in DISABLED_RULES:
@@ -1008,8 +1158,13 @@ def determine_category(
                 _fire("rule_garbage_density")
                 return "Trash", "trash_threshold"
 
+    # (#3 2026-07-02 calibration) computed once, after the hard-sweep /
+    # inverted / all-caps / garbage-density overrides above, so genuine
+    # garbage is untouched — it only ever lifts a line from Trash to Noisy.
+    forgiven = "rule_forgiven_headline" not in DISABLED_RULES and is_forgiven_headline(text_source, garbage_density)
+
     # 5. Structural short-garbage route
-    if "rule_short_garbage" not in DISABLED_RULES:
+    if "rule_short_garbage" not in DISABLED_RULES and not forgiven:
         if (
             word_count <= ISOLATED_CHAR_MIN_TOKENS
             and not has_cz_diacs(text_source)
@@ -1028,14 +1183,54 @@ def determine_category(
             _fire("rule_lowppl_clear")
             return "Clear", "lowppl_clear"
 
-    # 7. Quality-score band routing
-    if quality_score < CATEG_TRASH_SCORE_MAX:
+    # --- Strict thresholds replacing legacy cumulative penalties ---
+    # Moved down to immediately precede QS band routing. Rules 1-6 ignore QS
+    # and must take precedence. This restores parity by mimicking the priority
+    # of the legacy cumulative subtraction.
+    thresh_trash = CATEG_TRASH_SCORE_MAX + 0.35
+
+    def check_rescues():
         if "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
             text_source, valid_word_ratio, word_count
         ):
             _fire("rule_trailing_fill_rescue")
             return "Noisy", "noisy_threshold"
+        if forgiven:
+            _fire("rule_forgiven_headline")
+            return "Noisy", "noisy_threshold"
         return "Trash", "trash_threshold"
+
+    if "rule_wqx_rot" not in DISABLED_RULES:
+        wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(word_count, 1)
+        if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
+            _fire("rule_wqx_rot")
+            if quality_score < thresh_trash:
+                return check_rescues()
+
+    if "rule_vowelless" not in DISABLED_RULES:
+        if word_count <= 3 and vr < 0.30 and not is_upright_czech:
+            if is_all_caps_line(text_source):
+                _fire("rule_vowelless")
+                if quality_score < thresh_trash:
+                    return check_rescues()
+
+    if "rule_ledger_fragmentation" not in DISABLED_RULES:
+        if words and len(words) >= 4:
+            frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
+            if (frag_count / len(words)) > 0.60:
+                _fire("rule_ledger_fragmentation")
+                if quality_score < thresh_trash:
+                    return check_rescues()
+
+    if "rule_mid_uppercase" not in DISABLED_RULES:
+        if word_count <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
+            _fire("rule_mid_uppercase")
+            if quality_score < thresh_trash:
+                return check_rescues()
+
+    # 7. Quality-score band routing
+    if quality_score < CATEG_TRASH_SCORE_MAX:
+        return check_rescues()
 
     if "rule_mostly_readable_noisy" not in DISABLED_RULES:
         if valid_word_ratio < MOSTLY_READABLE_VALID_MIN and not _lm_confident_czech(
@@ -1063,37 +1258,8 @@ def categorize_line(
     is_upright_czech: bool = False,
     ghost_dominated: bool = False,
 ) -> tuple[str, float] | tuple[str, float, str]:
-    rot_ratio = compute_rotatable_ratio(txt)
-    words = txt.split()
-
-    # --- FIX 1: Sneaky leaks (WQX & Rotation) ---
-    if "penalty_wqx_rot" not in DISABLED_RULES:
-        wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(wc, 1)
-        if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
-            _fire("penalty_wqx_rot")
-            qs = max(0.0, qs - 0.35)
-
-    # --- FIX 2: Vowelless/Acronym gibberish ("WVL A") ---
-    if "penalty_vowelless" not in DISABLED_RULES:
-        if wc <= 3 and vowel_ratio < 0.30 and not is_upright_czech:
-            if is_all_caps_line(txt):
-                _fire("penalty_vowelless")
-                qs = max(0.0, qs - 0.35)
-
-    # --- FIX 3: Ledger / Table Fragmentation Loophole ---
-    if "penalty_ledger_fragmentation" not in DISABLED_RULES:
-        if words and len(words) >= 4:
-            frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
-            if (frag_count / len(words)) > 0.60:
-                _fire("penalty_ledger_fragmentation")
-                qs = max(0.0, qs - 0.35)
-
-    # --- FIX 4: Isolated Mid-Uppercase Fragments ("ClAŕ") ---
-    if "penalty_mid_uppercase" not in DISABLED_RULES:
-        if wc <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
-            _fire("penalty_mid_uppercase")
-            qs = max(0.0, qs - 0.35)
-
+    # Delegate immediately to the strict thresholds rather than applying
+    # cumulative subtraction modifiers to the quality score.
     categ, reason = determine_category(
         qs,
         txt,
@@ -1123,6 +1289,84 @@ def categorize_line(
     if return_reason:
         return categ, aligned_score, reason
     return categ, aligned_score
+
+
+# def categorize_line(
+#     qs: float,
+#     txt: str,
+#     wc: int,
+#     vowel_ratio: float,
+#     perplexity: float,
+#     weird_ratio: float = 0.0,
+#     return_reason: bool = False,
+#     valid_word_ratio: float = 1.0,
+#     lang_score: float = 1.0,
+#     orig_lang_score: float = 1.0,
+#     gibberish_present: bool = False,
+#     garbage_density: float = 0.0,
+#     is_upright_czech: bool = False,
+#     ghost_dominated: bool = False,
+# ) -> tuple[str, float] | tuple[str, float, str]:
+#     rot_ratio = compute_rotatable_ratio(txt)
+#     words = txt.split()
+#
+#     # --- FIX 1: Sneaky leaks (WQX & Rotation) ---
+#     if "penalty_wqx_rot" not in DISABLED_RULES:
+#         wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(wc, 1)
+#         if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
+#             _fire("penalty_wqx_rot")
+#             qs = max(0.0, qs - 0.35)
+#
+#     # --- FIX 2: Vowelless/Acronym gibberish ("WVL A") ---
+#     if "penalty_vowelless" not in DISABLED_RULES:
+#         if wc <= 3 and vowel_ratio < 0.30 and not is_upright_czech:
+#             if is_all_caps_line(txt):
+#                 _fire("penalty_vowelless")
+#                 qs = max(0.0, qs - 0.35)
+#
+#     # --- FIX 3: Ledger / Table Fragmentation Loophole ---
+#     if "penalty_ledger_fragmentation" not in DISABLED_RULES:
+#         if words and len(words) >= 4:
+#             frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
+#             if (frag_count / len(words)) > 0.60:
+#                 _fire("penalty_ledger_fragmentation")
+#                 qs = max(0.0, qs - 0.35)
+#
+#     # --- FIX 4: Isolated Mid-Uppercase Fragments ("ClAŕ") ---
+#     if "penalty_mid_uppercase" not in DISABLED_RULES:
+#         if wc <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
+#             _fire("penalty_mid_uppercase")
+#             qs = max(0.0, qs - 0.35)
+#
+#     categ, reason = determine_category(
+#         qs,
+#         txt,
+#         wc,
+#         vowel_ratio,
+#         perplexity,
+#         weird_ratio,
+#         valid_word_ratio,
+#         lang_score,
+#         orig_lang_score,
+#         gibberish_present,
+#         garbage_density,
+#         is_upright_czech,
+#         ghost_dominated,
+#     )
+#
+#     if categ == "Trash":
+#         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
+#     elif categ == "Noisy":
+#         aligned_score = max(qs, CATEG_TRASH_SCORE_MAX)
+#         aligned_score = min(aligned_score, CATEG_NOISY_SCORE_MAX - 0.0001)
+#     elif categ == "Clear":
+#         aligned_score = max(qs, CATEG_NOISY_SCORE_MAX)
+#     else:
+#         aligned_score = qs
+#
+#     if return_reason:
+#         return categ, aligned_score, reason
+#     return categ, aligned_score
 
 
 # ---------------------------------------------------------------------------
@@ -1181,8 +1425,17 @@ def is_non_text(text: str) -> bool:
         if RE_ARCHIVE_CODE.match(stripped):
             return True
         if RE_ALPHANUM_TOKEN.match(stripped):
-            if any(c.isdigit() for c in stripped) or (stripped.isupper() and ("X" in stripped or len(stripped) >= 10)):
+            if any(c.isdigit() for c in stripped):
                 return True
+            if stripped.isupper():
+                # (#3 2026-07-02 calibration) a genuine all-caps headline word
+                # (e.g. "LITERATURA") should be scored, not hard-routed here —
+                # but vowel-starved all-caps codes/garbage, and anything with
+                # "X" (the original garbage-code signal), still are.
+                if "X" in stripped:
+                    return True
+                if len(stripped) >= 10 and compute_vowel_ratio(stripped) < VOWEL_RATIO_LOW:
+                    return True
     else:
         if len(stripped) <= 20 and any(c.isdigit() for c in stripped):
             if RE_ARCHIVE_REF_SPACED.match(stripped):

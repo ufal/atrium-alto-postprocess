@@ -56,6 +56,7 @@ CANDIDATE_RULES: Set[str] = {
     "rule_lowppl_clear",
     "rule_mostly_readable_noisy",
     "rule_trailing_fill_rescue",
+    "rule_forgiven_headline",
     "penalty_wqx_rot",
     "penalty_vowelless",
     "penalty_ledger_fragmentation",
