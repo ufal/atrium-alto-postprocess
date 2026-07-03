@@ -332,7 +332,7 @@ QS_LENGTH_MAX         = 100.0   # Max length for normalization
 # NOTE: QS_WEIGHT_SYMBOL no longer exists — there is no symbol_ratio term in compute_quality_score().
 
 CATEG_TRASH_SCORE_MAX       = 0.55      # Max QS for Trash category
-CATEG_NOISY_SCORE_MAX       = 0.85      # Max QS for Noisy category
+CATEG_NOISY_SCORE_MAX       = 0.80      # Max QS for Noisy category (#3 2026-07-02: lowered 0.85 -> 0.80)
 REPEATED_DOUBLE_MIN         = 2         # Minimum occurrence count for doubled-char penalty
 SHORT_NOISY_QS_PENALTY      = 0.20      # Opt-in QS penalty for short strings exhibiting OCR oddities
 
@@ -373,6 +373,13 @@ does not change between models and their defaults are stable across either choic
 | `CLEAN_PROSE_WEIRD_MAX`     | 0.08    | Maximum mean per-word weirdness a line may have to qualify for the near-boundary promotion. Even a single notably corrupted token disqualifies the line from being promoted.                                                                                                |
 | `CLEAN_PROSE_WC_MIN`        | 4       | Minimum word count a line must have to qualify for near-boundary promotion. Very short lines (1–3 words) have unreliable **perplexity** 📉 scores and are therefore never promoted regardless of their **quality score** 📈.                                                |
 | `MOSTLY_READABLE_VALID_MIN` | 0.85    | Minimum ratio of structurally valid words required. Semi-readable lines dipping below this ratio are capped at `Noisy` and prevented from achieving `Clear`.                                                                                                                |
+
+> [!NOTE]
+> The `CLEAN_PROSE_*` rows above (`CLEAN_PROSE_PPL_MAX`, `CLEAN_PROSE_MIN_SCORE`, `CLEAN_PROSE_WEIRD_MAX`,
+> `CLEAN_PROSE_WC_MIN`) parameterise the near-boundary **"Override 4"** clean-prose promotion, which has been
+> **removed** from `determine_category()` (see the callout in [Categorisation Logic](#categorisation-logic)). The keys
+> remain in `config_langID.txt` for backward compatibility but are **not read** by any current scoring or
+> categorisation path.
 
 ---
 
@@ -484,7 +491,7 @@ two 2-to-4 digit numbers separated by a `/`, and optional trailing non-alphanume
 8. **Isolated Chars & Fusions**: A line dominated by isolated alphanumeric tokens, or a single token fusing letters, digits, and symbols → `Non-text`.
 9. **Otherwise** → forwarded for ML classification as `Process`
 
-Finally, two categories of exception send a line directly to `Process` even if it would otherwise be caught by a `Non-text` rule:
+Finally, the following categories of exception send a line directly to `Process` even if it would otherwise be caught by a `Non-text` rule:
 
 * **Metadata marker bypass** — If the line contains any of the following patterns (checked case-insensitively),
 it is forwarded as **Process** regardless of how short it is or how few letters it contains. These strings are
@@ -507,6 +514,18 @@ forwarded as **Process** regardless of its letter ratio. This preserves content-
 numeric-heavy: measurement records (e.g., `váha 90,9g`, `30–50 cm`), date strings (e.g., `5.XI.1946`), grid
 coordinates, and catalogue references that combine letters and numbers. Without this bypass, most measurement lines
 would be discarded by rule 7 above.
+
+* **Forgiven headline / abbreviation bypass (#3, 2026-07-02)** — Lines recognised by `is_forgiven_headline()`
+(short numbered headlines/captions such as `2, Popis nálezu i - 3`, and bare domain abbreviations/units such as
+`mm`, `cm`, `Tb.`, `č.neg.`) are forwarded as **Process** even when they fall under the 4-character floor of rule 6,
+so they are scored and floored at `Noisy` by the categoriser instead of being discarded as `Non-text`. See the
+`forgiven` note in [Categorisation Logic](#categorisation-logic) for the full definition of what qualifies.
+
+* **All-caps headline word (#3, 2026-07-02)** — A standalone all-caps **alphabetic** word that carries real vowels
+(e.g. `LITERATURA`, `ARCHEOLOGIE`) is treated as a section headline and forwarded as **Process** for scoring, rather
+than being caught as a code by the standalone-alphanumeric-token check inside `is_non_text()` (rules 4–5). Genuine
+garbled codes are still `Non-text`: a token containing `X` (a classic garbled-**OCR** 🔍-code signal), a vowel-starved
+all-caps run of 10+ characters, or any digit-bearing alphanumeric token remains `Non-text`.
 
 ---
 
