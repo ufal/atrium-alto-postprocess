@@ -25,7 +25,7 @@ jobs:
       matrix:
         language: ["python"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4   # Node 24; v3 deprecates Dec 2026
