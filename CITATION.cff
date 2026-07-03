@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "ATRIUM's ALTO XMLs postprocessor: a tool to extract contents, fix word splits, and categorize textlines by language & severity of OCR errors."
-version: "0.20.0"
+version: "0.20.1"
 date-released: "2026-03-02"
 authors:
   - family-names: "Lutsai"
