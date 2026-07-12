@@ -3,6 +3,7 @@ service/text_api.py
 FastAPI wrapper for the ATRIUM text processing service.
 """
 
+import configparser
 import os
 import shutil
 import sys
@@ -40,7 +41,20 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="ATRIUM Text Processor", lifespan=lifespan)
+def _read_tool_version() -> str:
+    """Read the tool version from para_config.txt [tool] section.
+
+    Single source of truth — security.reusable.yml already validates this value
+    against CITATION.cff and the release tag, so the API version can never drift
+    from the released version again.
+    """
+    config = configparser.ConfigParser()
+    config.read(Path(__file__).resolve().parent.parent / "para_config.txt", encoding="utf-8")
+    version = config.get("tool", "version", fallback="unknown")
+    return version[1:] if version.lower().startswith("v") else version
+
+
+app = FastAPI(title="ATRIUM Text Processor", version=_read_tool_version(), lifespan=lifespan)
 
 # ---------------------------------------------------------------------------
 # CORS — configurable via environment variable; defaults to localhost only
@@ -77,6 +91,7 @@ async def root() -> Union[HTMLResponse, Dict[str, str]]:
 async def info() -> Dict[str, Any]:
     return {
         "status": "active",
+        "version": app.version,
         "device": text_manager.device,
         "supported_formats": ["ALTO XML (.xml)", "Plain Text (.txt)"],
         "quality_categories": ["Clear", "Noisy", "Trash", "Non-text", "Empty"],

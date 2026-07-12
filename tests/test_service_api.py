@@ -16,6 +16,21 @@ def test_info_endpoint():
     assert "Clear" in data["quality_categories"]
 
 
+def test_info_version_matches_para_config():
+    """The API version must come from para_config.txt [tool], never hardcoded."""
+    import configparser
+    from pathlib import Path
+
+    config = configparser.ConfigParser()
+    config.read(Path(__file__).resolve().parent.parent / "para_config.txt", encoding="utf-8")
+    expected = config.get("tool", "version").lstrip("v")
+
+    response = client.get("/info")
+    assert response.status_code == 200
+    assert response.json()["version"] == expected
+    assert app.version == expected
+
+
 @patch("service.text_api.text_manager.process_text_file", create=True)
 def test_process_text_auto_routing(mock_process):
     """Ensure text uploads correctly route to the text_manager text processor."""
