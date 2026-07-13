@@ -24,6 +24,16 @@ GPU_WAIT_TIMEOUT = 600.0
 EXPECTED_LANGS = ces,deu,eng
 TRUSTED_FOREIGN_LANGS = deu,eng,fra,pol,ita,slk
 MODEL_NAME = Qwen/Qwen2.5-0.5B
+# (#7 Tier 1) FastText language-ID weights path (was hardcoded in
+# init_cpu_worker).
+FASTTEXT_MODEL = lid.176.bin
+# (#7 Tier 1) Two-tier trust multipliers on the FastText confidence before it
+# feeds the quality score: known-but-unexpected language / unknown language.
+TRUST_TIER_TRUSTED = 0.85
+TRUST_TIER_UNKNOWN = 0.50
+# (#7 Tier 1) Languages that keep their original FastText confidence when
+# remapped to the default language (Slovak ~ Czech).
+REMAP_KEEP_SCORE_LANGS = slk
 
 [AGGREGATE]
 RAW_LINES_CSV = data_samples/DOC_LINE_CATEG
@@ -38,14 +48,35 @@ ALLOWED_INTERNAL = .-,+()"'—–:%;?!/
 STRIP_CHARS = .,;:!?()[]"'\/\
 METADATA_MARKERS = Tb.,č.neg,neg.,obr.,obr ,neg ,Tb ,č. neg,č.neg.,č.,str.,Datum
 CZ_DIACS = áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ
+# (#7 Tier 1) German diacritic glyphs; _LANG_DIACRITICS is rebuilt from
+# CZ_DIACS + DEU_DIACS at import time.
+DEU_DIACS = äöüßÄÖÜ
+# (#7 Tier 1) Minimum diacritic share among alphabetic chars for
+# infer_lang_from_diacritics (was a hardcoded 0.07 default argument).
+DIACRITIC_INFER_THRESHOLD = 0.07
 VOWEL_CHARS = aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ
 ROTATABLE_CHARS = pbqdnuwmoxszeyv
+# (#7 Tier 1) Letters rare in Czech — wqx-heavy tokens signal OCR noise
+# (score_word / score_words_in_line / determine_category).
+WQX_CHARS = wqxWQX
+# (#7 Tier 1) Czech function words recognisable upright; their mirror/rotation
+# ghost images (ROT_GHOSTLIST) are derived at import time. Changing this key
+# requires re-import — override_constants() does not rebuild the ghostlist.
+ROT_WHITELIST = po,pod,do,od,on,ony,by,bez,ne,nebo,ven,den,zde,se,ve,mez,pouze,bude
+# (#7 Tier 1) Ghost images colliding with real words — never count as ghosts.
+GHOST_WORD_COLLISIONS = no,bo
+# (#7 Tier 1) Trailing filler chars stripped before headline/short-line
+# checks. Unicode-escape decoded (configparser strips leading whitespace, so
+# the leading space is written as \x20).
+TRAILING_FILL_CHARS = \x20._:-<\u2013\u2014
+# (#7 Tier 1) Collection-specific literal markers forcing the Non-text route
+# in pre_filter_line (ARUP/B "IVerc" stamp).
+NONTEXT_MARKERS = IVerc
 
 QS_LENGTH_MAX         = 100
 PERPLEXITY_THRESHOLD_MAX  = 1000.0
 
 SHORT_PPL_CAP               = 850.0
-CLEAN_PROSE_PPL_MAX         = 400.0
 PPL_INVERTED_MIN            = 200.0
 
 QS_WEIGHT_VALID_WORD  = 0.35
@@ -67,14 +98,12 @@ CATEG_GARBAGE_DENSITY_HIGH  = 0.35
 QS_GARBAGE_NORM_MAX         = 0.35
 
 ROT_RATIO_INVERTED_MIN      = 0.55
+# (#7 Phase 0) WEIRD_RATIO_INVERTED_MIN is loaded and registered in the sweep
+# space but currently used by NO decision path — a decision-inert knob and a
+# wasted sweep dimension. Kept pending team ack (it sits in the published
+# sweep space); flag to DanaKriv before removal.
 WEIRD_RATIO_INVERTED_MIN    = 0.35
 ROT_HIGH_LANG_CONF          = 0.90
-
-CLEAN_PROSE_MIN_SCORE       = 0.65
-CLEAN_PROSE_WEIRD_MAX       = 0.08
-CLEAN_PROSE_WC_MIN          = 4
-
-CLEAR_BAND_WC_MIN           = 0
 
 LANG_SCORE_REMAP             = 0.75
 LANG_SCORE_REMAP_FAR        = 0.50

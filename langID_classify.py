@@ -217,6 +217,29 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
                 result_dict[msg[0]] = [99999.0] * len(msg[1])
 
 
+# (#7 Tier 1) Module-level config read (mirrors text_util_langID) so spawned
+# CPU workers — which re-import this module — see the same values without any
+# queue plumbing. Honors the LANGID_CONFIG env var set by run_pipeline.py.
+_config = configparser.ConfigParser()
+_config_path = Path(os.getenv("LANGID_CONFIG", "config_langID.txt"))
+if _config_path.exists():
+    _config.read(_config_path)
+
+
+def _cfg_get(key: str, default: str) -> str:
+    if _config.has_section("CLASSIFY"):
+        return _config.get("CLASSIFY", key, fallback=default)
+    return default
+
+
+# (#7 Tier 1) FastText language-ID weights path (previously hardcoded).
+FASTTEXT_MODEL = _cfg_get("FASTTEXT_MODEL", "lid.176.bin")
+# (#7 Tier 1) Two-tier trust multipliers applied to the FastText confidence
+# before it feeds the quality score (previously hardcoded 0.85 / 0.50):
+# known-but-unexpected language → TRUSTED; unknown language → UNKNOWN.
+TRUST_TIER_TRUSTED = float(_cfg_get("TRUST_TIER_TRUSTED", "0.85"))
+TRUST_TIER_UNKNOWN = float(_cfg_get("TRUST_TIER_UNKNOWN", "0.50"))
+
 worker_models = {}
 
 
@@ -224,7 +247,7 @@ def init_cpu_worker():
     """Initializes the CPU-bound FastText model once per spawned process."""
     import fasttext
 
-    worker_models["ft"] = fasttext.load_model("lid.176.bin")
+    worker_models["ft"] = fasttext.load_model(FASTTEXT_MODEL)
 
 
 def write_rows_to_doc(output_dir: Path, file_id: str, rows: list):
@@ -338,9 +361,9 @@ def process_and_write_batch_cpu(
             if base_lang in expected_langs:
                 trust_lang_score = original_lang_score
             else:
-                trust_lang_score = original_lang_score * 0.85
+                trust_lang_score = original_lang_score * TRUST_TIER_TRUSTED
         else:
-            trust_lang_score = original_lang_score * 0.50
+            trust_lang_score = original_lang_score * TRUST_TIER_UNKNOWN
 
         q_score = compute_quality_score(
             valid_word_ratio=valid_ratio,
@@ -787,7 +810,8 @@ def main():
     EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng")
     EXPECTED_LANGS = [lang.strip() for lang in EXPECTED_LANGS_STR.split(",") if lang.strip()]
 
-    TRUSTED_FOREIGN_LANG_BASES = config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback="deu,eng,fra,pol,ita")
+    # (#7 Phase 0) fallback aligned with the shipped config (slk was missing).
+    TRUSTED_FOREIGN_LANG_BASES = config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback="deu,eng,fra,pol,ita,slk")
     _TRUSTED_FOREIGN_LANG_BASES = [lang.strip() for lang in TRUSTED_FOREIGN_LANG_BASES.split(",") if lang.strip()]
 
     out_dir = Path(OUTPUT_DIR)

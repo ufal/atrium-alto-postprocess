@@ -58,3 +58,20 @@ def test_sum_metrics_empty():
     df = pd.DataFrame()
     res = _sum_metrics(df, STANDARD_COLS)
     assert res.empty
+
+
+def test_load_config_reads_standard_cols(tmp_path):
+    """(#7 Phase 0) [AGGREGATE] STANDARD_COLS must round-trip from the config
+    file instead of always falling back to the hardcoded default."""
+    cfg = tmp_path / "config_langID.txt"
+    cfg.write_text("[AGGREGATE]\nSTANDARD_COLS = Clear,Noisy\n", encoding="utf-8")
+    loaded = load_config(str(cfg))
+    assert loaded["standard_cols"] == "Clear,Noisy"
+
+    # Shipped config carries the full five-category set.
+    shipped = load_config(DEFAULT_CONFIG)
+    assert frozenset(shipped["standard_cols"].split(",")) == frozenset({"Clear", "Noisy", "Trash", "Non-text", "Empty"})
+
+    # Missing-file fallback must include the key too (main() relies on it).
+    missing = load_config(str(tmp_path / "nope.txt"))
+    assert "standard_cols" in missing

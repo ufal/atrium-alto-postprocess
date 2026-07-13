@@ -343,7 +343,6 @@ HARD_SWEEP_PPL_MIN          = 1000.0    # ppl floor for the hard-sweep route
 GHOST_DOMINATED_MIN_RATIO   = 0.5       # min ghost-token share to flag ghost_dominated
 WORD_W_PENALTY              = 0.20      # per-word weirdness penalty for tokens containing 'w'
 ROT_HIGH_LANG_CONF          = 0.90      # lang_score ceiling for the page-level rotation arm
-CLEAR_BAND_WC_MIN           = 0         # short-fragment Clear-band guard (0 = disabled)
 
 ```
 
@@ -377,9 +376,27 @@ does not change between models and their defaults are stable across either choic
 > [!NOTE]
 > The `CLEAN_PROSE_*` rows above (`CLEAN_PROSE_PPL_MAX`, `CLEAN_PROSE_MIN_SCORE`, `CLEAN_PROSE_WEIRD_MAX`,
 > `CLEAN_PROSE_WC_MIN`) parameterise the near-boundary **"Override 4"** clean-prose promotion, which has been
-> **removed** from `determine_category()` (see the callout in [Categorisation Logic](#categorisation-logic)). The keys
-> remain in `config_langID.txt` for backward compatibility but are **not read** by any current scoring or
-> categorisation path.
+> **removed** from `determine_category()` (see the callout in [Categorisation Logic](#categorisation-logic)). These
+> keys — together with the never-implemented `CLEAR_BAND_WC_MIN` guard — have now been **removed from
+> `config_langID.txt`** as well (#7 Phase 0 of the config-coverage audit); they are **not read** by any current
+> scoring or categorisation path. The rows are kept here only as historical documentation of the removed override.
+
+Language- and collection-specific data 🇨🇿 moved from hardcoded Python literals into the config (#7 Tier 1). Defaults
+are bit-identical to the previous in-code values, so the shipped config produces exactly the same categorisation:
+
+| Parameter                   | Section        | Default                                                               | What it controls                                                                                                                                                                                                         |
+|-----------------------------|----------------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `DEU_DIACS`                 | `[TEXT_UTILS]` | `äöüßÄÖÜ`                                                             | German diacritic glyphs 🇩🇪; together with `CZ_DIACS` rebuilds the per-language diacritic map used by `infer_lang_from_diacritics()`.                                                                                   |
+| `DIACRITIC_INFER_THRESHOLD` | `[TEXT_UTILS]` | 0.07                                                                  | Minimum diacritic share among alphabetic characters for diacritic-based language inference.                                                                                                                              |
+| `WQX_CHARS`                 | `[TEXT_UTILS]` | `wqxWQX`                                                              | Letters rare in Czech 🇨🇿 — wqx-heavy tokens signal OCR noise in `score_word`, `score_words_in_line` and `determine_category`.                                                                                          |
+| `ROT_WHITELIST`             | `[TEXT_UTILS]` | `po,pod,do,od,on,ony,by,bez,ne,nebo,ven,den,zde,se,ve,mez,pouze,bude` | Czech 🇨🇿 function words recognisable upright; their mirror/rotation ghost images (`ROT_GHOSTLIST`) are **derived at import time** — changing this key requires re-import (`override_constants()` does not rebuild it). |
+| `GHOST_WORD_COLLISIONS`     | `[TEXT_UTILS]` | `no,bo`                                                               | Ghost images that collide with real words and must never count as ghost hits.                                                                                                                                            |
+| `TRAILING_FILL_CHARS`       | `[TEXT_UTILS]` | `\x20._:-<\u2013\u2014`                                               | Trailing filler characters stripped before headline/short-line checks. Unicode-escape decoded — the leading space is written as `\x20` because configparser strips leading whitespace from values.                       |
+| `NONTEXT_MARKERS`           | `[TEXT_UTILS]` | `IVerc`                                                               | Collection-specific literal markers (ARUP/B stamp) forcing the `Non-text` route in `pre_filter_line()`.                                                                                                                  |
+| `FASTTEXT_MODEL`            | `[CLASSIFY]`   | `lid.176.bin`                                                         | Path to the **FastText** 🌐 language-ID weights loaded by each CPU worker.                                                                                                                                               |
+| `TRUST_TIER_TRUSTED`        | `[CLASSIFY]`   | 0.85                                                                  | Trust multiplier on the **FastText** 🌐 confidence for a *known but unexpected* language before it feeds the **quality score** 📈.                                                                                       |
+| `TRUST_TIER_UNKNOWN`        | `[CLASSIFY]`   | 0.50                                                                  | Trust multiplier for an *unknown* language.                                                                                                                                                                              |
+| `REMAP_KEEP_SCORE_LANGS`    | `[CLASSIFY]`   | `slk`                                                                 | Languages that keep their original **FastText** 🌐 confidence when remapped to the default language (Slovak ≈ Czech 🇨🇿, so the confidence stays meaningful after the label swap).                                      |
 
 ---
 

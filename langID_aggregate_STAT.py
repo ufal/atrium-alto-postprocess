@@ -61,13 +61,18 @@ def load_config(config_path):
             "input_dir": "data_samples/DOC_LINE_CATEG",
             "output_dir": "data_samples/DOC_LINE_STATS",
             "output_stats": "samples_page_stats.csv",
+            "standard_cols": "Clear,Noisy,Trash,Non-text,Empty",
         }
     config.read(config_path)
 
+    # (#7 Phase 0) STANDARD_COLS was documented in [AGGREGATE] but never read:
+    # main() called .get("standard_cols", ...) on a dict that lacked the key,
+    # so the fallback default always won. Now wired through load_config().
     return {
         "input_dir": config.get("AGGREGATE", "RAW_LINES_CSV", fallback="data_samples/DOC_LINE_CATEG"),
         "output_dir": config.get("AGGREGATE", "OUTPUT_DOC_DIR", fallback="data_samples/DOC_LINE_STATS"),
         "output_stats": config.get("AGGREGATE", "OUTPUT_STATS", fallback="samples_page_stats.csv"),
+        "standard_cols": config.get("AGGREGATE", "STANDARD_COLS", fallback="Clear,Noisy,Trash,Non-text,Empty"),
     }
 
 

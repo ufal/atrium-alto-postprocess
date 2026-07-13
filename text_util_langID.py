@@ -17,6 +17,7 @@ Categories Outputted:
 
 import configparser
 import itertools
+import os
 import re
 import sys
 from contextlib import contextmanager
@@ -71,7 +72,10 @@ def rule_fire_capture():
 # ---------------------------------------------------------------------------
 
 _config = configparser.RawConfigParser()
-_config_path = Path("config_langID.txt")
+# (#7 Phase 0) Honor the LANGID_CONFIG env var that run_pipeline.py sets for
+# child stages, so `--config other.txt` actually reaches the [TEXT_UTILS]
+# constants instead of silently falling back to the CWD default.
+_config_path = Path(os.getenv("LANGID_CONFIG", "config_langID.txt"))
 if _config_path.exists():
     _config.read(_config_path)
 
@@ -98,9 +102,11 @@ COMMON_LANGS = ["ces", "deu", "eng"]
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
     COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
 
+# (#7 Phase 0) fallback aligned with the shipped config (slk was missing), so
+# "no-config" behaviour matches shipped behaviour.
 _TRUSTED_FOREIGN_LANG_BASES: frozenset = frozenset(
     lang.strip()
-    for lang in _get_str("CLASSIFY", "TRUSTED_FOREIGN_LANGS", "deu,eng,fra,pol,ita").split(",")
+    for lang in _get_str("CLASSIFY", "TRUSTED_FOREIGN_LANGS", "deu,eng,fra,pol,ita,slk").split(",")
     if lang.strip()
 )
 
@@ -114,11 +120,34 @@ def _lang_base(lang_code: str) -> str:
 # the page-level inverted-scan sweep and the short-garbage route both use it.
 CZ_DIACS = frozenset(_get_str("TEXT_UTILS", "CZ_DIACS", "áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ"))
 
-METADATA_MARKERS = frozenset(_get_str("TEXT_UTILS", "METADATA_MARKERS", "©,®").split(","))
+# (#7 Phase 0) fallback aligned with the shipped Czech marker list ("©,®" was
+# a stale placeholder), so "no-config" behaviour matches shipped behaviour.
+METADATA_MARKERS = frozenset(
+    _get_str("TEXT_UTILS", "METADATA_MARKERS", "Tb.,č.neg,neg.,obr.,obr ,neg ,Tb ,č. neg,č.neg.,č.,str.,Datum").split(
+        ","
+    )
+)
 
 VOWEL_CHARS = frozenset(_get_str("TEXT_UTILS", "VOWEL_CHARS", "aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ"))
 
-ROTATABLE_CHARS = frozenset(_get_str("TEXT_UTILS", "ROTATBLE_CHARS", "pbqdnuwmoxszeyv"))
+# (#7 Phase 0) key was misspelled "ROTATBLE_CHARS", so the config value was
+# never read (harmless only because config value == default). Fixed.
+ROTATABLE_CHARS = frozenset(_get_str("TEXT_UTILS", "ROTATABLE_CHARS", "pbqdnuwmoxszeyv"))
+
+# (#7 Tier 1) Letters rare in Czech — a wqx-heavy token is a strong OCR-noise
+# signal. Previously the literal "wqxWQX" at three call sites (score_word,
+# score_words_in_line, determine_category).
+WQX_CHARS = frozenset(_get_str("TEXT_UTILS", "WQX_CHARS", "wqxWQX"))
+
+# (#7 Tier 1) Collection-specific literal markers that force a Non-text route
+# in pre_filter_line (previously the hardcoded "IVerc" ARUP/B stamp marker).
+NONTEXT_MARKERS = _get_csv_set("TEXT_UTILS", "NONTEXT_MARKERS", "IVerc")
+
+# (#7 Tier 1) Languages that keep their original FastText confidence when
+# remapped to the default language (previously a hardcoded `slk` special case
+# in remap_lang — Slovak is close enough to Czech that the confidence remains
+# meaningful after the label swap).
+REMAP_KEEP_SCORE_LANGS = _get_csv_set("CLASSIFY", "REMAP_KEEP_SCORE_LANGS", "slk")
 
 
 def has_cz_diacs(text: str) -> bool:
@@ -288,10 +317,20 @@ def _collapse_spaced_caps(m: re.Match) -> str:
     return letters[0].upper() + letters[1:].lower()
 
 
+# (#7 Tier 1) German diacritic glyphs — language data, now read from config
+# (the Czech set reuses the existing CZ_DIACS key). _LANG_DIACRITICS is rebuilt
+# from the two configured sets; the shipped defaults are set-identical to the
+# previous hardcoded dict.
+DEU_DIACS = frozenset(_get_str("TEXT_UTILS", "DEU_DIACS", "äöüßÄÖÜ"))
+
 _LANG_DIACRITICS: dict[str, frozenset] = {
-    "ces": frozenset("áčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ"),
-    "deu": frozenset("äöüßÄÖÜ"),
+    "ces": CZ_DIACS,
+    "deu": DEU_DIACS,
 }
+
+# (#7 Tier 1) Minimum diacritic share among alphabetic chars for
+# infer_lang_from_diacritics (previously a hardcoded 0.07 default argument).
+DIACRITIC_INFER_THRESHOLD = _get_float("TEXT_UTILS", "DIACRITIC_INFER_THRESHOLD", 0.07)
 
 # (#3) Extreme-perplexity trash route + LM-confident upright-Czech recovery.
 PPL_EXTREME_MIN = _get_float("TEXT_UTILS", "PPL_EXTREME_MIN", 3000.0)
@@ -311,7 +350,15 @@ INVERTED_WEIRD_PENALTY = _get_float("TEXT_UTILS", "INVERTED_WEIRD_PENALTY", 0.45
 
 PPL_GARBAGE_ABSOLUTE = _get_float("TEXT_UTILS", "PPL_GARBAGE_ABSOLUTE", 30000.0)
 GHOST_HITS_INVERTED_MIN = _get_int("TEXT_UTILS", "GHOST_HITS_INVERTED_MIN", 1)
-TRAILING_FILL_CHARS = " ._:-<\u2013\u2014"
+# (#7 Tier 1) Trailing filler chars stripped before headline/short-line checks.
+# Read from config with unicode-escape decoding, because configparser strips
+# leading whitespace from values — the leading space must be written as \x20
+# in config_langID.txt. Decoded default == the previous literal " ._:-<–—".
+TRAILING_FILL_CHARS = (
+    _get_str("TEXT_UTILS", "TRAILING_FILL_CHARS", "\\x20._:-<\\u2013\\u2014")
+    .encode("latin-1", "backslashreplace")
+    .decode("unicode_escape")
+)
 
 # ---------------------------------------------------------------------------
 # Lexicon Integration for Rotation/Inversion detection
@@ -370,29 +417,17 @@ def _transform_word(w: str, glyph_map: dict) -> str | None:
     return "".join(reversed(out))
 
 
-ROT_WHITELIST: frozenset = frozenset(
-    {
-        "po",
-        "pod",
-        "do",
-        "od",
-        "on",
-        "ony",
-        "by",
-        "bez",
-        "ne",
-        "nebo",
-        "ven",
-        "den",
-        "zde",
-        "se",
-        "ve",
-        "mez",
-        "pouze",
-        "bude",
-    }
+# (#7 Tier 1) Czech function-word whitelist for rotation/inversion detection —
+# language data, now read from config. Default == the previous effective value
+# (the union of the old MIR_PAIRS/ROT_PAIRS keys; those dicts' *values* were
+# never read anywhere, and the earlier literal frozenset was immediately
+# overwritten by the key-union — both deleted as dead code).
+ROT_WHITELIST: frozenset = _get_csv_set(
+    "TEXT_UTILS", "ROT_WHITELIST", "po,pod,do,od,on,ony,by,bez,ne,nebo,ven,den,zde,se,ve,mez,pouze,bude"
 )
-_GHOST_REAL_WORD_COLLISIONS: frozenset = frozenset({"no", "bo"})
+# (#7 Tier 1) Ghost images that collide with real Czech/common words and must
+# never count as ghost hits.
+_GHOST_REAL_WORD_COLLISIONS: frozenset = _get_csv_set("TEXT_UTILS", "GHOST_WORD_COLLISIONS", "no,bo")
 
 
 def _build_ghostlist() -> frozenset:
@@ -404,46 +439,9 @@ def _build_ghostlist() -> frozenset:
     return frozenset(ghosts - ROT_WHITELIST - _GHOST_REAL_WORD_COLLISIONS)
 
 
-ROT_GHOSTLIST: frozenset = _build_ghostlist()
-
-MIR_PAIRS = {
-    "po": "oq",
-    "pod": "boq",
-    "do": "ob",
-    "od": "bo",
-    "on": "no",
-    "ony": "yno",
-    "by": "yd",
-    "bez": "zed",
-    "ne": "en",
-    "nebo": "oden",
-    "ven": "nev",
-    "den": "neb",
-    "zde": "ebz",
-    "se": "es",
-    "ve": "ev",
-    "mez": "zem",
-    "pouze": "ezouq",
-    "bude": "ebud",
-}
-ROT_PAIRS = {
-    "po": "od",
-    "pod": "pod",
-    "do": "op",
-    "od": "po",
-    "on": "uo",
-    "by": "hq",
-    "bez": "zeq",
-    "ne": "eu",
-    "nebo": "oqeu",
-    "den": "uep",
-    "zde": "epz",
-    "se": "es",
-    "mez": "zew",
-    "pouze": "ezond",
-    "bude": "epuq",
-}
-ROT_WHITELIST = set(MIR_PAIRS.keys()).union(set(ROT_PAIRS.keys()))
+# Derived at import time from ROT_WHITELIST / _GHOST_REAL_WORD_COLLISIONS.
+# NOTE: override_constants() does NOT rebuild this — changing the whitelist at
+# runtime requires re-import (documented in agent_dev_logs/plans/7.plan.md).
 ROT_GHOSTLIST: frozenset = _build_ghostlist()
 
 
@@ -512,7 +510,8 @@ def remap_lang(
         return label, score
     suffix = label[len(base) :]
     new_label = default_lang + suffix
-    if base == "slk":
+    # (#7 Tier 1) previously a hardcoded `slk` special case.
+    if base in REMAP_KEEP_SCORE_LANGS:
         return new_label, score
     # (#3 2026-07-02 calibration) DanaKriv: "Remapped lang score should be
     # always 0.75 or 0.5 (the original lang score should not matter)" —
@@ -569,7 +568,11 @@ def has_symbol_letter_digit(word: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: float = 0.07) -> str | None:
+def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: float | None = None) -> str | None:
+    # (#7 Tier 1) resolved at call time (not def time) so override_constants /
+    # config changes take effect without re-import.
+    if threshold is None:
+        threshold = DIACRITIC_INFER_THRESHOLD
     alpha = [c for c in text if c.isalpha()]
     if not alpha:
         return None
@@ -751,7 +754,7 @@ def pre_filter_line(line: str) -> tuple[str, str]:
         return "Non-text", clean_text
     if RE_ROMAN_NUMERAL.match(clean_text.strip()):
         return "Non-text", clean_text
-    if RE_STAMP.search(clean_text) or "IVerc" in clean_text:
+    if RE_STAMP.search(clean_text) or any(m in clean_text for m in NONTEXT_MARKERS):
         return "Non-text", clean_text
 
     tokens = clean_text.split()
@@ -863,7 +866,7 @@ def score_word(word: str) -> float:
     has_rep = _has_repeated_run(core)
     has_ldl = _has_ldl(core)
     has_uppercase = _is_mid_uppercase(core)
-    has_wqx = any(c in "wqxWQX" for c in core)
+    has_wqx = any(c in WQX_CHARS for c in core)
 
     has_caps_prefix = False
     if len(core) >= 4 and not core.isupper() and core.rstrip(".") not in ACADEMIC_TITLES:
@@ -895,7 +898,7 @@ def score_words_in_line(text: str) -> list[tuple[str, float]]:
     rot_ratio = compute_rotatable_ratio(text)
 
     words = text.split()
-    wqx_words = sum(1 for w in words if any(c in "wqxWQX" for c in w))
+    wqx_words = sum(1 for w in words if any(c in WQX_CHARS for c in w))
     wqx_ratio = wqx_words / len(words) if words else 0.0
 
     is_suspicious_rot = rot_ratio > SUSPICIOUS_ROT_RATIO and wqx_ratio >= SUSPICIOUS_WQX_RATIO and not is_upright
@@ -1212,7 +1215,7 @@ def determine_category(
         return "Trash", "trash_threshold"
 
     if "rule_wqx_rot" not in DISABLED_RULES:
-        wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(word_count, 1)
+        wqx_ratio = sum(1 for w in words if any(c in WQX_CHARS for c in w)) / max(word_count, 1)
         if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
             _fire("rule_wqx_rot")
             if quality_score < thresh_trash:
