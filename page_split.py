@@ -19,27 +19,21 @@ import xml.etree.ElementTree as ET  # For parsing and creating XML
 from atrium_paradata import ParadataLogger
 
 
-def _make_safe_parser() -> ET.XMLParser:
-    """Build an ElementTree parser that does not resolve external entities.
+def _assert_no_doctype(input_file_path):
+    """Reject any input containing a DOCTYPE declaration.
 
-    (#5) ALTO documents may be untrusted. stdlib ElementTree does not expand
-    external entities by default, but we attach an explicit handler that refuses
-    any entity declaration so a crafted DOCTYPE cannot trigger entity-expansion
-    ("billion laughs") blow-ups.
+    (#5) ALTO documents may be untrusted, and legitimate ALTO never carries a
+    DOCTYPE. The previous approach attached expat handlers via
+    ``ET.XMLParser().parser`` — but the C-accelerated XMLParser exposes no such
+    attribute (verified on CPython 3.12), so the ``except AttributeError``
+    fallback silently disabled the hardening and internal entities were still
+    expanded into the output. Scanning for a DOCTYPE before parsing fails
+    closed: no entity declarations can exist without one, which rules out
+    entity-expansion ("billion laughs") inputs entirely.
     """
-    parser = ET.XMLParser()
-    try:
-        # expat: disable entity definitions and external entity resolution.
-        parser.parser.DefaultHandler = lambda data: None
-        parser.parser.EntityDeclHandler = lambda *a, **k: (_ for _ in ()).throw(
-            ET.ParseError("entities are not allowed")
-        )
-        parser.parser.ExternalEntityRefHandler = lambda *a, **k: False
-    except AttributeError:
-        # Some Python builds expose a restricted expat; fall back to the default
-        # parser, which still does not resolve external entities.
-        pass
-    return parser
+    content = open(input_file_path, "rb").read()
+    if b"<!doctype" in content.lower():
+        raise ET.ParseError(f"DOCTYPE is not allowed in ALTO inputs: {input_file_path}")
 
 
 def split_alto_xml(input_file_path, output_dir):
@@ -52,8 +46,9 @@ def split_alto_xml(input_file_path, output_dir):
     namespace = {"alto": "http://www.loc.gov/standards/alto/ns-v3#"}
     ET.register_namespace("", "http://www.loc.gov/standards/alto/ns-v3#")
 
-    # --- Parse the Input XML (hardened parser) ---
-    tree = ET.parse(input_file_path, parser=_make_safe_parser())
+    # --- Parse the Input XML (DOCTYPE rejected up front, see #5) ---
+    _assert_no_doctype(input_file_path)
+    tree = ET.parse(input_file_path)
     root = tree.getroot()
 
     description = root.find("alto:Description", namespace)
