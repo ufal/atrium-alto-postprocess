@@ -1059,10 +1059,10 @@ permissive components would resolve to **Apache-2.0**.
 * **Funded by** ATRIUM [^4](https://atrium-research.eu/) 💰
 * **Shared by** ATRIUM [^4](https://atrium-research.eu/) & UFAL [^7](https://ufal.mff.cuni.cz/home-page) 🔗
 * **Models used**:
-* **FastText** 🌐 [^2](https://huggingface.co/facebook/fasttext-language-identification) for language identification
-* **Qwen2.5-0.5B** 🤖 [^6](https://huggingface.co/Qwen/Qwen2.5-0.5B) for **perplexity** 📉 scoring
-* **GLM-4v-9b** 🤖 [^10](https://huggingface.co/THUDM/glm-4v-9b) for generative **OCR** 🔍 (LLM-based method)
-* **LayoutLMv3** 📐 [^9](https://github.com/ppaanngggg/layoutreader) for layout-aware text extraction
+  * **FastText** 🌐 [^2](https://huggingface.co/facebook/fasttext-language-identification) for language identification
+  * **Qwen2.5-0.5B** 🤖 [^6](https://huggingface.co/Qwen/Qwen2.5-0.5B) for **perplexity** 📉 scoring
+  * **GLM-4v-9b** 🤖 [^10](https://huggingface.co/THUDM/glm-4v-9b) for generative **OCR** 🔍 (LLM-based method)
+  * **LayoutLMv3** 📐 [^9](https://github.com/ppaanngggg/layoutreader) for layout-aware text extraction
 
 
 
