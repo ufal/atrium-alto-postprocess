@@ -54,7 +54,7 @@ Before you begin, set up your environment.
 1.  Create and activate a new **virtual environment** 🖥️ in the project directory.
 2.  Install the required **Python** 🐍 packages:
     ```bash
-    pip install -r requirements.txt
+    pip install -r setup/requirements.txt
     ```
 3. Download the **FastText** 🌐 model for language identification:
     ```bash
@@ -995,7 +995,7 @@ structured **JSON** 📄 format.
 * **Provenance 🏛️:** Captures the tool name, a tool **version** 🏷️ tag, the repository/runner reference, the running
 container image (when set), the **Python** 🐍 version, and assigns a unique `run_id` to each execution. The repository
 reference is resolved **dynamically** — environment overrides (`ATRIUM_RUNNER_REPO`, `ATRIUM_RUNNER_REF`,
-`ATRIUM_RUNNER_IMAGE`) take precedence over the static fallback in [para_config.txt](para_config.txt) 📎 — so the log
+`ATRIUM_RUNNER_IMAGE`) take precedence over the static fallback in [para_config.txt](setup/para_config.txt) 📎 — so the log
 points at the image actually executing rather than a fixed fork.
 * **Output license ⚖️:** Computes the **effective output license** 📜 of the run from the licensed components it actually
 exercised, and records it as `license` / `license_url` plus a detailed `license_detail` block (per-component licenses,
@@ -1022,11 +1022,11 @@ repository); the **paradata** 🗒️ JSON files themselves are distributed unde
 > [!IMPORTANT]
 > The license of the files a run **produces** is **not fixed** — it is computed per run as the **most restrictive**
 > license among the components (models, data, APIs) that the run actually used. The mechanism is data-driven via
-> [para_config.txt](para_config.txt) 📎 (component → license) and [para_licenses.py](para_licenses.py) 📎
+> [para_config.txt](setup/para_config.txt) 📎 (component → license) and [para_licenses.py](setup/para_licenses.py) 📎
 > (restrictiveness ranking + share-alike / non-commercial rules), so the licensing owner can adjust it without touching
 > the logger.
 
-Each repository ships a [para_config.txt](para_config.txt) 📎 listing its components. Components flagged `always` count
+Each repository ships a [para_config.txt](setup/para_config.txt) 📎 listing its components. Components flagged `always` count
 toward every run (the worst-case baseline); components flagged `conditional` are only counted when the script that uses
 them records it. For this repository the components and their effect on the **effective output license** 📜 are:
 
