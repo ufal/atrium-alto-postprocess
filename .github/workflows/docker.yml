@@ -21,4 +21,4 @@ jobs:
       image-name: ufal/atrium-alto-postprocess
       apt-packages: build-essential g++
       pre-install-torch: torch
-      requirements: requirements.txt service/requirements.txt requirements-test.txt
+      requirements: setup/requirements.txt service/requirements.txt setup/requirements-test.txt
