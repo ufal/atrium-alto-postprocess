@@ -27,6 +27,8 @@ jobs:
     uses: ufal/atrium-project/.github/workflows/security.reusable.yml@test
     secrets: inherit
     with:
-      # The published image to scan/SBOM. para-config-path defaults to
-      # para_config.txt (root), which is correct for this repo.
+      # The published image to scan/SBOM.
       image-ref: ghcr.io/ufal/atrium-alto-postprocess:latest
+      citation-path: CITATION.cff
+      # CRITICAL: this repo stores para_config.txt in the setup folder
+      para-config-path: setup/para_config.txt
