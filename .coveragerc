@@ -10,8 +10,8 @@ omit =
     para_licenses.py
 
 [report]
-# Fail standard pipeline CI under a baseline coverage (optional, uncomment to ratchet)
-# fail_under = 65
+# Ratchet: fast-lane baseline measured 53% (2026-07-16, issue atrium-project#10)
+fail_under = 50
 show_missing = True
 exclude_lines =
     pragma: no cover
