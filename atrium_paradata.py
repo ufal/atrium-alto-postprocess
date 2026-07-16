@@ -39,7 +39,7 @@ _ENV_RUNNER_REF = "ATRIUM_RUNNER_REF"
 
 
 def _load_para_config(start_dir: str = ".") -> Dict[str, Any]:
-    path = os.path.join(start_dir, "para_config.txt")
+    path = os.path.join(start_dir, "setup/para_config.txt")
     out: Dict[str, Any] = {"components": []}
     if not os.path.exists(path):
         return out

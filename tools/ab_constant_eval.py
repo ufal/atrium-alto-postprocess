@@ -121,7 +121,9 @@ def run_ab(
 def main() -> None:
     parser = argparse.ArgumentParser(description="A/B a single config constant vs. the stored categories.")
     parser.add_argument("--input-dir", type=Path, required=True, help="Directory of DOC_LINE_CATEG CSVs.")
-    parser.add_argument("--config", type=str, default="config_langID.txt", help="config_langID.txt-style file.")
+    parser.add_argument(
+        "--config", type=str, default="setup/config_langID.txt", help="setup/config_langID.txt-style file."
+    )
     parser.add_argument("--const", type=str, default="CATEG_GARBAGE_DENSITY_HIGH", help="Constant to vary.")
     parser.add_argument(
         "--values",

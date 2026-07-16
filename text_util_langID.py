@@ -75,7 +75,7 @@ _config = configparser.RawConfigParser()
 # (#7 Phase 0) Honor the LANGID_CONFIG env var that run_pipeline.py sets for
 # child stages, so `--config other.txt` actually reaches the [TEXT_UTILS]
 # constants instead of silently falling back to the CWD default.
-_config_path = Path(os.getenv("LANGID_CONFIG", "config_langID.txt"))
+_config_path = Path(os.getenv("LANGID_CONFIG", "setup/config_langID.txt"))
 if _config_path.exists():
     _config.read(_config_path)
 

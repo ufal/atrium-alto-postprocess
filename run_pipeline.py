@@ -60,7 +60,7 @@ from typing import Dict, List
 
 from atrium_paradata import merge_run_paradata
 
-CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
+CONFIG_PATH = os.getenv("LANGID_CONFIG", "setup/config_langID.txt")
 
 # Canonical stage order; the keys also drive --skip-<key> / [PIPELINE].SKIP_<KEY>.
 STAGE_ORDER = ["split", "stats", "extract", "classify", "aggregate"]

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # --- Configuration & Constants ---
 _config = configparser.RawConfigParser()
 # Locate config_langID.txt in the project root
-_config_path = Path(__file__).resolve().parent.parent / "config_langID.txt"
+_config_path = Path(__file__).resolve().parent.parent / "setup" / "config_langID.txt"
 if _config_path.exists():
     _config.read(_config_path)
 

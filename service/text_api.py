@@ -49,7 +49,7 @@ def _read_tool_version() -> str:
     from the released version again.
     """
     config = configparser.ConfigParser()
-    config.read(Path(__file__).resolve().parent.parent / "para_config.txt", encoding="utf-8")
+    config.read(Path(__file__).resolve().parent.parent / "setup" / "para_config.txt", encoding="utf-8")
     version = config.get("tool", "version", fallback="unknown")
     return version[1:] if version.lower().startswith("v") else version
 

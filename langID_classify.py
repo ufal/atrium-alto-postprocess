@@ -785,7 +785,7 @@ def process_document(task):
 
 def main():
     """Initializes queue managers, sets up models, and maps CPU document tasks."""
-    config_path = os.getenv("LANGID_CONFIG", "config_langID.txt")
+    config_path = os.getenv("LANGID_CONFIG", "setup/config_langID.txt")
     config = configparser.ConfigParser()
     config.read(config_path)
 

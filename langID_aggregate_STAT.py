@@ -44,7 +44,7 @@ from atrium_paradata import ParadataLogger
 # ---------------------------------------------------------------------------
 
 # STANDARD_COLS = ["Clear", "Noisy", "Trash", "Non-text", "Empty"]
-DEFAULT_CONFIG = "config_langID.txt"
+DEFAULT_CONFIG = "setup/config_langID.txt"
 
 
 def load_config(config_path):

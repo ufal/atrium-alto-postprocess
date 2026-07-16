@@ -436,7 +436,9 @@ def recategorize_dataframe(
     row order/index.
     """
     if expected_langs is None or known_bases is None:
-        expected_langs, known_bases = _load_lang_config(os.getenv("LANGID_CONFIG", str(_ROOT / "config_langID.txt")))
+        expected_langs, known_bases = _load_lang_config(
+            os.getenv("LANGID_CONFIG", str(_ROOT / "setup/config_langID.txt"))
+        )
 
     work = _coerce_locators(df.copy())
 
@@ -929,7 +931,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("path", nargs="?", help="CSV file or directory of per-document CSVs")
     ap.add_argument("--input-dir", dest="input_dir", help="Alias for the positional path (a directory).")
     ap.add_argument("--out", "--output-dir", dest="out", help="Output file/dir (default: overwrite in place).")
-    ap.add_argument("--config", help="config_langID.txt-style INI to source constants from.")
+    ap.add_argument("--config", help="setup/config_langID.txt-style INI to source constants from.")
     ap.add_argument(
         "--override",
         nargs="*",

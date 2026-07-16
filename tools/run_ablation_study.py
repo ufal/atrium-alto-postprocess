@@ -152,7 +152,7 @@ def run_ablation(df: pd.DataFrame, eval_kwargs: Dict[str, Any], base_constants: 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run LOO Ablation on heuristics.")
     parser.add_argument("--input-dir", type=Path, required=True)
-    parser.add_argument("--config", type=str, default="config_langID.txt")
+    parser.add_argument("--config", type=str, default="setup/config_langID.txt")
     args = parser.parse_args()
 
     df = load_csvs(args.input_dir, recursive=True)
