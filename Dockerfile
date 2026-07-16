@@ -17,7 +17,7 @@ ENV ATRIUM_RUNNER_IMAGE=${ATRIUM_RUNNER_IMAGE} \
     PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
     HF_HOME=/cache/huggingface \
     MODEL_DIR=/app/models \
-    LANGID_CONFIG=/app/config_langID.txt
+    LANGID_CONFIG=/app/setup/config_langID.txt
 
 # (#3) The per-document line CSVs now carry extra diagnostic boolean and string columns
 # (including original_text, original_lang, and rule flags). This aggregation
@@ -32,10 +32,10 @@ WORKDIR /app
 
 # 1) deps first for layer caching. CPU torch pinned, then the unpinned `torch`
 #    in the requirements files is already satisfied (stays CPU).
-COPY requirements.txt requirements-test.txt requirements-sweep.txt ./
+COPY setup/requirements.txt setup/requirements-test.txt setup/requirements-sweep.txt ./
 COPY service/requirements.txt service/requirements.txt
 RUN pip install --index-url ${TORCH_INDEX_URL} torch \
-    && pip install -r requirements.txt -r service/requirements.txt -r requirements-test.txt -r requirements-sweep.txt
+    && pip install -r setup/requirements.txt -r service/requirements.txt -r setup/requirements-test.txt -r setup/requirements-sweep.txt
 
 # 2) LayoutReader v3/ (translated from setup_api_server.sh) -> /app/v3 (on sys.path)
 #    Required by the GPU extraction method (extract_LytRdr_ALTO_2_TXT.py).

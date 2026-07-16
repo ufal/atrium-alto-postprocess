@@ -16,7 +16,7 @@ services:
       - ./data:/data
       - hf-cache:/cache/huggingface
       - alto-models:/app/models          # persists lid.176.bin (seeded from image on first run)
-      - ./config_langID.txt:/app/config_langID.txt:ro
+      - ./setup/config_langID.txt:/app/setup/config_langID.txt:ro
 
   # API profile — only starts with: docker compose --profile api up
   api:

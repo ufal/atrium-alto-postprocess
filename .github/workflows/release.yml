@@ -21,7 +21,7 @@ jobs:
       - name: Package service artifact
         run: |
           mkdir -p atrium-service
-          cp -r service/ atrium-service/ 2>/dev/null || true
+          cp -r setup/ service/ atrium-service/ 2>/dev/null || true
           cp README.md atrium-service/ 2>/dev/null || true
           zip -r service_bundle.zip atrium-service/ -x "*/__pycache__/*" "*/.git/*"
 

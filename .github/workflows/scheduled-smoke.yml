@@ -18,7 +18,7 @@ on:
 env:
   APT_PACKAGES: "build-essential g++"
   PRE_INSTALL_TORCH: "torch"
-  REQUIREMENTS: "requirements.txt service/requirements.txt requirements-test.txt"
+  REQUIREMENTS: "setup/requirements.txt service/requirements.txt setup/requirements-test.txt"
 
 jobs:
   slow-tests:
