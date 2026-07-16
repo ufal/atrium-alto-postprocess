@@ -22,7 +22,7 @@ def test_info_version_matches_para_config():
     from pathlib import Path
 
     config = configparser.ConfigParser()
-    config.read(Path(__file__).resolve().parent.parent / "para_config.txt", encoding="utf-8")
+    config.read(Path(__file__).resolve().parent.parent / "setup" / "para_config.txt", encoding="utf-8")
     expected = config.get("tool", "version").lstrip("v")
 
     response = client.get("/info")
