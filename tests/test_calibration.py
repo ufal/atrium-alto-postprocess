@@ -46,7 +46,7 @@ from tests.calibration_fixtures import (  # noqa: E402
 )
 from text_util_langID import pre_filter_line  # noqa: E402
 
-_EXPECTED, _KNOWN = _load_lang_config(str(_ROOT / "config_langID.txt"))
+_EXPECTED, _KNOWN = _load_lang_config(str(_ROOT / "setup" / "config_langID.txt"))
 
 
 def _categ(text, ppl, lang_score):

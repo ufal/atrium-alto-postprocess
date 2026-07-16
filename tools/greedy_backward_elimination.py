@@ -198,8 +198,8 @@ def main() -> None:
     parser.add_argument(
         "--config",
         type=str,
-        default="../config_langID.txt",
-        help="Path to the system configuration file (default: ../config_langID.txt).",
+        default="../setup/config_langID.txt",
+        help="Path to the system configuration file (default: ../setup/config_langID.txt).",
     )
     parser.add_argument(
         "--macro-tol",

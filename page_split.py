@@ -112,6 +112,7 @@ def main(argv=None):
         },
         paradata_dir="paradata",
         output_types=["xml"],
+        config_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "setup"),
     )
 
     # (#10) Track documents (the unit of input) and pages (the unit of output)

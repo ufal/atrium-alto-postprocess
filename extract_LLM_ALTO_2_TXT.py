@@ -21,7 +21,7 @@ from atrium_paradata import ParadataLogger
 _SCRIPT_NAME = "extract_llm"
 
 # --- Configuration (read from config_langID.txt [EXTRACT]) ---
-CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
+CONFIG_PATH = os.getenv("LANGID_CONFIG", "setup/config_langID.txt")
 
 
 def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
@@ -206,6 +206,7 @@ def main():
         },
         paradata_dir="paradata",
         output_types=["txt"],
+        config_dir=str(Path(__file__).resolve().parent / "setup"),
     )
     _logger.log_component("glm4v_9b")  # glm-4 (non-commercial) attaches to GLM outputs
     # _total_inputs is the total number of pages in the CSV; pages that are

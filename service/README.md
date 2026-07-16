@@ -64,8 +64,9 @@ atrium-alto-postprocess/
 │   │   └── script.js            # JS adapted to the lindat-common webpack bundle
 │   ├── requirements.txt         # Python dependencies
 │   └── README.md                # API service documentation
+├── setup/                       # ⚙️ Configuration and setup files
+│   └── setup_api_server.sh      # Sets up virtual environment and installs dependencies
 ├── text_util_langID.py          # Structural quality detectors and categorisation logic
-├── setup_api_server.sh          # Sets up virtual environment and installs dependencies
 ├── README.md                    # Project overview and documentation (this file)
 ├── LICENSE
 └── ...                          # Other project files (scripts, data samples, paradata)
@@ -219,15 +220,15 @@ sparse checkout, and downloads the FastText binary:
 ```bash
 git clone [https://github.com/ufal/atrium-alto-postprocess.git](https://github.com/ufal/atrium-alto-postprocess.git)
 cd atrium-alto-postprocess
-chmod +x setup_api_server.sh
-./setup_api_server.sh
+chmod +x setup/setup_api_server.sh
+./setup/setup_api_server.sh
 ```
 
 Key libraries: `fastapi`, `uvicorn`, `python-multipart`, `torch`, `transformers`, `fasttext`, `lxml`, `numpy`.
 Full list in `service/requirements.txt` for manual installation if needed.
 
 > [!NOTE]
-> The virtual environment name is set in `setup_api_server.sh` and can be changed to match an existing environment.
+> The virtual environment name is set in `setup/setup_api_server.sh` and can be changed to match an existing environment.
 
 ### 3. Model Weights
 

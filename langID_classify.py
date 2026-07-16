@@ -221,7 +221,7 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
 # CPU workers — which re-import this module — see the same values without any
 # queue plumbing. Honors the LANGID_CONFIG env var set by run_pipeline.py.
 _config = configparser.ConfigParser()
-_config_path = Path(os.getenv("LANGID_CONFIG", "config_langID.txt"))
+_config_path = Path(os.getenv("LANGID_CONFIG", "setup/config_langID.txt"))
 if _config_path.exists():
     _config.read(_config_path)
 
@@ -867,6 +867,7 @@ def main():
         },
         paradata_dir="paradata",
         output_types=["csv"],
+        config_dir=str(Path(__file__).resolve().parent / "setup"),
     )
 
     # ── paradata: record the licensed components this step exercises ──────────

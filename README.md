@@ -104,7 +104,7 @@ python3 run_pipeline.py --skip-split         # PAGE_ALTO already populated
 python3 run_pipeline.py --dry-run            # print the resolved plan, run nothing
 ```
 
-* **Configuration ⚙️:** every setting is read from [config_langID.txt](config_langID.txt) 📎
+* **Configuration ⚙️:** every setting is read from [config_langID.txt](setup/config_langID.txt) 📎
 (section `[PIPELINE]`, with `INPUT_CSV` taken from `[EXTRACT]`). Precedence is
 **CLI flag > config value > built-in default**. Point at a different config with `--config`
 or the `LANGID_CONFIG` environment variable.
@@ -306,7 +306,7 @@ As the script processes, it assigns each line one of five categories 🪧:
 > `DOC_LINE_LANG_CLASS/` and `DOC_LINE_STATS/`, while the
 > raw **text** 📝 files (primary input) are stored in `../PAGE_TXT/` generated from `../PAGE_ALTO/`.
 
-All input/output paths and tunable parameters are configured ⚙️ in [config_langID.txt](config_langID.txt) 📎.
+All input/output paths and tunable parameters are configured ⚙️ in [config_langID.txt](setup/config_langID.txt) 📎.
 Parameters are organized into **three sections**: `[CLASSIFY]`, `[AGGREGATE]`, and `[TEXT_UTILS]`.
 
 ```ini
@@ -1022,7 +1022,7 @@ repository); the **paradata** 🗒️ JSON files themselves are distributed unde
 > [!IMPORTANT]
 > The license of the files a run **produces** is **not fixed** — it is computed per run as the **most restrictive**
 > license among the components (models, data, APIs) that the run actually used. The mechanism is data-driven via
-> [para_config.txt](setup/para_config.txt) 📎 (component → license) and [para_licenses.py](setup/para_licenses.py) 📎
+> [para_config.txt](setup/para_config.txt) 📎 (component → license) and [para_licenses.py](para_licenses.py) 📎
 > (restrictiveness ranking + share-alike / non-commercial rules), so the licensing owner can adjust it without touching
 > the logger.
 

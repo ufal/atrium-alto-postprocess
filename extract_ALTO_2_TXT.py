@@ -31,7 +31,7 @@ from atrium_paradata import ParadataLogger
 
 _SCRIPT_NAME = "extract_alto2txt"
 
-CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
+CONFIG_PATH = os.getenv("LANGID_CONFIG", "setup/config_langID.txt")
 
 # Common hyphen variations found in OCR/typesetting at a line break.
 HYPHEN_VARIATIONS = ("-", "\xad", "\u2013", "\u2014")
@@ -155,6 +155,7 @@ def main() -> None:
         },
         paradata_dir="paradata",
         output_types=["txt"],
+        config_dir=str(Path(__file__).resolve().parent / "setup"),
     )
     # alto_tools is already seeded as an "always" component, so its Apache-2.0
     # license is recorded automatically; FastText (CC BY-NC 4.0, also "always")

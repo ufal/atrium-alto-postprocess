@@ -257,6 +257,7 @@ def main():
         config=vars(args),
         paradata_dir="paradata",
         output_types=["csv"],
+        config_dir=str(Path(__file__).resolve().parent / "setup"),
     )
 
     print(f"Aggregating {len(csv_files)} documents using Multiprocessing...")

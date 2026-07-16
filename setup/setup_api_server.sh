@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script lives in setup/ but operates on the repository root, so all
+# paths below stay root-relative regardless of the caller's working directory.
+cd "$(dirname "$0")/.." || exit 1
+
 # Configuration
 VENV_DIR="venv"
 SERV_REQUIREMENTS="service/requirements.txt"

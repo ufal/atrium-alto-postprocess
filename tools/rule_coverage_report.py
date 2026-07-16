@@ -217,7 +217,7 @@ def run_coverage(
                                clear_loss, class}.
     """
     df, in_path = _load_dataframe(raw_path)
-    resolved_config = config_path or str(_ROOT / "config_langID.txt")
+    resolved_config = config_path or str(_ROOT / "setup" / "config_langID.txt")
     expected_langs, known_bases = _load_lang_config(resolved_config)
 
     n_total = len(df)

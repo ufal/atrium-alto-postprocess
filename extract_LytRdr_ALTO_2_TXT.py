@@ -43,7 +43,7 @@ except ImportError:
         sys.exit(1)
 
 # --- Configuration (read from config_langID.txt [EXTRACT]) ---
-CONFIG_PATH = os.getenv("LANGID_CONFIG", "config_langID.txt")
+CONFIG_PATH = os.getenv("LANGID_CONFIG", "setup/config_langID.txt")
 
 
 def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
@@ -407,6 +407,7 @@ def main():
         },
         paradata_dir="paradata",
         output_types=["txt"],
+        config_dir=str(Path(__file__).resolve().parent / "setup"),
     )
     _logger.log_component("layoutlmv3")  # CC BY-NC-SA 4.0 attaches to LR outputs
     _total_inputs = len(tasks)

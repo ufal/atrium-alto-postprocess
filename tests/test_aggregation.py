@@ -6,7 +6,7 @@ import pandas as pd
 
 from langID_aggregate_STAT import _sum_metrics, load_config
 
-DEFAULT_CONFIG = "config_langID.txt"
+DEFAULT_CONFIG = "setup/config_langID.txt"
 config = load_config(DEFAULT_CONFIG)
 STANDARD_COLS = frozenset(config.get("standard_cols", "Clear,Noisy,Trash,Non-text,Empty").split(","))
 

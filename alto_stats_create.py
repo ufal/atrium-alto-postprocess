@@ -220,6 +220,7 @@ def main(argv=None):
         },
         paradata_dir="paradata",
         output_types=["csv"],
+        config_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "setup"),
     )
     _total_inputs = 0
 

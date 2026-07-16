@@ -699,7 +699,7 @@ def main(argv=None):
     n_docs = data["file"].nunique() if "file" in data.columns else 1
     print(f"Loaded {len(data):,} lines across {n_docs} document(s)")
 
-    expected_langs, known_bases = _load_lang_config(args.config or str(Path("config_langID.txt")))
+    expected_langs, known_bases = _load_lang_config(args.config or str(Path("setup/config_langID.txt")))
     eval_kwargs = {"expected_langs": expected_langs, "known_bases": known_bases}
 
     baseline_metrics = evaluate_dataframe(data, base_constants, **eval_kwargs)
