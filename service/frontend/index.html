@@ -613,8 +613,21 @@
             </ul>
 
             <h2>GET /info</h2>
-            <p>Returns service status, active device (<code>cpu</code> / <code>cuda</code>),
-            and the full list of response fields.</p>
+            <p>Returns service identity (<code>service</code>, <code>version</code>,
+            <code>endpoints</code>, <code>limits</code>), active device
+            (<code>cpu</code> / <code>cuda</code>), and the full list of response fields.</p>
+
+            <h2>API usage 📡</h2>
+            <p>This page is a thin client over the REST API. The same call from the command line:</p>
+            <pre><code>curl -X POST "http://localhost:8000/process" \
+  -F "file=@page.alto.xml" -F "task_type=auto"</code></pre>
+            <p>
+                Interactive docs: <a href="/docs">/docs</a> (Swagger UI) ·
+                machine-readable schema: <a href="/openapi.json">/openapi.json</a> ·
+                full reference:
+                <a href="https://github.com/ufal/atrium-alto-postprocess/blob/test/service/README.md"
+                   target="_blank" rel="noopener">service/README.md</a>
+            </p>
         </div>
     </div>
 </main>

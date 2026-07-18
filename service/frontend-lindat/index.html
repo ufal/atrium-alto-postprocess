@@ -332,6 +332,18 @@
                     valid-word ratio, symbol ratio, perplexity and text length.
                     Thresholds: &gt; 0.75 → Clear, ≥ 0.45 → Noisy, &lt; 0.45 → Trash.</li>
                 </ul>
+
+                <h3>API usage 📡</h3>
+                <p>This page is a thin client over the REST API. The same call from the command line:</p>
+                <pre><code>curl -X POST "http://localhost:8000/process" \
+  -F "file=@page.alto.xml" -F "task_type=auto"</code></pre>
+                <p>
+                    Interactive docs: <a href="/docs">/docs</a> (Swagger UI) ·
+                    machine-readable schema: <a href="/openapi.json">/openapi.json</a> ·
+                    full reference:
+                    <a href="https://github.com/ufal/atrium-alto-postprocess/blob/test/service/README.md"
+                       target="_blank" rel="noopener">service/README.md</a>
+                </p>
             </div>
         </main>
 

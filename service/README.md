@@ -89,8 +89,8 @@ The pipeline applies three models in sequence, balancing structural layout under
 > Perplexity is one weighted signal; on short 1–2 word lines it is capped before scoring because the LM has too
 > little context. `distilgpt2` remains available as an English-only alternative via the `GPT2_MODEL_NAME`
 > environment variable (re-tune `PERPLEXITY_THRESHOLD_MAX`, see [Troubleshooting](#hardware--configuration-troubleshooting)).
-> Full logic: main [README → Composite Quality Score](../README.md#composite-quality-score) and
-> [Categorisation Logic](../README.md#categorisation-logic).
+> Full logic: development-branch [README → Composite Quality Score](https://github.com/ufal/atrium-alto-postprocess/blob/test/README.md#composite-quality-score) and
+> [Categorisation Logic](https://github.com/ufal/atrium-alto-postprocess/blob/test/README.md#categorisation-logic).
 
 ## Quality Categories 🪧
 
@@ -108,19 +108,21 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 
 > [!NOTE]
 > The thresholds and the full set of overrides (hard-sweep, inverted-scan, low-perplexity-clear, clean-prose
-> promotion, mostly-readable cap, and the document/page post-passes) are documented once in the main
-> [README → Categorisation Logic](../README.md#categorisation-logic) and are not duplicated here.
+> promotion, mostly-readable cap, and the document/page post-passes) are documented once in the development
+> branch's [README → Categorisation Logic](https://github.com/ufal/atrium-alto-postprocess/blob/test/README.md#categorisation-logic)
+> and are not duplicated here.
 
 
 ## API Usage 📡
 
 ### Endpoints 🔗
 
-| Method | Path       | Description                                                                                   |
-|--------|------------|-----------------------------------------------------------------------------------------------|
-| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                              |
-| `GET`  | `/info`    | Returns service status, active device (`cpu` or `cuda`), line fields, and quality categories. |
-| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                  |
+| Method | Path       | Description                                                                                              |
+|--------|------------|-----------------------------------------------------------------------------------------------------------|
+| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                                         |
+| `GET`  | `/info`    | Service identity + capabilities: `service`, `version`, `endpoints`, `limits`, device, line fields, quality categories. |
+| `GET`  | `/health`  | Liveness probe; `/health?deep=true` additionally verifies that the models are loaded (503 otherwise).    |
+| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                             |
 
 ### Request Example 💻
 
@@ -139,21 +141,28 @@ curl -X POST "http://localhost:8000/process" \
 
 ### Response Schema
 
-Each item in `cleaned_lines` carries the fields used by the classification pipeline.
+The response wraps the classified lines in a small envelope; each item in `lines`
+carries the fields used by the classification pipeline.
 
 ```json
 {
-  "type": "alto_xml",
+  "task_type": "alto",
+  "num_lines": 2,
+  "reading_order": "layout-reader",
   "filename": "page_01.xml",
-  "cleaned_lines": [
+  "lines": [
     {
       "line_num": 1,
       "text": "The quick brown fox jumps over the lazy dog.",
       "lang": "eng",
       "lang_score": 0.9821,
       "perplexity": 12.5,
+      "garbage_density": 0.0,
       "sym_count": 0,
       "upper_count": 0,
+      "repeated_count": 0,
+      "ldl_fuses": 0,
+      "gibberish": 0,
       "word_weird": 0.0,
       "quality_score": 0.9501,
       "category": "Clear"
@@ -164,42 +173,46 @@ Each item in `cleaned_lines` carries the fields used by the classification pipel
       "lang": "ces",
       "lang_score": 0.4201,
       "perplexity": 4800.0,
+      "garbage_density": 0.35,
       "sym_count": 2,
       "upper_count": 0,
+      "repeated_count": 1,
+      "ldl_fuses": 1,
+      "gibberish": 1,
       "word_weird": 0.85,
       "quality_score": 0.1205,
       "category": "Trash"
-    },
-    {
-      "line_num": 3,
-      "text": "1956–1959",
-      "lang": "N/A",
-      "lang_score": 0.0,
-      "perplexity": 0.0,
-      "sym_count": 0,
-      "upper_count": 0,
-      "word_weird": 0.0,
-      "quality_score": 0.0,
-      "category": "Non-text"
     }
   ]
 }
 ```
 
-**Response fields:**
+**Envelope fields:** `task_type` (`alto` | `text`), `num_lines`,
+`reading_order` (`layout-reader` when LayoutReader reordering was applied,
+`document` otherwise), `filename` (echo of the upload), `lines`.
 
-| Field           | Type   | Description                                                                                                                                |
-|-----------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| `line_num`      | int    | 1-based line position after layout reordering.                                                                                             |
-| `text`          | string | Cleaned line text with split-word merges applied.                                                                                          |
-| `lang`          | string | ISO language code predicted by FastText (e.g., `eng`, `ces`).                                                                              |
-| `lang_score`    | float  | FastText confidence score `[0, 1]`.                                                                                                        |
-| `perplexity`    | float  | Qwen2.5-0.5B perplexity. `0` means the line was pre-filtered and inference was skipped.                                                    |
-| `sym_count`     | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`).                                                  |
-| `upper_count`   | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).                                                          |
-| `word_weird`    | float  | Mean per-word weirdness score `[0, 1]`; combines strange-symbol, repeated-char, LDL-fusion, mid-uppercase and mirror-OCR (`w` / caps-prefix) signals; `0` = fully clean. |
-| `quality_score` | float  | Composite quality score `[0, 1]`; weighted sum of nine signals (valid-word ratio, word-weirdness, perplexity, length, garbage density, vowel quality, language confidence, gibberish, fused-word ratio); higher = cleaner. |
-| `category`      | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                                                                    |
+**Line fields:**
+
+| Field             | Type   | Description                                                                                                                                |
+|-------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `line_num`        | int    | 1-based line position (after layout reordering for ALTO input).                                                                            |
+| `text`            | string | Cleaned line text with split-word merges applied.                                                                                          |
+| `lang`            | string | ISO language code predicted by FastText (e.g., `eng`, `ces`).                                                                              |
+| `lang_score`      | float  | FastText confidence score `[0, 1]`.                                                                                                        |
+| `perplexity`      | float  | Qwen2.5-0.5B perplexity. `0` means the line was pre-filtered and inference was skipped.                                                    |
+| `garbage_density` | float  | Ratio of non-alphanumeric noise characters `[0, 1]`.                                                                                       |
+| `sym_count`       | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`).                                                  |
+| `upper_count`     | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).                                                          |
+| `repeated_count`  | int    | Tokens with non-standard character repetition (`detect_repeated_chars`).                                                                   |
+| `ldl_fuses`       | int    | Tokens with letter-digit-letter fusions (`detect_letter_digit_letter`).                                                                    |
+| `gibberish`       | int    | Tokens lacking vowels or with highly irregular ratios (`detect_gibberish_words`).                                                          |
+| `word_weird`      | float  | Mean per-word weirdness score `[0, 1]`; combines strange-symbol, repeated-char, LDL-fusion, mid-uppercase and mirror-OCR (`w` / caps-prefix) signals; `0` = fully clean. |
+| `quality_score`   | float  | Composite quality score `[0, 1]`; weighted sum of nine signals (valid-word ratio, word-weirdness, perplexity, length, garbage density, vowel quality, language confidence, gibberish, fused-word ratio); higher = cleaner. |
+| `category`        | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                                                                    |
+
+Errors follow the ATRIUM family table: `413` upload too large (`MAX_UPLOAD_MB`),
+`422` unusable input (undetectable type), `500` processing failure — clients retry
+only `502/503/504`.
 
 
 ## Installation & Setup 🛠
