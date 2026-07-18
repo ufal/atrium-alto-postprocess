@@ -5,7 +5,6 @@ FastAPI wrapper for the ATRIUM text processing service.
 
 import configparser
 import os
-import shutil
 import sys
 import tempfile
 from contextlib import asynccontextmanager
@@ -56,10 +55,14 @@ def _read_tool_version() -> str:
 
 app = FastAPI(title="ATRIUM Text Processor", version=_read_tool_version(), lifespan=lifespan)
 
+SERVICE_NAME = "atrium-alto-postprocess"
+API_ENDPOINTS = ["/info", "/health", "/process"]
+MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "10"))
+
 # ---------------------------------------------------------------------------
-# CORS — configurable via environment variable; defaults to localhost only
+# CORS — configurable via environment variable; defaults to * (family standard)
 # ---------------------------------------------------------------------------
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5500")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
 allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
@@ -90,8 +93,11 @@ async def root() -> Union[HTMLResponse, Dict[str, str]]:
 @app.get("/info")
 async def info() -> Dict[str, Any]:
     return {
+        "service": SERVICE_NAME,
         "status": "active",
         "version": app.version,
+        "endpoints": API_ENDPOINTS,
+        "limits": {"max_upload_mb": MAX_UPLOAD_MB},
         "device": text_manager.device,
         "supported_formats": ["ALTO XML (.xml)", "Plain Text (.txt)"],
         "quality_categories": ["Clear", "Noisy", "Trash", "Non-text", "Empty"],
@@ -114,6 +120,20 @@ async def info() -> Dict[str, Any]:
     }
 
 
+@app.get("/health")
+async def health(deep: bool = False) -> JSONResponse:
+    """Liveness (shallow) / readiness (deep=true, models loaded) probe."""
+    if deep and not getattr(text_manager, "_models_loaded", False):
+        return JSONResponse(
+            {"status": "degraded", "detail": "models not loaded (startup pending or failed)"},
+            status_code=503,
+        )
+    payload: Dict[str, Any] = {"status": "ok"}
+    if deep:
+        payload.update({"models_loaded": True, "device": text_manager.device})
+    return JSONResponse(payload)
+
+
 @app.post("/process")
 async def process_document(
     file: UploadFile = File(...),
@@ -122,7 +142,10 @@ async def process_document(
     """
     Upload an ALTO XML or plain-text file.
 
-    Returns a list of classified lines.  Each entry carries:
+    Returns ``{task_type, num_lines, reading_order, lines, filename}`` where
+    ``reading_order`` is ``layout-reader`` when LayoutReader reordering was
+    applied to the ALTO lines and ``document`` otherwise.  Each ``lines`` entry
+    carries:
 
       line_num        (int)   – 1-based position after layout reordering
       text            (str)   – cleaned text with split-word merges applied
@@ -155,12 +178,16 @@ async def process_document(
             task_type = "text"
         else:
             raise HTTPException(
-                status_code=400,
+                status_code=422,
                 detail="Cannot auto-detect file type. Set task_type='alto' or 'text'.",
             )
 
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_MB * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_UPLOAD_MB} MB.")
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
-        shutil.copyfileobj(file.file, tmp)
+        tmp.write(content)
         tmp_path = tmp.name
 
     try:

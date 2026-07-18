@@ -125,6 +125,70 @@ class TextModelManager:
             self._models_loaded = False
             raise RuntimeError(f"Failed to load core text-processing models: {exc}") from exc
 
+    # -- request-level entry points used by text_api.py ---------------------
+
+    def _line_perplexities(self, texts: list) -> list:
+        """Batch perplexity for a list of lines; 0.0 per line when the unified
+        toolkit is unavailable (legacy fallback path)."""
+        if not texts:
+            return []
+        if _UTIL_AVAILABLE and self.ppl_model is not None:
+            from text_util_langID import calculate_perplexity_batch
+
+            return calculate_perplexity_batch(texts, self.ppl_model, self.ppl_tokenizer, self.device)
+        return [0.0] * len(texts)
+
+    def _classify_lines(self, texts: list) -> list:
+        """Run the full per-line quality pipeline; returns 1-based row dicts."""
+        rows = []
+        for i, (text, ppl) in enumerate(zip(texts, self._line_perplexities(texts)), start=1):
+            if _UTIL_AVAILABLE:
+                row = _classify_line(
+                    text,
+                    float(ppl),
+                    ft_model=self.ft_model,
+                    ppl_model=self.ppl_model,
+                    tokenizer=self.ppl_tokenizer,
+                    device=self.device,
+                )
+            else:
+                row = _classify_line_legacy(text, float(ppl), self.ft_model)
+            rows.append({"line_num": i, **row})
+        return rows
+
+    def process_text_file(self, path: str) -> Dict[str, Any]:
+        """Classify every non-empty line of a plain-text file."""
+        raw = Path(path).read_text(encoding="utf-8", errors="replace")
+        texts = [line.strip() for line in raw.splitlines() if line.strip()]
+        lines = self._classify_lines(texts)
+        return {"task_type": "text", "num_lines": len(lines), "reading_order": "document", "lines": lines}
+
+    def process_alto(self, path: str) -> Dict[str, Any]:
+        """Parse an ALTO XML page, reorder lines with LayoutReader when
+        available (document order otherwise), and classify each line."""
+        from utils import normalize_boxes, parse_alto_xml
+
+        texts, boxes, (page_w, page_h) = parse_alto_xml(path)
+        reading_order = "document"
+        if texts and self.layout_model is not None and boxes2inputs is not None:
+            try:
+                import torch
+
+                norm_boxes = normalize_boxes(boxes, page_w, page_h)
+                inputs = prepare_inputs(boxes2inputs(norm_boxes), self.layout_model)
+                for key, value in inputs.items():
+                    if isinstance(value, torch.Tensor):
+                        inputs[key] = value.to(self.device)
+                with torch.no_grad():
+                    logits = self.layout_model(**inputs).logits.cpu().squeeze(0)
+                order = parse_logits(logits, len(norm_boxes))
+                texts = [texts[i] for i in order]
+                reading_order = "layout-reader"
+            except Exception as exc:
+                logger.warning("Layout reordering failed (%s); keeping document order.", exc)
+        lines = self._classify_lines(texts)
+        return {"task_type": "alto", "num_lines": len(lines), "reading_order": reading_order, "lines": lines}
+
 
 # ---------------------------------------------------------------------------
 # Helper: classify one line (mirrors process_and_write_batch in langID_classify)
