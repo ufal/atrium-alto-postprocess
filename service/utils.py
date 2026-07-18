@@ -133,8 +133,9 @@ def parse_alto_xml(xml_path: str) -> Tuple[List[str], List[List[int]], Tuple[int
 def normalize_boxes(boxes: List[List[int]], width: int, height: int) -> List[List[int]]:
     """Normalise pixel boxes to the 0-1000 scale LayoutLMv3 expects.
 
-    Mirrors extract_LytRdr_ALTO_2_TXT.normalize_boxes so the service and the
-    batch pipeline feed the layout model identical inputs (#8).
+    Kept identical to the batch pipeline's box normalisation (on the development
+    branch) so the service and the pipeline feed the layout model the same
+    inputs (#8).
     """
     if not boxes or width == 0 or height == 0:
         return [[0, 0, 0, 0] for _ in boxes]

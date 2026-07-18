@@ -32,10 +32,10 @@ WORKDIR /app
 
 # 1) deps first for layer caching. CPU torch pinned, then the unpinned `torch`
 #    in the requirements files is already satisfied (stays CPU).
-COPY setup/requirements.txt setup/requirements-test.txt setup/requirements-sweep.txt ./
+COPY setup/requirements.txt ./
 COPY service/requirements.txt service/requirements.txt
 RUN pip install --index-url ${TORCH_INDEX_URL} torch \
-    && pip install -r setup/requirements.txt -r service/requirements.txt -r setup/requirements-test.txt -r setup/requirements-sweep.txt
+    && pip install -r setup/requirements.txt -r service/requirements.txt
 
 # 2) LayoutReader v3/ (translated from setup_api_server.sh) -> /app/v3 (on sys.path)
 #    Required by the GPU extraction method (extract_LytRdr_ALTO_2_TXT.py).
