@@ -1,0 +1,17 @@
+categ,quality_score,file,page_num,line_num,text,original_text,lang,lang_score,original_lang,orig_lang_score,perplex,word_count,char_count
+Clear,0.9500,CTXA,1,1,Mocnost kulturní vrstvy činila 40 cm.,Mocnost kulturní vrstvy činila 40 cm.,ces_Latn,0.9900,ces_Latn,0.9900,90.00,6,37
+Clear,0.9300,CTXA,1,2,Eva Procházková dokumentovala nálezy.,Eva Procházková dokumentovala nálezy.,ces_Latn,0.9343,ces_Latn,0.9343,110.00,4,37
+Clear,0.9100,CTXA,1,3,Sonda byla zaměřena geodeticky přesně.,Sonda byla zaměřena geodeticky přesně.,ces_Latn,0.9600,ces_Latn,0.9600,95.00,5,38
+Noisy,0.7000,CTXA,1,4,Popis nalezu i - 3,Popis nalezu i - 3,ces_Latn,0.7000,ces_Latn,0.7000,400.00,5,18
+Trash,0.4100,CTXA,1,5,rnn1 ww0rd vv_~~,rnn1 ww0rd vv_~~,vie_Latn,0.4836,vie_Latn,0.4836,2624.00,3,15
+Empty,0.0000,CTXA,1,6,,,N/A,0.0000,N/A,0.0000,0.00,0,0
+Non-text,0.0000,CTXA,1,7,A123/2024,A123/2024,N/A,0.0000,N/A,0.0000,0.00,1,9
+Clear,0.9400,CTXB,1,1,Lokalita se nachází u obce Horní Mez.,Lokalita se nachází u obce Horní Mez.,ces_Latn,0.9700,ces_Latn,0.9700,85.00,7,37
+Clear,0.9200,CTXB,1,2,Archeologický výzkum probíhal v létě.,Archeologický výzkum probíhal v létě.,ces_Latn,0.9500,ces_Latn,0.9500,96.00,5,37
+Clear,0.9100,CTXB,1,3,Sonda byla zaměřena geodeticky přesně.,Sonda byla zaměřena geodeticky přesně.,ces_Latn,0.9600,ces_Latn,0.9600,95.00,5,38
+Noisy,0.6800,CTXB,1,4,Tab. 4 vrstva popela,Tab. 4 vrstva popela,ces_Latn,0.8000,ces_Latn,0.8000,300.00,4,20
+Trash,0.5000,CTXB,1,5,qpqb dbqp uunn kkm,qpqb dbqp uunn kkm,lmo_Latn,0.9988,lmo_Latn,0.9988,13000.00,4,18
+Clear,0.9300,CTXC,1,1,Nálezy byly uloženy do depozitáře muzea.,Nálezy byly uloženy do depozitáře muzea.,ces_Latn,0.9800,ces_Latn,0.9800,88.00,6,40
+Clear,0.9000,CTXC,1,2,Datace odpovídá době halštatské kultuře.,Datace odpovídá době halštatské kultuře.,ces_Latn,0.9000,ces_Latn,0.9000,105.00,5,40
+Noisy,0.6500,CTXC,1,3,str. 12 obr nahore,str. 12 obr nahore,ces_Latn,0.7500,ces_Latn,0.7500,350.00,4,18
+Trash,0.3800,CTXC,1,4,zzz mmm nnn uuu bbb,zzz mmm nnn uuu bbb,eng_Latn,0.3000,eng_Latn,0.3000,5000.00,5,19

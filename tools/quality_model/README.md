@@ -34,8 +34,8 @@ not repeated in the finetune file.
 |------------------------------|-------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `score_texts.py`             | 0     | ✅ drafted | `build_line_record()` — the faithful mirror of the production per-line scorer (`langID_classify.py:315-437`) that Phase 0 will extract; a CLI that loads FastText + Qwen once and relabels arbitrary lines, emitting `score_raw` (pre-clamp) **and** `score_clamped`. |
 | `corrupt.py`                 | 1     | ✅ drafted | OCR-realistic corruption engine; each op is aligned with a production detector and deterministically seeded via SHA-256.                                                                                                                                              |
-| `build_dataset.py`           | 1     | ⏳ TODO    | select sources → generate variants → relabel → dedup → split-by-document → balance → parquet.                                                                                                                                                                         |
-| `report_dataset.py`          | 1     | ⏳ TODO    | severity→score monotonicity + synthetic-vs-real feature-distribution (KS) report.                                                                                                                                                                                     |
+| `build_dataset.py`           | 1     | ✅ drafted | select sources → generate variants → relabel → dedup → split-by-document → balance → CSV + JSON manifest. Model-free `offline` scorer for dry runs/tests; `ModelScorer` for real FastText + Qwen relabelling.                                                          |
+| `report_dataset.py`          | 1     | ✅ drafted | severity→score monotonicity + synthetic-vs-real feature deltas + split/provenance/score distribution.                                                                                                                                                                 |
 | `correct.py`                 | 2     | ⏳ TODO    | korektor (REST/local) + pluggable LLM correction backends with a JSONL disk cache.                                                                                                                                                                                    |
 | `report_correction_delta.py` | 2     | ⏳ TODO    | the issue's explicit check: algo-score `Δ` after correction, band-transition matrix, per-backend go/no-go.                                                                                                                                                            |
 | `train_baseline_gbm.py`      | 3     | ⏳ TODO    | `HistGradientBoostingRegressor` baseline (± perplexity feature).                                                                                                                                                                                                      |
@@ -67,10 +67,35 @@ python tools/quality_model/score_texts.py \
 label/score and the perplexity), which is how the fast tests exercise the full
 engine without a GPU.
 
+Assemble a training dataset (offline dry run — no models, approximate perplexity)
+or the real thing:
+
+```bash
+# offline: select -> corrupt Clear lines -> relabel -> dedup -> split-by-doc -> balance
+python tools/quality_model/build_dataset.py \
+    --input-glob 'data_samples/DOC_LINE_CATEG/*.csv' \
+    --scorer offline --seed 23 --variants-per-clear 3 \
+    --gold-docs CTX192100040 \
+    --out /tmp/dataset.csv          # + /tmp/dataset.csv.manifest.json
+
+# real relabelling pass (needs the ML stack + GPU)
+python tools/quality_model/build_dataset.py --input-glob 'DOC_LINE_CATEG/*.csv' \
+    --scorer model --model Qwen/Qwen2.5-0.5B --fasttext lid.176.bin --out dataset.csv
+
+# monotonicity + realism + distribution report
+python tools/quality_model/report_dataset.py --input /tmp/dataset.csv
+```
+
+The `offline` scorer holds perplexity fixed, so its *absolute* scores are only
+approximate — but the non-perplexity detectors still react to corruption, so it is
+faithful enough for pipeline tests and the monotonicity check. Use `--scorer model`
+for a dataset you will actually train on (strategy D2).
+
 ## Tests
 
 ```bash
-pytest -m "not slow" tests/test_quality_model_corrupt.py tests/test_quality_model_score_texts.py
+pytest -m "not slow" tests/test_quality_model_corrupt.py \
+    tests/test_quality_model_score_texts.py tests/test_quality_model_dataset.py
 ```
 
 Fast tests are model-free and never read `data_samples/` directly (house rule).
