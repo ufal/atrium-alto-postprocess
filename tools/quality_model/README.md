@@ -34,10 +34,10 @@ not repeated in the finetune file.
 |------------------------------|-------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `score_texts.py`             | 0     | ✅ drafted | `build_line_record()` — the faithful mirror of the production per-line scorer (`langID_classify.py:315-437`) that Phase 0 will extract; a CLI that loads FastText + Qwen once and relabels arbitrary lines, emitting `score_raw` (pre-clamp) **and** `score_clamped`. |
 | `corrupt.py`                 | 1     | ✅ drafted | OCR-realistic corruption engine; each op is aligned with a production detector and deterministically seeded via SHA-256.                                                                                                                                              |
-| `build_dataset.py`           | 1     | ✅ drafted | select sources → generate variants → relabel → dedup → split-by-document → balance → CSV + JSON manifest. Model-free `offline` scorer for dry runs/tests; `ModelScorer` for real FastText + Qwen relabelling.                                                          |
+| `build_dataset.py`           | 1     | ✅ drafted | select sources → generate variants → relabel → dedup → split-by-document → balance → CSV + JSON manifest. Model-free `offline` scorer for dry runs/tests; `ModelScorer` for real FastText + Qwen relabelling.                                                         |
 | `report_dataset.py`          | 1     | ✅ drafted | severity→score monotonicity + synthetic-vs-real feature deltas + split/provenance/score distribution.                                                                                                                                                                 |
-| `correct.py`                 | 2     | ⏳ TODO    | korektor (REST/local) + pluggable LLM correction backends with a JSONL disk cache.                                                                                                                                                                                    |
-| `report_correction_delta.py` | 2     | ⏳ TODO    | the issue's explicit check: algo-score `Δ` after correction, band-transition matrix, per-backend go/no-go.                                                                                                                                                            |
+| `correct.py`                 | 2     | ✅ drafted | korektor (LINDAT REST / local binary) + pluggable LLM (GLM) correction backends behind one `CorrectionBackend` contract, with a resumable JSONL disk cache and language routing (Czech → korektor, else → LLM).                                                       |
+| `report_correction_delta.py` | 2     | ✅ drafted | the issue's explicit check: algo-score `Δ` after correction, share improved/degraded, Noisy→band transition matrix, per-backend median-Δ go/no-go gate.                                                                                                               |
 | `train_baseline_gbm.py`      | 3     | ⏳ TODO    | `HistGradientBoostingRegressor` baseline (± perplexity feature).                                                                                                                                                                                                      |
 | `train.py`                   | 3     | ⏳ TODO    | HF `Trainer` fine-tune of `distilbert-base-multilingual-cased` (regression + category heads, Huber + CE).                                                                                                                                                             |
 | `evaluate.py`                | 4     | ⏳ TODO    | metrics vs algorithm (held-out docs) **and** vs expert gold subsets (the only objective gate).                                                                                                                                                                        |
@@ -91,11 +91,30 @@ approximate — but the non-perplexity detectors still react to corruption, so i
 faithful enough for pipeline tests and the monotonicity check. Use `--scorer model`
 for a dataset you will actually train on (strategy D2).
 
+Auto-correct Noisy lines and check the algorithm's score delta (the issue's
+explicit ask):
+
+```bash
+# Czech spell-correction via LINDAT korektor (or --backend korektor-local / llm)
+python tools/quality_model/correct.py \
+    --input noisy_lines.csv --text-col text --only-categ Noisy \
+    --backend korektor-rest --cache /tmp/korektor_cache.jsonl \
+    --out /tmp/corrected.csv
+
+# did correction raise the algo score? median Δ > 0 is the go/no-go gate.
+# use --scorer model for the real gate (offline perplexity is fixed, so it
+# under-reports the delta on diacritic-only fixes).
+python tools/quality_model/report_correction_delta.py \
+    --input /tmp/corrected.csv --scorer model \
+    --model Qwen/Qwen2.5-0.5B --fasttext lid.176.bin
+```
+
 ## Tests
 
 ```bash
 pytest -m "not slow" tests/test_quality_model_corrupt.py \
-    tests/test_quality_model_score_texts.py tests/test_quality_model_dataset.py
+    tests/test_quality_model_score_texts.py tests/test_quality_model_dataset.py \
+    tests/test_quality_model_correct.py
 ```
 
 Fast tests are model-free and never read `data_samples/` directly (house rule).
