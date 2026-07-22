@@ -28,7 +28,7 @@ jobs:
       issues: write          # only used by the "open issue on failure" step below
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: "pip"
