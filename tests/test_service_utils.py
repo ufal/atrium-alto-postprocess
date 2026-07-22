@@ -1,10 +1,6 @@
 """
 tests/test_service_utils.py – Unit tests for service/utils.py: the pure ALTO
-parsing / box-normalisation / legacy-categoriser helpers behind the FastAPI
-/process endpoint.
-
-Thresholds and COMMON_LANGS are imported from the module itself so the tests
-track config_langID.txt rather than hard-coding stale numbers.
+parsing / box-normalisation helpers behind the FastAPI /process endpoint.
 """
 
 import pytest
@@ -12,12 +8,6 @@ import pytest
 pytest.importorskip("lxml")
 
 from service.utils import (  # noqa: E402
-    COMMON_LANGS,
-    LANG_SCORE_CLEAR,
-    LANG_SCORE_ROUGH,
-    PERPLEXITY_THRESHOLD_MAX,
-    PERPLEXITY_THRESHOLD_MIN,
-    categorize_line,
     normalize_boxes,
     parse_alto_xml,
 )
@@ -106,28 +96,3 @@ def test_normalize_empty_boxes_returns_empty():
 
 def test_normalize_zero_dimension_returns_zero_boxes():
     assert normalize_boxes([[1, 2, 3, 4]], width=0, height=100) == [[0, 0, 0, 0]]
-
-
-# ── categorize_line (legacy fallback) ───────────────────────────────────────
-def test_categorize_clear_for_common_lang_high_score():
-    lang = COMMON_LANGS[0]
-    out = categorize_line(lang, LANG_SCORE_CLEAR + 0.05, ppl=10.0, text="this is a clear sentence")
-    assert out == "Clear"
-
-
-def test_categorize_trash_on_hard_override():
-    out = categorize_line(COMMON_LANGS[0], 0.9, ppl=PERPLEXITY_THRESHOLD_MAX + 100.0, text="garbage", weird_ratio=0.6)
-    assert out == "Trash"
-
-
-def test_categorize_noisy_between_thresholds():
-    mid = (LANG_SCORE_ROUGH + LANG_SCORE_CLEAR) / 2
-    out = categorize_line(
-        COMMON_LANGS[0], mid, ppl=PERPLEXITY_THRESHOLD_MIN - 100.0, text="this is a longer readable line"
-    )
-    assert out == "Noisy"
-
-
-def test_categorize_trash_for_low_score():
-    out = categorize_line(COMMON_LANGS[0], 0.1, ppl=10.0, text="this is a longer readable line")
-    assert out == "Trash"

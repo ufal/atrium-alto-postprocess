@@ -3,38 +3,13 @@ service/utils.py
 Helper functions for ALTO parsing, box normalization, and text reconstruction.
 """
 
-import configparser
 import logging
-from pathlib import Path
 from typing import List, Tuple
 
 # Use lxml for highly efficient XML parsing
 import lxml.etree as ET
 
 logger = logging.getLogger(__name__)
-
-# --- Configuration & Constants ---
-_config = configparser.RawConfigParser()
-# Locate config_langID.txt in the project root
-_config_path = Path(__file__).resolve().parent.parent / "setup" / "config_langID.txt"
-if _config_path.exists():
-    _config.read(_config_path)
-
-
-def _get_float(section, key, default):
-    return _config.getfloat(section, key, fallback=default) if _config.has_section(section) else default
-
-
-if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
-    COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
-else:
-    COMMON_LANGS = ["ces", "deu", "eng"]
-
-# Sourced directly from config_langID.txt rather than hard-coding stale values
-PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
-PERPLEXITY_THRESHOLD_MIN = _get_float("TEXT_UTILS", "SHORT_PPL_CAP", 850.0)
-LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
-LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
 # (#5) Hardened parser for UNTRUSTED ALTO uploaded via the FastAPI /process
 # endpoint. The default lxml parser resolves entities and may hit the network,
@@ -151,28 +126,3 @@ def normalize_boxes(boxes: List[List[int]], width: int, height: int) -> List[Lis
             ]
         )
     return out
-
-
-def categorize_line(lang_code: str, score: float, ppl: float, text: str, weird_ratio: float = 0.0) -> str:
-    """Legacy fallback classifier (Clear / Noisy / Trash).
-
-    Only used by service/text_inference.py when text_util_langID cannot be
-    imported. The primary path uses text_util_langID.categorize_line.
-    """
-    is_common = any(lang_code.startswith(cl) for cl in COMMON_LANGS)
-
-    # Hard override matching the new logic
-    if ppl > PERPLEXITY_THRESHOLD_MAX and weird_ratio > 0.4:
-        return "Trash"
-
-    # Heuristic for short lines
-    words_count = len(text.split())
-    short_line_coef = 2.0 if len(text) < 20 or words_count < 4 else 1.0
-
-    if score > LANG_SCORE_CLEAR and is_common:
-        return "Clear"
-
-    if score > LANG_SCORE_ROUGH and ppl < (PERPLEXITY_THRESHOLD_MIN * short_line_coef):
-        return "Noisy"
-
-    return "Trash"

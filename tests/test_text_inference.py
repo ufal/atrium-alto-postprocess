@@ -8,10 +8,7 @@ the classification helpers can be exercised with a mocked FastText model.
 
 from unittest.mock import MagicMock
 
-import pytest
-
-from service import text_inference
-from service.text_inference import TextModelManager, _classify_line, _classify_line_legacy
+from service.text_inference import TextModelManager, _classify_line
 
 
 def _mock_ft(lang="ces", score=0.95):
@@ -38,17 +35,6 @@ def test_load_models_early_return_when_already_loaded():
     assert m._models_loaded is True
 
 
-def test_classify_line_legacy_uses_legacy_categorizer(monkeypatch):
-    # _legacy_categorize only exists as a module symbol when text_util_langID is
-    # unavailable; inject a stub so the legacy path is exercised either way.
-    monkeypatch.setattr(text_inference, "_legacy_categorize", lambda *a, **k: "Clear", raising=False)
-    out = _classify_line_legacy("some text line", 120.0, _mock_ft("ces", 0.9))
-    assert out["lang"] == "ces"
-    assert out["category"] == "Clear"
-    assert out["quality_score"] is None  # rich metrics stay unset on the legacy path
-
-
-@pytest.mark.skipif(not text_inference._UTIL_AVAILABLE, reason="text_util_langID not importable")
 def test_classify_line_full_pipeline_returns_all_fields():
     out = _classify_line(
         "this is a readable line of text",

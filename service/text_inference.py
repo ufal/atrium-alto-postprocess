@@ -28,33 +28,25 @@ except ImportError:
     prepare_inputs = boxes2inputs = parse_logits = None  # type: ignore[assignment]
 
 # Import the full quality-analysis toolkit from the main pipeline module.
-try:
-    from text_util_langID import (
-        analyze_rotation_signals,
-        compute_garbage_density,
-        compute_quality_score,
-        compute_valid_ratio,
-        compute_vowel_ratio,
-        compute_word_weird_ratio,
-        detect_fused_words,
-        detect_gibberish_words,
-        detect_letter_digit_letter,
-        detect_mid_uppercase,
-        detect_repeated_chars,
-        detect_strange_symbols,
-        detect_wx_words,
-        score_words_in_line,
-    )
-    from text_util_langID import categorize_line as _categorize_line_struct
-
-    _UTIL_AVAILABLE = True
-except ImportError as _err:
-    logging.getLogger(__name__).warning(
-        "text_util_langID not found (%s); falling back to legacy utils.categorize_line.",
-        _err,
-    )
-    _UTIL_AVAILABLE = False
-    from utils import categorize_line as _legacy_categorize  # type: ignore[assignment]
+# Unconditional on purpose: the service must never silently fall back to a
+# stale secondary categoriser — a broken import has to fail loud at startup.
+from text_util_langID import (  # noqa: E402
+    analyze_rotation_signals,
+    compute_garbage_density,
+    compute_quality_score,
+    compute_valid_ratio,
+    compute_vowel_ratio,
+    compute_word_weird_ratio,
+    detect_fused_words,
+    detect_gibberish_words,
+    detect_letter_digit_letter,
+    detect_mid_uppercase,
+    detect_repeated_chars,
+    detect_strange_symbols,
+    detect_wx_words,
+    score_words_in_line,
+)
+from text_util_langID import categorize_line as _categorize_line_struct  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -219,32 +211,6 @@ def _classify_line(
         "gibberish": gibb_count,
         "word_weird": round(weird_ratio, 4),
         "quality_score": round(q_score, 4),
-        "category": categ,
-    }
-
-
-def _classify_line_legacy(text: str, ppl: float, ft_model) -> Dict[str, Any]:
-    """
-    Fallback when text_util_langID is unavailable.
-    """
-    labels, scores = ft_model.predict([text.lower()], k=1)
-    lang = labels[0][0].replace("__label__", "")
-    lang_score = float(scores[0][0])
-    categ = _legacy_categorize(lang, lang_score, ppl, text, weird_ratio=0.0)  # type: ignore[call-arg]
-
-    return {
-        "text": text,
-        "lang": lang,
-        "lang_score": round(lang_score, 4),
-        "perplexity": round(ppl, 2),
-        "garbage_density": None,
-        "sym_count": None,
-        "upper_count": None,
-        "repeated_count": None,
-        "ldl_fuses": None,
-        "gibberish": None,
-        "word_weird": None,
-        "quality_score": None,
         "category": categ,
     }
 
