@@ -38,8 +38,9 @@ not repeated in the finetune file.
 | `report_dataset.py`          | 1     | ✅ drafted | severity→score monotonicity + synthetic-vs-real feature deltas + split/provenance/score distribution.                                                                                                                                                                 |
 | `correct.py`                 | 2     | ✅ drafted | korektor (LINDAT REST / local binary) + pluggable LLM (GLM) correction backends behind one `CorrectionBackend` contract, with a resumable JSONL disk cache and language routing (Czech → korektor, else → LLM).                                                       |
 | `report_correction_delta.py` | 2     | ✅ drafted | the issue's explicit check: algo-score `Δ` after correction, share improved/degraded, Noisy→band transition matrix, per-backend median-Δ go/no-go gate.                                                                                                               |
-| `train_baseline_gbm.py`      | 3     | ⏳ TODO    | `HistGradientBoostingRegressor` baseline (± perplexity feature).                                                                                                                                                                                                      |
-| `train.py`                   | 3     | ⏳ TODO    | HF `Trainer` fine-tune of `distilbert-base-multilingual-cased` (regression + category heads, Huber + CE).                                                                                                                                                             |
+| `common.py`                  | 3     | ✅ drafted | shared dependency-light helpers: config parsing, dataset IO, feature extraction, band mapping, and manual regression / category metrics (band thresholds reused from `text_util_langID`).                                                                             |
+| `train_baseline_gbm.py`      | 3     | ✅ drafted | `HistGradientBoostingRegressor` baseline, trained twice (± perplexity feature); sklearn imported lazily.                                                                                                                                                              |
+| `train.py`                   | 3     | ✅ drafted | HF `Trainer` fine-tune of `distilbert-base-multilingual-cased` (sigmoid regression head + 3-way category head, Huber + CE); torch/transformers lazy. Config: `setup/config_quality_model.txt`.                                                                        |
 | `evaluate.py`                | 4     | ⏳ TODO    | metrics vs algorithm (held-out docs) **and** vs expert gold subsets (the only objective gate).                                                                                                                                                                        |
 
 ## Usage (drafted modules)
@@ -109,13 +110,33 @@ python tools/quality_model/report_correction_delta.py \
     --model Qwen/Qwen2.5-0.5B --fasttext lid.176.bin
 ```
 
+Train the baseline and the encoder on a built dataset (config in
+`setup/config_quality_model.txt`; CLI flags override it):
+
+```bash
+# GBM sanity baseline — trained ± perplexity; the −perplexity number is the floor
+python tools/quality_model/train_baseline_gbm.py --dataset data/qm_dataset.csv --out runs/gbm
+
+# fine-tune distilbert-base-multilingual-cased (regression + category heads)
+python tools/quality_model/train.py --dataset data/qm_dataset.csv \
+    --config setup/config_quality_model.txt --out runs/distilbert
+# char-level fallback if subword fragmentation on garbage hurts:
+python tools/quality_model/train.py --dataset data/qm_dataset.csv --model google/canine-s ...
+```
+
+Record headline numbers in `tools/quality_model/EXPERIMENTS.md`. Baseline/fine-tune
+need the ML stack (`setup/requirements-finetune.txt`) + a GPU; the pure config /
+metric / feature glue in `common.py` is unit-tested without them.
+
 ## Tests
 
 ```bash
 pytest -m "not slow" tests/test_quality_model_corrupt.py \
     tests/test_quality_model_score_texts.py tests/test_quality_model_dataset.py \
-    tests/test_quality_model_correct.py
+    tests/test_quality_model_correct.py tests/test_quality_model_train.py
 ```
 
 Fast tests are model-free and never read `data_samples/` directly (house rule).
+The sklearn GBM fit and the torch/transformers fine-tune are `@pytest.mark.slow`
+and self-skip when the libraries are absent.
 Model / GPU / network paths are marked `@pytest.mark.slow` in later phases.

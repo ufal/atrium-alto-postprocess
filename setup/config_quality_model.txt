@@ -1,0 +1,60 @@
+# Configuration for the issue #23 quality-score model training/eval tooling
+# (tools/quality_model/train_baseline_gbm.py, train.py, evaluate.py).
+#
+# Same .ini/configparser style as setup/config_langID.txt. Offline training config
+# only — it does NOT touch the production pipeline (that stays in config_langID.txt).
+# CLI flags override these values (strategy decision D5).
+
+[DATA]
+# Dataset CSV produced by tools/quality_model/build_dataset.py.
+DATASET = dataset.csv
+TEXT_COL = text
+# Regression target: the raw (pre-clamp) score is the smooth training target (D1).
+TARGET_COL = score_raw
+CATEG_COL = categ
+SPLIT_COL = split
+
+[BASELINE]
+# HistGradientBoostingRegressor sanity baseline (D7). Trained twice — with and
+# without the perplexity feature — to quantify what the Qwen signal buys and what
+# a text-only model must beat.
+INCLUDE_PERPLEXITY = true
+MAX_ITER = 400
+LEARNING_RATE = 0.05
+MAX_DEPTH = 6
+L2_REGULARIZATION = 0.0
+EARLY_STOPPING = true
+
+[MODEL]
+# Primary encoder (D6): ~134M params, < Qwen2.5-0.5B, covers ces/deu/eng.
+# Fallback char-level: google/canine-s.
+NAME = distilbert-base-multilingual-cased
+MAX_LENGTH = 192
+# Auxiliary 3-way category head on top of the regression head (D1; category is not
+# a pure function of the score, issue #3).
+CATEGORY_HEAD = true
+NUM_CATEGORIES = 3
+
+[TRAIN]
+LR_ENCODER = 2e-5
+LR_HEAD = 1e-3
+BATCH_SIZE = 64
+EPOCHS = 4
+WARMUP_RATIO = 0.06
+WEIGHT_DECAY = 0.01
+# Robust regression loss around noisy rule boundaries (D8): total = huber + CE_WEIGHT*ce.
+HUBER_DELTA = 0.1
+CE_WEIGHT = 0.3
+BF16 = true
+SEED = 42
+EARLY_STOPPING_METRIC = spearman
+EARLY_STOPPING_PATIENCE = 2
+OUTPUT_DIR = runs
+
+[EVAL]
+# Banding thresholds default to the production values (read from text_util_langID);
+# set here only to override. Trash < TRASH_MAX <= Noisy < NOISY_MAX <= Clear.
+# TRASH_MAX = 0.55
+# NOISY_MAX = 0.80
+# Optional expert gold CSV — the only self-reference-free gate (Phase 4).
+GOLD_CSV =
