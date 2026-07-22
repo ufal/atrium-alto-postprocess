@@ -41,7 +41,7 @@ Key features:
 * **Quality Classification:** Classifies every line with a composite **quality score** built from structural detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions, gibberish, fused/rotated tokens) and **Qwen2.5-0.5B** perplexity, implemented in `text_util_langID.py` [^6]. The category is then assigned from quality-score thresholds plus named overrides.
 * **GPU Support:** Automatically detects and utilises CUDA devices for inference if available [^3].
 * **Two Frontend Variants:** A self-contained standalone interface for direct use, and a LINDAT-integrated interface for deployment within the LINDAT Common framework.
-* **CORS Support:** Cross-Origin Resource Sharing is configurable via the `ALLOWED_ORIGINS` environment variable (defaults to `http://localhost:8080,http://localhost:5500`).
+* **CORS Support:** Cross-Origin Resource Sharing is configurable via the `ALLOWED_ORIGINS` environment variable (defaults to `*`, the ATRIUM family standard; the wildcard is dropped automatically when `ALLOW_CREDENTIALS` is enabled, mirroring the atrium-page-classification exemplar).
 
 ## Directory Structure 📂
 
@@ -119,7 +119,8 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 
 | Method | Path       | Description                                                                                              |
 |--------|------------|-----------------------------------------------------------------------------------------------------------|
-| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                                         |
+| `GET`  | `/`        | Redirects to `/frontend` (the standalone interface for manual testing).                                  |
+| `GET`  | `/frontend`| Standalone `index.html` interface (static mount; the LINDAT variant is at `/frontend-lindat`).           |
 | `GET`  | `/info`    | Service identity + capabilities: `service`, `version`, `endpoints`, `limits`, device, line fields, quality categories. |
 | `GET`  | `/health`  | Liveness probe; `/health?deep=true` additionally verifies that the models are loaded (503 otherwise).    |
 | `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                             |
@@ -211,8 +212,9 @@ carries the fields used by the classification pipeline.
 | `category`        | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                                                                    |
 
 Errors follow the ATRIUM family table: `413` upload too large (`MAX_UPLOAD_MB`),
-`422` unusable input (undetectable type), `500` processing failure — clients retry
-only `502/503/504`.
+`415` unsupported media type (extension not `.xml`/`.txt`, or missing
+`Content-Type`), `422` unusable request (e.g. missing filename), `500` processing
+failure — clients retry only `502/503/504`.
 
 
 ## Installation & Setup 🛠
@@ -263,8 +265,8 @@ source venv/bin/activate
 python service/text_api.py
 ```
 
-The server starts at `http://0.0.0.0:8000`. The standalone frontend is served at `/`.
-Send a test request in a second terminal:
+The server starts at `http://0.0.0.0:8000`. The standalone frontend is served at
+`/frontend` (opening `/` redirects there). Send a test request in a second terminal:
 
 ```bash
 curl -X POST "http://localhost:8000/process" \

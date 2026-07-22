@@ -13,7 +13,7 @@ from typing import Any, Dict, Union
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 # Add this file's own directory (service/) to sys.path BEFORE importing the
@@ -60,33 +60,45 @@ API_ENDPOINTS = ["/info", "/health", "/process"]
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "10"))
 
 # ---------------------------------------------------------------------------
-# CORS — configurable via environment variable; defaults to * (family standard)
+# CORS — configurable via environment variable; defaults to * (family standard).
+# Mirrors the atrium-page-classification exemplar: a wildcard origin must not be
+# combined with credentials (browsers reject that pairing).
 # ---------------------------------------------------------------------------
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
-allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
+if "*" in allowed_origins and os.getenv("ALLOW_CREDENTIALS", "true").lower() == "true":
+    allowed_origins.remove("*")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_credentials=allowed_origins != ["*"],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
 # ---------------------------------------------------------------------------
-# Static frontend
+# Static frontend — mounted at /frontend (family standard) with html=True so the
+# directory root serves index.html and its relative assets (script.js) resolve.
+# The optional LINDAT-themed variant is mounted alongside when present.
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
+FRONTEND_LINDAT_DIR = BASE_DIR / "frontend-lindat"
 
 if FRONTEND_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+    app.mount("/frontend", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+if FRONTEND_LINDAT_DIR.exists():
+    app.mount(
+        "/frontend-lindat",
+        StaticFiles(directory=str(FRONTEND_LINDAT_DIR), html=True),
+        name="frontend-lindat",
+    )
 
 
-@app.get("/", response_model=None)
-async def root() -> Union[HTMLResponse, Dict[str, str]]:
-    index_path = FRONTEND_DIR / "index.html"
-    if index_path.exists():
-        return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
+@app.get("/", include_in_schema=False)
+async def root() -> Union[RedirectResponse, Dict[str, str]]:
+    if FRONTEND_DIR.exists():
+        return RedirectResponse(url="/frontend")
     return {"message": "Service running. Frontend not found."}
 
 
@@ -163,11 +175,12 @@ async def process_document(
       category        (str)   – Clear | Noisy | Trash | Non-text | Empty
                                 Assigned dynamically using the unified penalty system.
     """
-    # [FIX]: Add cross-repo standard 500 guard for missing file metadata
+    # Missing upload metadata is a client fault, never a 5xx (meta-contract §4.4):
+    # no filename → 422 (unusable request), no content-type → 415 (media type).
     if not file.filename:
-        raise HTTPException(status_code=500, detail="Filename is missing from the upload.")
+        raise HTTPException(status_code=422, detail="Filename is missing from the upload.")
     if not file.content_type:
-        raise HTTPException(status_code=500, detail="Content-Type is missing from the upload.")
+        raise HTTPException(status_code=415, detail="Content-Type is missing from the upload.")
 
     filename = file.filename.lower()
 
@@ -178,8 +191,9 @@ async def process_document(
             task_type = "text"
         else:
             raise HTTPException(
-                status_code=422,
-                detail="Cannot auto-detect file type. Set task_type='alto' or 'text'.",
+                status_code=415,
+                detail="Unsupported media type. Upload ALTO XML (.xml) or plain text (.txt), "
+                "or set task_type='alto' or 'text' explicitly.",
             )
 
     content = await file.read()
