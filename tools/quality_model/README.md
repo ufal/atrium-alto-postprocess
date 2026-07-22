@@ -41,7 +41,7 @@ not repeated in the finetune file.
 | `common.py`                  | 3     | ✅ drafted | shared dependency-light helpers: config parsing, dataset IO, feature extraction, band mapping, and manual regression / category metrics (band thresholds reused from `text_util_langID`).                                                                             |
 | `train_baseline_gbm.py`      | 3     | ✅ drafted | `HistGradientBoostingRegressor` baseline, trained twice (± perplexity feature); sklearn imported lazily.                                                                                                                                                              |
 | `train.py`                   | 3     | ✅ drafted | HF `Trainer` fine-tune of `distilbert-base-multilingual-cased` (sigmoid regression head + 3-way category head, Huber + CE); torch/transformers lazy. Config: `setup/config_quality_model.txt`.                                                                        |
-| `evaluate.py`                | 4     | ⏳ TODO    | metrics vs algorithm (held-out docs) **and** vs expert gold subsets (the only objective gate).                                                                                                                                                                        |
+| `evaluate.py`                | 4     | ✅ drafted | metrics vs algorithm (MAE/RMSE/Spearman, banded + category-head agreement, calibration, predicted-score monotonicity, per-language stratification) **and** the self-reference-free gold gate (model-vs-gold F1 vs algorithm-vs-gold F1). torch prediction path lazy.  |
 
 ## Usage (drafted modules)
 
@@ -128,12 +128,25 @@ Record headline numbers in `tools/quality_model/EXPERIMENTS.md`. Baseline/fine-t
 need the ML stack (`setup/requirements-finetune.txt`) + a GPU; the pure config /
 metric / feature glue in `common.py` is unit-tested without them.
 
+Evaluate a trained model — against the algorithm (held-out) and against expert gold:
+
+```bash
+# predict with a trained checkpoint, then score vs the algorithm labels
+python tools/quality_model/evaluate.py --model-dir runs/distilbert \
+    --dataset data/qm_dataset.csv --stratify-by lang
+
+# the objective gate: model-vs-gold F1 vs algorithm-vs-gold F1 (gold CSV has
+# gold_categ + algo_categ + pred_score/pred_categ)
+python tools/quality_model/evaluate.py --predictions preds.csv --gold gold.csv
+```
+
 ## Tests
 
 ```bash
 pytest -m "not slow" tests/test_quality_model_corrupt.py \
     tests/test_quality_model_score_texts.py tests/test_quality_model_dataset.py \
-    tests/test_quality_model_correct.py tests/test_quality_model_train.py
+    tests/test_quality_model_correct.py tests/test_quality_model_train.py \
+    tests/test_quality_model_evaluate.py
 ```
 
 Fast tests are model-free and never read `data_samples/` directly (house rule).

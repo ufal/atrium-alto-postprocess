@@ -18,6 +18,10 @@ python tools/quality_model/train_baseline_gbm.py --dataset data/qm_dataset.csv -
 # 3. encoder fine-tune
 python tools/quality_model/train.py --dataset data/qm_dataset.csv \
     --config setup/config_quality_model.txt --out runs/distilbert
+
+# 4. evaluate — vs the algorithm (held-out) and the objective gold gate
+python tools/quality_model/evaluate.py --model-dir runs/distilbert \
+    --dataset data/qm_dataset.csv --gold data/gold.csv --stratify-by lang
 ```
 
 ## Metric key
