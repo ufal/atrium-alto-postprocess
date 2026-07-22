@@ -95,7 +95,7 @@ function initFormHandler() {
 // --- Rendering Logic ---
 function renderResults(data) {
     const container = $('#results');
-    const lines     = data.cleaned_lines || [];
+    const lines     = data.lines || [];
 
     const total   = lines.length;
     const usable  = lines.filter(l => USABLE_CATEGORIES.has(l.category)).length;
@@ -120,7 +120,7 @@ function renderResults(data) {
             <div><span class="stat-item">File:</span>
                  <span class="stat-value">${data.filename}</span></div>
             <div><span class="stat-item">Type:</span>
-                 <span class="stat-value">${data.type}</span></div>
+                 <span class="stat-value">${data.task_type}</span></div>
             <div><span class="stat-item">Total Lines:</span>
                  <span class="stat-value">${total}</span></div>
             <div><span class="stat-item">Usable (Clear+Noisy):</span>
@@ -194,21 +194,6 @@ function renderResults(data) {
         html += `</tbody></table></div>`;
     } else {
         html += `<p class="text-muted">No text lines extracted.</p>`;
-    }
-
-    // Raw text toggle
-    if (data.raw_text) {
-        html += `
-            <div style="margin-top:2rem;">
-                <button type="button" class="btn-primary"
-                        style="background:#6c757d;margin:0;"
-                        onclick="$('#rawTextView').toggle()">
-                    Toggle Raw Extracted Text
-                </button>
-                <div id="rawTextView" style="display:none;">
-                    <div class="raw-text-box">${escapeHtml(data.raw_text)}</div>
-                </div>
-            </div>`;
     }
 
     container.html(html);
