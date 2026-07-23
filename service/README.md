@@ -119,7 +119,8 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 | Method | Path       | Description                                                                                   |
 |--------|------------|-----------------------------------------------------------------------------------------------|
 | `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                              |
-| `GET`  | `/info`    | Returns service status, active device (`cpu` or `cuda`), line fields, and quality categories. |
+| `GET`  | `/info`    | Service identity + capabilities: `service`, `version`, `endpoints`, `limits`, plus status, device, line fields, quality categories. |
+| `GET`  | `/health`  | Liveness probe; `?deep=true` also checks the quality/language models are loaded (503 on failure). |
 | `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                  |
 
 ### Request Example 💻

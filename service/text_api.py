@@ -3,7 +3,6 @@ service/text_api.py
 FastAPI wrapper for the ATRIUM text processing service.
 """
 
-import configparser
 import os
 import shutil
 import sys
@@ -13,7 +12,6 @@ from pathlib import Path
 from typing import Any, Dict, Union
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -28,7 +26,22 @@ _current_dir = Path(__file__).resolve().parent
 if str(_current_dir) not in sys.path:
     sys.path.insert(0, str(_current_dir))
 
+# Both imports below are bare (service/ is on sys.path from the bootstrap above) and
+# carry noqa: E402 so Ruff's import sorter does not hoist them above that bootstrap.
+# `atrium_service` is the shared ATRIUM meta-contract helper (§4), byte-identical
+# across every service and enforced by para-drift.reusable.yml.
+from atrium_service import (  # noqa: E402
+    add_cors,
+    attach_health,
+    build_info,
+    read_tool_version,
+    resolve_max_upload_mb,
+)
 from text_inference import text_manager  # noqa: E402
+
+# Canonical upload limit (§4.5): MAX_UPLOAD_MB, with a MAX_UPLOAD_BYTES fallback.
+MAX_UPLOAD_MB = resolve_max_upload_mb(25)
+MAX_UPLOAD_BYTES = int(MAX_UPLOAD_MB * 1024 * 1024)
 
 
 @asynccontextmanager
@@ -41,33 +54,24 @@ async def lifespan(app: FastAPI):
     yield
 
 
-def _read_tool_version() -> str:
-    """Read the tool version from para_config.txt [tool] section.
-
-    Single source of truth — security.reusable.yml already validates this value
-    against CITATION.cff and the release tag, so the API version can never drift
-    from the released version again.
-    """
-    config = configparser.ConfigParser()
-    config.read(Path(__file__).resolve().parent.parent / "setup" / "para_config.txt", encoding="utf-8")
-    version = config.get("tool", "version", fallback="unknown")
-    return version[1:] if version.lower().startswith("v") else version
-
-
-app = FastAPI(title="ATRIUM Text Processor", version=_read_tool_version(), lifespan=lifespan)
-
-# ---------------------------------------------------------------------------
-# CORS — configurable via environment variable; defaults to localhost only
-# ---------------------------------------------------------------------------
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:5500")
-allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="ATRIUM Text Processor",
+    version=read_tool_version(Path(__file__).resolve().parent),
+    lifespan=lifespan,
 )
+
+# CORS — standard §4.5 configuration; default "*" for parity with sibling services.
+add_cors(app, methods=["GET", "POST"])
+
+
+def _deep_health() -> str | None:
+    """Deep readiness (§4.1): quality/language models are loaded."""
+    if getattr(text_manager, "device", None) is None:
+        return "text models not loaded"
+    return None
+
+
+attach_health(app, deep_check=_deep_health)
 
 # ---------------------------------------------------------------------------
 # Static frontend
@@ -89,13 +93,15 @@ async def root() -> Union[HTMLResponse, Dict[str, str]]:
 
 @app.get("/info")
 async def info() -> Dict[str, Any]:
-    return {
-        "status": "active",
-        "version": app.version,
-        "device": text_manager.device,
-        "supported_formats": ["ALTO XML (.xml)", "Plain Text (.txt)"],
-        "quality_categories": ["Clear", "Noisy", "Trash", "Non-text", "Empty"],
-        "line_fields": [
+    return build_info(
+        app,
+        service="atrium-alto-postprocess",
+        limits={"max_upload_mb": MAX_UPLOAD_MB},
+        status="active",
+        device=text_manager.device,
+        supported_formats=["ALTO XML (.xml)", "Plain Text (.txt)"],
+        quality_categories=["Clear", "Noisy", "Trash", "Non-text", "Empty"],
+        line_fields=[
             "line_num",
             "text",
             "lang",
@@ -111,7 +117,7 @@ async def info() -> Dict[str, Any]:
             "quality_score",
             "category",
         ],
-    }
+    )
 
 
 @app.post("/process")
@@ -140,11 +146,11 @@ async def process_document(
       category        (str)   – Clear | Noisy | Trash | Non-text | Empty
                                 Assigned dynamically using the unified penalty system.
     """
-    # [FIX]: Add cross-repo standard 500 guard for missing file metadata
+    # §4.4: missing upload metadata is a client error (422), not a server 500.
     if not file.filename:
-        raise HTTPException(status_code=500, detail="Filename is missing from the upload.")
+        raise HTTPException(status_code=422, detail="Filename is missing from the upload.")
     if not file.content_type:
-        raise HTTPException(status_code=500, detail="Content-Type is missing from the upload.")
+        raise HTTPException(status_code=422, detail="Content-Type is missing from the upload.")
 
     filename = file.filename.lower()
 
@@ -164,6 +170,10 @@ async def process_document(
         tmp_path = tmp.name
 
     try:
+        # §4.3/§4.4: enforce the canonical upload limit (413).
+        if os.path.getsize(tmp_path) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_UPLOAD_MB} MB.")
+
         if task_type == "alto":
             result = text_manager.process_alto(tmp_path)
         else:
@@ -172,6 +182,9 @@ async def process_document(
         result["filename"] = file.filename
         return JSONResponse(content=result)
 
+    except HTTPException:
+        # Never re-wrap an intentional 4xx (413/422) as a 500.
+        raise
     except Exception as exc:
         import traceback
 

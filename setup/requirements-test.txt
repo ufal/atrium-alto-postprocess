@@ -1,13 +1,9 @@
-# Test-only dependencies — no ML models, no GPU libraries.
-# Install with:  pip install -r requirements-test.txt
+# Fast-lane + API meta-contract test deps (issue #32).
+# Heavy model deps are intentionally omitted — the API contract test
+# importorskips them, running only where the full stack exists.
 pytest>=9.1.1
-pytest-cov>=7.1.0
-# Fast-lane runtime deps (clean-venv collection breaks without these):
-pandas>=3.0.3,<4.0
-numpy
-lxml>=6.1.1
-tqdm>=4.68.4
-# Service API tests (fastapi TestClient stack):
+pytest-cov
 fastapi
-httpx2>=2.7.0
+httpx
 python-multipart
+openapi-spec-validator
