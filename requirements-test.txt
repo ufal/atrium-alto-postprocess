@@ -1,0 +1,7 @@
+# Fast-lane + API meta-contract test deps (issue #32).
+pytest>=9.1.1
+pytest-cov
+fastapi
+httpx
+python-multipart
+openapi-spec-validator
