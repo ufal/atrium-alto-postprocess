@@ -1,4 +1,6 @@
 # Fast-lane + API meta-contract test deps (issue #32).
+# Heavy model deps are intentionally omitted — the API contract test
+# importorskips them, running only where the full stack exists.
 pytest>=9.1.1
 pytest-cov
 fastapi
