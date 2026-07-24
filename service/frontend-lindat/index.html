@@ -293,11 +293,9 @@
                 <h3>Example Response</h3>
                 <pre style="background:#f4f4f4; padding:1rem; border-radius:4px; overflow-x:auto;">
 {
-  "task_type": "alto",
-  "num_lines": 2,
-  "reading_order": "layout-reader",
+  "type": "alto_xml",
   "filename": "page_01.xml",
-  "lines": [
+  "cleaned_lines": [
     {
       "line_num":      1,
       "text":          "The quick brown fox jumps over the lazy dog.",
@@ -334,18 +332,6 @@
                     valid-word ratio, symbol ratio, perplexity and text length.
                     Thresholds: &gt; 0.75 → Clear, ≥ 0.45 → Noisy, &lt; 0.45 → Trash.</li>
                 </ul>
-
-                <h3>API usage 📡</h3>
-                <p>This page is a thin client over the REST API. The same call from the command line:</p>
-                <pre><code>curl -X POST "http://localhost:8000/process" \
-  -F "file=@page.alto.xml" -F "task_type=auto"</code></pre>
-                <p>
-                    Interactive docs: <a href="/docs">/docs</a> (Swagger UI) ·
-                    machine-readable schema: <a href="/openapi.json">/openapi.json</a> ·
-                    full reference:
-                    <a href="https://github.com/ufal/atrium-alto-postprocess/blob/test/service/README.md"
-                       target="_blank" rel="noopener">service/README.md</a>
-                </p>
             </div>
         </main>
 

@@ -133,7 +133,7 @@ function initFormHandler() {
 
 function renderResults(data) {
     const container = document.getElementById("results");
-    const lines     = data.lines ?? [];
+    const lines     = data.cleaned_lines ?? [];
 
     // --- Summary bar ---
     const total   = lines.length;
@@ -165,7 +165,7 @@ function renderResults(data) {
             </div>
             <div>
                 <span class="stat-label">Type</span>
-                <span class="stat-value">${escapeHtml(data.task_type ?? "")}</span>
+                <span class="stat-value">${escapeHtml(data.type ?? "")}</span>
             </div>
             <div>
                 <span class="stat-label">Lines</span>
@@ -264,7 +264,25 @@ function renderResults(data) {
         html += `<p class="empty-msg">No text lines extracted.</p>`;
     }
 
+    // --- Raw text toggle ---
+    if (data.raw_text) {
+        html += `
+        <div class="raw-section">
+            <button type="button" class="btn-secondary" onclick="toggleRaw(this)">
+                Show Raw Extracted Text
+            </button>
+            <pre id="rawTextView" class="raw-text-box" hidden>${escapeHtml(data.raw_text)}</pre>
+        </div>`;
+    }
+
     container.innerHTML = html;
+}
+
+function toggleRaw(btn) {
+    const pre = document.getElementById("rawTextView");
+    const hidden = pre.hidden;
+    pre.hidden = !hidden;
+    btn.textContent = hidden ? "Hide Raw Extracted Text" : "Show Raw Extracted Text";
 }
 
 // ---------------------------------------------------------------------------
