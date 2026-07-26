@@ -1170,6 +1170,11 @@ def determine_category(
                 and _trailing_fill_rescued(text_source, valid_word_ratio, word_count)
             ):
                 pass  # Bypass this override and allow it to route naturally
+            elif "rule_reference_floor" not in DISABLED_RULES and is_clean_reference(text_source):
+                # (#3 2026-07-22) Damage-free reference line ("Max. d. - -",
+                # "Neg. i.č,:") floors at Noisy rather than Trash on density.
+                _fire("rule_reference_floor")
+                return "Noisy", "noisy_threshold"
             else:
                 _fire("rule_garbage_density")
                 return "Trash", "trash_threshold"
@@ -1292,6 +1297,12 @@ def determine_category(
             return "Noisy", "noisy_threshold"
         if forgiven:
             _fire("rule_forgiven_headline")
+            return "Noisy", "noisy_threshold"
+        # (#3 2026-07-22) Reference floor: a damage-free catalogue/measurement
+        # line ("kont. K 101-spraš", "ad č.j. MTX …") floors at Noisy instead
+        # of Trash. Only ever lifts Trash → Noisy.
+        if "rule_reference_floor" not in DISABLED_RULES and is_clean_reference(text_source):
+            _fire("rule_reference_floor")
             return "Noisy", "noisy_threshold"
         return "Trash", "trash_threshold"
 
@@ -1579,6 +1590,33 @@ def count_damaged_tokens(text: str) -> int:
 # but so does it flag innocent Czech ("nenalezeno", 30% single-letter rule),
 # so the short-line gate needs this narrower letters-only pattern instead.
 _RE_BIGRAM_RUN = re.compile(r"([^\W\d_]{2})\1\1")
+
+# (#3 2026-07-22 calibration) Reference floor: a correctly-read
+# catalogue/measurement/inventory record must not fall to Trash purely because
+# one fused reference token ("101-spraš", "603b/57") drops valid_word_ratio to
+# 0. Recognised by a reference marker (inv./č.j./kont./Obr./Neg./nál.č./unit)
+# and, crucially, ZERO character-level damage — so genuine garbage carrying a
+# marker word is not lifted. Lifts Trash → Noisy only; never demotes.
+_RE_REF_MARKER = re.compile(
+    r"\binv\b|\binv\.|\bkont\b|\bkont\.|\bn[áa]l\b|\bn[áa]l\.|\bobr\b|\bobr\.|"
+    r"\btab\b|\btab\.|\bneg\b|\bneg\.|\bmax\.|\bmin\.|"
+    r"č\.\s?j|č\.\s?inv|č\.\s?pl|inv\.\s?č|s\.\s?j\b",
+    re.IGNORECASE,
+)
+# Multi-character units only: single-letter m/g/l spuriously match garbage
+# fragments ("3L", "11 g e i") that merely happen to place a letter after a
+# digit, so they are deliberately excluded.
+_RE_MEASUREMENT = re.compile(
+    r"\d\s?[.,]?\s?(?:mm|cm|km|kg|ml|ha)\b",
+    re.IGNORECASE,
+)
+
+
+def is_clean_reference(text: str) -> bool:
+    """True for a catalogue/measurement/inventory line with no OCR damage."""
+    if count_damaged_tokens(text) > 0:
+        return False
+    return bool(_RE_REF_MARKER.search(text) or _RE_MEASUREMENT.search(text))
 
 
 def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
