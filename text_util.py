@@ -1164,8 +1164,10 @@ def determine_category(
     # 4. Overwhelming non-alphanumeric density
     if "rule_garbage_density" not in DISABLED_RULES:
         if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
-            if "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
-                text_source, valid_word_ratio, word_count
+            is_siglum = word_count <= 2 and _RE_SIGLUM.match(text_source.strip())
+            if is_siglum or (
+                "rule_trailing_fill_rescue" not in DISABLED_RULES
+                and _trailing_fill_rescued(text_source, valid_word_ratio, word_count)
             ):
                 pass  # Bypass this override and allow it to route naturally
             else:
@@ -1176,6 +1178,54 @@ def determine_category(
     # inverted / all-caps / garbage-density overrides above, so genuine
     # garbage is untouched — it only ever lifts a line from Trash to Noisy.
     forgiven = "rule_forgiven_headline" not in DISABLED_RULES and is_forgiven_headline(text_source, garbage_density)
+
+    # 5a. Short lines (1-2 words): FastText confidence on 1-2 tokens is
+    # statistically meaningless, so lang_score must never decide here (it
+    # made "Poue" Clear and "Mzm." Trash purely on FastText's whim). Route
+    # on structural evidence only:
+    #   - a standalone domain siglum (Mzm., M.z.m., Tb.) is Clear;
+    #   - structural damage (weirdness, gibberish, fused vowels, garbage)
+    #     caps at Noisy;
+    #   - no recognizable word at all and no Czech evidence -> Trash;
+    #   - otherwise Clear only with positive evidence (Czech diacritics /
+    #     upright function word, or all evaluable tokens structurally valid).
+    if "rule_short_line" not in DISABLED_RULES and word_count <= 2:
+        _fire("rule_short_line")
+        stripped = text_source.strip()
+        if _RE_SIGLUM.match(stripped) and sum(c.isalpha() for c in stripped) >= 2:
+            return "Clear", "clear_threshold"
+        # weird >= 0.40, not 0.30: the per-word scorer flags any word whose
+        # single most frequent letter reaches 30% as "repeated" (0.35), which
+        # hits innocent Czech words like "nenalezeno" (3x n, 3x e). Real stray
+        # fragments score 0.425+ (isolated-letter penalty), so 0.40 separates
+        # them. Trailing form-fill dots ("Okr.:.... Hodonín") are not damage.
+        # The fused-word and gibberish detectors false-positive on clean
+        # Czech (syllabic-r clusters: "vrstva"; vowel runs: "obou"), so on
+        # their own they are not damage when every evaluable token is
+        # structurally valid.
+        structurally_clean = valid_word_ratio >= 1.0
+        damage = (
+            weird_ratio >= 0.40
+            or ((gibberish_present or detect_fused_words(text_source) > 0) and not structurally_clean)
+            or (
+                garbage_density >= CATEG_GARBAGE_DENSITY_HIGH
+                and not _trailing_fill_rescued(text_source, valid_word_ratio, word_count)
+            )
+        )
+        if damage:
+            return "Noisy", "noisy_threshold"
+        # Abbreviation / numbered-reference floor (#3 2026-07-02): `forgiven`
+        # must be honored here too, or this Trash branch would undercut the
+        # is_forgiven_headline floor for 1-2 word lines. It is a floor, not a
+        # cap ("lifts Trash→Noisy without demoting Clear" — 3.plan.md): a
+        # correctly read siglum/unit/reference still rates Clear below.
+        if valid_word_ratio <= 0.0 and not is_upright_czech:
+            if forgiven:
+                return "Noisy", "noisy_threshold"
+            return "Trash", "trash_threshold"
+        if is_upright_czech or valid_word_ratio >= 1.0:
+            return "Clear", "clear_threshold"
+        return "Noisy", "noisy_threshold"
 
     # 5. Structural short-garbage route
     if "rule_short_garbage" not in DISABLED_RULES and not forgiven:
@@ -1414,6 +1464,10 @@ _NEUTRAL_LEXICON = frozenset({"dr", "x", "mm", "cm", "dm", "km", "g", "dkg", "kg
 
 _RE_ROMAN_TOKEN = re.compile(r"^[IVXLCDM]{1,7}$")
 
+# Figure/table/object references with the number fused to the abbreviation
+# ("Obr.3", "OBR.24", "Tab,237", "no.1") — reference data, not prose.
+_RE_ABBREV_NUM = re.compile(r"^[A-Za-zÁ-Žá-ž]{1,4}[.,]\d+[a-z]?$")
+
 
 def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
     if not any(c.isalnum() for c in core):
@@ -1424,6 +1478,8 @@ def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
         return True  # initials and sigla (Č, V, I.L.)
     if core.lower() in _NEUTRAL_LEXICON:
         return True
+    if _RE_ABBREV_NUM.match(core):
+        return True  # figure/table refs (Obr.3, Tab.208, no.1)
     # Dot-terminated abbreviation: s.o., Dr., Zs., hl., Ždán. — letters/dots
     # only, short alpha runs, and the raw token must actually end with '.'
     # A SINGLE letter with a dot is an abbreviation only in reference context
@@ -1436,6 +1492,10 @@ def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
         if alpha == 1 and next_core and (
             any(c.isdigit() for c in next_core) or _RE_ROMAN_TOKEN.match(next_core)
         ):
+            return True
+        # form-field label ("Obj. č.:") — the colon marks a record heading,
+        # the single letter is an abbreviation there, not a stray fragment
+        if alpha == 1 and raw.rstrip().endswith(":"):
             return True
     return False
 
