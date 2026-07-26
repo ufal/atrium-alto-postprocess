@@ -734,7 +734,7 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     clean_text = re.sub(
         r"(?<=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])1(?=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])", "l", clean_text
     )
-    clean_text = re.sub(r"\b2(?=[a-záčďéěíňóřšťůúýž])", "z", clean_text)
+    clean_text = re.sub(r"(?<![\d.,])\b2(?=[a-záčďéěíňóřšťůúýž])", "z", clean_text)
     clean_text = _RE_SPACED_CAPS.sub(_collapse_spaced_caps, clean_text)
 
     if any(marker.lower() in clean_text.lower() for marker in METADATA_MARKERS):
