@@ -1401,19 +1401,69 @@ def compute_digit_ratio(text: str) -> float:
     return sum(c.isdigit() for c in text) / len(text)
 
 
+# Tokens that carry reference/measurement data rather than prose: dates,
+# volume/year/page cites, initials, sigla, abbreviations. They are
+# unjudgeable as "words", so they are excluded from both numerator and
+# denominator (neutral).
+_RE_INITIALS = re.compile(r"^([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]\.?){1,3}$")
+_RE_DOTTED_ABBREV = re.compile(r"^[A-Za-zÁ-Žá-ž]{1,4}(\.[A-Za-zÁ-Žá-ž]{1,4})*$")
+# dotless title abbrev.; dimension separator; measurement units (bare unit
+# tokens ride along with the measurement numbers they follow)
+_NEUTRAL_LEXICON = frozenset({"dr", "x", "mm", "cm", "dm", "km", "g", "dkg", "kg", "ha", "hl", "ks", "m", "l"})
+
+
+_RE_ROMAN_TOKEN = re.compile(r"^[IVXLCDM]{1,7}$")
+
+
+def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
+    if not any(c.isalnum() for c in core):
+        return True  # pure punctuation (stray dashes, bullets)
+    if sum(c.isdigit() for c in core) / len(core) >= 0.50:
+        return True  # dates, cites, measurements (24.2.2020, /1933/32, 2.4m)
+    if _RE_INITIALS.match(core):
+        return True  # initials and sigla (Č, V, I.L.)
+    if core.lower() in _NEUTRAL_LEXICON:
+        return True
+    # Dot-terminated abbreviation: s.o., Dr., Zs., hl., Ždán. — letters/dots
+    # only, short alpha runs, and the raw token must actually end with '.'
+    # A SINGLE letter with a dot is an abbreviation only in reference context
+    # ("t. III", "š. 12,5") — before an ordinary word ("e. Hodomi") it is a
+    # stray fragment and must stay evaluable.
+    if raw.rstrip(",;:-–—/)").endswith(".") and _RE_DOTTED_ABBREV.match(core):
+        alpha = sum(c.isalpha() for c in core)
+        if 2 <= alpha <= 5:
+            return True
+        if alpha == 1 and next_core and (
+            any(c.isdigit() for c in next_core) or _RE_ROMAN_TOKEN.match(next_core)
+        ):
+            return True
+    return False
+
+
+# Whole-line siglum: dotted domain abbreviation standing alone (Mzm.,
+# M.z.m., Tb., č.neg.) — the standard shorthand of museum/archive records.
+_RE_SIGLUM = re.compile(r"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,4}\.){1,4}$")
+
+
 def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
     words = text.split()
     if not words:
         return 0.0
     valid = 0
-    for word in words:
+    evaluable = 0
+    for wi, word in enumerate(words):
         core = word.strip(_STRIP_CHARS)
         if not core:
             continue
         if word_set is not None:
+            evaluable += 1
             if core.lower() in word_set:
                 valid += 1
         else:
+            next_core = words[wi + 1].strip(_STRIP_CHARS) if wi + 1 < len(words) else ""
+            if _is_neutral_token(core, word, next_core):
+                continue
+            evaluable += 1
             if core.lower() in SHORT_VALID_WORDS or core in SINGLE_CHAR_ALLOWED:
                 valid += 1
                 continue
@@ -1423,7 +1473,9 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
                 if _is_mid_uppercase(core):
                     continue
                 valid += 1
-    return valid / len(words)
+    if evaluable == 0:
+        return 1.0
+    return valid / evaluable
 
 
 def is_non_text(text: str) -> bool:
