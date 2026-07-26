@@ -1187,11 +1187,7 @@ def determine_category(
     # (#3 2026-07-22 calibration) Character-level damage caps a 3+ word line
     # at Noisy. Consulted only where Clear would otherwise be returned, so it
     # never pushes a line toward Trash.
-    damaged = (
-        "rule_damaged_token" not in DISABLED_RULES
-        and word_count >= 3
-        and count_damaged_tokens(text_source) > 0
-    )
+    damaged = "rule_damaged_token" not in DISABLED_RULES and word_count >= 3 and count_damaged_tokens(text_source) > 0
 
     # 5a. Short lines (1-2 words): FastText confidence on 1-2 tokens is
     # statistically meaningless, so lang_score must never decide here (it
@@ -1368,10 +1364,7 @@ def determine_category(
         # left the Noisy→Trash hits untouched and halved the wrong Clear
         # demotions on the DS annotation (14 → 8).
         lengths = [
-            len(core) + 1 if w.endswith(".") else len(core)
-            for w in words
-            for core in [w.strip(_STRIP_CHARS)]
-            if core
+            len(core) + 1 if w.endswith(".") else len(core) for w in words for core in [w.strip(_STRIP_CHARS)] if core
         ]
         if lengths and (sum(lengths) / len(lengths)) < 2.0:
             _fire("rule_fragment_tokens")
@@ -1545,7 +1538,7 @@ def compute_digit_ratio(text: str) -> float:
 # unjudgeable as "words", so they are excluded from both numerator and
 # denominator (neutral).
 _RE_INITIALS = re.compile(r"^([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]\.?){1,3}$")
-_RE_DOTTED_ABBREV = re.compile(r"^[A-Za-zÁ-Žá-ž]{1,4}(\.[A-Za-zÁ-Žá-ž]{1,4})*$")
+_RE_DOTTED_ABBREV = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ſ]{1,4}(\.[A-Za-zÀ-ÖØ-öø-ſ]{1,4})*$")
 # dotless title abbrev.; dimension separator; measurement units (bare unit
 # tokens ride along with the measurement numbers they follow)
 _NEUTRAL_LEXICON = frozenset({"dr", "x", "mm", "cm", "dm", "km", "g", "dkg", "kg", "ha", "hl", "ks", "m", "l"})
@@ -1555,7 +1548,7 @@ _RE_ROMAN_TOKEN = re.compile(r"^[IVXLCDM]{1,7}$")
 
 # Figure/table/object references with the number fused to the abbreviation
 # ("Obr.3", "OBR.24", "Tab,237", "no.1") — reference data, not prose.
-_RE_ABBREV_NUM = re.compile(r"^[A-Za-zÁ-Žá-ž]{1,4}[.,]\d+[a-z]?$")
+_RE_ABBREV_NUM = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ſ]{1,4}[.,]\d+[a-z]?$")
 
 
 def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
@@ -1578,9 +1571,7 @@ def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
         alpha = sum(c.isalpha() for c in core)
         if 2 <= alpha <= 5:
             return True
-        if alpha == 1 and next_core and (
-            any(c.isdigit() for c in next_core) or _RE_ROMAN_TOKEN.match(next_core)
-        ):
+        if alpha == 1 and next_core and (any(c.isdigit() for c in next_core) or _RE_ROMAN_TOKEN.match(next_core)):
             return True
         # form-field label ("Obj. č.:") — the colon marks a record heading,
         # the single letter is an abbreviation there, not a stray fragment
@@ -1630,9 +1621,7 @@ _CZ_VOWELS = frozenset("aeiouyáéěíóúůý")
 #    "±" was tried and dropped: it is a legitimate measurement tolerance
 #    ("166.76 cm ± 4.32"), and the 892 lines carrying it are not worth it.
 _DMG_SYMBOLS_V8 = frozenset("©®™।")
-_RE_DMG_CASE_MIX = re.compile(
-    r"[a-záčďéěíňóřšťúůýž][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]"
-)
+_RE_DMG_CASE_MIX = re.compile(r"[a-záčďéěíňóřšťúůýž][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]")
 
 
 def count_damaged_tokens(text: str) -> int:
@@ -1647,11 +1636,7 @@ def count_damaged_tokens(text: str) -> int:
             or any(c in _DMG_SYMBOLS_V8 for c in core)
             or _RE_DMG_APOSTROPHE.search(core)
             or _RE_DMG_DIGIT_IN_WORD.search(core)
-            or (
-                len(core) >= 4
-                and not token.endswith(".")
-                and _RE_DMG_CASE_MIX.search(core)
-            )
+            or (len(core) >= 4 and not token.endswith(".") and _RE_DMG_CASE_MIX.search(core))
             or (
                 not token.rstrip(",;:").endswith(".")
                 and _RE_DMG_VOWELLESS.match(core)
