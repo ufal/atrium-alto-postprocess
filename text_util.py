@@ -1214,9 +1214,20 @@ def determine_category(
         if word_count == 1:
             solitary = stripped.strip(_STRIP_CHARS)
             if len(solitary) == 1 and solitary.isalpha() and "." not in stripped:
-                if forgiven:
-                    return "Noisy", "noisy_threshold"
+                # (#3 2026-07-25, v8) The forgiven-headline floor used to lift
+                # these back to Noisy, and it caught every one of them in
+                # practice: all 12 solitary-letter lines in the DS annotation
+                # were forgiven, and DS rated all 12 Trash. A single letter is
+                # not a headline, so the floor does not apply here.
                 return "Trash", "trash_threshold"
+        # (#3 2026-07-25, v8) An alternating-bigram run ("IDIDIDIDIDIDUOID",
+        # "mioioioinininioiomio") is scanner noise, not damaged text — capping
+        # it at Noisy via `damage` below was too lenient and it is what let
+        # such a line climb out of Trash. No Czech word repeats a
+        # bigram three times, and a full-set scan found only 3 297 such lines
+        # (1 731 Noisy, 360 Clear), all of them garbage on inspection.
+        if any(_RE_BIGRAM_RUN.search(w.strip(_STRIP_CHARS)) for w in words):
+            return "Trash", "trash_threshold"
         # weird >= 0.40, not 0.30: the per-word scorer flags any word whose
         # single most frequent letter reaches 30% as "repeated" (0.35), which
         # hits innocent Czech words like "nenalezeno" (3x n, 3x e). Real stray
@@ -1331,6 +1342,39 @@ def determine_category(
     if "rule_mid_uppercase" not in DISABLED_RULES:
         if word_count <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
             _fire("rule_mid_uppercase")
+            if quality_score < thresh_trash:
+                return check_rescues()
+
+    # (#3 2026-07-25, v8) Same alternating-bigram run as in the short-line
+    # gate, for lines of 3+ words that never reach it ("Jiné: Iiiiiiiiiiii").
+    if "rule_bigram_run" not in DISABLED_RULES:
+        if any(_RE_BIGRAM_RUN.search(w.strip(_STRIP_CHARS)) for w in words):
+            _fire("rule_bigram_run")
+            return check_rescues()
+
+    # (#3 2026-07-25 calibration, v8) Token-fragment route. A line whose mean
+    # token length is under two characters has been shredded into fragments
+    # ("k owpoti n", "O l", "/ ■ y i m") and carries no readable content.
+    # rule_ledger_fragmentation covers the same idea but only for 4+ word lines
+    # and with a laxer threshold, so short shredded lines slipped past it.
+    # Clean references are skipped outright rather than left to the floor in
+    # check_rescues(): a short catalogue line is legitimately made of tiny
+    # tokens ("N. č. 16" averages 1.3 characters) and must keep its Clear —
+    # the floor would only have caught it after demoting it. Measured on the
+    # DS annotation, the reference guard lifted precision 0.59 -> 0.85.
+    if "rule_fragment_tokens" not in DISABLED_RULES and not is_clean_reference(text_source):
+        # A dot-terminated abbreviation is a whole word, not a fragment, so it
+        # is measured with its dot ("N. č. 16" averages 2.0, not 1.3). This
+        # left the Noisy→Trash hits untouched and halved the wrong Clear
+        # demotions on the DS annotation (14 → 8).
+        lengths = [
+            len(core) + 1 if w.endswith(".") else len(core)
+            for w in words
+            for core in [w.strip(_STRIP_CHARS)]
+            if core
+        ]
+        if lengths and (sum(lengths) / len(lengths)) < 2.0:
+            _fire("rule_fragment_tokens")
             if quality_score < thresh_trash:
                 return check_rescues()
 
@@ -1562,6 +1606,34 @@ _RE_DMG_DIGIT_IN_WORD = re.compile(r"[a-záčďéěíňóřšťúůýž]{2}\d|\d
 _RE_DMG_VOWELLESS = re.compile(r"[a-záčďéěíňóřšťúůýž]{3,}$")
 _CZ_VOWELS = frozenset("aeiouyáéěíóúůý")
 
+# (#3 2026-07-25 calibration, v8) Two additions to the damaged-token detector,
+# both derived from DS annotations and validated against a full-set volume scan.
+#
+# 1. Stray non-corpus symbols. A full scan of the v7 set showed which exotic
+#    characters are OCR damage and which are legitimate, and the split is not
+#    the obvious one: "ä" (27 561 Clear lines) is genuine German toponymy
+#    ('V trati "Sandäcker"'), "ô ľ ŕ ĺ Ľ Ŕ" are genuine Slovak, and "¬" plus
+#    U+00AD are end-of-line hyphenation — all deliberately excluded. What is
+#    left is unambiguous garbage.
+#    "•" was shipped in the first v8 cut and withdrawn after DS annotated the
+#    change sample: 69 of its 70 demotions there were wrong. It is a genuine
+#    form glyph throughout the collection ("mater. •", "AKCE Soubor: •",
+#    "Uloženina č.: •0208"), not a stray mark, and treating it as damage did
+#    second-order harm — it pushed count_damaged_tokens above zero, which
+#    voided is_clean_reference() on real measurement lines and dropped whole
+#    pages below PAGE_CLEAN_CLEAR_MIN, switching off the pp_page_context
+#    recovery that had been holding unrelated lines at Noisy.
+# 2. Case mix inside a token ("dalSÍ", "zjiStěna", "PřUohy"). Restricted to
+#    cores of 4+ characters and non-dot-terminated tokens, which keeps the
+#    legitimate title/code abbreviations out ("PhDr.", "ZvK", "StAŮ").
+#    Measured on 1 670 DS-annotated lines: 92 % of hits are not Clear.
+#    "±" was tried and dropped: it is a legitimate measurement tolerance
+#    ("166.76 cm ± 4.32"), and the 892 lines carrying it are not worth it.
+_DMG_SYMBOLS_V8 = frozenset("©®™।")
+_RE_DMG_CASE_MIX = re.compile(
+    r"[a-záčďéěíňóřšťúůýž][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]"
+)
+
 
 def count_damaged_tokens(text: str) -> int:
     """Count tokens carrying character-level OCR damage."""
@@ -1572,8 +1644,14 @@ def count_damaged_tokens(text: str) -> int:
             continue
         if (
             any(c in _DMG_SYMBOLS for c in core)
+            or any(c in _DMG_SYMBOLS_V8 for c in core)
             or _RE_DMG_APOSTROPHE.search(core)
             or _RE_DMG_DIGIT_IN_WORD.search(core)
+            or (
+                len(core) >= 4
+                and not token.endswith(".")
+                and _RE_DMG_CASE_MIX.search(core)
+            )
             or (
                 not token.rstrip(",;:").endswith(".")
                 and _RE_DMG_VOWELLESS.match(core)
