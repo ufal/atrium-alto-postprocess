@@ -1179,6 +1179,15 @@ def determine_category(
     # garbage is untouched — it only ever lifts a line from Trash to Noisy.
     forgiven = "rule_forgiven_headline" not in DISABLED_RULES and is_forgiven_headline(text_source, garbage_density)
 
+    # (#3 2026-07-22 calibration) Character-level damage caps a 3+ word line
+    # at Noisy. Consulted only where Clear would otherwise be returned, so it
+    # never pushes a line toward Trash.
+    damaged = (
+        "rule_damaged_token" not in DISABLED_RULES
+        and word_count >= 3
+        and count_damaged_tokens(text_source) > 0
+    )
+
     # 5a. Short lines (1-2 words): FastText confidence on 1-2 tokens is
     # statistically meaningless, so lang_score must never decide here (it
     # made "Poue" Clear and "Mzm." Trash purely on FastText's whim). Route
@@ -1194,6 +1203,15 @@ def determine_category(
         stripped = text_source.strip()
         if _RE_SIGLUM.match(stripped) and sum(c.isalpha() for c in stripped) >= 2:
             return "Clear", "clear_threshold"
+        # (#3 2026-07-22) A solitary letter carries no content -> Trash
+        # (DS: "M" x8 = Trash; letter+digit codes "P1"/"P6" = Clear and are
+        # untouched — their core is 2 chars). Forgiven floor still honored.
+        if word_count == 1:
+            solitary = stripped.strip(_STRIP_CHARS)
+            if len(solitary) == 1 and solitary.isalpha() and "." not in stripped:
+                if forgiven:
+                    return "Noisy", "noisy_threshold"
+                return "Trash", "trash_threshold"
         # weird >= 0.40, not 0.30: the per-word scorer flags any word whose
         # single most frequent letter reaches 30% as "repeated" (0.35), which
         # hits innocent Czech words like "nenalezeno" (3x n, 3x e). Real stray
@@ -1206,6 +1224,9 @@ def determine_category(
         structurally_clean = valid_word_ratio >= 1.0
         damage = (
             weird_ratio >= 0.40
+            # (#3 2026-07-22) "IDIDIDIDIDIDUOID" passed as a structurally
+            # valid word; an alternating-bigram run is damage regardless.
+            or any(_RE_BIGRAM_RUN.search(w.strip(_STRIP_CHARS)) for w in words)
             or ((gibberish_present or detect_fused_words(text_source) > 0) and not structurally_clean)
             or (
                 garbage_density >= CATEG_GARBAGE_DENSITY_HIGH
@@ -1224,6 +1245,13 @@ def determine_category(
                 return "Noisy", "noisy_threshold"
             return "Trash", "trash_threshold"
         if is_upright_czech or valid_word_ratio >= 1.0:
+            # (#3 2026-07-22) Character-level OCR damage (symbol/digit/apostrophe
+            # inside a token, vowel-less run) blocks Clear and caps at Noisy —
+            # otherwise garbage like "Ch. i6dn.283/54" reaches Clear via the
+            # inflated valid ratio. Consulted only on the Clear outcome, so it
+            # never lifts the Trash branch above.
+            if count_damaged_tokens(text_source) > 0:
+                return "Noisy", "noisy_threshold"
             return "Clear", "clear_threshold"
         return "Noisy", "noisy_threshold"
 
@@ -1243,6 +1271,9 @@ def determine_category(
         if ppl < LOWPPL_CLEAR_MAX and word_count >= 3:
             if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
                 _fire("rule_lowppl_clear")
+                return "Noisy", "noisy_threshold"
+            if damaged:
+                _fire("rule_damaged_token")
                 return "Noisy", "noisy_threshold"
             _fire("rule_lowppl_clear")
             return "Clear", "lowppl_clear"
@@ -1303,6 +1334,9 @@ def determine_category(
             _fire("rule_mostly_readable_noisy")
             return "Noisy", "noisy_threshold"
 
+    if damaged:
+        _fire("rule_damaged_token")
+        return "Noisy", "noisy_threshold"
     return "Clear", "clear_threshold"
 
 
@@ -1503,6 +1537,48 @@ def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
 # Whole-line siglum: dotted domain abbreviation standing alone (Mzm.,
 # M.z.m., Tb., č.neg.) — the standard shorthand of museum/archive records.
 _RE_SIGLUM = re.compile(r"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,4}\.){1,4}$")
+
+# (#3 2026-07-22 calibration) Damaged-token detector: character-level OCR
+# damage inside an otherwise plausible token — a symbol or digit lodged in a
+# word ("d^ku", "nyn5j5í"), a typographic apostrophe replacing a lost letter
+# ("malebn’m"), or a vowel-less lowercase run ("nnd"). Dot-terminated
+# abbreviations (Mzm.), uppercase acronyms (MVJ) and % | & (percentages,
+# table rules, company names) are deliberately exempt; syllabic r/l keeps
+# "vlk"/"smrt" out of the vowel-less branch.
+_DMG_SYMBOLS = frozenset("^»«■□¤§~<>#*@$")
+_RE_DMG_APOSTROPHE = re.compile(r"[^\W\d_][’‘][^\W\d_]")
+_RE_DMG_DIGIT_IN_WORD = re.compile(r"[a-záčďéěíňóřšťúůýž]{2}\d|\d[a-záčďéěíňóřšťúůýž]{2}")
+_RE_DMG_VOWELLESS = re.compile(r"[a-záčďéěíňóřšťúůýž]{3,}$")
+_CZ_VOWELS = frozenset("aeiouyáéěíóúůý")
+
+
+def count_damaged_tokens(text: str) -> int:
+    """Count tokens carrying character-level OCR damage."""
+    count = 0
+    for token in text.split():
+        core = token.strip(_STRIP_CHARS)
+        if not core:
+            continue
+        if (
+            any(c in _DMG_SYMBOLS for c in core)
+            or _RE_DMG_APOSTROPHE.search(core)
+            or _RE_DMG_DIGIT_IN_WORD.search(core)
+            or (
+                not token.rstrip(",;:").endswith(".")
+                and _RE_DMG_VOWELLESS.match(core)
+                and not (_CZ_VOWELS & set(core))
+                and "r" not in core
+                and "l" not in core
+            )
+        ):
+            count += 1
+    return count
+
+
+# Alternating-bigram run ("IDIDID…"): the per-char repeat detector flags it,
+# but so does it flag innocent Czech ("nenalezeno", 30% single-letter rule),
+# so the short-line gate needs this narrower letters-only pattern instead.
+_RE_BIGRAM_RUN = re.compile(r"([^\W\d_]{2})\1\1")
 
 
 def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
