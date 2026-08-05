@@ -9,4 +9,4 @@ python-multipart
 openapi-spec-validator
 # (#37) atrium_document.schema.json conformance check for the json-keys
 # extractor's doc.json accretion output.
-jsonschema>=4.20
+jsonschema>=4.26.0
