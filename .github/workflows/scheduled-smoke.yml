@@ -10,6 +10,12 @@
 
 name: Scheduled Smoke Tests
 
+# Mirrors the hub's e2e-pipeline-smoke.yml: a smoke run that is already executing is
+# the one carrying the signal, so a later trigger queues rather than killing it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   schedule:
     - cron: "0 3 * * *"    # daily 03:00 UTC
