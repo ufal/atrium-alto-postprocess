@@ -3,18 +3,25 @@ source = .
 omit =
     tests/*
     setup/*
-    service/*
     venv/*
     .venv/*
     *_paradata.py
     para_licenses.py
 
 [report]
-# Ratchet: set ~2 points below the measured fast-lane baseline of 61.63%
-# (2026-08-06, issue atrium-project#10 Phase 6). Raised from 50 — the suites grew
-# substantially in the 08-05/06 round, and a floor left far below the real number
-# stops being a ratchet: coverage can fall by twenty points and still pass.
-fail_under = 59
+# Ratchet: set ~2 points below the measured fast-lane baseline of 63.11%
+# (2026-08-19, issue atrium-project#10). Raised from 59.
+#
+# `service/*` was in the omit list above until this round, which mattered because BOTH
+# of this repo's P0s lived in service/text_api.py -- the /process endpoint merging a key
+# no path returns, and the lower-cased Path.stem re-keying baselines. The ratchet could
+# not have protected the one directory whose defects had already shipped.
+#
+# The correction worth recording: un-omitting was expected to CRATER the number, and it
+# raised it (61.63% -> 63.11%). service/ was never untested -- the api-contract and
+# document_json suites cover it at 61-89% -- it was tested code hidden from the report.
+# The blind spot was the ratchet's, not the suite's.
+fail_under = 61
 show_missing = True
 exclude_lines =
     pragma: no cover

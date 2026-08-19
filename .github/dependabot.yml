@@ -29,6 +29,18 @@ updates:
       - dependency-name: "torchvision"
       - dependency-name: "transformers"
         versions: [">= 5.0.0"]
+      # numpy 2.5.0 raised its floor to Requires-Python >= 3.12. This repo is 3.11
+      # everywhere -- the CI setup-python, ruff's target-version, and the Dockerfile's
+      # python:3.11-slim base -- so `numpy>=2.5.1` is not a code incompatibility, it is
+      # an UNSATISFIABLE requirement: pip cannot resolve any candidate and the install
+      # step fails before a test runs. PR #39 sat red for a week for that reason, and no
+      # amount of fixing the code would have turned it green.
+      #
+      # Lift this when the repo moves to 3.12, which is a deliberate decision about the
+      # base image and not something a dependency bump should make for us.
+      # (issue atrium-project#10)
+      - dependency-name: "numpy"
+        versions: [">= 2.5.0"]
 
   # FastAPI service layer.
   - package-ecosystem: "pip"
@@ -45,3 +57,15 @@ updates:
       - dependency-name: "torchvision"
       - dependency-name: "transformers"
         versions: [">= 5.0.0"]
+      # numpy 2.5.0 raised its floor to Requires-Python >= 3.12. This repo is 3.11
+      # everywhere -- the CI setup-python, ruff's target-version, and the Dockerfile's
+      # python:3.11-slim base -- so `numpy>=2.5.1` is not a code incompatibility, it is
+      # an UNSATISFIABLE requirement: pip cannot resolve any candidate and the install
+      # step fails before a test runs. PR #39 sat red for a week for that reason, and no
+      # amount of fixing the code would have turned it green.
+      #
+      # Lift this when the repo moves to 3.12, which is a deliberate decision about the
+      # base image and not something a dependency bump should make for us.
+      # (issue atrium-project#10)
+      - dependency-name: "numpy"
+        versions: [">= 2.5.0"]
