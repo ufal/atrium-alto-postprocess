@@ -28,6 +28,6 @@ jsonschema>=4.26.0
 # and numpy, so declaring them here is the fix; the pins mirror
 # setup/requirements.txt exactly so the two can never resolve differently.
 pandas>=3.0.5,<4.0
-numpy>=1.26.4
+numpy>=2.4.6
 tqdm>=4.67.1
 lxml>=6.1.1
