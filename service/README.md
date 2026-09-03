@@ -111,6 +111,21 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 > promotion, mostly-readable cap, and the document/page post-passes) are documented once in the main
 > [README → Categorisation Logic](../README.md#categorisation-logic) and are not duplicated here.
 
+> [!IMPORTANT]
+> `/process` classifies through **the same scoring function as the batch pipeline**
+> (`classify_TEXT.score_line()`), so the API and a pipeline run return the same category for the
+> same line. This was not always true: the endpoint used to assemble its own signals and had
+> drifted — it skipped the language remap, the two-tier trust scaling and `SHORT_PPL_CAP`, and it
+> never passed `orig_lang_score`, leaving that argument at its `1.0` default. Three Trash routes
+> that key on low language confidence (`rule_hard_sweep`, `rule_extreme_ppl`, `rule_wqx_rot`) could
+> therefore never fire from the API, which returned `Noisy` for lines the pipeline calls `Trash`.
+>
+> Two consequences worth knowing when comparing API output against a batch CSV:
+> * the service has no separate pre-repair text, so `garbage_density` and `vowel_ratio` are computed
+>   on the submitted line, whereas the pipeline computes them on the original pre-repair line;
+> * document- and page-level smoothing (`pp_*`) is a batch pass over a whole document and does not
+>   apply to single-line API calls.
+
 
 ## API Usage 📡
 

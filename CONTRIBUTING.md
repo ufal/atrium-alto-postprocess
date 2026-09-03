@@ -264,12 +264,13 @@ tests/
 
 **Per-repo targets:**
 
-| Repository                | Test file           | Primary targets                                                                                                                                                                                |
-|---------------------------|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `atrium-nlp-enrich`       | `test_keywords.py`  | `_extract_surface_text`, `_extract_lemmas`, `_extract_legacy`, `extract_keywords`, `_sort_csv_file`                                                                                            |
-| `atrium-alto-postprocess` | `test_text_util.py` | Density/ratio helpers, detectors, `pre_filter_line`, `parse_line_splits`, `determine_category` (reason-tag coverage), `categorize_line` (ppl passed directly, no GPU), `compute_quality_score` |
-| `atrium-alto-postprocess` | `test_utils.py`     | `directory_scraper`, `dataframe_results` (Top-1 and Top-N), `collect_images`                                                                                                                   |
-| `atrium-translator`       | `test_utils.py`     | `_resolve_namespaces`, `validate_xml_with_xsd`, `process_alto_xml`, `process_amcr_xml` (mock translator injected)                                                                              |
+| Repository                | Test file                       | Primary targets                                                                                                                                                                                                           |
+|---------------------------|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `atrium-nlp-enrich`       | `test_keywords.py`              | `_extract_surface_text`, `_extract_lemmas`, `_extract_legacy`, `extract_keywords`, `_sort_csv_file`                                                                                                                       |
+| `atrium-alto-postprocess` | `test_text_util.py`             | Density/ratio helpers, detectors, `pre_filter_line`, `parse_line_splits`, `determine_category` (reason-tag coverage), `categorize_line` (ppl passed directly, no GPU), `compute_quality_score`                            |
+| `atrium-alto-postprocess` | `test_scoring_single_source.py` | `score_line` / `row_from_signals` as the one scoring step: live→CSV→re-score round-trip parity, idempotence, trust-tier vs stored `lang_score`, `SHORT_PPL_CAP`, and guards that fail if any caller re-grows its own copy |
+| `atrium-alto-postprocess` | `test_utils.py`                 | `directory_scraper`, `dataframe_results` (Top-1 and Top-N), `collect_images`                                                                                                                                              |
+| `atrium-translator`       | `test_utils.py`                 | `_resolve_namespaces`, `validate_xml_with_xsd`, `process_alto_xml`, `process_amcr_xml` (mock translator injected)                                                                                                         |
 
 **Slow tests** — any test loading a model checkpoint, calling an external API, or requiring a GPU must be decorated with `@pytest.mark.slow`. Document in the PR description which resource it requires and how to enable it locally.
 
@@ -289,6 +290,11 @@ Each documentation file has one target audience and one responsibility. Rules ar
 | `README.md`       | GitHub visitors | Project overview, workflow stages, quick start |
 | `CONTRIBUTING.md` | Developers      | Code conventions, branches, PRs, testing       |
 
+* **Do not duplicate the line scorer:** `classify_TEXT.score_line()` is the single definition of
+  how a line becomes a category. The batch pipeline, the offline re-scorer
+  (`tools/recategorize_from_csv.py`) and the API (`service/text_inference.py`) all call it, and all
+  three previously drifted when they each kept a copy. Change the scoring there, never in a caller;
+  `tests/test_scoring_single_source.py` fails if a caller re-grows its own signal block.
 * **Do not duplicate rules:** if a rule is defined in `CONTRIBUTING.md`, other files
 reference it rather than copying it.
 * **When changing a rule:** update the canonical source and verify that referencing files

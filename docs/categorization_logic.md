@@ -10,14 +10,32 @@ output CSVs contain — and links here for the decision logic itself.
 
 > [!NOTE]
 > Constants named below are read from `setup/config.txt` (sections `[CLASSIFY]` and
-> `[TEXT_UTILS]`), with defaults declared in `text_util.py`. The offline re-scorer
-> `tools/recategorize_from_csv.py` reads the same constants and calls the same scoring
-> functions, so it can replay a config change over existing CSVs without a GPU.
+> `[TEXT_UTILS]`), with defaults declared in `text_util.py`.
+
+> [!IMPORTANT]
+> **One scoring step, three callers.** Everything on this page describes
+> `classify_TEXT.score_line()`, which is the single implementation of "how a line becomes
+> a category". Three entry points call it and none of them reimplements it:
+>
+> | Caller                           | Role                            | Where the model values come from                     |
+> |----------------------------------|---------------------------------|------------------------------------------------------|
+> | `classify_TEXT.py`               | the batch pipeline (Step 4.1)   | FastText + the perplexity LM, live                   |
+> | `tools/recategorize_from_csv.py` | the offline re-scorer           | the frozen `orig_lang_score` / `perplex` CSV columns |
+> | `service/text_inference.py`      | the FastAPI `/process` endpoint | FastText + the LM, per request                       |
+>
+> Only the *model-derived* inputs differ — language, language confidence and perplexity.
+> Every other signal is recomputed from the text by the same code, so the three agree by
+> construction rather than by hand-maintained duplication. That is what lets the re-scorer
+> replay a config change over existing CSVs without a GPU and get exactly what the pipeline
+> would have produced. `tests/test_scoring_single_source.py` enforces it, including a
+> round-trip test that scores a line, writes its CSV row, re-scores that row offline and
+> requires all 40 columns to be identical.
 
 ## 📖 Contents
 
 - [CPU 💻 Pre-filter](#cpu--pre-filter)
 - [Language 🌐 Handling](#language--handling)
+  - [Two-tier trust score](#two-tier-trust-score--not-the-stored-lang_score)
 - [Structural Detectors](#structural-detectors)
 - [Composite Quality Score](#composite-quality-score)
 - [Categorisation Logic](#categorisation-logic)
@@ -140,9 +158,39 @@ default), and the stored `lang_score` is replaced according to the `LANG_REMAP_A
 >   is pulled down. A *confident* foreign guess on Czech archival data is evidence of inverted or garbled **OCR** 🔍, not
 >   of trustworthy language ID, so capping (rather than flooring) keeps the stored score honestly low.
 >
-> Either way, this switch only changes the **stored** `lang_score` and the `QS_WEIGHT_LANG` input. It has **no effect**
+> Either way, this switch only changes the **stored** `lang_score`. It has **no effect**
 > on `orig_lang_score` — the pre-remapping **FastText** 🌐 confidence — which is passed through unchanged and is what
 > actually drives the hard-sweep, wqx/rotation, and vowelless overrides in [Categorisation Logic](#categorisation-logic).
+
+### Two-tier trust score — *not* the stored `lang_score`
+
+There are **three** different language numbers in play, and confusing them is the easiest way to
+mis-calibrate the categoriser. Only one of them reaches the scoring logic:
+
+| Value                  | How it is computed                        | What it is used for                                                                   |
+|------------------------|-------------------------------------------|---------------------------------------------------------------------------------------|
+| `orig_lang_score`      | raw **FastText** 🌐 confidence, untouched | stored; drives the hard-sweep, extreme-perplexity and wqx/rotation gates              |
+| `lang_score` (stored)  | `remap_lang()` — the cap described above  | written to the **CSV** 📊 and to the page-level inverted-scan sweep                   |
+| **`trust_lang_score`** | `orig_lang_score ×` a trust multiplier    | **the `lang_score` argument of `compute_quality_score()` and `determine_category()`** |
+
+The trust multiplier depends on how much the *detected* language is believed, and is applied in
+`score_line()`:
+
+* predicted language is in `EXPECTED_LANGS` → **×1.0** (unscaled)
+* predicted language is in `TRUSTED_FOREIGN_LANGS` but not expected → **× `TRUST_TIER_TRUSTED`** (0.85)
+* anything else → **× `TRUST_TIER_UNKNOWN`** (0.50)
+
+> [!WARNING]
+> The structural guards see `trust_lang_score`, **never** the remapped `lang_score`. The two
+> routinely differ: an unknown-language line scoring 0.9163 is stored with `lang_score = 0.75`
+> (the Latin-script remap cap) but handed to the guards as `0.9163 × 0.50 = 0.4582`. Any offline
+> analysis or test harness that feeds the stored value where the pipeline feeds the trust value
+> is measuring something the pipeline never computes.
+
+Because the unknown tier multiplies by 0.50, `trust_lang_score` for an unknown language can never
+exceed 0.50 — which is below `LANG_SCORE_REMAP` (0.75). Gates written as
+`lang_score <= LANG_SCORE_REMAP` are therefore **always true** for unknown-language lines, whatever
+FastText reported. That is worth keeping in mind when reading the short-line gates below.
 
 ---
 
@@ -335,8 +383,9 @@ corresponding to the assigned band, so the **CSV** 📊 value is always internal
 
 After all lines in a document are classified and written to **CSV** 📊, `apply_document_postprocessing()` in
 [classify_TEXT.py](../classify_TEXT.py)📎 runs three passes, **in this order**, before the file is finalized. This
-same function is reused byte-for-byte by the offline re-scorer (`tools/recategorize_from_csv.py`), so production
-output and offline re-measurement never drift.
+same function is reused byte-for-byte by the offline re-scorer (`tools/recategorize_from_csv.py`). Together with the
+shared `score_line()` above — and a shared row formatter, so both paths round every column identically before this
+pass reads them back — production output and offline re-measurement never drift.
 
 **1. Header/footer deduplication.** All occurrences of the exact same text string across a document are identified.
 If the same string has been assigned to different categories on different pages (e.g., `Obr. 1. SKUHROV NAD BĚLOU`
