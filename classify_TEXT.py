@@ -149,6 +149,221 @@ CSV_HEADER = [
 ]
 
 
+def score_line(
+    *,
+    text_content: str,
+    original_text: str,
+    original_lang: str,
+    original_lang_score: float,
+    perplexity: float,
+    known_lang_bases: frozenset,
+    expected_langs: "list | tuple | None",
+) -> dict:
+    """Assemble every per-line signal and categorise it — the ONE scoring step.
+
+    This is the single definition of "how a line becomes a category". It is
+    called by the live batch pipeline (``score_batch``) and by the offline
+    re-scorer (``tools/recategorize_from_csv.py::_rescore_row``) so the two
+    agree **by construction** instead of by hand-maintained duplication.
+
+    Everything model-derived is an *input* (``original_lang``,
+    ``original_lang_score``, ``perplexity``): the live path takes them from
+    FastText/the LM, the offline path from the frozen CSV columns. Everything
+    else is recomputed here from the text, identically for both.
+
+    Two distinctions matter and are easy to get wrong when copying this by
+    hand — they are the reason this function exists:
+
+    * ``garbage_density`` and ``vowel_ratio`` are computed on ``original_text``
+      (the PRE-repair line) so cleaning can never hide noise. Every other
+      signal is computed on ``text_content`` (the cleaned line).
+    * ``lang_score`` handed to the scorer is the **two-tier trust score**
+      (``original_lang_score`` scaled by how much the detected language is
+      trusted), which is NOT the remapped ``lang_score`` recorded in the CSV.
+      Both are returned: ``trust_lang_score`` drives the decision, ``lang`` /
+      ``lang_score`` are what gets stored.
+
+    All tunables are read at call time through this module's globals, so an
+    enclosing ``override_constants`` block is honoured.
+
+    Returns a dict of every signal plus ``categ`` / ``quality_score`` /
+    ``reason``; callers format it into their own row shape.
+    """
+    wc = len(text_content.split())
+    cc = len(text_content)
+
+    # (#15, #3) Remap is what gets STORED: slk keeps its score, every other
+    # unknown base is relabelled to the collection default and capped.
+    new_lang, new_lang_score = remap_lang(
+        original_lang,
+        original_lang_score,
+        known_lang_bases,
+        expected_langs[0] if expected_langs else "ces",
+    )
+
+    ppl_val = perplexity
+    if wc <= 2 and ppl_val > SHORT_PPL_CAP:
+        ppl_val = SHORT_PPL_CAP
+
+    # (#5/#11/#8) density and vowels ride the ORIGINAL (pre-repair) line so
+    # cleaning never hides noise; every other signal uses the cleaned text.
+    g_density = compute_garbage_density(original_text)
+    vowel_ratio = compute_vowel_ratio(original_text)
+
+    upper_count = detect_mid_uppercase(text_content)
+    rep_count = detect_repeated_chars(text_content)
+    fuse_count = detect_letter_digit_letter(text_content)
+    fused_words = detect_fused_words(text_content)
+    gibb_count = detect_gibberish_words(text_content)
+    wx_count = detect_wx_words(text_content)
+
+    rot_ratio = compute_rotatable_ratio(text_content)
+    is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content)
+    caps_header = is_all_caps_line(text_content)
+    weird_ratio = compute_word_weird_ratio(score_words_in_line(text_content))
+    valid_ratio = compute_valid_ratio(text_content)
+
+    structured_flag = is_structured_line(text_content)
+    damaged_flag = count_damaged_tokens(text_content) > 0
+
+    # Two-tier trust system: what the structural guards actually see.
+    base_lang = _lang_base(original_lang)
+    if base_lang in known_lang_bases:
+        if expected_langs and base_lang in expected_langs:
+            trust_lang_score = original_lang_score
+        else:
+            trust_lang_score = original_lang_score * TRUST_TIER_TRUSTED
+    else:
+        trust_lang_score = original_lang_score * TRUST_TIER_UNKNOWN
+
+    q_score = compute_quality_score(
+        valid_word_ratio=valid_ratio,
+        perplexity=ppl_val,
+        text_length=cc,
+        weird_ratio=weird_ratio,
+        vowel_ratio=vowel_ratio,
+        garbage_density=g_density,
+        lang_score=trust_lang_score,  # Feed trust-tier into QS natively
+        gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
+        fused_ratio=fused_words / max(wc, 1),
+        is_upright_czech=is_upright_czech,
+    )
+
+    categ, q_score, reason = categorize_line(
+        q_score,
+        text_content,
+        wc,
+        vowel_ratio,
+        ppl_val,
+        weird_ratio=weird_ratio,
+        return_reason=True,
+        valid_word_ratio=valid_ratio,
+        lang_score=trust_lang_score,  # Structural guard uses tier trust
+        orig_lang_score=original_lang_score,
+        gibberish_present=(gibb_count + wx_count) > 0,
+        garbage_density=g_density,
+        is_upright_czech=is_upright_czech,
+        ghost_dominated=ghost_dominated,
+    )
+
+    return {
+        "categ": categ,
+        "quality_score": q_score,
+        "reason": reason,
+        "lang": new_lang,
+        "lang_score": new_lang_score,
+        "trust_lang_score": trust_lang_score,
+        "perplex": ppl_val,
+        "word_count": wc,
+        "char_count": cc,
+        "garbage_density": g_density,
+        "upper": upper_count,
+        "repeated": rep_count,
+        "ldl_fuses": fuse_count,
+        "fused_words": fused_words,
+        "gibberish": gibb_count,
+        "weird_wx": wx_count,
+        "word_weird": weird_ratio,
+        "vowel_ratio": vowel_ratio,
+        "rot_ratio": rot_ratio,
+        "valid_word_ratio": valid_ratio,
+        "structured": structured_flag,
+        "damaged": damaged_flag,
+        "caps_header": caps_header,
+        "is_upright_czech": is_upright_czech,
+        "ghost_dominated": ghost_dominated,
+    }
+
+
+def row_from_signals(
+    sig: dict,
+    *,
+    file_id,
+    page_id,
+    line_num,
+    text_content: str,
+    original_text: str,
+    split_ws,
+    split_we,
+    original_lang: str,
+    original_lang_score: float,
+) -> dict:
+    """Format one ``score_line`` result into a CSV row dict.
+
+    Shared with the offline re-scorer so both paths emit **identically
+    formatted** columns. This matters beyond tidiness: the live pipeline writes
+    this row to CSV and then re-reads it with ``pd.read_csv`` before
+    ``apply_document_postprocessing``, while the re-scorer feeds its rows to
+    that same function directly. Any difference in rounding or repr here would
+    show up as document-smoothing drift rather than as an obvious mismatch.
+
+    ``pp_*`` flags start False; ``apply_document_postprocessing`` sets them.
+    """
+    reason = sig["reason"]
+    return {
+        "categ": sig["categ"],
+        "quality_score": f"{sig['quality_score']:.4f}",
+        "file": file_id,
+        "page_num": page_id,
+        "line_num": line_num,
+        "text": text_content,
+        "original_text": original_text,
+        "split_ws": split_ws,
+        "split_we": split_we,
+        "lang": sig["lang"],
+        "lang_score": f"{sig['lang_score']:.4f}",
+        "original_lang": original_lang,
+        "orig_lang_score": f"{original_lang_score:.4f}",
+        "perplex": f"{sig['perplex']:.2f}",
+        "word_count": sig["word_count"],
+        "char_count": sig["char_count"],
+        "garbage_density": f"{sig['garbage_density']:.4f}",
+        "upper": sig["upper"],
+        "repeated": sig["repeated"],
+        "ldl_fuses": sig["ldl_fuses"],
+        "fused_words": sig["fused_words"],
+        "gibberish": sig["gibberish"],
+        "weird_wx": sig["weird_wx"],
+        "word_weird": f"{sig['word_weird']:.4f}",
+        "vowel_ratio": f"{sig['vowel_ratio']:.4f}",
+        "rot_ratio": f"{sig['rot_ratio']:.4f}",
+        "valid_word_ratio": f"{sig['valid_word_ratio']:.4f}",
+        "structured": sig["structured"],
+        "damaged": sig["damaged"],
+        "caps_header": sig["caps_header"],
+        "allcaps_novowel": reason == "allcaps_novowel",
+        "lowppl_clear": reason == "lowppl_clear",
+        "cleanprose_clear": reason == "cleanprose_clear",
+        "trash_threshold": reason in TRASH_REASONS,
+        "noisy_threshold": reason == "noisy_threshold",
+        "clear_threshold": reason == "clear_threshold",
+        "pp_dedup": False,
+        "pp_surrounded_trash": False,
+        "pp_inverted_run": False,
+        "pp_page_context": False,
+    }
+
+
 def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: str, gpu_dead=None):
     """
     Standalone background loop that consumes line batches and generates Perplexity
@@ -324,128 +539,29 @@ def process_and_write_batch_cpu(
         original_lang = langs[i]
         original_lang_score = scores[i]
 
-        wc = len(text_content.split())
-        cc = len(text_content)
-
-        # (#15, #3) Language remap via the pure helper: slk keeps its score, every
-        # other unknown base is relabelled to the collection default and its score
-        # CAPPED at LANG_SCORE_REMAP / LANG_SCORE_REMAP_FAR. The stored lang/
-        # lang_score reflect the remap; the ORIGINAL score still drives the
-        # QS_WEIGHT_LANG component.
-        langs[i], scores[i] = remap_lang(langs[i], scores[i], _known_lang_bases, expected_langs[0])
-
-        ppl_val = ppls[i]
-
-        if wc <= 2 and ppl_val > SHORT_PPL_CAP:
-            ppl_val = SHORT_PPL_CAP
-
-        # (#5/#11/#8) garbage density and vowel ratio are computed on the ORIGINAL
-        # (pre-repair) line so cleaning never hides noise; char_count and the QS
-        # length signal stay on the cleaned text_content.
-        g_density = compute_garbage_density(original_text)
-        vowel_ratio = compute_vowel_ratio(original_text)
-
-        # sym_count = detect_strange_symbols(text_content)
-        upper_count = detect_mid_uppercase(text_content)
-        rep_count = detect_repeated_chars(text_content)
-        fuse_count = detect_letter_digit_letter(text_content)
-        fused_words = detect_fused_words(text_content)
-        gibb_count = detect_gibberish_words(text_content)
-        wx_count = detect_wx_words(text_content)  # (#13) standalone weird_wx column
-
-        rot_ratio = compute_rotatable_ratio(text_content)
-
-        is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content)
-        caps_header = is_all_caps_line(text_content)
-        word_scores = score_words_in_line(text_content)
-        weird_ratio = compute_word_weird_ratio(word_scores)
-        valid_ratio = compute_valid_ratio(text_content)
-
-        # Two-tier Trust System over flat remapping
-        base_lang = _lang_base(original_lang)
-        if base_lang in _known_lang_bases:
-            if base_lang in expected_langs:
-                trust_lang_score = original_lang_score
-            else:
-                trust_lang_score = original_lang_score * TRUST_TIER_TRUSTED
-        else:
-            trust_lang_score = original_lang_score * TRUST_TIER_UNKNOWN
-
-        q_score = compute_quality_score(
-            valid_word_ratio=valid_ratio,
-            perplexity=ppl_val,
-            text_length=cc,
-            weird_ratio=weird_ratio,
-            vowel_ratio=vowel_ratio,
-            garbage_density=g_density,
-            lang_score=trust_lang_score,  # Feed trust-tier into QS natively
-            gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
-            fused_ratio=fused_words / max(wc, 1),
-            is_upright_czech=is_upright_czech,
+        # The ONE scoring step, shared with tools/recategorize_from_csv.py.
+        sig = score_line(
+            text_content=text_content,
+            original_text=original_text,
+            original_lang=original_lang,
+            original_lang_score=original_lang_score,
+            perplexity=ppls[i],
+            known_lang_bases=_known_lang_bases,
+            expected_langs=expected_langs,
         )
 
-        categ, q_score, reason = categorize_line(
-            q_score,
-            text_content,
-            wc,
-            vowel_ratio,
-            ppl_val,
-            weird_ratio=weird_ratio,
-            return_reason=True,
-            valid_word_ratio=valid_ratio,
-            lang_score=trust_lang_score,  # Structural guard uses tier trust
-            orig_lang_score=original_lang_score,
-            gibberish_present=(gibb_count + wx_count) > 0,
-            garbage_density=g_density,
-            is_upright_czech=is_upright_czech,
-            ghost_dominated=ghost_dominated,
+        row_dict = row_from_signals(
+            sig,
+            file_id=file_id,
+            page_id=page_id,
+            line_num=line_num,
+            text_content=text_content,
+            original_text=original_text,
+            split_ws=split_ws,
+            split_we=split_we,
+            original_lang=original_lang,
+            original_lang_score=original_lang_score,
         )
-
-        structured_flag = is_structured_line(text_content)
-        damaged_flag = count_damaged_tokens(text_content) > 0
-
-        row_dict = {
-            "categ": categ,
-            "quality_score": f"{q_score:.4f}",
-            "file": file_id,
-            "page_num": page_id,
-            "line_num": line_num,
-            "text": text_content,
-            "original_text": original_text,
-            "split_ws": split_ws,
-            "split_we": split_we,
-            "lang": langs[i],
-            "lang_score": f"{scores[i]:.4f}",
-            "original_lang": original_lang,
-            "orig_lang_score": f"{original_lang_score:.4f}",
-            "perplex": f"{ppl_val:.2f}",
-            "word_count": wc,
-            "char_count": cc,
-            "garbage_density": f"{g_density:.4f}",
-            "upper": upper_count,
-            "repeated": rep_count,
-            "ldl_fuses": fuse_count,
-            "fused_words": fused_words,
-            "gibberish": gibb_count,
-            "weird_wx": wx_count,
-            "word_weird": f"{weird_ratio:.4f}",
-            "vowel_ratio": f"{vowel_ratio:.4f}",
-            "rot_ratio": f"{rot_ratio:.4f}",
-            "valid_word_ratio": f"{valid_ratio:.4f}",
-            "structured": structured_flag,
-            "damaged": damaged_flag,
-            "caps_header": caps_header,
-            "allcaps_novowel": reason == "allcaps_novowel",
-            "lowppl_clear": reason == "lowppl_clear",
-            "cleanprose_clear": reason == "cleanprose_clear",
-            "trash_threshold": reason in TRASH_REASONS,
-            "noisy_threshold": reason == "noisy_threshold",
-            "clear_threshold": reason == "clear_threshold",
-            "pp_dedup": False,
-            "pp_surrounded_trash": False,
-            "pp_inverted_run": False,
-            "pp_page_context": False,
-        }
         results.append(_row_from_dict(row_dict))
 
     # Column 2 of CSV_HEADER is "file"; group by it to write per-document.

@@ -50,31 +50,13 @@ import text_util as _tu  # noqa: E402
 from classify_TEXT import (  # noqa: E402
     CSV_HEADER,
     apply_document_postprocessing,
+    row_from_signals,
+    score_line,
 )
 from text_util import (  # noqa: E402
-    TRASH_REASONS,
     _lang_base,
-    analyze_rotation_signals,
-    categorize_line,
-    compute_garbage_density,
-    compute_quality_score,
-    compute_rotatable_ratio,
-    compute_valid_ratio,
-    compute_vowel_ratio,
-    compute_word_weird_ratio,
-    count_damaged_tokens,
-    detect_fused_words,
-    detect_gibberish_words,
-    detect_letter_digit_letter,
-    detect_mid_uppercase,
-    detect_repeated_chars,
-    detect_wx_words,
-    is_all_caps_line,
-    is_structured_line,
     override_constants,
     probe_spaced_decimal_metre_candidate,
-    remap_lang,
-    score_words_in_line,
 )
 
 # Modules whose copies of the tunable constants must move in lock-step when a
@@ -129,20 +111,22 @@ def _count_spaced_decimal_metre_candidates(frame: pd.DataFrame) -> int:
 def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     """Recompute one previously-scored line from its frozen signals.
 
-    Reads tunables through the live module (`_tu.SHORT_PPL_CAP`) and calls the
-    real `compute_quality_score` / `categorize_line` so a surrounding
-    `override_constants` block is honoured.
+    Delegates to ``classify_TEXT.score_line`` / ``row_from_signals`` — the very
+    same functions the live pipeline runs — so this path cannot drift from
+    production by construction. Only the model-derived inputs come from the
+    frozen CSV columns (``orig_lang_score``, ``perplex``); every other signal is
+    recomputed from the stored text exactly as the pipeline computes it.
+
+    Tunables are read inside those functions at call time, so a surrounding
+    ``override_constants`` block is honoured.
     """
     text_content = str(row.get("text", "") or "")
 
-    # FALLBACK FIX: Read 'original_text' so density/vowels match the live pipeline exactly.
-    # Fall back to 'text_content' for older baseline CSVs missing this column.
+    # Read 'original_text' so density/vowels match the live pipeline exactly.
+    # Fall back to 'text' for older baseline CSVs missing this column.
     original_text = str(row.get("original_text", "") or "")
     if not original_text:
         original_text = text_content
-
-    wc = len(text_content.split())
-    cc = len(text_content)
 
     original_lang = str(row.get("original_lang", "") or "")
     try:
@@ -150,120 +134,35 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     except (ValueError, TypeError):
         original_lang_score = 0.0
 
-    # (#3 A1) remap CAP on the frozen raw FastText guess.
-    new_lang, new_score = remap_lang(
-        original_lang,
-        original_lang_score,
-        known_bases,
-        expected_langs[0] if expected_langs else "ces",
-    )
-
     try:
         ppl_val = float(row.get("perplex", 0.0) or 0.0)
     except (ValueError, TypeError):
         ppl_val = 0.0
-    if wc <= 2 and ppl_val > _tu.SHORT_PPL_CAP:
-        ppl_val = _tu.SHORT_PPL_CAP
 
-    # RESTORE PARITY: Calculate density and vowels using original_text
-    g_density = compute_garbage_density(original_text)
-    vowel_ratio = compute_vowel_ratio(original_text)
-
-    upper_count = detect_mid_uppercase(text_content)
-    rep_count = detect_repeated_chars(text_content)
-    fuse_count = detect_letter_digit_letter(text_content)
-    fused_words = detect_fused_words(text_content)
-    gibb_count = detect_gibberish_words(text_content)
-    wx_count = detect_wx_words(text_content)
-
-    rot_ratio = compute_rotatable_ratio(text_content)
-    is_upright_czech, ghost_dominated = analyze_rotation_signals(text_content)
-
-    caps_header = is_all_caps_line(text_content)
-    weird_ratio = compute_word_weird_ratio(score_words_in_line(text_content))
-    valid_ratio = compute_valid_ratio(text_content)
-
-    # ALIGNMENT FIX: Evaluate missing signals
-    structured = is_structured_line(text_content)
-    damaged = count_damaged_tokens(text_content) > 0
-
-    # ALIGNMENT FIX: Apply Two-tier Trust System to perfectly match classify_TEXT.py
-    base_lang = _lang_base(original_lang)
-    if base_lang in known_bases:
-        if expected_langs and base_lang in expected_langs:
-            trust_lang_score = original_lang_score
-        else:
-            trust_lang_score = original_lang_score * getattr(_lc, "TRUST_TIER_TRUSTED", 0.85)
-    else:
-        trust_lang_score = original_lang_score * getattr(_lc, "TRUST_TIER_UNKNOWN", 0.50)
-
-    q_score = compute_quality_score(
-        valid_word_ratio=valid_ratio,
+    sig = score_line(
+        text_content=text_content,
+        original_text=original_text,
+        original_lang=original_lang,
+        original_lang_score=original_lang_score,
         perplexity=ppl_val,
-        text_length=cc,
-        weird_ratio=weird_ratio,
-        vowel_ratio=vowel_ratio,
-        garbage_density=g_density,
-        lang_score=trust_lang_score,
-        gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
-        fused_ratio=fused_words / max(wc, 1),
-        is_upright_czech=is_upright_czech,
-    )
-
-    categ, q_score, reason = categorize_line(
-        q_score,
-        text_content,
-        wc,
-        vowel_ratio,
-        ppl_val,
-        weird_ratio=weird_ratio,
-        return_reason=True,
-        valid_word_ratio=valid_ratio,
-        lang_score=trust_lang_score,
-        orig_lang_score=original_lang_score,
-        gibberish_present=(gibb_count + wx_count) > 0,
-        garbage_density=g_density,
-        is_upright_czech=is_upright_czech,
-        ghost_dominated=ghost_dominated,
+        known_lang_bases=known_bases,
+        expected_langs=expected_langs,
     )
 
     out = dict(row)
     out.update(
-        {
-            "categ": categ,
-            "quality_score": f"{q_score:.4f}",
-            "lang": new_lang,
-            "lang_score": f"{new_score:.4f}",
-            "original_lang": original_lang,
-            "orig_lang_score": f"{original_lang_score:.4f}",
-            "perplex": f"{ppl_val:.2f}",
-            "word_count": wc,
-            "char_count": cc,
-            "valid_word_ratio": f"{valid_ratio:.4f}",  # <-- ADDED
-            "structured": structured,  # <-- ADDED
-            "damaged": damaged,  # <-- ADDED
-            "garbage_density": f"{g_density:.4f}",
-            "upper": upper_count,
-            "repeated": rep_count,
-            "ldl_fuses": fuse_count,
-            "fused_words": fused_words,
-            "gibberish": gibb_count,
-            "weird_wx": wx_count,
-            "word_weird": f"{weird_ratio:.4f}",
-            "vowel_ratio": f"{vowel_ratio:.4f}",
-            "rot_ratio": f"{rot_ratio:.4f}",
-            "caps_header": caps_header,
-            "allcaps_novowel": reason == "allcaps_novowel",
-            "lowppl_clear": reason == "lowppl_clear",
-            "cleanprose_clear": reason == "cleanprose_clear",
-            "trash_threshold": reason in TRASH_REASONS,
-            "noisy_threshold": reason == "noisy_threshold",
-            "clear_threshold": reason == "clear_threshold",
-            "pp_dedup": False,
-            "pp_surrounded_trash": False,
-            "pp_inverted_run": False,
-            "pp_page_context": False,
-        }
+        row_from_signals(
+            sig,
+            file_id=row.get("file"),
+            page_id=row.get("page_num"),
+            line_num=row.get("line_num"),
+            text_content=text_content,
+            original_text=original_text,
+            split_ws=row.get("split_ws"),
+            split_we=row.get("split_we"),
+            original_lang=original_lang,
+            original_lang_score=original_lang_score,
+        )
     )
     return out
 

@@ -6,17 +6,24 @@ line-categorisation decision path.
 
 Why this exists
 ---------------
-Three call sites each hand-maintain their own copy of the step that assembles
-per-line signals before handing them to ``compute_quality_score()`` /
-``categorize_line()``:
+Three call sites need per-line signals assembled before handing them to
+``compute_quality_score()`` / ``categorize_line()``:
 
 * ``classify_TEXT.py``                  — the batch pipeline (reference behaviour)
 * ``tools/recategorize_from_csv.py``    — the offline re-scorer
 * ``service/text_inference.py``         — the FastAPI ``/process`` endpoint
 
-The first two agree only because the re-scorer was manually patched to match
-(see its own ``ALIGNMENT FIX`` / ``RESTORE PARITY`` comments). Parity is
-maintained by hand, not by construction.
+Each used to hand-maintain its own copy, and they drifted: the re-scorer agreed
+only because it kept being patched to match, and the service had silently lost
+the language remap, the trust tiers, ``SHORT_PPL_CAP`` and ``orig_lang_score``
+altogether. All three now call ``classify_TEXT.score_line()``, so parity is
+maintained by construction; ``tests/test_scoring_single_source.py`` holds that
+property directly.
+
+This module remains the behavioural pin underneath it. A shared helper only
+guarantees the three callers agree with *each other* — it cannot tell you they
+still agree with what the pipeline emitted before the refactor. That is what
+the golden file below is for.
 
 ``tests/test_recategorize_parity.py`` checks that the re-scorer does not *flip
 categories* relative to the stored CSVs, but with a tolerance (5% flip rate

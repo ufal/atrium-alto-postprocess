@@ -7,10 +7,12 @@ Classification is fully aligned with the main pipeline (classify_TEXT.py):
   - New API fields       : word_weird, garbage_density, ldl_fuses, etc.
 """
 
+import configparser
 import json
 import logging
 import os
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -36,27 +38,15 @@ except ImportError:
 # the ALTO parsing below, which is deliberately mirrored (#8) to avoid pulling
 # extract_LytRdr_ALTO_2_TXT's eager torch/transformers/pandas imports into a
 # module that must stay importable without ML libraries installed.
+from classify_TEXT import score_line  # noqa: E402
 from extract_JSON_2_TXT import TARGET_KEYS, _yield_json_text_by_keys  # noqa: E402
 from service.utils import normalize_boxes, parse_alto_xml_lines, post_process_text  # noqa: E402
 from text_util import (  # noqa: E402
-    analyze_rotation_signals,
+    _lang_base,
     calculate_perplexity_batch,
-    compute_garbage_density,
-    compute_quality_score,
-    compute_valid_ratio,
-    compute_vowel_ratio,
-    compute_word_weird_ratio,
-    detect_fused_words,
-    detect_gibberish_words,
-    detect_letter_digit_letter,
-    detect_mid_uppercase,
-    detect_repeated_chars,
     detect_strange_symbols,
-    detect_wx_words,
     parse_line_splits,
-    score_words_in_line,
 )
-from text_util import categorize_line as _categorize_line_struct  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -280,6 +270,29 @@ def _run_layout_reader(lines: List[str], norm_boxes: List[List[int]], layout_mod
 # ---------------------------------------------------------------------------
 
 
+@lru_cache(maxsize=1)
+def _lang_config() -> "tuple[list[str], frozenset]":
+    """Resolve EXPECTED_LANGS / TRUSTED_FOREIGN_LANGS like the batch pipeline.
+
+    The service previously had no language configuration at all, which is why
+    it skipped the remap and the trust tiers entirely. It reads the same
+    ``setup/config.txt`` the pipeline does so the two agree on which languages
+    are expected, merely trusted, or unknown.
+    """
+    config = configparser.ConfigParser()
+    config.read(os.getenv("LANGID_CONFIG", str(project_root / "setup" / "config.txt")))
+    expected = [
+        s.strip() for s in config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng").split(",") if s.strip()
+    ]
+    trusted = [
+        s.strip()
+        for s in config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback="deu,eng,fra,pol,ita").split(",")
+        if s.strip()
+    ]
+    known_bases = frozenset(_lang_base(code) for code in (trusted + expected))
+    return expected, known_bases
+
+
 def _classify_line(
     text: str,
     ppl: float,
@@ -289,86 +302,62 @@ def _classify_line(
     tokenizer,
     device: str,
 ) -> Dict[str, Any]:
-    """
-    Run the full unified classification pipeline on a single text line and
-    return all quality metrics.
+    """Classify a single line through the pipeline's own scoring step.
 
-    categorize_line signature (from text_util):
-        categorize_line(qs, txt, wc, vowel_ratio, perplexity, *, weird_ratio=0.0,
-                        return_reason=False, valid_word_ratio=1.0, lang_score=1.0,
-                        orig_lang_score=1.0, gibberish_present=False,
-                        garbage_density=0.0, is_upright_czech=False,
-                        ghost_dominated=False)
+    This used to hand-roll its own signal assembly, and it drifted: it never
+    applied ``remap_lang`` or the two-tier trust scaling, never applied
+    ``SHORT_PPL_CAP`` to one- and two-token lines, and never passed
+    ``orig_lang_score`` to ``categorize_line`` at all -- so that argument sat at
+    its 1.0 default and silently disabled three Trash routes the batch pipeline
+    relies on (``rule_hard_sweep``, ``rule_extreme_ppl``, ``rule_wqx_rot``). The
+    API could therefore return a different category than the pipeline for the
+    same line.
+
+    It now calls ``classify_TEXT.score_line``, the single scoring step shared
+    with the batch pipeline and the offline re-scorer.
+
+    The service sees one text per line with no separate pre-repair variant, so
+    the same string is passed as both ``text_content`` and ``original_text``;
+    that is what the previous code did implicitly by computing every signal on
+    ``text``.
     """
-    # 1. Language Identification
+    # 1. Language identification (unchanged: raw FastText prediction)
     labels, scores = ft_model.predict([text.lower()], k=1)
-    lang = labels[0][0].replace("__label__", "")
-    lang_score = float(scores[0][0])
+    original_lang = labels[0][0].replace("__label__", "")
+    original_lang_score = float(scores[0][0])
 
-    # 2. Structural Metrics
-    sym_count = detect_strange_symbols(text)
-    upper_count = detect_mid_uppercase(text)
-    rep_count = detect_repeated_chars(text)
-    fuse_count = detect_letter_digit_letter(text)
-    gibb_count = detect_gibberish_words(text)
-    wx_count = detect_wx_words(text)
-    fused_words = detect_fused_words(text)
-    g_density = compute_garbage_density(text)
-    vowel_ratio = compute_vowel_ratio(text)
+    expected_langs, known_bases = _lang_config()
 
-    wc = len(text.split())
-    cc = len(text)
-
-    # 3. Weirdness, validity, rotation
-    word_scores = score_words_in_line(text)
-    weird_ratio = compute_word_weird_ratio(word_scores)
-    valid_ratio = compute_valid_ratio(text)
-    is_upright_czech, ghost_dominated = analyze_rotation_signals(text)
-
-    # 4. Quality score
-    q_score = compute_quality_score(
-        valid_word_ratio=valid_ratio,
+    # 2-5. The ONE scoring step, shared with classify_TEXT / recategorize_from_csv.
+    sig = score_line(
+        text_content=text,
+        original_text=text,
+        original_lang=original_lang,
+        original_lang_score=original_lang_score,
         perplexity=ppl,
-        text_length=cc,
-        weird_ratio=weird_ratio,
-        vowel_ratio=vowel_ratio,
-        garbage_density=g_density,
-        lang_score=lang_score,
-        gibberish_ratio=(gibb_count + wx_count) / max(wc, 1),
-        fused_ratio=fused_words / max(wc, 1),
-        is_upright_czech=is_upright_czech,
+        known_lang_bases=known_bases,
+        expected_langs=expected_langs,
     )
 
-    # 5. Categorisation — positional args match the real signature exactly
-    categ, q_score = _categorize_line_struct(
-        q_score,  # qs
-        text,  # txt
-        wc,  # wc
-        vowel_ratio,  # vowel_ratio
-        ppl,  # perplexity
-        weird_ratio=weird_ratio,
-        valid_word_ratio=valid_ratio,
-        lang_score=lang_score,
-        gibberish_present=(gibb_count + wx_count) > 0,
-        garbage_density=g_density,
-        is_upright_czech=is_upright_czech,
-        ghost_dominated=ghost_dominated,
-    )
+    # detect_strange_symbols is service-only (reported, never scored).
+    sym_count = detect_strange_symbols(text)
 
     return {
         "text": text,
-        "lang": lang,
-        "lang_score": round(lang_score, 4),
-        "perplexity": round(ppl, 2),
-        "garbage_density": round(g_density, 4),
+        "lang": sig["lang"],
+        "lang_score": round(sig["lang_score"], 4),
+        "original_lang": original_lang,
+        "orig_lang_score": round(original_lang_score, 4),
+        "perplexity": round(sig["perplex"], 2),
+        "garbage_density": round(sig["garbage_density"], 4),
         "sym_count": sym_count,
-        "upper_count": upper_count,
-        "repeated_count": rep_count,
-        "ldl_fuses": fuse_count,
-        "gibberish": gibb_count,
-        "word_weird": round(weird_ratio, 4),
-        "quality_score": round(q_score, 4),
-        "category": categ,
+        "upper_count": sig["upper"],
+        "repeated_count": sig["repeated"],
+        "ldl_fuses": sig["ldl_fuses"],
+        "gibberish": sig["gibberish"],
+        "word_weird": round(sig["word_weird"], 4),
+        "quality_score": round(sig["quality_score"], 4),
+        "category": sig["categ"],
     }
 
 
