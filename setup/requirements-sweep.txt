@@ -5,7 +5,7 @@
 #   pip install -r tools/requirements-sweep.txt
 #
 # pandas/numpy already come from requirements.txt.
-scikit-learn>=1.9.0      # RandomForest surrogate + permutation importance (sklearn backend)
+scikit-learn>=1.7,<1.8      # RandomForest surrogate + permutation importance (sklearn backend)
 optuna>=4.9.0            # TPE/random search + fANOVA importance (optuna backend)
-matplotlib>=3.11.1        # optional: param_importance.png bar charts
+matplotlib>=3.10,<3.11   # resolves to 3.10.9 on your interpreter
 SALib>=1.5.2           # Morris screening + Sobol global sensitivity (model-free backends)

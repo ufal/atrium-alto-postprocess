@@ -97,6 +97,7 @@ RULES: list[str] = sorted(
         "rule_garbage_density",
         "rule_trailing_fill_rescue",
         "rule_short_garbage",
+        "rule_domain_notation",
         "rule_short_line",
         "rule_zero_alpha",
         "rule_lowppl_clear",

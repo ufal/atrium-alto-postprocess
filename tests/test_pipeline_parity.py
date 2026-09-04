@@ -206,6 +206,23 @@ EDGE_CASES: list[tuple[str, dict]] = [
             gibberish_present=True,
         ),
     ),
+    # Same signals as short_garbage above, but the text is a grid reference, so
+    # rule_domain_notation suppresses the rule instead of letting it trash.
+    (
+        "domain_notation_suppresses_short_garbage",
+        dict(
+            qs=0.25,
+            txt="I-VIII-c",
+            wc=1,
+            vowel_ratio=0.20,
+            perplexity=800.0,
+            valid_word_ratio=0.0,
+            lang_score=0.50,
+            orig_lang_score=0.50,
+            weird_ratio=0.6,
+            gibberish_present=True,
+        ),
+    ),
     # ── Gate 7: short lines (1-2 words) ──
     (
         "short_line_clear",

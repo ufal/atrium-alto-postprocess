@@ -77,6 +77,15 @@
         "rule_short_garbage"
       ]
     ],
+    "domain_notation_suppresses_short_garbage": [
+      "Noisy",
+      0.55,
+      "noisy_threshold",
+      [
+        "rule_domain_notation",
+        "rule_short_line"
+      ]
+    ],
     "short_line_clear": [
       "Clear",
       0.95,

@@ -101,6 +101,15 @@ QS_LENGTH_MAX         = 100
 PERPLEXITY_THRESHOLD_MAX  = 1000.0
 
 SHORT_PPL_CAP               = 850.0
+
+# ── Page-relative perplexity blend (issue #30) ──────────────────────────────
+# OFF by default. Gives 1-2 token lines a usable perplexity by reading them
+# relative to the long lines on their own page, since SHORT_PPL_CAP otherwise
+# flattens them to a constant below every perplexity threshold.
+PAGE_PPL_BLEND_ENABLE = false
+PAGE_PPL_BLEND_WEIGHT = 0.5
+PAGE_PPL_LONG_MIN_WC = 4
+PAGE_PPL_MIN_LONG_LINES = 3
 PPL_INVERTED_MIN            = 200.0
 
 QS_WEIGHT_VALID_WORD  = 0.35

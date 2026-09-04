@@ -39,6 +39,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from itertools import groupby
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -58,6 +59,10 @@ from text_util import (
     PAGE_GARBAGE_LANG_MAX,
     PAGE_GARBAGE_MEDIAN_QS_MAX,
     PAGE_GARBAGE_NOISY_QS_MAX,
+    PAGE_PPL_BLEND_ENABLE,
+    PAGE_PPL_BLEND_WEIGHT,
+    PAGE_PPL_LONG_MIN_WC,
+    PAGE_PPL_MIN_LONG_LINES,
     PERPLEXITY_THRESHOLD_MAX,
     PPL_INVERTED_MIN,
     ROT_HIGH_LANG_CONF,
@@ -120,6 +125,8 @@ CSV_HEADER = [
     "original_lang",
     "orig_lang_score",
     "perplex",
+    "perplex_raw",
+    "perplex_blend",
     "word_count",
     "char_count",
     "garbage_density",
@@ -201,6 +208,7 @@ def score_line(
         expected_langs[0] if expected_langs else "ces",
     )
 
+    ppl_raw = perplexity
     ppl_val = perplexity
     if wc <= 2 and ppl_val > SHORT_PPL_CAP:
         ppl_val = SHORT_PPL_CAP
@@ -274,6 +282,7 @@ def score_line(
         "lang_score": new_lang_score,
         "trust_lang_score": trust_lang_score,
         "perplex": ppl_val,
+        "perplex_raw": ppl_raw,
         "word_count": wc,
         "char_count": cc,
         "garbage_density": g_density,
@@ -335,6 +344,14 @@ def row_from_signals(
         "original_lang": original_lang,
         "orig_lang_score": f"{original_lang_score:.4f}",
         "perplex": f"{sig['perplex']:.2f}",
+        # The uncapped LM value. Equal to `perplex` whenever SHORT_PPL_CAP did
+        # not bite; recorded because the capped value is otherwise the only one
+        # kept, which makes the blend below impossible to compute or re-tune
+        # offline (blending from a constant blends a constant).
+        "perplex_raw": f"{sig['perplex_raw']:.2f}",
+        # Written by apply_page_perplexity_blend(); blank when the blend did not
+        # run or did not change the value.
+        "perplex_blend": "",
         "word_count": sig["word_count"],
         "char_count": sig["char_count"],
         "garbage_density": f"{sig['garbage_density']:.4f}",
@@ -588,6 +605,8 @@ def _fast_track_row(file_id, page_id, line_num, clean_text, original_text, split
         "original_lang": "N/A",
         "orig_lang_score": "0.0000",
         "perplex": "0.00",
+        "perplex_raw": "0.00",
+        "perplex_blend": "",
         "word_count": 0,
         "char_count": len(clean_text),
         "garbage_density": "0.0000",
@@ -616,6 +635,137 @@ def _fast_track_row(file_id, page_id, line_num, clean_text, original_text, split
         "pp_page_context": False,
     }
     return _row_from_dict(d)
+
+
+def apply_page_perplexity_blend(
+    df: "pd.DataFrame",
+    *,
+    known_lang_bases: frozenset | None = None,
+    expected_langs: "list | tuple | None" = None,
+) -> "pd.DataFrame":
+    """Give 1-2 token lines a usable perplexity by reading them against their page.
+
+    Disabled unless ``PAGE_PPL_BLEND_ENABLE``; with the flag off this returns the
+    frame untouched and ``perplex_blend`` stays blank everywhere.
+
+    **Why this exists.** ``SHORT_PPL_CAP`` flattens perplexity to 850 for
+    ``wc <= 2``, and the capped value is what is both scored and stored, so the
+    raw LM number never survives to the CSV. 850 is below ``HARD_SWEEP_PPL_MIN``
+    (1000), ``PPL_EXTREME_MIN`` (3000) and ``PPL_GARBAGE_ABSOLUTE`` (30000),
+    which means **no perplexity rule can fire on a short line at all**. Removing
+    the cap does not fix it either: both surviving routes also gate on *low*
+    language-ID confidence, and on this population the confidence is
+    anti-correlated with quality -- ``oueussd`` scores 0.9163 while
+    ``malakofauna`` scores 0.56 -- so uncapping demotes real notation around
+    perplexity 3000 while ``oueussd`` survives to 30000.
+
+    **What it does instead.** A short line's perplexity is only interpretable
+    next to the page it came from. The reference is the *median* perplexity of
+    the page's long lines, and the blend is geometric:
+
+        blended = exp(w * ln(own) + (1 - w) * ln(reference))
+
+    Both choices are load-bearing. The median resists the tail -- a page holding
+    one 6e7 outlier still yields a reference around 39, where a mean would give
+    1.5e7. And the averaging has to happen in log space for the same reason:
+    perplexity here spans six orders of magnitude, so an arithmetic blend is just
+    the largest value.
+
+    **What it is not.** This is a page-consistency prior, not a garbage detector.
+    On a mixed page it pulls a garbage token toward its clean neighbours, and on
+    a garbage page it pushes a clean token up. That is the intended behaviour --
+    it makes "unusual for this page" measurable -- but it means the constants
+    need calibrating on a real collection before the flag is turned on.
+
+    Blending always reads the immutable ``perplex_raw``, never ``perplex``, so
+    running this twice is a fixed point rather than a slow drift.
+    """
+    if df.empty or not PAGE_PPL_BLEND_ENABLE:
+        return df
+
+    required = {"perplex_raw", "word_count", "page_num", "categ"}
+    if not required.issubset(df.columns):
+        return df
+
+    df = df.copy()
+    if "perplex_blend" not in df.columns:
+        df["perplex_blend"] = ""
+
+    raw = pd.to_numeric(df["perplex_raw"], errors="coerce")
+    wc = pd.to_numeric(df["word_count"], errors="coerce").fillna(0)
+    scoreable = ~df["categ"].isin(["Empty", "Non-text"]) & (raw > 0)
+
+    # Document-level fallback, used when a page has too few long lines to trust.
+    doc_long = raw[scoreable & (wc >= PAGE_PPL_LONG_MIN_WC)]
+    doc_reference = float(np.median(doc_long)) if len(doc_long) >= PAGE_PPL_MIN_LONG_LINES else None
+
+    weight = PAGE_PPL_BLEND_WEIGHT
+
+    for _page_id, page_df in df.groupby("page_num"):
+        page_long = raw.loc[page_df.index][
+            scoreable.loc[page_df.index] & (wc.loc[page_df.index] >= PAGE_PPL_LONG_MIN_WC)
+        ]
+
+        if len(page_long) >= PAGE_PPL_MIN_LONG_LINES:
+            reference = float(np.median(page_long))
+        elif doc_reference is not None:
+            reference = doc_reference
+        else:
+            # No usable reference anywhere: leave the page exactly as it was,
+            # which is today's SHORT_PPL_CAP behaviour.
+            continue
+
+        if not np.isfinite(reference) or reference <= 0:
+            continue
+
+        targets = page_df.index[
+            (wc.loc[page_df.index] <= 2) & scoreable.loc[page_df.index] & np.isfinite(raw.loc[page_df.index])
+        ]
+
+        for idx in targets:
+            own = float(raw.loc[idx])
+            if own <= 0:
+                continue
+
+            blended = float(np.exp(weight * np.log(own) + (1.0 - weight) * np.log(reference)))
+
+            if not np.isfinite(blended) or f"{blended:.2f}" == f"{float(df.loc[idx, 'perplex']):.2f}":
+                # Unchanged -- leave perplex_blend blank so the column reads as
+                # "this line was not moved", not "moved to the same value".
+                continue
+
+            df.loc[idx, "perplex_blend"] = f"{blended:.2f}"
+            df.loc[idx, "perplex"] = f"{blended:.2f}"
+
+            # Re-score at the blended perplexity. This is what actually moves
+            # the category: apply_document_postprocessing only smooths existing
+            # labels, it never recomputes a quality score.
+            if known_lang_bases is None:
+                continue
+
+            row = df.loc[idx]
+            text_content = str(row.get("text", "") or "")
+            original_text = str(row.get("original_text", "") or "") or text_content
+
+            try:
+                orig_lang_score = float(row.get("orig_lang_score", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                continue
+
+            sig = score_line(
+                text_content=text_content,
+                original_text=original_text,
+                original_lang=str(row.get("original_lang", "") or ""),
+                original_lang_score=orig_lang_score,
+                perplexity=blended,
+                known_lang_bases=known_lang_bases,
+                expected_langs=expected_langs,
+            )
+
+            df.loc[idx, "categ"] = sig["categ"]
+            df.loc[idx, "quality_score"] = f"{sig['quality_score']:.4f}"
+
+    return df
 
 
 def apply_document_postprocessing(df: "pd.DataFrame") -> "pd.DataFrame":
@@ -925,6 +1075,13 @@ def process_document(task):
             )
 
             if not df.empty:
+                df = apply_page_perplexity_blend(
+                    df,
+                    known_lang_bases=frozenset(
+                        _lang_base(lng) for lng in ((trusted_bases or []) + (expected_langs or []))
+                    ),
+                    expected_langs=expected_langs,
+                )
                 df = apply_document_postprocessing(df)
 
             # (#3.7) UTF-8 keeps Czech diacritics intact on the finalised file.

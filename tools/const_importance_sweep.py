@@ -70,6 +70,11 @@ SEARCH_SPACE: dict[str, dict[str, Any]] = {
     "PPL_INVERTED_MIN": {"type": "float", "low": 50.0, "high": 500.0},
     "PERPLEXITY_THRESHOLD_MAX": {"type": "float", "low": 500.0, "high": 2000.0},
     "SHORT_PPL_CAP": {"type": "float", "low": 300.0, "high": 950.0},
+    # Page-relative perplexity blend (issue #30). PAGE_PPL_BLEND_ENABLE is a
+    # feature flag, not a tunable, so it is deliberately absent here.
+    "PAGE_PPL_BLEND_WEIGHT": {"type": "float", "low": 0.0, "high": 1.0},
+    "PAGE_PPL_LONG_MIN_WC": {"type": "int", "low": 3, "high": 8},
+    "PAGE_PPL_MIN_LONG_LINES": {"type": "int", "low": 1, "high": 10},
     "HARD_SWEEP_LANG_MAX": {"type": "float", "low": 0.20, "high": 0.70},
     "HARD_SWEEP_PPL_MIN": {"type": "float", "low": 500.0, "high": 3000.0},
     "PPL_EXTREME_MIN": {"type": "float", "low": 1500.0, "high": 6000.0},

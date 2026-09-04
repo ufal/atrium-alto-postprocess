@@ -4,6 +4,8 @@ tests/test_text_util.py
 Unit tests for text_util.py  —  all pure-Python, zero ML dependencies.
 """
 
+import pytest
+
 from classify_TEXT import CSV_HEADER, _fast_track_row, _row_from_dict
 from text_util import (
     CATEG_NOISY_SCORE_MAX,
@@ -22,6 +24,8 @@ from text_util import (
     detect_repeated_chars,
     detect_strange_symbols,
     detect_wx_words,
+    is_domain_notation,
+    is_structured_line,
     override_constants,
     pre_filter_line,
     remap_lang,
@@ -88,6 +92,112 @@ def test_row_from_dict_covers_header_exactly():
     main_row = _row_from_dict(dummy_dict)
     assert len(main_row) == len(CSV_HEADER)
     assert main_row[0] == dummy_dict[CSV_HEADER[0]]
+
+
+class TestIsDomainNotation:
+    """Regression lock for `is_domain_notation()` (rule_domain_notation).
+
+    The predicate exists because every one of the seven predicates behind
+    `is_structured_line()` is inert on archaeological notation: `II/C`,
+    `KK-XIII`, `Reg.Bez.Aussig.` and `1 ks` all return False from all seven, so
+    they reach `rule_short_garbage` and are trashed. `_RE_SIGLUM` in particular
+    caps abbreviation segments at four characters, which is why
+    `Reg.Bez.Aussig.` fails on "Aussig".
+
+    Two boundaries are load-bearing and each has its own test below: the
+    predicate must recognise notation WITHOUT recognising vocabulary (a lexicon
+    problem, deliberately left alone), and it must not re-open the spaced bare
+    metre that `_looks_like_measurement` deliberately refuses.
+    """
+
+    # Shapes the predicate must recover — all of them reach rule_short_garbage
+    # on an unpatched tree.
+    NOTATION = [
+        "II/C",
+        "I-VIII-c",
+        "KK-XIII",
+        "A/1",
+        "XIV-2b",
+        "Lokalisace: MM-III",
+        "sonda: III",
+        "1 ks",
+        "2 ks",
+        "Reg.Bez.Aussig.",
+        "radius prox.sin.",
+    ]
+
+    # Garbage and probe noise that must stay unmatched. The first four are the
+    # same lines pinned by
+    # test_recategorize_parity.py::test_obvious_garbage_is_not_structured; the
+    # rest are drawn from the issue #30 thread and from the single-letter-unit
+    # and spaced-metre tripwires.
+    NEGATIVES = [
+        "olie",
+        "oueussd",
+        "pbqdnuwmoxszeyv!!",
+        "NINNNIC",
+        "3 m",
+        "o 5 m",
+        "cuxoaid v. 12",
+        "clouCelRa pr. 4",
+        "2,10 m",
+        "pr. 4",
+        "ab c9 xz",
+        "vansasaasasa",
+        "Tthts I",
+        "rragment",
+        "vfetennl k.",
+        "Slaot-o hiezazzt",
+        "IDIDIDIDIDIDUOID",
+        "zcv7",
+        "/7suuk",
+        "sektlll",
+        "edelite",
+        "Ch. i6dn.283/54",
+        "p.nA o.",
+        "cuxoaid ,",
+    ]
+
+    @pytest.mark.parametrize("text", NOTATION)
+    def test_notation_is_recognised(self, text):
+        assert is_domain_notation(text) is True
+
+    @pytest.mark.parametrize("text", NEGATIVES)
+    def test_garbage_is_not_notation(self, text):
+        assert is_domain_notation(text) is False
+
+    @pytest.mark.parametrize("text", ["malakofauna", "Equus caballus", "diapozitiv", "Ossa tarsi"])
+    def test_vocabulary_is_out_of_scope(self, text):
+        """Words, not shapes.
+
+        Separating `malakofauna` from `oueussd` needs a lexicon; no regex does
+        it. Matching these here would be the predicate quietly claiming to solve
+        the harder half of issue #30, so they stay with rule_short_garbage.
+        """
+        assert is_domain_notation(text) is False
+
+    @pytest.mark.parametrize("text", ["12,5 cm", "145-167mm", "0,46m"])
+    def test_dimensions_are_left_to_looks_like_measurement(self, text):
+        """Dimensions already satisfy `is_structured_line()`, so they never
+        reach rule_short_garbage and need no second implementation here. A copy
+        would only be able to drift from the original."""
+        assert is_structured_line(text) is True
+
+    def test_spaced_bare_metre_stays_closed(self):
+        """Mirror of
+        test_categorization_routes.py::test_not_yet_wired_into_looks_like_measurement.
+
+        `_RE_UNIT_CANDIDATE` is dormant on purpose and wiring it in is a separate,
+        deliberate decision. This predicate must not re-open it through the back
+        door."""
+        assert is_domain_notation("2,10 m") is False
+        assert is_domain_notation("0,2-0,4 m") is False
+
+    def test_single_letter_units_stay_closed(self):
+        """`3 m` / `o 5 m` are pinned as non-measurements elsewhere; the count
+        pattern accepts only multi-character unit words (`ks`)."""
+        assert is_domain_notation("3 m") is False
+        assert is_domain_notation("1 ks") is True
 
 
 class TestComputeVowelRatio:

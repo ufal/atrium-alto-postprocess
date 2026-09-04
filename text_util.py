@@ -184,6 +184,38 @@ LANG_REMAP_ALWAYS = _get_str("TEXT_UTILS", "LANG_REMAP_ALWAYS", "true").strip().
     "on",
 )
 SINGLE_CHAR_ALLOWED = _get_str("TEXT_UTILS", "SINGLE_CHAR_ALLOWED", "aAiIuUvVzZkKsS")
+# ── Page-relative perplexity blend (default OFF) ────────────────────────────
+# SHORT_PPL_CAP flattens perplexity to a constant for wc <= 2, and the capped
+# value is what is both scored AND stored -- the raw LM number is discarded and
+# is unrecoverable from a delivered CSV. That leaves short lines with no usable
+# perplexity at all: 850 is below HARD_SWEEP_PPL_MIN (1000), PPL_EXTREME_MIN
+# (3000) and PPL_GARBAGE_ABSOLUTE (30000), so no perplexity rule can fire on a
+# one- or two-token line.
+#
+# Simply uncapping does not fix it: both surviving perplexity routes gate on LOW
+# language-ID confidence, while garbage tokens score high (oueussd at 0.9163)
+# and real domain words score low (malakofauna at 0.56). Uncapped, real notation
+# is demoted around perplexity 3000 while oueussd survives to 30000.
+#
+# The blend instead reads a short line's perplexity RELATIVE to the long lines on
+# its own page, which is the comparison a human makes. It is a page-consistency
+# prior, not a garbage detector: on a mixed page it pulls a garbage token toward
+# its clean neighbours. Off by default until calibrated on a real ARUP/ARUB run.
+PAGE_PPL_BLEND_ENABLE = _get_str("TEXT_UTILS", "PAGE_PPL_BLEND_ENABLE", "false").strip().lower() in (
+    "true",
+    "1",
+    "yes",
+    "on",
+)
+# Geometric blend weight on the line's own perplexity. Log-space is where the
+# average has to happen: perplexities span six orders of magnitude here (II/C
+# measures ~6e7), so an arithmetic blend is dominated by the tail.
+PAGE_PPL_BLEND_WEIGHT = _get_float("TEXT_UTILS", "PAGE_PPL_BLEND_WEIGHT", 0.5)
+# Minimum word count for a line to count toward the page reference.
+PAGE_PPL_LONG_MIN_WC = _get_int("TEXT_UTILS", "PAGE_PPL_LONG_MIN_WC", 4)
+# Minimum number of such lines before a page reference is trusted at all.
+PAGE_PPL_MIN_LONG_LINES = _get_int("TEXT_UTILS", "PAGE_PPL_MIN_LONG_LINES", 3)
+
 SHORT_VALID_WORDS = _get_csv_set(
     "TEXT_UTILS",
     "SHORT_VALID_WORDS",
@@ -1162,7 +1194,12 @@ def determine_category(
     # ------------------------------------------------------------
     # 6. Short-line garbage
     # ------------------------------------------------------------
-    if "rule_short_garbage" not in DISABLED_RULES and not forgiven and not structured:
+    if (
+        "rule_short_garbage" not in DISABLED_RULES
+        and not forgiven
+        and not structured
+        and not ("rule_domain_notation" not in DISABLED_RULES and is_domain_notation(text_source))
+    ):
         if (
             word_count <= ISOLATED_CHAR_MIN_TOKENS
             and not has_cz_diacs(text_source)
@@ -1171,6 +1208,18 @@ def determine_category(
         ):
             _fire("rule_short_garbage")
             return "Trash", "trash_threshold"
+
+    elif (
+        "rule_short_garbage" not in DISABLED_RULES
+        and not forgiven
+        and not structured
+        and "rule_domain_notation" not in DISABLED_RULES
+        and is_domain_notation(text_source)
+    ):
+        # Reached only when the notation predicate is the DECIDING term — the
+        # other three would have let rule_short_garbage run. Recorded so coverage
+        # and ablation see the suppression rather than just its absence.
+        _fire("rule_domain_notation")
 
     # ------------------------------------------------------------
     # 7. Short lines (1-2 words)
@@ -1778,6 +1827,47 @@ def _looks_like_document_structure_label(text_source: str) -> bool:
     return core.lower() in _DOCUMENT_HEADER_LABELS
 
 
+def is_domain_notation(text_source: str) -> bool:
+    """Archaeological / administrative notation shapes that must escape
+    `rule_short_garbage`.
+
+    Consulted at exactly ONE site — the outer guard of `rule_short_garbage` in
+    `determine_category()` — and confers no other exemption. This is the whole
+    point of it being separate from `is_structured_line()`: that predicate is
+    read at eleven places in the rule chain and is an absolute veto at the first
+    statement of `_has_strong_garbage_evidence()`, so widening it to cover
+    notation would also switch off `rule_allcaps`, `rule_garbage_density`,
+    `rule_zero_alpha`, `rule_vowelless` and `rule_mid_uppercase`, and could
+    promote lines directly to Clear. That is far more blast radius than
+    recovering grid references needs.
+
+    Recognises notation, never vocabulary. `II/C`, `Reg.Bez.Aussig.` and `1 ks`
+    have a *shape*; `malakofauna` and `Equus caballus` do not, and separating
+    those from `oueussd` needs a lexicon rather than a pattern. They stay with
+    `rule_short_garbage`.
+    """
+    stripped = " ".join(text_source.split())
+
+    if not stripped:
+        return False
+
+    # The grid pattern is the loose one — its single-letter segment would
+    # otherwise accept all-lowercase OCR mush like `o-e`. Require a capital or a
+    # digit there, so `sektlll` and `edelite` stay out. The other four shapes
+    # are self-identifying (a colon label, a unit word, a dotted tail), so they
+    # do not need the guard and must not be subject to it: `radius prox.sin.` is
+    # legitimate notation with no capital in it.
+    if _RE_NOTATION_GRID.match(stripped) and _RE_NOTATION_HAS_CODE_CHAR.search(stripped):
+        return True
+
+    return bool(
+        _RE_NOTATION_LABELLED.match(stripped)
+        or _RE_NOTATION_COUNT.match(stripped)
+        or _RE_NOTATION_ABBR.match(stripped)
+        or _RE_NOTATION_ABBR_SP.match(stripped)
+    )
+
+
 def is_structured_line(text_source: str) -> bool:
     stripped = " ".join(text_source.split())
 
@@ -1854,6 +1944,56 @@ def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
 
 
 _RE_SIGLUM = re.compile(r"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,4}\.){1,4}$")
+
+# ── rule_domain_notation ────────────────────────────────────────────────────
+# Archaeological / administrative notation that `rule_short_garbage` must not
+# trash. Deliberately NARROWER than `is_structured_line()`: consulted at exactly
+# one site (the outer guard of rule_short_garbage) and conferring no other
+# exemption, so it cannot silently disable rule_allcaps, rule_garbage_density,
+# rule_zero_alpha, rule_vowelless or rule_mid_uppercase the way widening
+# `is_structured_line()` would.
+#
+# Scope is NOTATION, not vocabulary. Grid/context refs, counts, abbreviation
+# chains and labelled refs are shapes a regex can recognise. Latin binomials
+# (`Equus caballus`, `Ossa tarsi`) and bare foreign words (`malakofauna`) are
+# vocabulary — they need a lexicon, not a pattern, and are deliberately left to
+# `rule_short_garbage` here.
+#
+# Dimensions (`12,5 cm`, `145-167mm`, `0,46m`) are NOT covered: they already
+# match `_looks_like_measurement()`, so they never reach rule_short_garbage in
+# the first place. A second copy here would only be able to drift from it.
+
+# A grid/context segment: roman numeral, short all-caps run, a single letter, or
+# digits with an optional letter suffix. Lowercase word fragments are excluded
+# on purpose — that is what keeps `Slaot-o` and `sektlll` out.
+_NOTATION_SEGMENT = r"(?:[IVXLCDM]{1,6}|[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]{1,4}|[A-Za-z]|\d{1,3}[a-z]?)"
+
+# `II/C`, `I-VIII-c`, `KK-XIII`, `A/1`, `XIV-2b` — at least one separator.
+_RE_NOTATION_GRID = re.compile(rf"^{_NOTATION_SEGMENT}(?:[/\-]{_NOTATION_SEGMENT}){{1,4}}$")
+
+# `Lokalisace: MM-III`, `sonda: III` — a word label, then a grid reference.
+_RE_NOTATION_LABELLED = re.compile(
+    rf"^[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{{3,20}}\s*:\s*"
+    rf"{_NOTATION_SEGMENT}(?:[/\-]{_NOTATION_SEGMENT}){{0,4}}$"
+)
+
+# `1 ks`, `2 ks`. Multi-character count units only — a bare single-letter unit
+# (`3 m`, `o 5 m`) stays out, matching `_looks_like_measurement`'s own refusal.
+_RE_NOTATION_COUNT = re.compile(r"^\d{1,4}\s*(?:ks|kusy|kusů|ex)\.?$", re.IGNORECASE)
+
+# `Reg.Bez.Aussig.` — the same shape as _RE_SIGLUM but with segments up to 8
+# characters, so German administrative chains stop failing on "Aussig".
+_RE_NOTATION_ABBR = re.compile(r"^(?:[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,8}\.){2,6}$")
+
+# `radius prox.sin.` — a word followed by a dotted tail. Requires >= 2 tail
+# segments: one is not enough (`vfetennl k.` must stay unmatched).
+_RE_NOTATION_ABBR_SP = re.compile(
+    r"^[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{2,20}\s+"
+    r"(?:[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,8}\.){2,4}$"
+)
+
+_RE_NOTATION_HAS_CODE_CHAR = re.compile(r"[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ0-9]")
+
 
 _DMG_SYMBOLS = frozenset("^»«■□¤§~<>#*@$")
 _RE_DMG_APOSTROPHE = re.compile(r"[^\W\d_][’‘][^\W\d_]")

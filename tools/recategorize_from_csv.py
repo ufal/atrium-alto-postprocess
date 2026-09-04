@@ -50,6 +50,7 @@ import text_util as _tu  # noqa: E402
 from classify_TEXT import (  # noqa: E402
     CSV_HEADER,
     apply_document_postprocessing,
+    apply_page_perplexity_blend,
     row_from_signals,
     score_line,
 )
@@ -134,8 +135,16 @@ def _rescore_row(row: dict, expected_langs, known_bases) -> dict:
     except (ValueError, TypeError):
         original_lang_score = 0.0
 
+    # Prefer the uncapped `perplex_raw`: `perplex` may already carry
+    # SHORT_PPL_CAP (or a page-blended value), and re-scoring from that would
+    # feed a derived number back through the cap on every pass. Older CSVs
+    # written before the column existed fall back to `perplex`.
+    ppl_source = row.get("perplex_raw", "")
+    if ppl_source in (None, "", "nan"):
+        ppl_source = row.get("perplex", 0.0)
+
     try:
-        ppl_val = float(row.get("perplex", 0.0) or 0.0)
+        ppl_val = float(ppl_source or 0.0)
     except (ValueError, TypeError):
         ppl_val = 0.0
 
@@ -191,6 +200,10 @@ def _recategorize_one_document(doc: pd.DataFrame, expected_langs, known_bases) -
     if new.empty:
         return new
     new = _coerce_locators(new)
+    # Page-relative perplexity blend runs before smoothing, in both paths, so
+    # the offline re-scorer stays byte-identical to production. No-op with
+    # PAGE_PPL_BLEND_ENABLE off.
+    new = apply_page_perplexity_blend(new, known_lang_bases=known_bases, expected_langs=expected_langs)
     # The real, byte-identical document smoothing (dedup / surrounded-trash /
     # page-majority + inverted-run sweep). Honours any active override_constants.
     return apply_document_postprocessing(new)
@@ -297,6 +310,9 @@ _THRESHOLD_NAMES = (
     "PPL_INVERTED_MIN",
     "PERPLEXITY_THRESHOLD_MAX",
     "SHORT_PPL_CAP",
+    "PAGE_PPL_BLEND_WEIGHT",
+    "PAGE_PPL_LONG_MIN_WC",
+    "PAGE_PPL_MIN_LONG_LINES",
     # (#3) hard-sweep / extreme- and absolute-perplexity trash routes
     "HARD_SWEEP_LANG_MAX",
     "HARD_SWEEP_PPL_MIN",
@@ -335,7 +351,14 @@ _THRESHOLD_NAMES = (
 TUNABLE_CONSTANTS = QS_WEIGHT_NAMES + _THRESHOLD_NAMES
 
 # Constants that must stay integral.
-INT_CONSTANTS = frozenset({"GHOST_HITS_INVERTED_MIN", "INVERTED_RUN_MIN"})
+INT_CONSTANTS = frozenset(
+    {
+        "GHOST_HITS_INVERTED_MIN",
+        "INVERTED_RUN_MIN",
+        "PAGE_PPL_LONG_MIN_WC",
+        "PAGE_PPL_MIN_LONG_LINES",
+    }
+)
 
 
 def _live_default(name: str) -> float | int:

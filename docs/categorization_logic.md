@@ -29,7 +29,7 @@ output CSVs contain — and links here for the decision logic itself.
 > replay a config change over existing CSVs without a GPU and get exactly what the pipeline
 > would have produced. `tests/test_scoring_single_source.py` enforces it, including a
 > round-trip test that scores a line, writes its CSV row, re-scores that row offline and
-> requires all 40 columns to be identical.
+> requires all 42 columns to be identical.
 
 ## 📖 Contents
 
@@ -39,6 +39,7 @@ output CSVs contain — and links here for the decision logic itself.
 - [Structural Detectors](#structural-detectors)
 - [Composite Quality Score](#composite-quality-score)
 - [Categorisation Logic](#categorisation-logic)
+- [Page-relative perplexity (default OFF)](#page-relative-perplexity-default-off)
 - [Post-Processing Smoothing](#post-processing-smoothing)
 
 ---
@@ -310,7 +311,8 @@ Every gate below is individually toggleable via the ablation kill-switch (`DISAB
 | 2  | `rule_inverted`        | **not** `is_upright_czech` **and** (`ghost_dominated` **or** (no Czech diacritics **and** `rot_ratio ≥ SUSPICIOUS_ROT_RATIO` (def: 0.65) **and** `ppl ≥ PPL_INVERTED_MIN` (def: 200.0) **and** ghost-word hits `≥ GHOST_HITS_INVERTED_MIN` (def: 1))) | `Trash`                                                               | **Inverted/mirrored scan (per-line).** `ghost_dominated`: a majority of word tokens are flip-images of common Czech function words (`analyze_rotation_signals`). `is_upright_czech` (a Czech diacritic, or a real upright function word) bypasses this route. Recorded as `trash_inverted`. |
 | 3  | `rule_allcaps`         | All alphabetic words are uppercase **and** `vowel_ratio < 0.10`                                                                                                                                                                                       | `Trash`                                                               | Definitively unreadable: an all-caps block with almost no vowels is a visual scramble. Recorded as `allcaps_novowel`.                                                                                                                                                                       |
 | 4  | `rule_garbage_density` | `garbage_density ≥ CATEG_GARBAGE_DENSITY_HIGH` (def: 0.35), **unless** `rule_trailing_fill_rescue` fires (see below)                                                                                                                                  | `Trash`                                                               | **Garbage-density hard override.** A line whose raw non-alphanumeric density alone exceeds the ceiling is routed to Trash directly, bypassing the weighted score. Recorded as `trash_threshold`.                                                                                            |
-| 5  | `rule_short_garbage`   | *(skipped entirely if the line is `forgiven`, see below)* — `word_count ≤ ISOLATED_CHAR_MIN_TOKENS` (def: 3) **and** no Czech 🇨🇿 diacritics **and** `lang_score ≤ LANG_SCORE_REMAP` (def: 0.75) **and** (gibberish present **or** `word_weird > 0`) | `Trash`                                                               | Structural short-garbage route (e.g. `olie`). Recorded as `trash_threshold`.                                                                                                                                                                                                                |
+| 5  | `rule_short_garbage`   | *(skipped entirely if the line is `forgiven`, if `is_structured_line()` holds, or if `is_domain_notation()` holds — see `rule_domain_notation` below)* — `word_count ≤ ISOLATED_CHAR_MIN_TOKENS` (def: 3) **and** no Czech 🇨🇿 diacritics **and** (`lang_score ≤ LANG_SCORE_REMAP` (def: 0.75) **or** `rot_ratio ≥ SUSPICIOUS_ROT_RATIO` (def: 0.65)) **and** (gibberish present **or** `word_weird > 0`) | `Trash`                                                               | Structural short-garbage route (e.g. `olie`). Recorded as `trash_threshold`. Returns unconditionally — it does **not** consult `check_rescues()`.                                                                                                                                            |
+| 5b | `rule_domain_notation` | `is_domain_notation()` — archaeological / administrative **notation** shapes: grid and context refs (`II/C`, `I-VIII-c`, `KK-XIII`), labelled refs (`Lokalisace: MM-III`), counts (`1 ks`), abbreviation chains (`Reg.Bez.Aussig.`, `radius prox.sin.`) | *(suppresses gate 5; no category of its own)*                         | Consulted at **one** site only — the outer guard of `rule_short_garbage` — and confers no other exemption, unlike `is_structured_line()`, which is read at eleven places and vetoes `_has_strong_garbage_evidence()`. Recognises **notation, not vocabulary**: `malakofauna` and `Equus caballus` need a lexicon and are deliberately left to gate 5. Dimensions (`12,5 cm`) already satisfy `is_structured_line()` and are not duplicated here. |
 | 6  | `rule_lowppl_clear`    | `ppl < LOWPPL_CLEAR_MAX` (def: 50.0) **and** `word_count ≥ 3`                                                                                                                                                                                         | `Clear`  or `Noisy` if `valid_word_ratio < MOSTLY_READABLE_VALID_MIN` | The language model is near-certain about the text. Recorded as `lowppl_clear`, or `noisy_threshold` if capped by the mostly-readable guard.                                                                                                                                                 |
 
 > [!NOTE]
@@ -376,6 +378,62 @@ corresponding to the assigned band, so the **CSV** 📊 value is always internal
 > [!IMPORTANT]
 > `CATEG_NOISY_SCORE_MAX` defaults to **0.80**, not 0.85 as stated in earlier revisions of this document. The `Noisy`
 > band is therefore `[0.55, 0.80)` and `Clear` is `≥ 0.80` at default configuration.
+
+---
+
+## Page-relative perplexity (default OFF)
+
+`SHORT_PPL_CAP` (850) caps perplexity for `wc <= 2`, and **the capped value is what is both scored and
+stored** — the raw LM number never reaches the **CSV** 📊. Since 850 is below `HARD_SWEEP_PPL_MIN`
+(1 000), `PPL_EXTREME_MIN` (3 000) and `PPL_GARBAGE_ABSOLUTE` (30 000), the consequence is blunt:
+
+> [!IMPORTANT]
+> **No perplexity rule can fire on a one- or two-token line.** For that population `rule_short_garbage`
+> is the only Trash route that is not score-band routing.
+
+Simply removing the cap does not fix it, because both surviving perplexity routes *also* gate on **low**
+language-ID confidence — and on this population confidence is anti-correlated with quality: `oueussd`
+scores 0.9163 while `malakofauna` scores 0.56. Uncapped, real domain vocabulary is demoted around
+perplexity 3 000 while `oueussd` survives to 30 000.
+
+`apply_page_perplexity_blend()` in [classify_TEXT.py](../classify_TEXT.py)📎 instead reads a short line
+against **the long lines on its own page**, which is the comparison a human makes:
+
+```
+reference = median( perplex_raw of lines with word_count >= PAGE_PPL_LONG_MIN_WC )
+blended   = exp( w · ln(own) + (1 − w) · ln(reference) )        w = PAGE_PPL_BLEND_WEIGHT
+```
+
+Both choices carry weight. The reference is a **median** so one outlier cannot poison a page — a page
+containing a 6·10⁷ line still yields a reference near 39, where a mean would give 1.5·10⁷. And the
+averaging happens in **log space** because perplexity here spans six orders of magnitude; an arithmetic
+blend is simply the largest value. Fallback order is page → document → today's `SHORT_PPL_CAP`
+behaviour, unchanged.
+
+The pass runs immediately **before** `apply_document_postprocessing()` in both the live pipeline and the
+offline re-scorer, and re-scores the affected rows through `score_line()` — the smoothing pass only
+harmonises existing labels, it never recomputes a quality score.
+
+| constant | default | role |
+|---|---|---|
+| `PAGE_PPL_BLEND_ENABLE` | `false` | feature flag, **not** a tunable — deliberately absent from `SEARCH_SPACE` |
+| `PAGE_PPL_BLEND_WEIGHT` | 0.5 | weight on the line's own perplexity |
+| `PAGE_PPL_LONG_MIN_WC` | 4 | minimum word count to count toward the reference |
+| `PAGE_PPL_MIN_LONG_LINES` | 3 | minimum long lines before a page reference is trusted |
+
+Two **CSV** 📊 columns support it (40 → 42): `perplex_raw`, the uncapped LM value — required because
+blending from the already-capped `perplex` would blend a constant, and it makes the blend re-tunable
+offline with no GPU — and `perplex_blend`, written only when the blend actually moved a value and left
+**blank** otherwise. Blending always reads `perplex_raw`, so repeated passes are a fixed point.
+
+> [!WARNING]
+> This is a **page-consistency prior, not a garbage detector**. On a mixed page it pulls a garbage token
+> toward its clean neighbours, and on a garbage page it pushes a clean token up. It also does **not**, on
+> its own, make it safe to gate `rule_short_garbage`: it clears `PPL_EXTREME_MIN` but not the lang gate
+> in front of it, so confidently-mislabelled garbage such as `oueussd` still escapes. The constants need
+> calibrating on a real ARÚP/ARUB run before the flag is turned on, and
+> `service/text_inference.py::_classify_lines` must be wired first — it holds a whole page, while
+> `_classify_line` is single-line by construction.
 
 ---
 
