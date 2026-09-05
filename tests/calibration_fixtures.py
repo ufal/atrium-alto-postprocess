@@ -154,6 +154,44 @@ TRASH_INVERTED = [
     ("oueussd", 850.00, 0.9163, "Trash", "single inverted token, rot_ratio 1.0"),
 ]
 
+# ── SHORT DIACRITIC-FREE LINES: the population issue #30 is about. ──────────
+#
+# Every fixture above this point carries Czech diacritics, so the suite was
+# structurally blind to the lines `rule_short_garbage` actually fires on:
+# 1-3 tokens, no diacritics, weak language ID. @david-spacil reported the gap
+# (issue #30) and offered three candidates. Scored the way PRODUCTION scores
+# them, all three are Trash on current `test` — the "green on master, therefore
+# non-discriminating" reading came from `_categ`/`_process_mocked_line`
+# hardcoding `original_lang="ces_Latn"`, which hands them trust tier 1.0 where
+# production applies TRUST_TIER_UNKNOWN (0.50):
+#
+#   fixture           FastText      trust score   harness said   production
+#   malakofauna       isl @ 0.56    0.2800        Trash          Trash
+#   Equus caballus    ast @ 0.77    0.3850        Clear          Trash
+#   diapozitiv        ron @ 0.97    0.4850        Clear          Trash
+#
+# So each entry carries its own `original_lang`. These are recorded as the
+# CURRENT behaviour, not as a claim that Trash is correct for them — the
+# opposite is the open question in #30. Freezing today's answer is what makes a
+# change to it visible in review instead of silent.
+VOCABULARY_SHORT = [
+    ("malakofauna", 1210.00, 0.5600, "isl_Latn", "Trash", "(#30) domain vocabulary, FastText guesses Icelandic"),
+    ("Equus caballus", 640.00, 0.7700, "ast_Latn", "Trash", "(#30) Latin binomial, FastText guesses Asturian"),
+    ("diapozitiv", 900.00, 0.9700, "ron_Latn", "Trash", "(#30) Czech loanword, FastText guesses Romanian"),
+]
+
+# ── DOMAIN NOTATION: recovered by `is_domain_notation()` (rule_domain_notation).
+#
+# The half of the population that IS separable by shape. Unlike the vocabulary
+# above, these have a form a regex can recognise, and the predicate added in
+# `8fadeb9` keeps them out of `rule_short_garbage`. Pinned so that a change to
+# the predicate has to be argued for rather than merely committed.
+NOTATION_SHORT = [
+    ("II/C", 6.0e7, 0.4000, "ces_Latn", "Clear", "(#30) grid reference, extreme perplexity, exempt from ppl routes"),
+    ("Reg.Bez.Aussig.", 3400.00, 0.6100, "deu_Latn", "Clear", "(#30) German administrative abbreviation chain"),
+    ("1 ks", 5.0e6, 0.5000, "ces_Latn", "Clear", "(#30) count with a multi-character unit"),
+]
+
 # ── NON-TEXT: numeric / code / stamp content. ───────────────────────────────
 NON_TEXT = [
     ("\u010d: 6694 /1920.", None, None, "Non-text", "file-number stamp"),

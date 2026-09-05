@@ -175,6 +175,109 @@ class TestBlendBehaviour:
         assert list(twice["categ"]) == list(once["categ"])
 
 
+class TestBlendReachesTheRules:
+    """The blend must change *categories*, not just a column.
+
+    This class exists because it did not. `apply_page_perplexity_blend()`
+    re-scored through `score_line()`, which re-applies `SHORT_PPL_CAP` to
+    `wc <= 2` — the blend's only target population. The blended number was
+    pinned back to 850 before any rule read it, so no category could move at
+    any magnitude, and each affected row was left internally inconsistent:
+    `perplex` held the blended value while `categ` had been computed at the cap.
+
+    Every test in `TestBlendBehaviour` passed throughout, because they assert on
+    the blended *number*. The only `categ` assertion in the module was an
+    idempotence check, which passes trivially when nothing ever moves. A feature
+    can be fully covered and completely inert at the same time; the fix is to
+    assert on the thing the feature exists to change.
+    """
+
+    def test_blend_moves_a_category(self):
+        """The regression lock. A notation line on a garbage-heavy page must be
+        able to cross a perplexity threshold and change category.
+
+        `II/C` is exempt from `rule_extreme_ppl` and `rule_absolute_ppl` but not
+        from `rule_hard_sweep`, which needs an independent second witness
+        (`orig_lang_score < HARD_SWEEP_LANG_MAX`). At 0.30 FastText has failed to
+        place the line, so a high blended perplexity should convict it.
+        """
+        rows = LONG_GARBAGE + [("II/C", "ces_Latn", 0.30, 6.0e7)]
+        before = _page(rows)
+        after = _blend(before)
+
+        target = after.iloc[-1]
+        assert target["perplex_blend"] != "", "the blend did not fire at all"
+        assert target["categ"] != before.iloc[-1]["categ"], (
+            "the blend moved perplex but not categ — SHORT_PPL_CAP is being "
+            "re-applied to the blended value before the rules see it"
+        )
+
+    def test_blended_row_is_internally_consistent(self):
+        """`categ` must be the category of the perplexity actually stored.
+
+        Re-scoring the blended row from its own `perplex` has to reproduce the
+        `categ` written beside it. When the cap was re-applied, it did not: the
+        row advertised one perplexity and carried the category of another.
+        """
+        after = _blend(_page(LONG_GARBAGE + [("II/C", "ces_Latn", 0.30, 6.0e7)]))
+        row = after.iloc[-1]
+
+        recomputed = LC.score_line(
+            text_content=row["text"],
+            original_text=row["original_text"],
+            original_lang=row["original_lang"],
+            original_lang_score=float(row["orig_lang_score"]),
+            perplexity=float(row["perplex"]),
+            known_lang_bases=KNOWN_BASES,
+            expected_langs=EXPECTED_LANGS,
+            apply_short_cap=False,
+        )
+        assert recomputed["categ"] == row["categ"]
+
+    def test_short_cap_still_applies_to_every_other_caller(self):
+        """`apply_short_cap=False` is for the blend alone.
+
+        The default must stay `True`, or the cap silently disappears from the
+        live pipeline and the offline re-scorer as well.
+        """
+        capped = LC.score_line(
+            text_content="oueussd",
+            original_text="oueussd",
+            original_lang="isl_Latn",
+            original_lang_score=0.9163,
+            perplexity=40000.0,
+            known_lang_bases=KNOWN_BASES,
+            expected_langs=EXPECTED_LANGS,
+        )
+        assert capped["perplex"] == LC.SHORT_PPL_CAP
+
+        uncapped = LC.score_line(
+            text_content="oueussd",
+            original_text="oueussd",
+            original_lang="isl_Latn",
+            original_lang_score=0.9163,
+            perplexity=40000.0,
+            known_lang_bases=KNOWN_BASES,
+            expected_langs=EXPECTED_LANGS,
+            apply_short_cap=False,
+        )
+        assert uncapped["perplex"] == 40000.0
+
+    def test_long_lines_are_unaffected_by_the_flag(self):
+        """The cap only ever applied to `wc <= 2`, so the flag is a no-op above
+        it. Pinned so the parameter cannot quietly grow a wider remit."""
+        kw = dict(
+            text_content="qw xz vbn mkl",
+            original_text="qw xz vbn mkl",
+            original_lang="vie_Latn",
+            original_lang_score=0.20,
+            perplexity=5000.0,
+            known_lang_bases=KNOWN_BASES,
+            expected_langs=EXPECTED_LANGS,
+        )
+        assert LC.score_line(**kw)["perplex"] == LC.score_line(**kw, apply_short_cap=False)["perplex"]
+
+
 class TestKnownLimits:
     """What the blend does NOT do. Asserted so nobody has to rediscover it."""
 

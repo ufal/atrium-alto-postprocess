@@ -34,29 +34,44 @@ if str(_TOOLS) not in sys.path:
 
 from recategorize_from_csv import _load_lang_config, _rescore_row  # noqa: E402
 
+import classify_TEXT as LC  # noqa: E402
 from tests.calibration_fixtures import (  # noqa: E402
     ALLCAPS_HEADLINE,
     CLEAR,
     HEADLINE_NUMBERED,
     NOISY,
     NON_TEXT,
+    NOTATION_SHORT,
     ROT_FALSE_POSITIVE_GUARDS,
     SHORT_EXCEPTIONS,
     TRASH_GARBAGE,
+    VOCABULARY_SHORT,
 )
 from text_util import pre_filter_line  # noqa: E402
 
 _EXPECTED, _KNOWN = _load_lang_config(str(_ROOT / "setup" / "config.txt"))
 
 
-def _categ(text, ppl, lang_score):
-    """Faithful per-line category via the production re-scorer. original_lang is
-    set to ces (trusted): for these low-score garbage lines the remap CAP is a
-    no-op, and the hard sweep keys off orig_lang_score, which we preserve."""
+def _categ(text, ppl, lang_score, original_lang="ces_Latn"):
+    """Faithful per-line category via the production re-scorer.
+
+    ``original_lang`` defaults to ces (expected, trust tier 1.0), which is right
+    for the Czech fixtures: the remap cap is a no-op on them and the hard sweep
+    keys off ``orig_lang_score``, which is preserved either way.
+
+    It is a **parameter** rather than a constant because hardcoding it silently
+    rescored every non-Czech fixture. Production sends an unrecognised language
+    through ``TRUST_TIER_UNKNOWN`` (0.50), so FastText's ``isl`` at 0.56 reaches
+    the guards as 0.28, not 0.56 — below ``LANG_SCORE_REMAP`` where the pinned
+    value sat above it. Fixtures whose real prediction is not Czech must pass
+    their own language or they are not testing what the pipeline does. This is
+    the same class of harness bug already fixed in
+    ``tests/test_rotation_regression.py``.
+    """
     row = {
         "text": text,
         "original_text": text,
-        "original_lang": "ces_Latn",
+        "original_lang": original_lang,
         "orig_lang_score": "0.0" if lang_score is None else f"{lang_score}",
         "perplex": "0.0" if ppl is None else f"{ppl}",
         "categ": "Noisy",
@@ -124,3 +139,75 @@ def test_short_exceptions_never_trashed(text, ppl, ls, exp, note):
 def test_allcaps_headline_word_is_scored(text, ppl, ls, exp, note):
     cat, _ = pre_filter_line(text)
     assert cat == "Process", note
+
+
+# ── Issue #30: the short diacritic-free population ──────────────────────────
+
+
+@pytest.mark.parametrize("text,ppl,ls,lang,exp,note", VOCABULARY_SHORT)
+def test_short_vocabulary_current_behaviour_is_pinned(text, ppl, ls, lang, exp, note):
+    """Freezes what the pipeline does to short domain vocabulary TODAY.
+
+    Not an assertion that Trash is correct — issue #30 exists because it very
+    likely is not. Pinning it makes any change visible in review, and makes the
+    effect of a proposed gate on `rule_short_garbage` measurable rather than
+    asserted.
+    """
+    assert _categ(text, ppl, ls, original_lang=lang) == exp, note
+
+
+@pytest.mark.parametrize("text,ppl,ls,lang,exp,note", NOTATION_SHORT)
+def test_short_notation_is_recovered(text, ppl, ls, lang, exp, note):
+    """`is_domain_notation()` must keep notation out of `rule_short_garbage`.
+
+    These would all be Trash without the predicate — `II/C` at 6e7 perplexity is
+    the extreme case, and it survives only because notation is exempt from
+    `rule_extreme_ppl` and `rule_absolute_ppl`.
+    """
+    assert _categ(text, ppl, ls, original_lang=lang) == exp, note
+
+
+def test_fixture_languages_reach_the_guards_through_the_trust_tier():
+    """Regression lock on the harness bug, anchored to the MECHANISM.
+
+    Asserts on `trust_lang_score` rather than on a category, for two reasons.
+    It is the actual thing the harness got wrong — hardcoding
+    `original_lang="ces_Latn"` gives trust tier 1.0 where production applies
+    TRUST_TIER_UNKNOWN (0.50). And it stays meaningful however issue #30 is
+    resolved: a category-level assertion goes vacuous the moment a change makes
+    all three fixtures agree again, which is precisely when the lock is most
+    needed.
+
+    `Equus caballus` is the clearest case: FastText says ast @ 0.77, so the
+    guards see 0.385 — below LANG_SCORE_REMAP (0.75). Scored as Czech it would
+    arrive as 0.77, above it, and the fixture would read as green-on-master.
+    That artifact is why two of the three candidates offered in issue #30 looked
+    non-discriminating.
+    """
+    for text, ppl, ls, lang, _exp, _note in VOCABULARY_SHORT:
+        sig = LC.score_line(
+            text_content=text,
+            original_text=text,
+            original_lang=lang,
+            original_lang_score=ls,
+            perplexity=ppl,
+            known_lang_bases=_KNOWN,
+            expected_langs=_EXPECTED,
+        )
+        as_czech = LC.score_line(
+            text_content=text,
+            original_text=text,
+            original_lang="ces_Latn",
+            original_lang_score=ls,
+            perplexity=ppl,
+            known_lang_bases=_KNOWN,
+            expected_langs=_EXPECTED,
+        )
+
+        assert sig["trust_lang_score"] == pytest.approx(ls * LC.TRUST_TIER_UNKNOWN), (
+            f"{text!r}: {lang} should be an unknown base and take TRUST_TIER_UNKNOWN"
+        )
+        assert as_czech["trust_lang_score"] == pytest.approx(ls), (
+            f"{text!r}: ces is an expected language and should be unscaled"
+        )
+        assert sig["trust_lang_score"] < as_czech["trust_lang_score"]

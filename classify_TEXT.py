@@ -165,6 +165,7 @@ def score_line(
     perplexity: float,
     known_lang_bases: frozenset,
     expected_langs: "list | tuple | None",
+    apply_short_cap: bool = True,
 ) -> dict:
     """Assemble every per-line signal and categorise it — the ONE scoring step.
 
@@ -190,6 +191,16 @@ def score_line(
       Both are returned: ``trust_lang_score`` drives the decision, ``lang`` /
       ``lang_score`` are what gets stored.
 
+    ``apply_short_cap`` exists for exactly one caller. ``SHORT_PPL_CAP`` flattens
+    perplexity for ``wc <= 2``, which is correct when the number came straight
+    from the LM — it is unreliable on one or two tokens. But
+    ``apply_page_perplexity_blend()`` has *already* replaced that number with a
+    page-relative one, and re-capping it there pinned the blended value back to
+    850 before any rule could read it, leaving the row internally inconsistent:
+    ``perplex`` held the blend while ``categ`` had been computed at the cap. The
+    default keeps every other caller, and
+    ``test_short_ppl_cap_applies_to_one_and_two_token_lines_only``, untouched.
+
     All tunables are read at call time through this module's globals, so an
     enclosing ``override_constants`` block is honoured.
 
@@ -210,7 +221,7 @@ def score_line(
 
     ppl_raw = perplexity
     ppl_val = perplexity
-    if wc <= 2 and ppl_val > SHORT_PPL_CAP:
+    if apply_short_cap and wc <= 2 and ppl_val > SHORT_PPL_CAP:
         ppl_val = SHORT_PPL_CAP
 
     # (#5/#11/#8) density and vowels ride the ORIGINAL (pre-repair) line so
@@ -760,6 +771,10 @@ def apply_page_perplexity_blend(
                 perplexity=blended,
                 known_lang_bases=known_lang_bases,
                 expected_langs=expected_langs,
+                # The blended value IS the page-relative correction; re-capping
+                # it here would pin it straight back to SHORT_PPL_CAP and make
+                # this whole pass inert.
+                apply_short_cap=False,
             )
 
             df.loc[idx, "categ"] = sig["categ"]
