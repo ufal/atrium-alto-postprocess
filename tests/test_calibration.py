@@ -211,3 +211,55 @@ def test_fixture_languages_reach_the_guards_through_the_trust_tier():
             f"{text!r}: ces is an expected language and should be unscaled"
         )
         assert sig["trust_lang_score"] < as_czech["trust_lang_score"]
+
+
+def test_notation_is_convicted_by_hard_sweep_when_language_also_fails():
+    """The behavioural half of the hard-sweep decision (issue #30, §K).
+
+    @david-spacil measured that with `SHORT_PPL_CAP` lifted, `II/C`, `1 ks` and
+    `Reg.Bez.Aussig.` still route to `trash_hard_sweep`. Pinned here as intended
+    behaviour: notation is exempt from the two routes that convict on perplexity
+    alone, but not from `rule_hard_sweep`, which needs FastText to have failed
+    independently (`orig_lang_score < HARD_SWEEP_LANG_MAX`).
+
+    The justification is measured in
+    `test_text_utils.py::TestNotationIsNotExemptFromHardSweep` — the predicate
+    accepts most capitalised dot-chained garbage, so it cannot carry a hard-sweep
+    exemption on its own.
+    """
+    for text in ("II/C", "1 ks", "Reg.Bez.Aussig."):
+        assert (
+            LC.score_line(
+                text_content=text,
+                original_text=text,
+                original_lang="ces_Latn",
+                original_lang_score=0.30,  # below HARD_SWEEP_LANG_MAX
+                perplexity=6.0e7,
+                known_lang_bases=_KNOWN,
+                expected_langs=_EXPECTED,
+                apply_short_cap=False,
+            )["reason"]
+            == "trash_hard_sweep"
+        ), text
+
+
+def test_notation_survives_perplexity_when_language_is_placed():
+    """The other side of the same gate: hard sweep needs BOTH witnesses.
+
+    When FastText does place the line, notation survives arbitrarily high
+    perplexity — which is the whole point of exempting it from
+    `rule_extreme_ppl` and `rule_absolute_ppl`. `II/C` measures around 6e7 and is
+    correct; without the exemption that number alone would convict it.
+    """
+    for text in ("II/C", "1 ks", "Reg.Bez.Aussig."):
+        categ = LC.score_line(
+            text_content=text,
+            original_text=text,
+            original_lang="ces_Latn",
+            original_lang_score=0.60,  # above HARD_SWEEP_LANG_MAX
+            perplexity=6.0e7,
+            known_lang_bases=_KNOWN,
+            expected_langs=_EXPECTED,
+            apply_short_cap=False,
+        )["categ"]
+        assert categ != "Trash", f"{text} was convicted on perplexity alone"

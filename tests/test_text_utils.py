@@ -4,6 +4,8 @@ tests/test_text_util.py
 Unit tests for text_util.py  —  all pure-Python, zero ML dependencies.
 """
 
+import random
+
 import pytest
 
 from classify_TEXT import CSV_HEADER, _fast_track_row, _row_from_dict
@@ -198,6 +200,107 @@ class TestIsDomainNotation:
         pattern accepts only multi-character unit words (`ks`)."""
         assert is_domain_notation("3 m") is False
         assert is_domain_notation("1 ks") is True
+
+
+class TestNotationIsNotExemptFromHardSweep:
+    """Why `rule_hard_sweep` stays armed for notation — issue #30, @david-spacil.
+
+    He observed that with `SHORT_PPL_CAP` lifted, `II/C`, `1 ks` and
+    `Reg.Bez.Aussig.` still route to `trash_hard_sweep`, so exempting notation
+    from the perplexity routes changed nothing for the uncapping experiment.
+    That is correct, and it is deliberate rather than an oversight.
+
+    `rule_extreme_ppl` and `rule_absolute_ppl` convict on perplexity ALONE, and
+    perplexity is meaningless on this population — it runs backwards, demoting
+    real notation around 3,000 while `oueussd` survives to 30,000. Notation is
+    exempt from those two.
+
+    `rule_hard_sweep` additionally requires `orig_lang_score <
+    HARD_SWEEP_LANG_MAX`, an independent second witness: FastText also failed to
+    place the line. Notation is NOT exempt from it, because the predicate is not
+    strong enough to be trusted alone — see the measured hole below.
+    """
+
+    _GARBAGE_VOCAB = [
+        "oueussd",
+        "vansasaasasa",
+        "NINNNIC",
+        "rragment",
+        "sektlll",
+        "edelite",
+        "zcv7",
+        "kfjs",
+        "qmwx",
+        "zzpl",
+        "vvbn",
+        "nupoy",
+        "yoysqu",
+        "olie",
+        "Slaot",
+        "hiezazzt",
+        "cuxoaid",
+        "vfetennl",
+        "Tthts",
+    ]
+
+    def _capitalised_dot_chains(self, n=400, seed=20260905):
+        rng = random.Random(seed)
+        out = []
+        for _ in range(n):
+            k = rng.choice([2, 3])
+            out.append(
+                ".".join(rng.choice(self._GARBAGE_VOCAB).capitalize()[: rng.choice([3, 4, 5, 6, 7])] for _ in range(k))
+                + "."
+            )
+        return out
+
+    def test_abbreviation_pattern_has_a_large_hole_for_capitalised_dot_chains(self):
+        """The measurement that justifies keeping hard sweep armed.
+
+        `_RE_NOTATION_ABBR` requires a capital initial per segment, which closed
+        the *lowercase* dot-chain hole completely. It does not close the
+        capitalised one: OCR garbage is frequently capitalised, and
+        `Vvbn.Slaot.Vansas.` is structurally indistinguishable from
+        `Reg.Bez.Aussig.`
+
+        Two narrower rules were measured and rejected. Requiring a vowel per
+        segment cuts acceptance to ~40% but discards legitimate consonant
+        abbreviations (`Kr.Hr.`, `St.Pol.`). Requiring a majority of segments to
+        be <= 4 characters keeps every real chain but only reaches ~64%. Neither
+        earns its complexity, and both confirm that shape alone cannot separate
+        these — the same wall the vocabulary half of issue #30 runs into.
+
+        This test asserts the hole is STILL THERE. If a future change closes it,
+        this goes red, and exempting notation from `rule_hard_sweep` becomes
+        worth reconsidering.
+        """
+        chains = self._capitalised_dot_chains()
+        accepted = [c for c in chains if is_domain_notation(c)]
+        share = len(accepted) / len(chains)
+
+        assert share > 0.5, (
+            f"only {share:.1%} of capitalised dot-chained garbage is accepted by "
+            "is_domain_notation() — the hole may have been closed, in which case "
+            "exempting notation from rule_hard_sweep is worth re-measuring"
+        )
+
+    def test_lowercase_dot_chains_stay_closed(self):
+        """The half the capital-initial rule DID fix. Pinned so it stays fixed."""
+        rng = random.Random(20260905)
+        chains = [
+            ".".join(
+                rng.choice(self._GARBAGE_VOCAB).lower()[: rng.choice([3, 4, 5, 6])] for _ in range(rng.choice([2, 3]))
+            )
+            + "."
+            for _ in range(400)
+        ]
+        accepted = [c for c in chains if is_domain_notation(c)]
+        assert len(accepted) / len(chains) < 0.05
+
+    def test_real_administrative_chains_are_still_recognised(self):
+        """Closing the hole must not come at the cost of the real thing."""
+        for chain in ("Reg.Bez.Aussig.", "Kr.Hr.", "St.Pol.", "Bez.Leitm.", "Reg.Bez.Eger."):
+            assert is_domain_notation(chain) is True, chain
 
 
 class TestComputeVowelRatio:

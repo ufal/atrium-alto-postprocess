@@ -39,6 +39,7 @@ output CSVs contain — and links here for the decision logic itself.
 - [Structural Detectors](#structural-detectors)
 - [Composite Quality Score](#composite-quality-score)
 - [Categorisation Logic](#categorisation-logic)
+- [Why notation is *not* exempt from `rule_hard_sweep`](#why-notation-is-not-exempt-from-rule_hard_sweep)
 - [Page-relative perplexity (default OFF)](#page-relative-perplexity-default-off)
 - [Post-Processing Smoothing](#post-processing-smoothing)
 
@@ -312,7 +313,7 @@ Every gate below is individually toggleable via the ablation kill-switch (`DISAB
 | 3  | `rule_allcaps`         | All alphabetic words are uppercase **and** `vowel_ratio < 0.10`                                                                                                                                                                                                                                                                                                                                            | `Trash`                                                               | Definitively unreadable: an all-caps block with almost no vowels is a visual scramble. Recorded as `allcaps_novowel`.                                                                                                                                                                                                                                                                                                                            |
 | 4  | `rule_garbage_density` | `garbage_density ≥ CATEG_GARBAGE_DENSITY_HIGH` (def: 0.35), **unless** `rule_trailing_fill_rescue` fires (see below)                                                                                                                                                                                                                                                                                       | `Trash`                                                               | **Garbage-density hard override.** A line whose raw non-alphanumeric density alone exceeds the ceiling is routed to Trash directly, bypassing the weighted score. Recorded as `trash_threshold`.                                                                                                                                                                                                                                                 |
 | 5  | `rule_short_garbage`   | *(skipped entirely if the line is `forgiven`, if `is_structured_line()` holds, or if `is_domain_notation()` holds — see `rule_domain_notation` below)* — `word_count ≤ ISOLATED_CHAR_MIN_TOKENS` (def: 3) **and** no Czech 🇨🇿 diacritics **and** (`lang_score ≤ LANG_SCORE_REMAP` (def: 0.75) **or** `rot_ratio ≥ SUSPICIOUS_ROT_RATIO` (def: 0.65)) **and** (gibberish present **or** `word_weird > 0`) | `Trash`                                                               | Structural short-garbage route (e.g. `olie`). Recorded as `trash_threshold`. Returns unconditionally — it does **not** consult `check_rescues()`.                                                                                                                                                                                                                                                                                                |
-| 5b | `rule_domain_notation` | `is_domain_notation()` — archaeological / administrative **notation** shapes: grid and context refs (`II/C`, `I-VIII-c`, `KK-XIII`), labelled refs (`Lokalisace: MM-III`), counts (`1 ks`), abbreviation chains (`Reg.Bez.Aussig.`, `radius prox.sin.`)                                                                                                                                                    | *(suppresses gate 5; no category of its own)*                         | Consulted at **one** site only — the outer guard of `rule_short_garbage` — and confers no other exemption, unlike `is_structured_line()`, which is read at eleven places and vetoes `_has_strong_garbage_evidence()`. Recognises **notation, not vocabulary**: `malakofauna` and `Equus caballus` need a lexicon and are deliberately left to gate 5. Dimensions (`12,5 cm`) already satisfy `is_structured_line()` and are not duplicated here. |
+| 5b | `rule_domain_notation` | `is_domain_notation()` — archaeological / administrative **notation** shapes: grid and context refs (`II/C`, `I-VIII-c`, `KK-XIII`), labelled refs (`Lokalisace: MM-III`), counts (`1 ks`), abbreviation chains (`Reg.Bez.Aussig.`, `radius prox.sin.`)                                                                                                                                                    | *(suppresses gate 5; no category of its own)*                         | Consulted at **two** narrow sites — the outer guard of `rule_short_garbage`, and the two section-1 routes that convict on perplexity alone (`rule_extreme_ppl`, `rule_absolute_ppl`). It confers no other exemption, unlike `is_structured_line()`, which is read at eleven places and vetoes `_has_strong_garbage_evidence()`. Recognises **notation, not vocabulary**: `malakofauna` and `Equus caballus` need a lexicon and are deliberately left to gate 5. Dimensions (`12,5 cm`) already satisfy `is_structured_line()` and are not duplicated here. **Not exempt from `rule_hard_sweep`** — see the note below. |
 | 6  | `rule_lowppl_clear`    | `ppl < LOWPPL_CLEAR_MAX` (def: 50.0) **and** `word_count ≥ 3`                                                                                                                                                                                                                                                                                                                                              | `Clear`  or `Noisy` if `valid_word_ratio < MOSTLY_READABLE_VALID_MIN` | The language model is near-certain about the text. Recorded as `lowppl_clear`, or `noisy_threshold` if capped by the mostly-readable guard.                                                                                                                                                                                                                                                                                                      |
 
 > [!NOTE]
@@ -378,6 +379,39 @@ corresponding to the assigned band, so the **CSV** 📊 value is always internal
 > [!IMPORTANT]
 > `CATEG_NOISY_SCORE_MAX` defaults to **0.80**, not 0.85 as stated in earlier revisions of this document. The `Noisy`
 > band is therefore `[0.55, 0.80)` and `Clear` is `≥ 0.80` at default configuration.
+
+---
+
+### Why notation is *not* exempt from `rule_hard_sweep`
+
+Reported on issue #30: with `SHORT_PPL_CAP` lifted, `II/C`, `1 ks` and `Reg.Bez.Aussig.` still route to
+`trash_hard_sweep`, so exempting notation from the perplexity routes changes nothing for an uncapping
+experiment. That is correct, and it is **deliberate**.
+
+The three section-1 routes are not equivalent. `rule_extreme_ppl` and `rule_absolute_ppl` convict on
+perplexity **alone**, and perplexity is not merely weak on this population — it is *inverted*: real
+notation demotes around 3 000 while `oueussd` survives to 30 000. Notation is exempt from both.
+`rule_hard_sweep` additionally requires `orig_lang_score < HARD_SWEEP_LANG_MAX` (0.45) — an independent
+second witness that **FastText also failed to place the line**. Notation is not exempt from it.
+
+The reason is measured, not stylistic. `_RE_NOTATION_ABBR` requires a capital initial per segment, which
+closed the *lowercase* dot-chain hole completely (< 5 % accepted). It does not close the capitalised
+one: OCR garbage is frequently capitalised, and `Vvbn.Slaot.Vansas.` is structurally indistinguishable
+from `Reg.Bez.Aussig.` — **over half of generated capitalised dot-chained garbage is accepted by the
+predicate.** Two narrower rules were measured and rejected:
+
+| candidate rule | garbage still accepted | real chains lost |
+|---|---|---|
+| a vowel in every segment | ~40 % | `Kr.Hr.`, `St.Pol.` |
+| majority of segments ≤ 4 chars | ~64 % | none |
+
+Neither earns its complexity, and both confirm that shape alone cannot separate these — the same wall
+the *vocabulary* half of issue #30 runs into. So the predicate is not strong enough to carry a
+hard-sweep exemption on its own, and a notation line whose language FastText also cannot place is
+convicted. That is the safer error of the two available.
+
+`TestNotationIsNotExemptFromHardSweep` pins the hole as **still present**; if a future change closes it,
+that test goes red and the exemption becomes worth re-measuring.
 
 ---
 
