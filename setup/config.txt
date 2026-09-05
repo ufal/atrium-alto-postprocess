@@ -112,6 +112,21 @@ PAGE_PPL_LONG_MIN_WC = 4
 PAGE_PPL_MIN_LONG_LINES = 3
 PPL_INVERTED_MIN            = 200.0
 
+# (12-factor III) Document-smoothing thresholds used by
+# apply_document_postprocessing(). These were declared in text_util.py and read
+# through _get_float(), but had no key here — so they silently ran on their
+# in-code defaults while tools/SWEEP_NOTES.md advertised all eight as tunable
+# sweep dimensions. Values below are exactly those in-code defaults, so adding
+# them is behaviour-neutral.
+SURROUNDED_TRASH_QS_MARGIN  = 0.15
+PAGE_GARBAGE_CLEAR_MAX      = 0.05
+PAGE_GARBAGE_LANG_MAX       = 0.50
+PAGE_GARBAGE_MEDIAN_QS_MAX  = 0.55
+PAGE_GARBAGE_NOISY_QS_MAX   = 0.80
+PAGE_CLEAN_CLEAR_MIN        = 0.60
+PAGE_CLEAN_MEDIAN_QS_MIN    = 0.80
+PAGE_CLEAN_RECOVER_QS_MIN   = 0.45
+
 QS_WEIGHT_VALID_WORD  = 0.35
 QS_WEIGHT_WEIRD       = 0.18
 QS_WEIGHT_PERPLEXITY  = 0.08

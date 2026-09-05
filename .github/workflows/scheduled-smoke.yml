@@ -23,7 +23,9 @@ on:
 
 env:
   APT_PACKAGES: "build-essential g++"
-  PRE_INSTALL_TORCH: "torch"
+  # (12-factor X) Must match docker.yml's pre-install-torch, or the nightly
+  # smoke tests a torch the published image never ships.
+  PRE_INSTALL_TORCH: "torch>=2.1,<3.0"
   REQUIREMENTS: "setup/requirements.txt service/requirements.txt setup/requirements-test.txt"
 
 jobs:

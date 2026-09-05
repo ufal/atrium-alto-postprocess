@@ -1,25 +1,20 @@
-# alto_stats_create.py shells out to the `alto-tools` CLI unconditionally, for
-# EVERY --method (it is the stats stage, not an extraction backend) — para_config.txt
-# and the README dependency table both already list it as "always" required. It was
-# never declared here, so the published image could not run its own stats stage.
-# Must come from git, NOT PyPI: the released alto-tools 0.1.0 wheel has no `-s`
-# statistics flag at all (verified: `alto-tools -s` -> "unrecognized arguments: -s").
-# Pinned to a commit rather than a floating branch so the image stays reproducible.
-alto-tools @ git+https://github.com/cneud/alto-tools.git@1f4f01e5f6ac3562740e39948442973b9cb94be4
-fasttext>=0.9.3
-# (atrium-project#10 D4) RUNTIME dependency, not a test one: document_hook.py calls
-# atrium_document.validate_document() on every record this repo writes — the Layer D
-# gate ("no doc.json is emitted if validation fails"). validate_document() raises
-# RuntimeError rather than passing when jsonschema is absent, precisely so a gate
-# cannot silently become a no-op; the hook then degrades to one loud warning per run.
-# Declared here as well as in requirements-test.txt so the published image has it.
+# API service dependencies.
+#
+# (12-factor II) Pinned with the same constraints as setup/requirements.txt.
+# torch, transformers, fasttext, numpy, lxml, fastapi, uvicorn and
+# python-multipart were previously unpinned entirely, so an API-only install
+# resolved to whatever the index served that day and could differ from the
+# batch pipeline's own resolution for the same package.
+fastapi>=0.120,<1.0
+uvicorn>=0.40,<1.0
+python-multipart>=0.0.20
+# (atrium-project#10 D4) /process accretes into a document record through
+# document_hook.py, which validates it against atrium_document.schema.json before
+# writing. Declared here too because setup/setup_api_server.sh installs ONLY this
+# file — without it the Layer D gate degrades to a warning on an API-only install.
 jsonschema>=4.26.0
-lxml>=6.1.1
-pandas>=3.0.5,<4.0
-pillow>=12.3.0
 torch>=2.1,<3.0
-tqdm>=4.70.0
 transformers>=4.57.6,<5.0
-httpx2>=2.10.0
-bitsandbytes>=0.50.1
-accelerate>=1.14.0
+fasttext>=0.9.3
+numpy>=2.4.6
+lxml>=6.1.1

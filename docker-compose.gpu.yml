@@ -1,5 +1,21 @@
+# GPU overlay:  docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+#
+# (12-factor V) TORCH_INDEX_URL selects CPU vs CUDA wheels at BUILD time, so
+# reserving a GPU at run time is not enough on its own. This overlay previously
+# added only the device reservation, which meant the command above ran the
+# CPU-wheel image on GPU hardware unless someone had separately rebuilt with the
+# CUDA index — silently, at the ~100-400x slowdown classify_TEXT.py warns about.
+#
+# The image tag is also distinct. The CPU and GPU variants are different images
+# built from the same Dockerfile with different args; sharing one tag meant
+# whichever was built last won, and `docker compose pull` could quietly replace
+# one with the other.
 services:
   alto:
+    image: ghcr.io/ufal/atrium-alto-postprocess:${ATRIUM_VERSION:-dev}-gpu
+    build:
+      args:
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}
     environment:
       NVIDIA_VISIBLE_DEVICES: all
     deploy:

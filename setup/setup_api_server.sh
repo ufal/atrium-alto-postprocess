@@ -77,12 +77,14 @@ mkdir -p $MODEL_DIR
 # Download FastText binary if it does not exist
 if [ ! -f "$MODEL_DIR/$FASTTEXT_BIN" ]; then
     echo "⬇️ FastText binary not found. Downloading from HuggingFace..."
-    wget "$FASTTEXT_URL" -O "$MODEL_DIR/$FASTTEXT_BIN"
 
-    if wget "$FASTTEXT_URL" -O "$MODEL_DIR/$FASTTEXT_BIN"; then
+    # This used to run the identical wget twice — once unconditionally, then
+    # again as the success test — fetching ~2 GB two times per invocation.
+    if wget "$FASTTEXT_URL" -O "$MODEL_DIR/$FASTTEXT_BIN" && [ -s "$MODEL_DIR/$FASTTEXT_BIN" ]; then
         echo "✅ Successfully downloaded $FASTTEXT_BIN."
     else
         echo "❌ Failed to download $FASTTEXT_BIN."
+        rm -f "$MODEL_DIR/$FASTTEXT_BIN"
         exit 1
     fi
 else

@@ -48,7 +48,10 @@ from text_util import (  # noqa: E402
     parse_line_splits,
 )
 
-logging.basicConfig(level=logging.INFO)
+# (12-factor XI) No basicConfig() here. This module is imported as a library by
+# text_api.py and by tests; configuring the ROOT logger at import time is a
+# side effect that silently overrides whatever the host application chose.
+# Emit to a named logger and let the entry point decide handlers and level.
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ import itertools
 import os
 import re
 import sys
+import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -63,21 +64,75 @@ def rule_fire_capture():
 # Configuration & Regular Expressions
 # ---------------------------------------------------------------------------
 
+# (12-factor III) Config resolution order, highest precedence first:
+#
+#   1. environment  ATRIUM_<SECTION>_<KEY>   e.g. ATRIUM_TEXT_UTILS_SHORT_PPL_CAP=900
+#   2. the INI file named by LANGID_CONFIG   (default: setup/config.txt)
+#   3. the in-code default
+#
+# The env layer exists because the file was previously the ONLY way to change a
+# value: LANGID_CONFIG names a *path*, not a value, so a deploy could not move a
+# single threshold without editing a file inside its image or bind-mounting a
+# replacement. The section is part of the variable name because keys are not
+# unique across sections (WORKERS_MAX appears in both EXTRACT and CLASSIFY).
+#
+# Values are still read at import time, so an override must be set before the
+# process starts. Derived constants (ROT_GHOSTLIST, _LANG_DIACRITICS) are built
+# once from these and are not rebuilt by override_constants().
+ENV_PREFIX = "ATRIUM_"
+
 _config = configparser.RawConfigParser()
 _config_path = Path(os.getenv("LANGID_CONFIG", "setup/config.txt"))
+
 if _config_path.exists():
     _config.read(_config_path)
+elif os.getenv("LANGID_CONFIG"):
+    # Explicitly pointed somewhere that does not exist. Previously this fell
+    # through to the in-code defaults in silence, so a typo'd path ran the whole
+    # collection on defaults and looked exactly like a successful run.
+    raise FileNotFoundError(
+        f"LANGID_CONFIG points at {_config_path}, which does not exist. "
+        f"Unset it to use the bundled setup/config.txt, or correct the path."
+    )
+else:
+    # Running outside the repo root with no explicit path. Legitimate for a
+    # library import, but the operator should know the defaults are in force.
+    print(
+        f"[config] {_config_path} not found - every constant is using its in-code default. "
+        f"Set LANGID_CONFIG to silence this.",
+        file=sys.stderr,
+    )
+
+
+def _env_override(section, key):
+    """Return the raw env value for a section/key, or None if unset."""
+    return os.getenv(f"{ENV_PREFIX}{section}_{key}")
 
 
 def _get_float(section, key, default):
+    raw = _env_override(section, key)
+    if raw is not None:
+        try:
+            return float(raw)
+        except ValueError as exc:
+            raise ValueError(f"{ENV_PREFIX}{section}_{key}={raw!r} is not a float") from exc
     return _config.getfloat(section, key, fallback=default) if _config.has_section(section) else default
 
 
 def _get_str(section, key, default):
+    raw = _env_override(section, key)
+    if raw is not None:
+        return raw
     return _config.get(section, key, fallback=default) if _config.has_section(section) else default
 
 
 def _get_int(section, key, default):
+    raw = _env_override(section, key)
+    if raw is not None:
+        try:
+            return int(raw)
+        except ValueError as exc:
+            raise ValueError(f"{ENV_PREFIX}{section}_{key}={raw!r} is not an int") from exc
     return _config.getint(section, key, fallback=default) if _config.has_section(section) else default
 
 
@@ -1102,6 +1157,23 @@ def determine_category(
 
     structured = is_structured_line(text_source)
 
+    # (#30) Notation is exempt from the two PERPLEXITY-ONLY Trash routes below.
+    # For this class the LM score is not a quality signal at all, and is in fact
+    # inverted: `II/C` measures ~6e7 perplexity and is correct, `oueussd` ~4600
+    # and is garbage. Leaving the routes blind to it meant that the moment
+    # perplexity became real -- SHORT_PPL_CAP raised, or the page blend enabled
+    # -- section 1 trashed every grid reference before `rule_short_garbage` was
+    # reached. Computed once here and reused at gate 6.
+    #
+    # `rule_hard_sweep` is deliberately NOT exempted. It is the only one of the
+    # three that requires a second, independent witness: `orig_lang_score <
+    # HARD_SWEEP_LANG_MAX` means FastText also failed to place the line. Exempt
+    # the routes whose sole evidence we have just disowned; keep the one that
+    # corroborates. Measured on dot-mutated garbage with the cap off, exempting
+    # all three let 65% escape to Noisy/Clear, while leaving hard sweep armed
+    # trashed 600 of 600 and cost nothing on the pinned notation shapes.
+    notation = "rule_domain_notation" not in DISABLED_RULES and is_domain_notation(text_source)
+
     # ------------------------------------------------------------
     # 1. Hard sweep
     # ------------------------------------------------------------
@@ -1110,12 +1182,12 @@ def determine_category(
             _fire("rule_hard_sweep")
             return "Trash", "trash_hard_sweep"
 
-    if "rule_extreme_ppl" not in DISABLED_RULES:
+    if "rule_extreme_ppl" not in DISABLED_RULES and not notation:
         if ppl >= PPL_EXTREME_MIN and orig_lang_score < EXTREME_LANG_CONF:
             _fire("rule_extreme_ppl")
             return "Trash", "trash_hard_sweep"
 
-    if "rule_absolute_ppl" not in DISABLED_RULES:
+    if "rule_absolute_ppl" not in DISABLED_RULES and not notation:
         if ppl >= PPL_GARBAGE_ABSOLUTE and not is_upright_czech:
             _fire("rule_absolute_ppl")
             return "Trash", "trash_hard_sweep"
@@ -1194,12 +1266,7 @@ def determine_category(
     # ------------------------------------------------------------
     # 6. Short-line garbage
     # ------------------------------------------------------------
-    if (
-        "rule_short_garbage" not in DISABLED_RULES
-        and not forgiven
-        and not structured
-        and not ("rule_domain_notation" not in DISABLED_RULES and is_domain_notation(text_source))
-    ):
+    if "rule_short_garbage" not in DISABLED_RULES and not forgiven and not structured and not notation:
         if (
             word_count <= ISOLATED_CHAR_MIN_TOKENS
             and not has_cz_diacs(text_source)
@@ -1209,13 +1276,7 @@ def determine_category(
             _fire("rule_short_garbage")
             return "Trash", "trash_threshold"
 
-    elif (
-        "rule_short_garbage" not in DISABLED_RULES
-        and not forgiven
-        and not structured
-        and "rule_domain_notation" not in DISABLED_RULES
-        and is_domain_notation(text_source)
-    ):
+    elif "rule_short_garbage" not in DISABLED_RULES and not forgiven and not structured and notation:
         # Reached only when the notation predicate is the DECIDING term — the
         # other three would have let rule_short_garbage run. Recorded so coverage
         # and ablation see the suppression rather than just its absence.
@@ -1831,10 +1892,14 @@ def is_domain_notation(text_source: str) -> bool:
     """Archaeological / administrative notation shapes that must escape
     `rule_short_garbage`.
 
-    Consulted at exactly ONE site — the outer guard of `rule_short_garbage` in
-    `determine_category()` — and confers no other exemption. This is the whole
-    point of it being separate from `is_structured_line()`: that predicate is
-    read at eleven places in the rule chain and is an absolute veto at the first
+    Consulted at two places in `determine_category()`, both of them narrow: the
+    outer guard of `rule_short_garbage`, and the three perplexity routes in
+    section 1. The second was added once measurement showed the first was inert
+    on its own — with perplexity uncapped, section 1 convicted every grid
+    reference before gate 6 was ever reached. It confers no OTHER exemption, and
+    that is the whole point of keeping it separate from `is_structured_line()`:
+    that predicate is read at eleven places in the rule chain and is an absolute
+    veto at the first
     statement of `_has_strong_garbage_evidence()`, so widening it to cover
     notation would also switch off `rule_allcaps`, `rule_garbage_density`,
     `rule_zero_alpha`, `rule_vowelless` and `rule_mid_uppercase`, and could
@@ -1861,7 +1926,7 @@ def is_domain_notation(text_source: str) -> bool:
         return True
 
     return bool(
-        _RE_NOTATION_LABELLED.match(stripped)
+        _is_labelled_notation(stripped)
         or _RE_NOTATION_COUNT.match(stripped)
         or _RE_NOTATION_ABBR.match(stripped)
         or _RE_NOTATION_ABBR_SP.match(stripped)
@@ -1946,12 +2011,12 @@ def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
 _RE_SIGLUM = re.compile(r"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,4}\.){1,4}$")
 
 # ── rule_domain_notation ────────────────────────────────────────────────────
-# Archaeological / administrative notation that `rule_short_garbage` must not
-# trash. Deliberately NARROWER than `is_structured_line()`: consulted at exactly
-# one site (the outer guard of rule_short_garbage) and conferring no other
-# exemption, so it cannot silently disable rule_allcaps, rule_garbage_density,
-# rule_zero_alpha, rule_vowelless or rule_mid_uppercase the way widening
-# `is_structured_line()` would.
+# Archaeological / administrative notation that `rule_short_garbage` and the
+# section-1 perplexity routes must not trash. Deliberately NARROWER than
+# `is_structured_line()`: consulted at those two places only, and conferring no
+# other exemption, so it cannot silently disable rule_allcaps,
+# rule_garbage_density, rule_zero_alpha, rule_vowelless or rule_mid_uppercase the
+# way widening `is_structured_line()` would.
 #
 # Scope is NOTATION, not vocabulary. Grid/context refs, counts, abbreviation
 # chains and labelled refs are shapes a regex can recognise. Latin binomials
@@ -1971,11 +2036,61 @@ _NOTATION_SEGMENT = r"(?:[IVXLCDM]{1,6}|[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]{1,4}
 # `II/C`, `I-VIII-c`, `KK-XIII`, `A/1`, `XIV-2b` — at least one separator.
 _RE_NOTATION_GRID = re.compile(rf"^{_NOTATION_SEGMENT}(?:[/\-]{_NOTATION_SEGMENT}){{1,4}}$")
 
-# `Lokalisace: MM-III`, `sonda: III` — a word label, then a grid reference.
+
+def _fold_diacritics(word: str) -> str:
+    """Lowercase and strip combining marks, so `Řez` and `rez` compare equal."""
+    lowered = unicodedata.normalize("NFD", word.lower())
+    return "".join(c for c in lowered if unicodedata.category(c) != "Mn")
+
+
+# (#30) The label half of a labelled reference is a CLOSED set, not "any word".
+# It used to be `[A-Za-z...]{3,20}`, which accepts an OCR-corrupted label just as
+# happily as a real one: `Bokalisace: B-XII-c` is `Lokalisace` with B-for-L, and
+# it was the single false positive in the reviewer's 30-line sample. A closed set
+# is the same technique `_DOCUMENT_HEADER_LABELS` already uses, and it costs
+# nothing in recall because the vocabulary of these labels is genuinely small.
+_NOTATION_LABELS = frozenset(
+    {
+        "lokalisace",
+        "lokalizace",
+        "sonda",
+        "plocha",
+        "objekt",
+        "vrstva",
+        "sektor",
+        "kontext",
+        "hrob",
+        "jáma",
+        "čtverec",
+        "kvadrant",
+        "profil",
+        "řez",
+        "výkop",
+        "nález",
+        "inv",
+        "kat",
+        "sáček",
+        "karton",
+        "situace",
+        "blok",
+        "segment",
+        "horizont",
+    }
+)
+_NOTATION_LABELS_FOLDED = frozenset(_fold_diacritics(w) for w in _NOTATION_LABELS)
+
+# `Lokalisace: MM-III`, `sonda: III` — a KNOWN label, then a grid reference.
 _RE_NOTATION_LABELLED = re.compile(
-    rf"^[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{{3,20}}\s*:\s*"
+    rf"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{{3,20}})\s*:\s*"
     rf"{_NOTATION_SEGMENT}(?:[/\-]{_NOTATION_SEGMENT}){{0,4}}$"
 )
+
+
+def _is_labelled_notation(stripped: str) -> bool:
+    """A labelled grid reference whose label is a word we actually recognise."""
+    match = _RE_NOTATION_LABELLED.match(stripped)
+    return bool(match) and _fold_diacritics(match.group(1)) in _NOTATION_LABELS_FOLDED
+
 
 # `1 ks`, `2 ks`. Multi-character count units only — a bare single-letter unit
 # (`3 m`, `o 5 m`) stays out, matching `_looks_like_measurement`'s own refusal.
@@ -1983,7 +2098,18 @@ _RE_NOTATION_COUNT = re.compile(r"^\d{1,4}\s*(?:ks|kusy|kusů|ex)\.?$", re.IGNOR
 
 # `Reg.Bez.Aussig.` — the same shape as _RE_SIGLUM but with segments up to 8
 # characters, so German administrative chains stop failing on "Aussig".
-_RE_NOTATION_ABBR = re.compile(r"^(?:[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,8}\.){2,6}$")
+#
+# Each segment must START WITH A CAPITAL. Without that this pattern was a hole
+# rather than a predicate: `^(?:[A-Za-z]{1,8}\.){2,6}$` puts no constraint on
+# CONTENT, so `kfjs.qmwx.zzpl.vvbn.` and `oueussd.nupoy.` matched it as readily
+# as `Reg.Bez.Aussig.` — 100% of generated dot-chained garbage was accepted,
+# against 0% with the capital required. Spurious periods are among the most
+# common OCR artefacts in this corpus, and they concentrate on bad scans, so the
+# false-positive rate was highest exactly where a Clear label costs most.
+# Lowercase chains are not lost: `č.neg.`, `č.j.`, `s.j.` and `inv.č.` all match
+# `_RE_SIGLUM`, so `is_structured_line()` already keeps them out of
+# `rule_short_garbage` without this pattern.
+_RE_NOTATION_ABBR = re.compile(r"^(?:[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ][A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{0,7}\.){2,6}$")
 
 # `radius prox.sin.` — a word followed by a dotted tail. Requires >= 2 tail
 # segments: one is not enough (`vfetennl k.` must stay unmatched).

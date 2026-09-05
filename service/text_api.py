@@ -451,6 +451,26 @@ async def process_document(
 
 
 if __name__ == "__main__":
+    import logging
+
     import uvicorn
 
-    uvicorn.run("text_api:app", host="0.0.0.0", port=8000, reload=True)
+    # (12-factor XI) Logs are an event stream: emit to stdout and let the
+    # supervisor route them. The library modules only getLogger(); this is the
+    # one place allowed to configure handlers.
+    logging.basicConfig(
+        level=os.getenv("LOG_LEVEL", "INFO").upper(),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        stream=sys.stdout,
+    )
+
+    # (12-factor VII) The service exports itself by binding a port, and which
+    # port is configuration. These were hardcoded, which also meant `reload=True`
+    # — a development convenience that watches the filesystem and respawns —
+    # was what docker-compose ran as the `api` profile entrypoint.
+    uvicorn.run(
+        "text_api:app",
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "8000")),
+        reload=os.getenv("RELOAD", "false").strip().lower() in ("true", "1", "yes", "on"),
+    )

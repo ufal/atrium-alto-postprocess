@@ -7,12 +7,17 @@ literal so the migration is behaviour-neutral at the shipped config
 
 from __future__ import annotations
 
+import configparser
 import os
+import re
 import subprocess
 import sys
+from pathlib import Path
 
 import text_util as tu
 from classify_TEXT import FASTTEXT_MODEL, TRUST_TIER_TRUSTED, TRUST_TIER_UNKNOWN
+
+_ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_tier1_defaults_match_previous_literals():
@@ -111,3 +116,87 @@ def test_tier1_key_roundtrip_from_alternate_config(tmp_path):
     )
     env = dict(os.environ, LANGID_CONFIG=str(cfg))
     subprocess.run([sys.executable, "-c", code], env=env, check=True)
+
+
+# ---------------------------------------------------------------------------
+# (12-factor III) Config <-> code agreement.
+#
+# Nothing used to check that the two sides matched in either direction, which is
+# how eight TEXT_UTILS constants came to be declared in text_util.py, read
+# through _get_float(), and advertised as tunable in tools/SWEEP_NOTES.md while
+# having no key in setup/config.txt at all — they silently ran on their in-code
+# defaults and no test could see it.
+# ---------------------------------------------------------------------------
+
+_RE_GET = re.compile(r'_get_(?:float|int|str|csv_set)\(\s*"([A-Z_]+)"\s*,\s*"([A-Z_0-9]+)"')
+
+
+def _declared_text_utils_keys():
+    """Every ("TEXT_UTILS", KEY) pair text_util.py actually reads."""
+    source = (_ROOT / "text_util.py").read_text(encoding="utf-8")
+    return {key for section, key in _RE_GET.findall(source) if section == "TEXT_UTILS"}
+
+
+def _config_text_utils_keys():
+    parser = configparser.RawConfigParser()
+    parser.optionxform = str
+    parser.read(_ROOT / "setup" / "config.txt")
+    return set(parser.options("TEXT_UTILS"))
+
+
+def test_every_constant_read_by_code_has_a_config_key():
+    """A constant with no key cannot be configured, only recompiled."""
+    missing = sorted(_declared_text_utils_keys() - _config_text_utils_keys())
+    assert not missing, (
+        f"read by text_util.py but absent from setup/config.txt [TEXT_UTILS]: {missing}\n"
+        "Add the key with its in-code default (behaviour-neutral), or stop reading it from config."
+    )
+
+
+def test_every_config_key_is_read_by_code():
+    """An orphan key is a lie to whoever edits it."""
+    orphans = sorted(_config_text_utils_keys() - _declared_text_utils_keys())
+    assert not orphans, (
+        f"present in setup/config.txt [TEXT_UTILS] but never read by text_util.py: {orphans}\n"
+        "Remove the key, or wire it up."
+    )
+
+
+def test_env_override_beats_the_config_file():
+    """(12-factor III) ATRIUM_<SECTION>_<KEY> must reach the module constant.
+
+    The file used to be the only way to change a value — LANGID_CONFIG names a
+    path, not a value — so a deploy could not move one threshold without editing
+    a file inside its image.
+    """
+    code = "import text_util as tu; assert tu.SHORT_PPL_CAP == 1234.5, tu.SHORT_PPL_CAP"
+    env = dict(os.environ, ATRIUM_TEXT_UTILS_SHORT_PPL_CAP="1234.5")
+    subprocess.run([sys.executable, "-c", code], env=env, check=True, cwd=str(_ROOT))
+
+
+def test_unparseable_env_override_fails_loudly():
+    """A typo must not silently fall through to the default."""
+    env = dict(os.environ, ATRIUM_TEXT_UTILS_SHORT_PPL_CAP="not-a-number")
+    done = subprocess.run(
+        [sys.executable, "-c", "import text_util"],
+        env=env,
+        cwd=str(_ROOT),
+        capture_output=True,
+        text=True,
+    )
+    assert done.returncode != 0
+    assert "is not a float" in done.stderr
+
+
+def test_missing_explicit_config_path_fails_loudly():
+    """A typo'd LANGID_CONFIG used to run the whole collection on defaults."""
+    env = dict(os.environ, LANGID_CONFIG="/nonexistent/config.txt")
+    done = subprocess.run(
+        [sys.executable, "-c", "import text_util"],
+        env=env,
+        cwd=str(_ROOT),
+        capture_output=True,
+        text=True,
+    )
+    assert done.returncode != 0
+    assert "does not exist" in done.stderr
