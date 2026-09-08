@@ -1358,7 +1358,17 @@ def determine_category(
             and (gibberish_present or weird_ratio > 0.0)
         ):
             _fire("rule_short_garbage")
-            return "Trash", "trash_threshold"
+            if qs < CATEG_TRASH_SCORE_MAX + 0.35 and _has_strong_garbage_evidence(
+                text_source,
+                valid_word_ratio=valid_word_ratio,
+                lang_score=lang_score,
+                orig_lang_score=orig_lang_score,
+                gibberish_present=gibberish_present,
+                garbage_density=garbage_density,
+                weird_ratio=weird_ratio,
+                is_upright_czech=is_upright_czech,
+            ):
+                return "Trash", "trash_threshold"
 
     elif "rule_short_garbage" not in DISABLED_RULES and not forgiven and not structured and notation:
         # Reached only when the notation predicate is the DECIDING term — the
