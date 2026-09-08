@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-text_util_langID.py
+text_util.py
 
 Purpose:
 Provides the core text-processing utilities for the ALTO OCR post-processing pipeline.
@@ -20,6 +20,7 @@ import itertools
 import os
 import re
 import sys
+import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -32,7 +33,7 @@ DISABLED_RULES: frozenset = frozenset()
 # ---------------------------------------------------------------------------
 # Rule-Fire Coverage Instrumentation (Increment B5)
 # When RULE_FIRE_COUNTS is not None (i.e. inside a rule_fire_capture() block),
-# every _fire(name) call increments the counter for that rule.  Outside a capture
+# every _fire(name) call increments the counter for that rule. Outside a capture
 # block _fire() is a no-op so there is zero overhead during normal production runs.
 # ---------------------------------------------------------------------------
 RULE_FIRE_COUNTS: dict | None = None
@@ -49,15 +50,7 @@ def rule_fire_capture():
     """Context manager that enables rule-fire counting for the enclosed block.
 
     Yields the live counts dict so callers can inspect it after (or during)
-    the run.  Nested calls stack correctly: the outer context is restored on
-    exit, so existing sweep harnesses that call rule_fire_capture() inside
-    override_constants() are safe.
-
-    Usage::
-
-        with rule_fire_capture() as counts:
-            recategorize_dataframe(df, ...)
-        print(counts)  # {'rule_hard_sweep': 12, 'penalty_wqx_rot': 0, ...}
+    the run.
     """
     global RULE_FIRE_COUNTS
     prev, RULE_FIRE_COUNTS = RULE_FIRE_COUNTS, {}
@@ -71,24 +64,75 @@ def rule_fire_capture():
 # Configuration & Regular Expressions
 # ---------------------------------------------------------------------------
 
+# (12-factor III) Config resolution order, highest precedence first:
+#
+#   1. environment  ATRIUM_<SECTION>_<KEY>   e.g. ATRIUM_TEXT_UTILS_SHORT_PPL_CAP=900
+#   2. the INI file named by LANGID_CONFIG   (default: setup/config.txt)
+#   3. the in-code default
+#
+# The env layer exists because the file was previously the ONLY way to change a
+# value: LANGID_CONFIG names a *path*, not a value, so a deploy could not move a
+# single threshold without editing a file inside its image or bind-mounting a
+# replacement. The section is part of the variable name because keys are not
+# unique across sections (WORKERS_MAX appears in both EXTRACT and CLASSIFY).
+#
+# Values are still read at import time, so an override must be set before the
+# process starts. Derived constants (ROT_GHOSTLIST, _LANG_DIACRITICS) are built
+# once from these and are not rebuilt by override_constants().
+ENV_PREFIX = "ATRIUM_"
+
 _config = configparser.RawConfigParser()
-# (#7 Phase 0) Honor the LANGID_CONFIG env var that run_pipeline.py sets for
-# child stages, so `--config other.txt` actually reaches the [TEXT_UTILS]
-# constants instead of silently falling back to the CWD default.
-_config_path = Path(os.getenv("LANGID_CONFIG", "setup/config_langID.txt"))
+_config_path = Path(os.getenv("LANGID_CONFIG", "setup/config.txt"))
+
 if _config_path.exists():
     _config.read(_config_path)
+elif os.getenv("LANGID_CONFIG"):
+    # Explicitly pointed somewhere that does not exist. Previously this fell
+    # through to the in-code defaults in silence, so a typo'd path ran the whole
+    # collection on defaults and looked exactly like a successful run.
+    raise FileNotFoundError(
+        f"LANGID_CONFIG points at {_config_path}, which does not exist. "
+        f"Unset it to use the bundled setup/config.txt, or correct the path."
+    )
+else:
+    # Running outside the repo root with no explicit path. Legitimate for a
+    # library import, but the operator should know the defaults are in force.
+    print(
+        f"[config] {_config_path} not found - every constant is using its in-code default. "
+        f"Set LANGID_CONFIG to silence this.",
+        file=sys.stderr,
+    )
+
+
+def _env_override(section, key):
+    """Return the raw env value for a section/key, or None if unset."""
+    return os.getenv(f"{ENV_PREFIX}{section}_{key}")
 
 
 def _get_float(section, key, default):
+    raw = _env_override(section, key)
+    if raw is not None:
+        try:
+            return float(raw)
+        except ValueError as exc:
+            raise ValueError(f"{ENV_PREFIX}{section}_{key}={raw!r} is not a float") from exc
     return _config.getfloat(section, key, fallback=default) if _config.has_section(section) else default
 
 
 def _get_str(section, key, default):
+    raw = _env_override(section, key)
+    if raw is not None:
+        return raw
     return _config.get(section, key, fallback=default) if _config.has_section(section) else default
 
 
 def _get_int(section, key, default):
+    raw = _env_override(section, key)
+    if raw is not None:
+        try:
+            return int(raw)
+        except ValueError as exc:
+            raise ValueError(f"{ENV_PREFIX}{section}_{key}={raw!r} is not an int") from exc
     return _config.getint(section, key, fallback=default) if _config.has_section(section) else default
 
 
@@ -102,8 +146,6 @@ COMMON_LANGS = ["ces", "deu", "eng"]
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
     COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
 
-# (#7 Phase 0) fallback aligned with the shipped config (slk was missing), so
-# "no-config" behaviour matches shipped behaviour.
 _TRUSTED_FOREIGN_LANG_BASES: frozenset = frozenset(
     lang.strip()
     for lang in _get_str("CLASSIFY", "TRUSTED_FOREIGN_LANGS", "deu,eng,fra,pol,ita,slk").split(",")
@@ -115,13 +157,8 @@ def _lang_base(lang_code: str) -> str:
     return lang_code.split("_")[0]
 
 
-# (#3) Czech-specific diacritic glyphs. Presence of even one is a strong signal
-# that a line is genuine Czech text rather than inverted/foreign garbage OCR;
-# the page-level inverted-scan sweep and the short-garbage route both use it.
 CZ_DIACS = frozenset(_get_str("TEXT_UTILS", "CZ_DIACS", "áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ"))
 
-# (#7 Phase 0) fallback aligned with the shipped Czech marker list ("©,®" was
-# a stale placeholder), so "no-config" behaviour matches shipped behaviour.
 METADATA_MARKERS = frozenset(
     _get_str("TEXT_UTILS", "METADATA_MARKERS", "Tb.,č.neg,neg.,obr.,obr ,neg ,Tb ,č. neg,č.neg.,č.,str.,Datum").split(
         ","
@@ -129,24 +166,9 @@ METADATA_MARKERS = frozenset(
 )
 
 VOWEL_CHARS = frozenset(_get_str("TEXT_UTILS", "VOWEL_CHARS", "aeiouyáéíóúýěůäöüAEIOUYÁÉÍÓÚÝĚŮÄÖÜ"))
-
-# (#7 Phase 0) key was misspelled "ROTATBLE_CHARS", so the config value was
-# never read (harmless only because config value == default). Fixed.
 ROTATABLE_CHARS = frozenset(_get_str("TEXT_UTILS", "ROTATABLE_CHARS", "pbqdnuwmoxszeyv"))
-
-# (#7 Tier 1) Letters rare in Czech — a wqx-heavy token is a strong OCR-noise
-# signal. Previously the literal "wqxWQX" at three call sites (score_word,
-# score_words_in_line, determine_category).
 WQX_CHARS = frozenset(_get_str("TEXT_UTILS", "WQX_CHARS", "wqxWQX"))
-
-# (#7 Tier 1) Collection-specific literal markers that force a Non-text route
-# in pre_filter_line (previously the hardcoded "IVerc" ARUP/B stamp marker).
 NONTEXT_MARKERS = _get_csv_set("TEXT_UTILS", "NONTEXT_MARKERS", "IVerc")
-
-# (#7 Tier 1) Languages that keep their original FastText confidence when
-# remapped to the default language (previously a hardcoded `slk` special case
-# in remap_lang — Slovak is close enough to Czech that the confidence remains
-# meaningful after the label swap).
 REMAP_KEEP_SCORE_LANGS = _get_csv_set("CLASSIFY", "REMAP_KEEP_SCORE_LANGS", "slk")
 
 
@@ -158,11 +180,9 @@ def has_cz_diacs(text: str) -> bool:
 _EXPECTED_LANGS_BASES: frozenset = frozenset(_lang_base(lng) for lng in COMMON_LANGS)
 
 PERPLEXITY_THRESHOLD_MAX = _get_float("TEXT_UTILS", "PERPLEXITY_THRESHOLD_MAX", 1000.0)
-
 SHORT_PPL_CAP = _get_float("TEXT_UTILS", "SHORT_PPL_CAP", 850.0)
 
 LANG_SCORE_ROUGH = _get_float("TEXT_UTILS", "LANG_SCORE_ROUGH", 0.45)
-LANG_SCORE_CLEAR = _get_float("TEXT_UTILS", "LANG_SCORE_CLEAR", 0.75)
 
 # Core signal weights
 QS_WEIGHT_VOWEL = _get_float("TEXT_UTILS", "QS_WEIGHT_VOWEL", 0.07)
@@ -178,16 +198,8 @@ QS_WEIGHT_GARBAGE = _get_float("TEXT_UTILS", "QS_WEIGHT_GARBAGE", 0.18)
 
 CATEG_TRASH_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_TRASH_SCORE_MAX", 0.55)
 CATEG_NOISY_SCORE_MAX = _get_float("TEXT_UTILS", "CATEG_NOISY_SCORE_MAX", 0.80)
-
 CATEG_GARBAGE_DENSITY_HIGH = _get_float("TEXT_UTILS", "CATEG_GARBAGE_DENSITY_HIGH", 0.35)
-
-# (B2) Separate scale for normalising garbage_density inside compute_quality_score.
-# Previously the same constant (CATEG_GARBAGE_DENSITY_HIGH) was reused at both the
-# hard gate (rule_garbage_density) and the three QS-normalisation sites, making
-# the two effects inseparable in the importance sweep.
-# Default 0.35 == CATEG_GARBAGE_DENSITY_HIGH → bit-identical output at default config.
 QS_GARBAGE_NORM_MAX = _get_float("TEXT_UTILS", "QS_GARBAGE_NORM_MAX", 0.35)
-
 
 # Inverted / 180°-rotated scan detection
 ROT_RATIO_INVERTED_MIN = _get_float("TEXT_UTILS", "ROT_RATIO_INVERTED_MIN", 0.55)
@@ -195,23 +207,15 @@ WEIRD_RATIO_INVERTED_MIN = _get_float("TEXT_UTILS", "WEIRD_RATIO_INVERTED_MIN", 
 PPL_INVERTED_MIN = _get_float("TEXT_UTILS", "PPL_INVERTED_MIN", 200.0)
 ROT_HIGH_LANG_CONF = _get_float("TEXT_UTILS", "ROT_HIGH_LANG_CONF", 0.90)
 
-# (#3 Phase 2) override + structural-route thresholds, now config-driven.
 LOWPPL_CLEAR_MAX = _get_float("TEXT_UTILS", "LOWPPL_CLEAR_MAX", 50.0)
 HARD_SWEEP_LANG_MAX = _get_float("TEXT_UTILS", "HARD_SWEEP_LANG_MAX", 0.45)
 HARD_SWEEP_PPL_MIN = _get_float("TEXT_UTILS", "HARD_SWEEP_PPL_MIN", 1000.0)
 GHOST_DOMINATED_MIN_RATIO = _get_float("TEXT_UTILS", "GHOST_DOMINATED_MIN_RATIO", 0.5)
 WORD_W_PENALTY = _get_float("TEXT_UTILS", "WORD_W_PENALTY", 0.20)
 
-# (#3 A3) Page-level inverted-scan sweep — defined here (config-driven) and
-# re-exported via `from text_util_langID import *` so langID_classify and the
-# tests share one tunable source of truth.
 INVERTED_RUN_MIN = _get_int("TEXT_UTILS", "INVERTED_RUN_MIN", 4)
 INVERTED_PAGE_MAJORITY = _get_float("TEXT_UTILS", "INVERTED_PAGE_MAJORITY", 0.60)
 
-# (#5) Page-context smoothing thresholds — promoted from inline literals in
-# apply_document_postprocessing so they are config-driven, parity-overridable,
-# and visible to the importance sweep. Defaults equal the previous literals, so
-# the categoriser's output is unchanged.
 SURROUNDED_TRASH_QS_MARGIN = _get_float("TEXT_UTILS", "SURROUNDED_TRASH_QS_MARGIN", 0.15)
 PAGE_GARBAGE_CLEAR_MAX = _get_float("TEXT_UTILS", "PAGE_GARBAGE_CLEAR_MAX", 0.05)
 PAGE_GARBAGE_LANG_MAX = _get_float("TEXT_UTILS", "PAGE_GARBAGE_LANG_MAX", 0.50)
@@ -221,23 +225,13 @@ PAGE_CLEAN_CLEAR_MIN = _get_float("TEXT_UTILS", "PAGE_CLEAN_CLEAR_MIN", 0.60)
 PAGE_CLEAN_MEDIAN_QS_MIN = _get_float("TEXT_UTILS", "PAGE_CLEAN_MEDIAN_QS_MIN", 0.80)
 PAGE_CLEAN_RECOVER_QS_MIN = _get_float("TEXT_UTILS", "PAGE_CLEAN_RECOVER_QS_MIN", 0.45)
 
-# Trash routes inside determine_category that all fold to the single
-# `trash_threshold` diagnostic boolean (keeps "exactly one categoriser flag True"
-# while preserving granular reason strings for logging / the re-scorer).
 TRASH_REASONS = frozenset({"trash_threshold", "trash_hard_sweep", "trash_inverted"})
 
-# Phase 4
 MOSTLY_READABLE_VALID_MIN = _get_float("TEXT_UTILS", "MOSTLY_READABLE_VALID_MIN", 0.85)
 SHORT_NOISY_QS_PENALTY = _get_float("TEXT_UTILS", "SHORT_NOISY_QS_PENALTY", 0.20)
 
 LANG_SCORE_REMAP = _get_float("TEXT_UTILS", "LANG_SCORE_REMAP", 0.75)
 LANG_SCORE_REMAP_FAR = _get_float("TEXT_UTILS", "LANG_SCORE_REMAP_FAR", 0.50)
-# (#3 2026-07-02 calibration - Extra) On/off switch for DanaKriv's "the original
-# lang score should not matter" ask. true (default): remap_lang() unconditionally
-# assigns LANG_SCORE_REMAP/LANG_SCORE_REMAP_FAR to every remapped row. false:
-# restores the prior #3 A1 "cap, don't inflate" behaviour -- the fixed value is
-# only assigned when the original score exceeds the cap; a weaker original guess
-# is left untouched. Config-only switch so this doesn't require a code change.
 LANG_REMAP_ALWAYS = _get_str("TEXT_UTILS", "LANG_REMAP_ALWAYS", "true").strip().lower() in (
     "true",
     "1",
@@ -245,6 +239,38 @@ LANG_REMAP_ALWAYS = _get_str("TEXT_UTILS", "LANG_REMAP_ALWAYS", "true").strip().
     "on",
 )
 SINGLE_CHAR_ALLOWED = _get_str("TEXT_UTILS", "SINGLE_CHAR_ALLOWED", "aAiIuUvVzZkKsS")
+# ── Page-relative perplexity blend (default OFF) ────────────────────────────
+# SHORT_PPL_CAP flattens perplexity to a constant for wc <= 2, and the capped
+# value is what is both scored AND stored -- the raw LM number is discarded and
+# is unrecoverable from a delivered CSV. That leaves short lines with no usable
+# perplexity at all: 850 is below HARD_SWEEP_PPL_MIN (1000), PPL_EXTREME_MIN
+# (3000) and PPL_GARBAGE_ABSOLUTE (30000), so no perplexity rule can fire on a
+# one- or two-token line.
+#
+# Simply uncapping does not fix it: both surviving perplexity routes gate on LOW
+# language-ID confidence, while garbage tokens score high (oueussd at 0.9163)
+# and real domain words score low (malakofauna at 0.56). Uncapped, real notation
+# is demoted around perplexity 3000 while oueussd survives to 30000.
+#
+# The blend instead reads a short line's perplexity RELATIVE to the long lines on
+# its own page, which is the comparison a human makes. It is a page-consistency
+# prior, not a garbage detector: on a mixed page it pulls a garbage token toward
+# its clean neighbours. Off by default until calibrated on a real ARUP/ARUB run.
+PAGE_PPL_BLEND_ENABLE = _get_str("TEXT_UTILS", "PAGE_PPL_BLEND_ENABLE", "false").strip().lower() in (
+    "true",
+    "1",
+    "yes",
+    "on",
+)
+# Geometric blend weight on the line's own perplexity. Log-space is where the
+# average has to happen: perplexities span six orders of magnitude here (II/C
+# measures ~6e7), so an arithmetic blend is dominated by the tail.
+PAGE_PPL_BLEND_WEIGHT = _get_float("TEXT_UTILS", "PAGE_PPL_BLEND_WEIGHT", 0.5)
+# Minimum word count for a line to count toward the page reference.
+PAGE_PPL_LONG_MIN_WC = _get_int("TEXT_UTILS", "PAGE_PPL_LONG_MIN_WC", 4)
+# Minimum number of such lines before a page reference is trusted at all.
+PAGE_PPL_MIN_LONG_LINES = _get_int("TEXT_UTILS", "PAGE_PPL_MIN_LONG_LINES", 3)
+
 SHORT_VALID_WORDS = _get_csv_set(
     "TEXT_UTILS",
     "SHORT_VALID_WORDS",
@@ -264,8 +290,6 @@ ACADEMIC_TITLES = _get_csv_set(
 LDL_ALLOWED_FOLLOW = frozenset(_get_str("TEXT_UTILS", "LDL_ALLOWED_FOLLOW", ".,/:%-;?)="))
 LDL_UNITS = _get_csv_set("TEXT_UTILS", "LDL_UNITS", "m,cm,mm,g,kg,km,ha,l,ml")
 
-# (#3 2026-07-02 calibration) is_forgiven_headline tunables — see that function
-# for the full token-classification contract.
 SHORT_EXCEPTION_TOKENS = _get_csv_set(
     "TEXT_UTILS",
     "SHORT_EXCEPTION_TOKENS",
@@ -300,10 +324,6 @@ RE_ARCHIVE_CODE: re.Pattern = re.compile(r"^[A-Za-z]{1,3}\d{3,}(?:/\d+)?$")
 RE_ALPHANUM_TOKEN: re.Pattern = re.compile(r"^[A-Za-z0-9]{5,}$")
 RE_ARCHIVE_REF_SPACED: re.Pattern = re.compile(r"^[A-Za-záčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]{1,5}[\s.\-]+\d{1,}")
 
-# ---------------------------------------------------------------------------
-# Module-level regexes hoisted from inner functions
-# ---------------------------------------------------------------------------
-
 _RE_SPACED_CAPS: re.Pattern = re.compile(
     r"(?<!\S)"
     r"([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ] ){3,}"
@@ -317,10 +337,6 @@ def _collapse_spaced_caps(m: re.Match) -> str:
     return letters[0].upper() + letters[1:].lower()
 
 
-# (#7 Tier 1) German diacritic glyphs — language data, now read from config
-# (the Czech set reuses the existing CZ_DIACS key). _LANG_DIACRITICS is rebuilt
-# from the two configured sets; the shipped defaults are set-identical to the
-# previous hardcoded dict.
 DEU_DIACS = frozenset(_get_str("TEXT_UTILS", "DEU_DIACS", "äöüßÄÖÜ"))
 
 _LANG_DIACRITICS: dict[str, frozenset] = {
@@ -328,32 +344,23 @@ _LANG_DIACRITICS: dict[str, frozenset] = {
     "deu": DEU_DIACS,
 }
 
-# (#7 Tier 1) Minimum diacritic share among alphabetic chars for
-# infer_lang_from_diacritics (previously a hardcoded 0.07 default argument).
 DIACRITIC_INFER_THRESHOLD = _get_float("TEXT_UTILS", "DIACRITIC_INFER_THRESHOLD", 0.07)
 
-# (#3) Extreme-perplexity trash route + LM-confident upright-Czech recovery.
 PPL_EXTREME_MIN = _get_float("TEXT_UTILS", "PPL_EXTREME_MIN", 3000.0)
 EXTREME_LANG_CONF = _get_float("TEXT_UTILS", "EXTREME_LANG_CONF", 0.85)
 LOWPPL_CZECH_CLEAR_MAX = _get_float("TEXT_UTILS", "LOWPPL_CZECH_CLEAR_MAX", 180.0)
 CZECH_CLEAR_GARBAGE_MAX = _get_float("TEXT_UTILS", "CZECH_CLEAR_GARBAGE_MAX", 0.15)
 
-# Fix 1: Linguistic Anchor Bypass Config
 ANCHOR_MIN_WORDS = _get_int("TEXT_UTILS", "ANCHOR_MIN_WORDS", 2)
 ANCHOR_WORD_LEN = _get_int("TEXT_UTILS", "ANCHOR_WORD_LEN", 3)
 ANCHOR_VOWEL_RATIO = _get_float("TEXT_UTILS", "ANCHOR_VOWEL_RATIO", 0.10)
 
-# Fix 2: Suspicious Rotation Config
 SUSPICIOUS_ROT_RATIO = _get_float("TEXT_UTILS", "SUSPICIOUS_ROT_RATIO", 0.65)
 SUSPICIOUS_WQX_RATIO = _get_float("TEXT_UTILS", "SUSPICIOUS_WQX_RATIO", 0.15)
 INVERTED_WEIRD_PENALTY = _get_float("TEXT_UTILS", "INVERTED_WEIRD_PENALTY", 0.45)
 
 PPL_GARBAGE_ABSOLUTE = _get_float("TEXT_UTILS", "PPL_GARBAGE_ABSOLUTE", 30000.0)
 GHOST_HITS_INVERTED_MIN = _get_int("TEXT_UTILS", "GHOST_HITS_INVERTED_MIN", 1)
-# (#7 Tier 1) Trailing filler chars stripped before headline/short-line checks.
-# Read from config with unicode-escape decoding, because configparser strips
-# leading whitespace from values — the leading space must be written as \x20
-# in config_langID.txt. Decoded default == the previous literal " ._:-<–—".
 TRAILING_FILL_CHARS = (
     _get_str("TEXT_UTILS", "TRAILING_FILL_CHARS", "\\x20._:-<\\u2013\\u2014")
     .encode("latin-1", "backslashreplace")
@@ -417,16 +424,9 @@ def _transform_word(w: str, glyph_map: dict) -> str | None:
     return "".join(reversed(out))
 
 
-# (#7 Tier 1) Czech function-word whitelist for rotation/inversion detection —
-# language data, now read from config. Default == the previous effective value
-# (the union of the old MIR_PAIRS/ROT_PAIRS keys; those dicts' *values* were
-# never read anywhere, and the earlier literal frozenset was immediately
-# overwritten by the key-union — both deleted as dead code).
 ROT_WHITELIST: frozenset = _get_csv_set(
     "TEXT_UTILS", "ROT_WHITELIST", "po,pod,do,od,on,ony,by,bez,ne,nebo,ven,den,zde,se,ve,mez,pouze,bude"
 )
-# (#7 Tier 1) Ghost images that collide with real Czech/common words and must
-# never count as ghost hits.
 _GHOST_REAL_WORD_COLLISIONS: frozenset = _get_csv_set("TEXT_UTILS", "GHOST_WORD_COLLISIONS", "no,bo")
 
 
@@ -439,9 +439,6 @@ def _build_ghostlist() -> frozenset:
     return frozenset(ghosts - ROT_WHITELIST - _GHOST_REAL_WORD_COLLISIONS)
 
 
-# Derived at import time from ROT_WHITELIST / _GHOST_REAL_WORD_COLLISIONS.
-# NOTE: override_constants() does NOT rebuild this — changing the whitelist at
-# runtime requires re-import (documented in agent_dev_logs/plans/7.plan.md).
 ROT_GHOSTLIST: frozenset = _build_ghostlist()
 
 
@@ -510,26 +507,19 @@ def remap_lang(
         return label, score
     suffix = label[len(base) :]
     new_label = default_lang + suffix
-    # (#7 Tier 1) previously a hardcoded `slk` special case.
     if base in REMAP_KEEP_SCORE_LANGS:
         return new_label, score
-    # (#3 2026-07-02 calibration) DanaKriv: "Remapped lang score should be
-    # always 0.75 or 0.5 (the original lang score should not matter)" —
-    # unconditional assignment, not a ceiling, when LANG_REMAP_ALWAYS is true
-    # (the default). A prior pass (#3 A1) changed this from an unconditional
-    # floor to a `min(score, cap)` ceiling so a weak foreign guess wouldn't be
-    # inflated; DanaKriv's note reverses that, explicitly re-stating the
-    # original ask from earlier in the thread ("the languages, except for
-    # trusted, should have score 0.75"). LANG_REMAP_ALWAYS=false restores that
-    # intermediate cap behaviour without a code change, for exactly this kind
-    # of back-and-forth. The unremapped `orig_lang_score` is untouched either
-    # way and still drives the hard-sweep / wqx_rot / vowelless gates in
-    # determine_category, so this only affects the QS_WEIGHT_LANG component
-    # and the stored lang_score.
     cap = remap_floor if suffix == "_Latn" else LANG_SCORE_REMAP_FAR
     if LANG_REMAP_ALWAYS or score > cap:
         return new_label, cap
     return new_label, score
+
+
+def compute_garbage_density(text: str) -> float:
+    if not text:
+        return 0.0
+    noise_chars = sum(1 for c in text if not c.isalnum() and c not in GARBAGE_KEEP_CHARS)
+    return noise_chars / len(text)
 
 
 def _has_repeated_run(core: str) -> bool:
@@ -569,8 +559,6 @@ def has_symbol_letter_digit(word: str) -> bool:
 
 
 def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: float | None = None) -> str | None:
-    # (#7 Tier 1) resolved at call time (not def time) so override_constants /
-    # config changes take effect without re-import.
     if threshold is None:
         threshold = DIACRITIC_INFER_THRESHOLD
     alpha = [c for c in text if c.isalpha()]
@@ -583,13 +571,6 @@ def infer_lang_from_diacritics(text: str, expected_bases: frozenset, threshold: 
         if ratio >= threshold:
             return lang_code
     return None
-
-
-def compute_garbage_density(text: str) -> float:
-    if not text:
-        return 0.0
-    noise_chars = sum(1 for c in text if not c.isalnum() and c not in GARBAGE_KEEP_CHARS)
-    return noise_chars / len(text)
 
 
 def compute_rotatable_ratio(text: str) -> float:
@@ -734,7 +715,7 @@ def pre_filter_line(line: str) -> tuple[str, str]:
     clean_text = re.sub(
         r"(?<=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])1(?=[a-záčďéěíňóřšťůúýžA-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ])", "l", clean_text
     )
-    clean_text = re.sub(r"\b2(?=[a-záčďéěíňóřšťůúýž])", "z", clean_text)
+    clean_text = re.sub(r"(?<![\d.,])\b2(?=[a-záčďéěíňóřšťůúýž])", "z", clean_text)
     clean_text = _RE_SPACED_CAPS.sub(_collapse_spaced_caps, clean_text)
 
     if any(marker.lower() in clean_text.lower() for marker in METADATA_MARKERS):
@@ -1094,8 +1075,66 @@ def is_forgiven_headline(text: str, garbage_density: float) -> bool:
     return has_content and has_context
 
 
+def inspect_short_line_telemetry(
+    text_source: str,
+    word_count: int,
+    valid_word_ratio: float,
+    lang_score: float,
+    perplexity: float,
+    weird_ratio: float = 0.0,
+    garbage_density: float = 0.0,
+    is_upright_czech: bool = False,
+) -> dict:
+    """
+    Step 4 Telemetry Helper: Audit short lines (word_count <= 2) to log properties
+    and identify potential false Clear/Noisy promotions.
+    """
+    structured = is_structured_line(text_source)
+    damaged = count_damaged_tokens(text_source) > 0
+    forgiven = is_forgiven_headline(text_source, garbage_density)
+
+    category, score, reason = categorize_line(
+        qs=compute_quality_score(
+            valid_word_ratio=valid_word_ratio,
+            perplexity=perplexity,
+            text_length=len(text_source),
+            weird_ratio=weird_ratio,
+            garbage_density=garbage_density,
+            lang_score=lang_score,
+            is_upright_czech=is_upright_czech,
+        ),
+        txt=text_source,
+        wc=word_count,
+        vowel_ratio=compute_vowel_ratio(text_source),
+        perplexity=perplexity,
+        weird_ratio=weird_ratio,
+        valid_word_ratio=valid_word_ratio,
+        lang_score=lang_score,
+        garbage_density=garbage_density,
+        is_upright_czech=is_upright_czech,
+        return_reason=True,
+    )
+
+    return {
+        "text": text_source,
+        "word_count": word_count,
+        "valid_word_ratio": valid_word_ratio,
+        "lang_score": lang_score,
+        "perplexity": perplexity,
+        "weird_ratio": weird_ratio,
+        "garbage_density": garbage_density,
+        "structured": structured,
+        "damaged": damaged,
+        "forgiven_headline": forgiven,
+        "is_upright_czech": is_upright_czech,
+        "final_category": category,
+        "quality_score": score,
+        "route_reason": reason,
+    }
+
+
 def determine_category(
-    quality_score: float,
+    qs: float,
     text_source: str,
     word_count: int,
     vr: float,
@@ -1112,41 +1151,56 @@ def determine_category(
     if word_count == 0 or not text_source.strip():
         return "Empty", "empty"
 
+    stripped = text_source.strip()
     rot_ratio = compute_rotatable_ratio(text_source)
     words = text_source.split()
 
-    # (#3 2026-07-02 calibration) rule_wqx_rot / rule_vowelless /
-    # rule_ledger_fragmentation / rule_mid_uppercase used to short-circuit here,
-    # ahead of rules 1-6 and ahead of the `forgiven` computation below. That made
-    # the "moved down" copies of these same rules (right before the QS-band
-    # routing, guarded by `check_rescues()`) unreachable dead code, so a forgiven
-    # short-abbreviation/numbered-headline line that also happened to match one
-    # of these four conditions was hard-routed to Trash with no chance of rescue
-    # — exactly the DanaKriv-flagged failure mode (e.g. "mm", "2, Popis nálezu
-    # i - 3", "7, Plánky 1 - 2" all tripped this in practice). Removed here; the
-    # single authoritative check now lives immediately before QS-band routing.
+    structured = is_structured_line(text_source)
 
+    # (#30) Notation is exempt from the two PERPLEXITY-ONLY Trash routes below.
+    # For this class the LM score is not a quality signal at all, and is in fact
+    # inverted: `II/C` measures ~6e7 perplexity and is correct, `oueussd` ~4600
+    # and is garbage. Leaving the routes blind to it meant that the moment
+    # perplexity became real -- SHORT_PPL_CAP raised, or the page blend enabled
+    # -- section 1 trashed every grid reference before `rule_short_garbage` was
+    # reached. Computed once here and reused at gate 6.
+    #
+    # `rule_hard_sweep` is deliberately NOT exempted. It is the only one of the
+    # three that requires a second, independent witness: `orig_lang_score <
+    # HARD_SWEEP_LANG_MAX` means FastText also failed to place the line. Exempt
+    # the routes whose sole evidence we have just disowned; keep the one that
+    # corroborates. Measured on dot-mutated garbage with the cap off, exempting
+    # all three let 65% escape to Noisy/Clear, while leaving hard sweep armed
+    # trashed 600 of 600 and cost nothing on the pinned notation shapes.
+    notation = "rule_domain_notation" not in DISABLED_RULES and is_domain_notation(text_source)
+
+    # ------------------------------------------------------------
     # 1. Hard sweep
+    # ------------------------------------------------------------
     if "rule_hard_sweep" not in DISABLED_RULES:
         if orig_lang_score < HARD_SWEEP_LANG_MAX and ppl > HARD_SWEEP_PPL_MIN:
             _fire("rule_hard_sweep")
             return "Trash", "trash_hard_sweep"
-    if "rule_extreme_ppl" not in DISABLED_RULES:
+
+    if "rule_extreme_ppl" not in DISABLED_RULES and not notation:
         if ppl >= PPL_EXTREME_MIN and orig_lang_score < EXTREME_LANG_CONF:
             _fire("rule_extreme_ppl")
             return "Trash", "trash_hard_sweep"
-    if "rule_absolute_ppl" not in DISABLED_RULES:
+
+    if "rule_absolute_ppl" not in DISABLED_RULES and not notation:
         if ppl >= PPL_GARBAGE_ABSOLUTE and not is_upright_czech:
             _fire("rule_absolute_ppl")
             return "Trash", "trash_hard_sweep"
 
+    # ------------------------------------------------------------
     # 2. Inverted / mirrored scan
+    # ------------------------------------------------------------
     if "rule_inverted" not in DISABLED_RULES:
         if not is_upright_czech and (
             ghost_dominated
             or (
                 not has_cz_diacs(text_source)
-                and compute_rotatable_ratio(text_source) >= SUSPICIOUS_ROT_RATIO
+                and rot_ratio >= SUSPICIOUS_ROT_RATIO
                 and ppl >= PPL_INVERTED_MIN
                 and ghost_word_share(text_source)[0] >= GHOST_HITS_INVERTED_MIN
             )
@@ -1154,104 +1208,316 @@ def determine_category(
             _fire("rule_inverted")
             return "Trash", "trash_inverted"
 
+    # ------------------------------------------------------------
     # 3. All-caps vowel-less scramble
-    # Evaluating vr < 0.10 first fail-fast is cheaper than checking is_all_caps_line
+    # ------------------------------------------------------------
     if "rule_allcaps" not in DISABLED_RULES:
-        if vr < 0.10 and is_all_caps_line(text_source):
+        if vr < 0.10 and is_all_caps_line(text_source) and not structured:
             _fire("rule_allcaps")
             return "Trash", "allcaps_novowel"
 
-    # 4. Overwhelming non-alphanumeric density
+    # ------------------------------------------------------------
+    # 4. Extreme garbage density
+    # ------------------------------------------------------------
     if "rule_garbage_density" not in DISABLED_RULES:
         if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
-            if "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
-                text_source, valid_word_ratio, word_count
+            is_siglum = word_count <= 2 and _RE_SIGLUM.match(stripped)
+
+            if structured or is_siglum:
+                pass
+
+            elif "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
+                text_source,
+                valid_word_ratio,
+                word_count,
             ):
-                pass  # Bypass this override and allow it to route naturally
+                pass
+
             else:
                 _fire("rule_garbage_density")
                 return "Trash", "trash_threshold"
 
-    # (#3 2026-07-02 calibration) computed once, after the hard-sweep /
-    # inverted / all-caps / garbage-density overrides above, so genuine
-    # garbage is untouched — it only ever lifts a line from Trash to Noisy.
-    forgiven = "rule_forgiven_headline" not in DISABLED_RULES and is_forgiven_headline(text_source, garbage_density)
+    # ------------------------------------------------------------
+    # 5. Determine structural state
+    # ------------------------------------------------------------
+    forgiven = "rule_forgiven_headline" not in DISABLED_RULES and is_forgiven_headline(
+        text_source,
+        garbage_density,
+    )
 
-    # 5. Structural short-garbage route
-    if "rule_short_garbage" not in DISABLED_RULES and not forgiven:
+    damaged = "rule_damaged_token" not in DISABLED_RULES and word_count >= 3 and count_damaged_tokens(text_source) > 0
+
+    # ------------------------------------------------------------
+    # 5b. Zero-alphabetic content
+    # ------------------------------------------------------------
+    if (
+        "rule_zero_alpha" not in DISABLED_RULES
+        and not structured
+        and not is_upright_czech
+        and not any(c.isalpha() for c in text_source)
+    ):
+        _fire("rule_zero_alpha")
+
+        if forgiven:
+            return "Noisy", "noisy_threshold"
+
+        return "Trash", "trash_threshold"
+
+    # ------------------------------------------------------------
+    # 6. Short-line garbage
+    # ------------------------------------------------------------
+    if "rule_short_garbage" not in DISABLED_RULES and not forgiven and not structured and not notation:
         if (
             word_count <= ISOLATED_CHAR_MIN_TOKENS
             and not has_cz_diacs(text_source)
-            and lang_score <= LANG_SCORE_REMAP
+            and (lang_score <= LANG_SCORE_REMAP or rot_ratio >= SUSPICIOUS_ROT_RATIO)
             and (gibberish_present or weird_ratio > 0.0)
         ):
             _fire("rule_short_garbage")
             return "Trash", "trash_threshold"
 
-    # 6. High-confidence LM override
+    elif "rule_short_garbage" not in DISABLED_RULES and not forgiven and not structured and notation:
+        # Reached only when the notation predicate is the DECIDING term — the
+        # other three would have let rule_short_garbage run. Recorded so coverage
+        # and ablation see the suppression rather than just its absence.
+        _fire("rule_domain_notation")
+
+    # ------------------------------------------------------------
+    # 7. Short lines (1-2 words)
+    # ------------------------------------------------------------
+    if "rule_short_line" not in DISABLED_RULES and word_count <= 2:
+        _fire("rule_short_line")
+
+        if _RE_SIGLUM.match(stripped) and sum(c.isalpha() for c in stripped) >= 2:
+            return "Clear", "clear_threshold"
+
+        if word_count == 1:
+            solitary = stripped.strip(_STRIP_CHARS)
+
+            if len(solitary) == 1 and solitary.isalpha() and "." not in stripped:
+                return "Trash", "trash_threshold"
+
+        if any(_RE_BIGRAM_RUN.search(w.strip(_STRIP_CHARS)) for w in words):
+            if _has_strong_garbage_evidence(
+                text_source,
+                valid_word_ratio=valid_word_ratio,
+                lang_score=lang_score,
+                orig_lang_score=orig_lang_score,
+                gibberish_present=gibberish_present,
+                garbage_density=garbage_density,
+                weird_ratio=weird_ratio,
+                is_upright_czech=is_upright_czech,
+            ):
+                return "Trash", "trash_threshold"
+
+        structurally_clean = valid_word_ratio >= 1.0
+
+        damage = (
+            weird_ratio >= 0.40
+            or (any(_RE_BIGRAM_RUN.search(w.strip(_STRIP_CHARS)) for w in words) and not structured)
+            or ((gibberish_present or detect_fused_words(text_source) > 0) and not structurally_clean)
+            or (
+                garbage_density >= CATEG_GARBAGE_DENSITY_HIGH
+                and not _trailing_fill_rescued(
+                    text_source,
+                    valid_word_ratio,
+                    word_count,
+                )
+                and not structured
+            )
+        )
+
+        if damage:
+            return "Noisy", "noisy_threshold"
+
+        if valid_word_ratio <= 0.0 and not is_upright_czech and not structured:
+            if forgiven:
+                return "Noisy", "noisy_threshold"
+
+            return "Trash", "trash_threshold"
+
+        if is_upright_czech or valid_word_ratio >= 1.0 or structured:
+            if count_damaged_tokens(text_source) > 0 or (not is_upright_czech and weird_ratio >= 0.40):
+                return "Noisy", "noisy_threshold"
+
+            return "Clear", "clear_threshold"
+
+        return "Noisy", "noisy_threshold"
+
+    # ------------------------------------------------------------
+    # 8. High-confidence LM override
+    # ------------------------------------------------------------
     if "rule_lowppl_clear" not in DISABLED_RULES:
         if ppl < LOWPPL_CLEAR_MAX and word_count >= 3:
             if valid_word_ratio < MOSTLY_READABLE_VALID_MIN:
                 _fire("rule_lowppl_clear")
                 return "Noisy", "noisy_threshold"
+
+            if damaged:
+                _fire("rule_damaged_token")
+                return "Noisy", "noisy_threshold"
+
             _fire("rule_lowppl_clear")
             return "Clear", "lowppl_clear"
 
-    # --- Strict thresholds replacing legacy cumulative penalties ---
-    # Moved down to immediately precede QS band routing. Rules 1-6 ignore QS
-    # and must take precedence. This restores parity by mimicking the priority
-    # of the legacy cumulative subtraction.
+    # ------------------------------------------------------------
+    # 9. Explicit diagnostic hard gates [STEP 5]
+    # ------------------------------------------------------------
     thresh_trash = CATEG_TRASH_SCORE_MAX + 0.35
 
-    def check_rescues():
+    def check_rescues() -> tuple[str, str]:
         if "rule_trailing_fill_rescue" not in DISABLED_RULES and _trailing_fill_rescued(
-            text_source, valid_word_ratio, word_count
+            text_source,
+            valid_word_ratio,
+            word_count,
         ):
             _fire("rule_trailing_fill_rescue")
             return "Noisy", "noisy_threshold"
+
         if forgiven:
             _fire("rule_forgiven_headline")
             return "Noisy", "noisy_threshold"
+
+        if "rule_reference_floor" not in DISABLED_RULES and is_clean_reference(text_source):
+            _fire("rule_reference_floor")
+            return "Noisy", "noisy_threshold"
+
         return "Trash", "trash_threshold"
 
+    # 9a. WQX / rotation
     if "rule_wqx_rot" not in DISABLED_RULES:
         wqx_ratio = sum(1 for w in words if any(c in WQX_CHARS for c in w)) / max(word_count, 1)
+
         if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
             _fire("rule_wqx_rot")
-            if quality_score < thresh_trash:
+
+            if qs < thresh_trash and _has_strong_garbage_evidence(
+                text_source,
+                valid_word_ratio=valid_word_ratio,
+                lang_score=lang_score,
+                orig_lang_score=orig_lang_score,
+                gibberish_present=gibberish_present,
+                garbage_density=garbage_density,
+                weird_ratio=weird_ratio,
+                is_upright_czech=is_upright_czech,
+            ):
                 return check_rescues()
 
+    # 9b. Vowelless / all-caps
     if "rule_vowelless" not in DISABLED_RULES:
-        if word_count <= 3 and vr < 0.30 and not is_upright_czech:
-            if is_all_caps_line(text_source):
-                _fire("rule_vowelless")
-                if quality_score < thresh_trash:
-                    return check_rescues()
+        if word_count <= 3 and vr < 0.30 and not is_upright_czech and is_all_caps_line(text_source) and not structured:
+            _fire("rule_vowelless")
 
+            if qs < thresh_trash and _has_strong_garbage_evidence(
+                text_source,
+                valid_word_ratio=valid_word_ratio,
+                lang_score=lang_score,
+                orig_lang_score=orig_lang_score,
+                gibberish_present=gibberish_present,
+                garbage_density=garbage_density,
+                weird_ratio=weird_ratio,
+                is_upright_czech=is_upright_czech,
+            ):
+                return check_rescues()
+
+    # 9c. Ledger fragmentation
     if "rule_ledger_fragmentation" not in DISABLED_RULES:
-        if words and len(words) >= 4:
-            frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
+        if len(words) >= 4:
+            frag_count = sum(1 for w in words if (w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2))
+
             if (frag_count / len(words)) > 0.60:
                 _fire("rule_ledger_fragmentation")
-                if quality_score < thresh_trash:
+
+                if qs < thresh_trash and _has_strong_garbage_evidence(
+                    text_source,
+                    valid_word_ratio=valid_word_ratio,
+                    lang_score=lang_score,
+                    orig_lang_score=orig_lang_score,
+                    gibberish_present=gibberish_present,
+                    garbage_density=garbage_density,
+                    weird_ratio=weird_ratio,
+                    is_upright_czech=is_upright_czech,
+                ):
                     return check_rescues()
 
+    # 9d. Mid-uppercase
     if "rule_mid_uppercase" not in DISABLED_RULES:
-        if word_count <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
+        if word_count <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words) and not structured:
             _fire("rule_mid_uppercase")
-            if quality_score < thresh_trash:
+
+            if qs < thresh_trash and _has_strong_garbage_evidence(
+                text_source,
+                valid_word_ratio=valid_word_ratio,
+                lang_score=lang_score,
+                orig_lang_score=orig_lang_score,
+                gibberish_present=gibberish_present,
+                garbage_density=garbage_density,
+                weird_ratio=weird_ratio,
+                is_upright_czech=is_upright_czech,
+            ):
                 return check_rescues()
 
-    # 7. Quality-score band routing
-    if quality_score < CATEG_TRASH_SCORE_MAX:
+    # 9e. Bigram run
+    if "rule_bigram_run" not in DISABLED_RULES:
+        has_bigram_run = any(_RE_BIGRAM_RUN.search(w.strip(_STRIP_CHARS)) for w in words)
+
+        if has_bigram_run:
+            _fire("rule_bigram_run")
+
+            if qs < thresh_trash and _has_strong_garbage_evidence(
+                text_source,
+                valid_word_ratio=valid_word_ratio,
+                lang_score=lang_score,
+                orig_lang_score=orig_lang_score,
+                gibberish_present=gibberish_present,
+                garbage_density=garbage_density,
+                weird_ratio=weird_ratio,
+                is_upright_czech=is_upright_czech,
+            ):
+                return check_rescues()
+
+    # 9f. Fragment tokens
+    if "rule_fragment_tokens" not in DISABLED_RULES:
+        lengths = [
+            len(core) + 1 if w.endswith(".") else len(core) for w in words for core in [w.strip(_STRIP_CHARS)] if core
+        ]
+
+        fragment_like = bool(lengths and (sum(lengths) / len(lengths)) < 2.0)
+
+        if fragment_like:
+            _fire("rule_fragment_tokens")
+
+            if qs < thresh_trash and _has_strong_garbage_evidence(
+                text_source,
+                valid_word_ratio=valid_word_ratio,
+                lang_score=lang_score,
+                orig_lang_score=orig_lang_score,
+                gibberish_present=gibberish_present,
+                garbage_density=garbage_density,
+                weird_ratio=weird_ratio,
+                is_upright_czech=is_upright_czech,
+            ):
+                return check_rescues()
+
+    # ------------------------------------------------------------
+    # 10. Quality-score band routing
+    # ------------------------------------------------------------
+    if qs < CATEG_TRASH_SCORE_MAX:
         return check_rescues()
 
     if "rule_mostly_readable_noisy" not in DISABLED_RULES:
         if valid_word_ratio < MOSTLY_READABLE_VALID_MIN and not _lm_confident_czech(
-            is_upright_czech, ppl, garbage_density
+            is_upright_czech,
+            ppl,
+            garbage_density,
         ):
             _fire("rule_mostly_readable_noisy")
             return "Noisy", "noisy_threshold"
+
+    # [STEP 2] Restored character-level damage invariant capping route to Noisy
+    if damaged:
+        _fire("rule_damaged_token")
+        return "Noisy", "noisy_threshold"
 
     return "Clear", "clear_threshold"
 
@@ -1272,8 +1538,6 @@ def categorize_line(
     is_upright_czech: bool = False,
     ghost_dominated: bool = False,
 ) -> tuple[str, float] | tuple[str, float, str]:
-    # Delegate immediately to the strict thresholds rather than applying
-    # cumulative subtraction modifiers to the quality score.
     categ, reason = determine_category(
         qs,
         txt,
@@ -1305,86 +1569,400 @@ def categorize_line(
     return categ, aligned_score
 
 
-# def categorize_line(
-#     qs: float,
-#     txt: str,
-#     wc: int,
-#     vowel_ratio: float,
-#     perplexity: float,
-#     weird_ratio: float = 0.0,
-#     return_reason: bool = False,
-#     valid_word_ratio: float = 1.0,
-#     lang_score: float = 1.0,
-#     orig_lang_score: float = 1.0,
-#     gibberish_present: bool = False,
-#     garbage_density: float = 0.0,
-#     is_upright_czech: bool = False,
-#     ghost_dominated: bool = False,
-# ) -> tuple[str, float] | tuple[str, float, str]:
-#     rot_ratio = compute_rotatable_ratio(txt)
-#     words = txt.split()
-#
-#     # --- FIX 1: Sneaky leaks (WQX & Rotation) ---
-#     if "penalty_wqx_rot" not in DISABLED_RULES:
-#         wqx_ratio = sum(1 for w in words if any(c in "wqxWQX" for c in w)) / max(wc, 1)
-#         if (rot_ratio > 0.50 or wqx_ratio > 0.10) and orig_lang_score < 0.75 and not is_upright_czech:
-#             _fire("penalty_wqx_rot")
-#             qs = max(0.0, qs - 0.35)
-#
-#     # --- FIX 2: Vowelless/Acronym gibberish ("WVL A") ---
-#     if "penalty_vowelless" not in DISABLED_RULES:
-#         if wc <= 3 and vowel_ratio < 0.30 and not is_upright_czech:
-#             if is_all_caps_line(txt):
-#                 _fire("penalty_vowelless")
-#                 qs = max(0.0, qs - 0.35)
-#
-#     # --- FIX 3: Ledger / Table Fragmentation Loophole ---
-#     if "penalty_ledger_fragmentation" not in DISABLED_RULES:
-#         if words and len(words) >= 4:
-#             frag_count = sum(1 for w in words if w.strip(_STRIP_CHARS).isdigit() or len(w.strip(_STRIP_CHARS)) <= 2)
-#             if (frag_count / len(words)) > 0.60:
-#                 _fire("penalty_ledger_fragmentation")
-#                 qs = max(0.0, qs - 0.35)
-#
-#     # --- FIX 4: Isolated Mid-Uppercase Fragments ("ClAŕ") ---
-#     if "penalty_mid_uppercase" not in DISABLED_RULES:
-#         if wc <= 2 and any(_is_mid_uppercase(w.strip(_STRIP_CHARS)) for w in words):
-#             _fire("penalty_mid_uppercase")
-#             qs = max(0.0, qs - 0.35)
-#
-#     categ, reason = determine_category(
-#         qs,
-#         txt,
-#         wc,
-#         vowel_ratio,
-#         perplexity,
-#         weird_ratio,
-#         valid_word_ratio,
-#         lang_score,
-#         orig_lang_score,
-#         gibberish_present,
-#         garbage_density,
-#         is_upright_czech,
-#         ghost_dominated,
-#     )
-#
-#     if categ == "Trash":
-#         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
-#     elif categ == "Noisy":
-#         aligned_score = max(qs, CATEG_TRASH_SCORE_MAX)
-#         aligned_score = min(aligned_score, CATEG_NOISY_SCORE_MAX - 0.0001)
-#     elif categ == "Clear":
-#         aligned_score = max(qs, CATEG_NOISY_SCORE_MAX)
-#     else:
-#         aligned_score = qs
-#
-#     if return_reason:
-#         return categ, aligned_score, reason
-#     return categ, aligned_score
+def _has_strong_garbage_evidence(
+    text_source: str,
+    *,
+    valid_word_ratio: float,
+    lang_score: float,
+    orig_lang_score: float,
+    gibberish_present: bool,
+    garbage_density: float,
+    weird_ratio: float,
+    is_upright_czech: bool,
+) -> bool:
+    if is_structured_line(text_source):
+        return False
+
+    if gibberish_present:
+        return True
+
+    if valid_word_ratio <= 0.20:
+        return True
+
+    if lang_score <= 0.20 and orig_lang_score <= 0.50:
+        return True
+
+    if garbage_density >= CATEG_GARBAGE_DENSITY_HIGH:
+        return True
+
+    if weird_ratio >= 0.75:
+        return True
+
+    if not is_upright_czech and lang_score <= 0.40 and weird_ratio >= 0.40:
+        return True
+
+    return False
+
+
+def _looks_like_measurement(text_source: str) -> bool:
+    """
+    Detect structured archaeological measurement lines.
+
+    The goal is to protect lines that may be noisy OCR but still contain
+    meaningful measurements, dimensions, quantities, or physical descriptions.
+
+    This predicate is deliberately conservative. It requires either:
+      - an explicit measurement keyword with numeric context, or
+      - multi-character measurement units (mm, cm, km, kg, ml, ha), or a
+        bare metre unit glued directly to its number (0,4m), or
+      - explicit measurement separator structures (e.g. v - 112, pr.okraje - 145).
+
+    It strictly avoids classifying arbitrary digit-containing OCR or weak
+    single-letter substrings/units as structured.
+
+    Keyword/descriptor entries ending in a literal "." (rozm., pr., hl.) are
+    matched WITHOUT a trailing \\b. A "." is a non-word character, so a
+    trailing \\b can only hold when the abbreviation happens to be glued to a
+    following word/digit character ("pr.okraje") — it silently fails whenever
+    OCR (correctly) leaves a space or line-end after the dot ("pr. okraje",
+    "rozm. 12", "pr. dna - 7"). The leading \\b is unaffected and still keeps
+    these from matching mid-word; a lone hit still isn't enough on its own
+    ("clouCelRa pr. 4" stays unmatched — one descriptor hit is below the
+    corroboration threshold below).
+    """
+    stripped = " ".join(text_source.split())
+
+    if not stripped:
+        return False
+
+    lowered = stripped.lower()
+
+    # [STEP 3] Token-bounded full Czech measurement keywords.
+    # Word-form entries keep a trailing boundary (avoids matching inside a
+    # longer word); dot-terminated abbreviations must NOT have one — see
+    # the docstring note on why \b cannot follow a literal "." into
+    # whitespace or line-end.
+    full_measurement_keywords = r"\brozm\." r"|\b(?:rozměry?|výška|šířka|délka|hloubka|průměr)\b"
+    has_full_keyword = bool(re.search(full_measurement_keywords, lowered))
+
+    # Secondary measurement descriptors (require multiple hits or numeric context).
+    # Same dotted/word split as above, same reason.
+    descriptor_keywords = r"\b(?:pr|hl)\." r"|\b(?:dna|hrdla|okraje)\b"
+    descriptor_hits = len(re.findall(descriptor_keywords, lowered))
+
+    # [STEP 3] Multi-character measurement units, or a bare metre unit glued
+    # directly to its number (0,4m / 145-167m). A *spaced* bare unit ("3 m",
+    # "o 5 m") stays unmatched — too weak a signal alone — but a glued bare
+    # "m" is this corpus's single most common unit (far ahead of "mm"), so
+    # excluding it outright cost real protection on genuine depth/height
+    # readings; only the multi-character units are excluded from the
+    # space-tolerant branch.
+    has_unit = bool(
+        re.search(
+            r"\b\d+(?:[.,]\d+)?(?:\s*(?:mm|cm|km|kg|ml|ha)\b|m\b)",
+            lowered,
+        )
+    )
+
+    # Common measurement notation with explicit separators:
+    #   v - 112mm
+    #   pr.okraje - 145
+    #   pr. dna - 7
+    #   v: 144 mm
+    has_measurement_separator = bool(
+        re.search(
+            r"\b(?:v|š|s|d|hl|pr|prům|výš|šíř|dél|hloub)"
+            r"\.?\s*[:=\-]\s*\d",
+            lowered,
+        )
+    )
+
+    has_digits = any(char.isdigit() for char in stripped)
+
+    if has_full_keyword and has_digits:
+        return True
+
+    if descriptor_hits >= 2 and has_digits:
+        return True
+
+    if has_measurement_separator:
+        numeric_count = sum(char.isdigit() for char in stripped)
+        if numeric_count >= 2:
+            return True
+
+    if has_unit:
+        return True
+
+    return False
 
 
 # ---------------------------------------------------------------------------
-# Simple Ratio & General Helpers
+# DORMANT candidate refinement to `_looks_like_measurement`'s `has_unit` branch,
+# for the metre-spacing gap observed in issue #30. NOT WIRED INTO THE LIVE
+# DETECTOR -- it exists only as a probe, exposed through
+# `probe_spaced_decimal_metre_candidate()` and measured by
+# `tools/recategorize_from_csv.py --probe-metre-candidate`.
+#
+# `has_unit` currently accepts a bare "m" only when glued directly to its
+# number (`0,46m`), not when spaced (`3 m`) -- the latter stayed unmatched
+# because a bare spaced unit alone is too weak a signal (see
+# test_single_letter_units_and_probe_noise_rejected: "3 m", "o 5 m").
+# Measurement against the 273-doc corpus found that restriction is now
+# costing real coverage: 1,155 spaced-metre lines are unrecovered, and the
+# quoted examples ("2,10 m", "215,5 193,120 m", "Z /193,445 m/",
+# "Rovina profilu Z-V 214 192,740 m") are levelling/elevation readings, not
+# noise. All of them carry a decimal separator in the number itself, which
+# the rejected probes never do -- so a spaced bare "m" can be allowed
+# specifically when the number is decimal-marked, without reopening the
+# bare-integer case the pinned test guards against.
+#
+# Verified here to preserve every existing _looks_like_measurement assertion
+# (glued forms, both pinned "3 m"/"o 5 m" rejections) and to recover the four
+# quoted corpus lines, but the 1,155 figure above describes the *unrecovered*
+# count under the current, narrower regex -- how much of it is actually
+# decimal-marked (vs. some other spaced shape) hasn't been measured. Promoting
+# this means replacing `has_unit`'s regex with the one below and re-running
+# `tools/recategorize_from_csv.py` against the full local corpus to confirm the
+# recovery and check for new false positives.
+# ---------------------------------------------------------------------------
+_RE_UNIT_CANDIDATE = re.compile(
+    r"\b\d+(?:[.,]\d+\s*m\b|\s*(?:mm|cm|km|kg|ml|ha)\b|m\b)",
+)
+
+
+def _has_unit_with_spaced_decimal_metre_candidate(lowered: str) -> bool:
+    """Probe for the dormant metre-spacing candidate on already-lowercased text."""
+    return bool(_RE_UNIT_CANDIDATE.search(lowered))
+
+
+def probe_spaced_decimal_metre_candidate(text_source: str) -> bool:
+    """Return True when `text_source` matches the dormant metre-spacing probe."""
+    return _has_unit_with_spaced_decimal_metre_candidate(text_source.lower())
+
+
+# ---------------------------------------------------------------------------
+# Rule for issue #30's "sonda: XIV." finding.
+#
+# `641f936`'s leading-\b fix on `_looks_like_measurement` correctly closed
+# an accidental match — a bare "v." token used to match inside the Roman
+# numeral of lines like "Plocha: 3; sonda: XIV." purely because keyword
+# matching had no leading word-boundary yet.
+#
+# This rule explicitly recovers those plot/probe headers. It is now wired
+# into `_looks_like_catalogue_reference` to protect these headers.
+# ---------------------------------------------------------------------------
+_RE_PLOT_PROBE_HEADER = re.compile(
+    r"^plocha\s*:\s*\d+\s*;\s*sonda\s*:\s*[a-z]?[ivxlcdm]+\.$",
+    flags=re.IGNORECASE,
+)
+
+
+def _looks_like_plot_probe_header(text_source: str) -> bool:
+    """Match archaeological plot/probe headers: "Plocha: <n>; sonda: <roman>."."""
+    stripped = " ".join(text_source.split())
+    if not stripped:
+        return False
+    return bool(_RE_PLOT_PROBE_HEADER.match(stripped))
+
+
+def _looks_like_catalogue_reference(text_source: str) -> bool:
+    stripped = " ".join(text_source.split())
+
+    if not stripped:
+        return False
+
+    if is_clean_reference(stripped):
+        return True
+
+    if _RE_SIGLUM.match(stripped):
+        return True
+
+    if _looks_like_plot_probe_header(stripped):
+        return True
+
+    identifier_pattern = re.compile(
+        r"^[A-ZČŠŽĚŘÁÉÍÓÚŮÝ]{1,5}"
+        r"\d{1,6}"
+        r"(?:[/-][A-Z0-9ČŠŽĚŘÁÉÍÓÚŮÝ]{1,12}){1,8}"
+        r"[.]?$",
+        flags=re.IGNORECASE,
+    )
+
+    if identifier_pattern.match(stripped):
+        return True
+
+    table_reference_pattern = re.compile(
+        r"\b(?:tb|tab|tabul)[.]?\s*"
+        r"[IVXLCDM0-9]+"
+        r".{0,20}"
+        r"\b(?:č|čís|neg|negativ)[.]?"
+        r"\s*\d+",
+        flags=re.IGNORECASE,
+    )
+
+    if table_reference_pattern.search(stripped):
+        return True
+
+    reference_pattern = re.compile(
+        r"(?:č[.]?\s*j[.]?|"
+        r"č[.]?\s*neg[.]?|"
+        r"čís[.]?|"
+        r"inv[.]?|"
+        r"kat[.]?|"
+        r"\bčp[.]?|"
+        r"ref[.]?)"
+        r"\s*[A-Z0-9/-]*\d",
+        flags=re.IGNORECASE,
+    )
+
+    if reference_pattern.search(stripped):
+        return True
+
+    return False
+
+
+def _looks_like_date_or_document_reference(text_source: str) -> bool:
+    stripped = " ".join(text_source.split())
+
+    if not stripped:
+        return False
+
+    lowered = stripped.lower()
+
+    has_date = bool(
+        re.search(
+            r"\b\d{1,2}\s*[./-]\s*\d{1,2}"
+            r"(?:\s*[./-]\s*\d{2,4})?\b",
+            stripped,
+        )
+    )
+
+    has_year = bool(
+        re.search(
+            r"\b(?:18|19|20)\d{2}\b",
+            stripped,
+        )
+    )
+
+    document_marker = bool(
+        re.search(
+            r"\b(?:datum|date|č[.]?\s*j[.]?|"
+            r"podpis|sign|spis|číslo|cislo|ref[.]?)\b",
+            lowered,
+            flags=re.IGNORECASE,
+        )
+    )
+
+    if has_date and has_year:
+        return True
+
+    if document_marker and any(char.isdigit() for char in stripped):
+        return True
+
+    return False
+
+
+_RE_TOC_ENTRY = re.compile(r"^\d{1,2}[.,]\s+\S.*\s(?:\d{1,3}|\S{1,2}\s*[-–]\s*\d{1,3})$")
+
+_DOCUMENT_HEADER_LABELS = frozenset(
+    {
+        "obsah",
+        "úvod",
+        "závěr",
+        "literatura",
+        "seznam",
+        "přílohy",
+        "příloha",
+        "poznámka",
+        "shrnutí",
+        "resumé",
+    }
+)
+
+
+def _looks_like_document_structure_label(text_source: str) -> bool:
+    stripped = " ".join(text_source.split())
+    if not stripped:
+        return False
+    core = stripped.rstrip(" :;.-–—")
+    return core.lower() in _DOCUMENT_HEADER_LABELS
+
+
+def is_domain_notation(text_source: str) -> bool:
+    """Archaeological / administrative notation shapes that must escape
+    `rule_short_garbage`.
+
+    Consulted at two places in `determine_category()`, both of them narrow: the
+    outer guard of `rule_short_garbage`, and the three perplexity routes in
+    section 1. The second was added once measurement showed the first was inert
+    on its own — with perplexity uncapped, section 1 convicted every grid
+    reference before gate 6 was ever reached. It confers no OTHER exemption, and
+    that is the whole point of keeping it separate from `is_structured_line()`:
+    that predicate is read at eleven places in the rule chain and is an absolute
+    veto at the first
+    statement of `_has_strong_garbage_evidence()`, so widening it to cover
+    notation would also switch off `rule_allcaps`, `rule_garbage_density`,
+    `rule_zero_alpha`, `rule_vowelless` and `rule_mid_uppercase`, and could
+    promote lines directly to Clear. That is far more blast radius than
+    recovering grid references needs.
+
+    Recognises notation, never vocabulary. `II/C`, `Reg.Bez.Aussig.` and `1 ks`
+    have a *shape*; `malakofauna` and `Equus caballus` do not, and separating
+    those from `oueussd` needs a lexicon rather than a pattern. They stay with
+    `rule_short_garbage`.
+    """
+    stripped = " ".join(text_source.split())
+
+    if not stripped:
+        return False
+
+    # The grid pattern is the loose one — its single-letter segment would
+    # otherwise accept all-lowercase OCR mush like `o-e`. Require a capital or a
+    # digit there, so `sektlll` and `edelite` stay out. The other four shapes
+    # are self-identifying (a colon label, a unit word, a dotted tail), so they
+    # do not need the guard and must not be subject to it: `radius prox.sin.` is
+    # legitimate notation with no capital in it.
+    if _RE_NOTATION_GRID.match(stripped) and _RE_NOTATION_HAS_CODE_CHAR.search(stripped):
+        return True
+
+    return bool(
+        _is_labelled_notation(stripped)
+        or _RE_NOTATION_COUNT.match(stripped)
+        or _RE_NOTATION_ABBR.match(stripped)
+        or _RE_NOTATION_ABBR_SP.match(stripped)
+    )
+
+
+def is_structured_line(text_source: str) -> bool:
+    stripped = " ".join(text_source.split())
+
+    if not stripped:
+        return False
+
+    if is_clean_reference(stripped):
+        return True
+
+    if _RE_SIGLUM.match(stripped):
+        return True
+
+    if _looks_like_catalogue_reference(stripped):
+        return True
+
+    if _looks_like_measurement(stripped):
+        return True
+
+    if _looks_like_date_or_document_reference(stripped):
+        return True
+
+    if _RE_TOC_ENTRY.match(stripped):
+        return True
+
+    if _looks_like_document_structure_label(stripped):
+        return True
+
+    return False
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -1401,19 +1979,222 @@ def compute_digit_ratio(text: str) -> float:
     return sum(c.isdigit() for c in text) / len(text)
 
 
+_RE_INITIALS = re.compile(r"^([A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]\.?){1,3}$")
+_RE_DOTTED_ABBREV = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ſ]{1,4}(\.[A-Za-zÀ-ÖØ-öø-ſ]{1,4})*$")
+_NEUTRAL_LEXICON = frozenset({"dr", "x", "mm", "cm", "dm", "km", "g", "dkg", "kg", "ha", "hl", "ks", "m", "l"})
+_RE_ROMAN_TOKEN = re.compile(r"^[IVXLCDM]{1,7}$")
+_RE_ABBREV_NUM = re.compile(r"^[A-Za-zÀ-ÖØ-öø-ſ]{1,4}[.,]\d+[a-z]?$")
+
+
+def _is_neutral_token(core: str, raw: str = "", next_core: str = "") -> bool:
+    if not any(c.isalnum() for c in core):
+        return True
+    if sum(c.isdigit() for c in core) / len(core) >= 0.50:
+        return True
+    if _RE_INITIALS.match(core):
+        return True
+    if core.lower() in _NEUTRAL_LEXICON:
+        return True
+    if _RE_ABBREV_NUM.match(core):
+        return True
+    if raw.rstrip(",;:-–—/)").endswith(".") and _RE_DOTTED_ABBREV.match(core):
+        alpha = sum(c.isalpha() for c in core)
+        if 2 <= alpha <= 5:
+            return True
+        if alpha == 1 and next_core and (any(c.isdigit() for c in next_core) or _RE_ROMAN_TOKEN.match(next_core)):
+            return True
+        if alpha == 1 and raw.rstrip().endswith(":"):
+            return True
+    return False
+
+
+_RE_SIGLUM = re.compile(r"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,4}\.){1,4}$")
+
+# ── rule_domain_notation ────────────────────────────────────────────────────
+# Archaeological / administrative notation that `rule_short_garbage` and the
+# section-1 perplexity routes must not trash. Deliberately NARROWER than
+# `is_structured_line()`: consulted at those two places only, and conferring no
+# other exemption, so it cannot silently disable rule_allcaps,
+# rule_garbage_density, rule_zero_alpha, rule_vowelless or rule_mid_uppercase the
+# way widening `is_structured_line()` would.
+#
+# Scope is NOTATION, not vocabulary. Grid/context refs, counts, abbreviation
+# chains and labelled refs are shapes a regex can recognise. Latin binomials
+# (`Equus caballus`, `Ossa tarsi`) and bare foreign words (`malakofauna`) are
+# vocabulary — they need a lexicon, not a pattern, and are deliberately left to
+# `rule_short_garbage` here.
+#
+# Dimensions (`12,5 cm`, `145-167mm`, `0,46m`) are NOT covered: they already
+# match `_looks_like_measurement()`, so they never reach rule_short_garbage in
+# the first place. A second copy here would only be able to drift from it.
+
+# A grid/context segment: roman numeral, short all-caps run, a single letter, or
+# digits with an optional letter suffix. Lowercase word fragments are excluded
+# on purpose — that is what keeps `Slaot-o` and `sektlll` out.
+_NOTATION_SEGMENT = r"(?:[IVXLCDM]{1,6}|[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]{1,4}|[A-Za-z]|\d{1,3}[a-z]?)"
+
+# `II/C`, `I-VIII-c`, `KK-XIII`, `A/1`, `XIV-2b` — at least one separator.
+_RE_NOTATION_GRID = re.compile(rf"^{_NOTATION_SEGMENT}(?:[/\-]{_NOTATION_SEGMENT}){{1,4}}$")
+
+
+def _fold_diacritics(word: str) -> str:
+    """Lowercase and strip combining marks, so `Řez` and `rez` compare equal."""
+    lowered = unicodedata.normalize("NFD", word.lower())
+    return "".join(c for c in lowered if unicodedata.category(c) != "Mn")
+
+
+# (#30) The label half of a labelled reference is a CLOSED set, not "any word".
+# It used to be `[A-Za-z...]{3,20}`, which accepts an OCR-corrupted label just as
+# happily as a real one: `Bokalisace: B-XII-c` is `Lokalisace` with B-for-L, and
+# it was the single false positive in the reviewer's 30-line sample. A closed set
+# is the same technique `_DOCUMENT_HEADER_LABELS` already uses, and it costs
+# nothing in recall because the vocabulary of these labels is genuinely small.
+_NOTATION_LABELS = frozenset(
+    {
+        "lokalisace",
+        "lokalizace",
+        "sonda",
+        "plocha",
+        "objekt",
+        "vrstva",
+        "sektor",
+        "kontext",
+        "hrob",
+        "jáma",
+        "čtverec",
+        "kvadrant",
+        "profil",
+        "řez",
+        "výkop",
+        "nález",
+        "inv",
+        "kat",
+        "sáček",
+        "karton",
+        "situace",
+        "blok",
+        "segment",
+        "horizont",
+    }
+)
+_NOTATION_LABELS_FOLDED = frozenset(_fold_diacritics(w) for w in _NOTATION_LABELS)
+
+# `Lokalisace: MM-III`, `sonda: III` — a KNOWN label, then a grid reference.
+_RE_NOTATION_LABELLED = re.compile(
+    rf"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{{3,20}})\s*:\s*"
+    rf"{_NOTATION_SEGMENT}(?:[/\-]{_NOTATION_SEGMENT}){{0,4}}$"
+)
+
+
+def _is_labelled_notation(stripped: str) -> bool:
+    """A labelled grid reference whose label is a word we actually recognise."""
+    match = _RE_NOTATION_LABELLED.match(stripped)
+    return bool(match) and _fold_diacritics(match.group(1)) in _NOTATION_LABELS_FOLDED
+
+
+# `1 ks`, `2 ks`. Multi-character count units only — a bare single-letter unit
+# (`3 m`, `o 5 m`) stays out, matching `_looks_like_measurement`'s own refusal.
+_RE_NOTATION_COUNT = re.compile(r"^\d{1,4}\s*(?:ks|kusy|kusů|ex)\.?$", re.IGNORECASE)
+
+# `Reg.Bez.Aussig.` — the same shape as _RE_SIGLUM but with segments up to 8
+# characters, so German administrative chains stop failing on "Aussig".
+#
+# Each segment must START WITH A CAPITAL. Without that this pattern was a hole
+# rather than a predicate: `^(?:[A-Za-z]{1,8}\.){2,6}$` puts no constraint on
+# CONTENT, so `kfjs.qmwx.zzpl.vvbn.` and `oueussd.nupoy.` matched it as readily
+# as `Reg.Bez.Aussig.` — 100% of generated dot-chained garbage was accepted,
+# against 0% with the capital required. Spurious periods are among the most
+# common OCR artefacts in this corpus, and they concentrate on bad scans, so the
+# false-positive rate was highest exactly where a Clear label costs most.
+# Lowercase chains are not lost: `č.neg.`, `č.j.`, `s.j.` and `inv.č.` all match
+# `_RE_SIGLUM`, so `is_structured_line()` already keeps them out of
+# `rule_short_garbage` without this pattern.
+_RE_NOTATION_ABBR = re.compile(r"^(?:[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ][A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{0,7}\.){2,6}$")
+
+# `radius prox.sin.` — a word followed by a dotted tail. Requires >= 2 tail
+# segments: one is not enough (`vfetennl k.` must stay unmatched).
+_RE_NOTATION_ABBR_SP = re.compile(
+    r"^[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{2,20}\s+"
+    r"(?:[A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíňóřšťůúýž]{1,8}\.){2,4}$"
+)
+
+_RE_NOTATION_HAS_CODE_CHAR = re.compile(r"[A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ0-9]")
+
+
+_DMG_SYMBOLS = frozenset("^»«■□¤§~<>#*@$")
+_RE_DMG_APOSTROPHE = re.compile(r"[^\W\d_][’‘][^\W\d_]")
+_RE_DMG_DIGIT_IN_WORD = re.compile(r"[a-záčďéěíňóřšťúůýž]{2}\d|\d[a-záčďéěíňóřšťúůýž]{2}")
+_RE_DMG_VOWELLESS = re.compile(r"[a-záčďéěíňóřšťúůýž]{3,}$")
+_CZ_VOWELS = frozenset("aeiouyáéěíóúůý")
+_DMG_SYMBOLS_V8 = frozenset("©®™।")
+_RE_DMG_CASE_MIX = re.compile(r"[a-záčďéěíňóřšťúůýž][A-ZÁČĎÉĚÍŇÓŘŠŤŮÚÝŽ]")
+
+
+def count_damaged_tokens(text: str) -> int:
+    """Count tokens carrying character-level OCR damage."""
+    count = 0
+    for token in text.split():
+        core = token.strip(_STRIP_CHARS)
+        if not core:
+            continue
+        if (
+            any(c in _DMG_SYMBOLS for c in core)
+            or any(c in _DMG_SYMBOLS_V8 for c in core)
+            or _RE_DMG_APOSTROPHE.search(core)
+            or _RE_DMG_DIGIT_IN_WORD.search(core)
+            or (len(core) >= 4 and not token.endswith(".") and _RE_DMG_CASE_MIX.search(core))
+            or (
+                not token.rstrip(",;:").endswith(".")
+                and _RE_DMG_VOWELLESS.match(core)
+                and not (_CZ_VOWELS & set(core))
+                and "r" not in core
+                and "l" not in core
+            )
+        ):
+            count += 1
+    return count
+
+
+_RE_BIGRAM_RUN = re.compile(r"([^\W\d_]{2})\1\1")
+
+_RE_REF_MARKER = re.compile(
+    r"\binv\b|\binv\.|\bkont\b|\bkont\.|\bn[áa]l\b|\bn[áa]l\.|\bobr\b|\bobr\.|"
+    r"\btab\b|\btab\.|\bneg\b|\bneg\.|\bmax\.|\bmin\.|"
+    r"č\.\s?j|č\.\s?inv|č\.\s?pl|inv\.\s?č|s\.\s?j\b",
+    re.IGNORECASE,
+)
+_RE_MEASUREMENT = re.compile(
+    r"\d\s?[.,]?\s?(?:mm|cm|km|kg|ml|ha)\b",
+    re.IGNORECASE,
+)
+
+
+def is_clean_reference(text: str) -> bool:
+    """True for a catalogue/measurement/inventory line with no OCR damage."""
+    if count_damaged_tokens(text) > 0:
+        return False
+    return bool(_RE_REF_MARKER.search(text) or _RE_MEASUREMENT.search(text))
+
+
 def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
     words = text.split()
     if not words:
         return 0.0
     valid = 0
-    for word in words:
+    evaluable = 0
+    for wi, word in enumerate(words):
         core = word.strip(_STRIP_CHARS)
         if not core:
             continue
         if word_set is not None:
+            evaluable += 1
             if core.lower() in word_set:
                 valid += 1
         else:
+            next_core = words[wi + 1].strip(_STRIP_CHARS) if wi + 1 < len(words) else ""
+            if _is_neutral_token(core, word, next_core):
+                continue
+            evaluable += 1
             if core.lower() in SHORT_VALID_WORDS or core in SINGLE_CHAR_ALLOWED:
                 valid += 1
                 continue
@@ -1423,7 +2204,9 @@ def compute_valid_ratio(text: str, word_set: set | None = None) -> float:
                 if _is_mid_uppercase(core):
                     continue
                 valid += 1
-    return valid / len(words)
+    if evaluable == 0:
+        return 1.0
+    return valid / evaluable
 
 
 def is_non_text(text: str) -> bool:
@@ -1442,10 +2225,6 @@ def is_non_text(text: str) -> bool:
             if any(c.isdigit() for c in stripped):
                 return True
             if stripped.isupper():
-                # (#3 2026-07-02 calibration) a genuine all-caps headline word
-                # (e.g. "LITERATURA") should be scored, not hard-routed here —
-                # but vowel-starved all-caps codes/garbage, and anything with
-                # "X" (the original garbage-code signal), still are.
                 if "X" in stripped:
                     return True
                 if len(stripped) >= 10 and compute_vowel_ratio(stripped) < VOWEL_RATIO_LOW:
@@ -1508,7 +2287,6 @@ def compute_quality_score(
         + QS_WEIGHT_FUSED
     )
 
-    # ABLATION GUARD (Part A): Prevent zero division if all weights are artificially wiped out
     if total_weight <= 0.0:
         total_weight = 1.0
 

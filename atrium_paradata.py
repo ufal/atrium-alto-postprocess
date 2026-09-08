@@ -116,6 +116,21 @@ class ParadataLogger:
             }
         )
 
+    def get_license_block(self) -> dict:
+        """
+        Public accessor for the effective license block.
+        Replaces the private _license_block() calls in downstream tools.
+        """
+        return self._license_block()
+
+    @property
+    def run_id(self) -> str:
+        """
+        Public accessor for this logger's run id.
+        Replaces the private ``_run_id`` reads scattered across downstream tools.
+        """
+        return self._run_id
+
     def log_success(self, output_type: str, count: int = 1) -> None:
         self._output_counts[output_type] = self._output_counts.get(output_type, 0) + count
 

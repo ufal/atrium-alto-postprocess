@@ -2,7 +2,7 @@
  * script.js
  * Frontend logic for ATRIUM Text Processor
  *
- * Quality categories returned by text_util_langID.py:
+ * Quality categories returned by text_util.py:
  *   Clear    – passes all structural and perplexity checks
  *   Noisy    – degraded but recoverable (symbol / uppercase / high PPL)
  *   Trash    – structurally corrupt, not worth downstream processing
@@ -146,7 +146,7 @@ function renderResults(data) {
 
     // Page-level averages for word_weird and quality_score
     // (only lines that went through GPU scoring contribute, matching
-    //  the avg_quality_score / avg_word_weird logic in langID_aggregate)
+    //  the avg_quality_score / avg_word_weird logic in aggregate_STAT)
     const scoredLines = lines.filter(l =>
         l.category !== "Empty" && l.category !== "Non-text"
     );

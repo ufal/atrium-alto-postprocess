@@ -26,6 +26,8 @@ calls directly.
   perplexity model are downloaded and cached. Warmup takes minutes, not
   seconds - do **not** treat a slow first start as failure.
 - **Limits**: 10 MB per file (one ALTO page or one text file per request).
+- **Readiness**: `GET /health` is liveness (stays 200 while draining); `GET /ready` is the
+  orchestrator-facing readiness probe — 503 while warming up or shutting down.
 
 ## Quality categories 🧹
 
@@ -75,7 +77,21 @@ python3 scripts/atrium_postprocess.py export.dat --task-type text
 python3 scripts/atrium_postprocess.py --info
 ```
 
-### 3. Interpret output
+### 3. ATRIUM Document JSON accretion (optional)
+
+Accrete this tool's `pages[]`/`lines[]` fields onto an existing baseline record
+(accretion contract, `docs/document_schema.md` in the hub repo — note the API's field is
+named `document_record` on the way in and `document_json_out` on the way out):
+
+```bash
+python3 scripts/atrium_postprocess.py page.alto.xml --document-record in.document.json \
+    --document-record-out-file out.document.json
+```
+
+Only `pages[]`/`lines[]` fields this tool owns are merged in; fields owned by other tools
+(e.g. `page_categories`, `lemma`/`upos`/`feats`) pass through untouched.
+
+### 4. Interpret output
 
 Rows are FILE, LINE, LANG, QUALITY, CATEGORY, TEXT (text truncated in
 table mode, complete in csv/json). The JSON response additionally

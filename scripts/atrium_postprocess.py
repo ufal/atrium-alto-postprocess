@@ -15,6 +15,11 @@ Usage:
     python3 scripts/atrium_postprocess.py notes.dat --task-type text
     python3 scripts/atrium_postprocess.py --info
 
+    # ATRIUM Document JSON accretion (docs/document_schema.md, issue #13): accrete this
+    # tool's pages[]/lines[] fields onto an existing baseline record
+    python3 scripts/atrium_postprocess.py page.alto.xml --document-record in.document.json \
+        --document-record-out-file out.document.json
+
 Exit codes:
     0 - success
     1 - client-side error (bad arguments, unreadable file)
@@ -33,6 +38,7 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+from typing import Optional
 
 DEFAULT_BASE_URL = os.environ.get("ATRIUM_AP_URL", "http://localhost:8000")
 MAX_UPLOAD_MB = 10  # mirrors the server's MAX_UPLOAD_MB default
@@ -41,8 +47,12 @@ RETRY_ATTEMPTS = 3
 RETRY_WAIT_S = 10
 
 
-def build_multipart(fields: dict, file_field: str, file_path: Path) -> tuple[bytes, str]:
-    """Encode form fields and one file as multipart/form-data using only the stdlib."""
+def build_multipart(fields: dict, files: dict) -> tuple[bytes, str]:
+    """Encode form fields and one or more files as multipart/form-data using only the stdlib.
+
+    `files` maps the multipart field name to a `Path` (e.g. `{"file": page.xml,
+    "document_record": baseline.json}` for the accretion contract).
+    """
     boundary = uuid.uuid4().hex
     lines = []
     for name, value in fields.items():
@@ -51,12 +61,15 @@ def build_multipart(fields: dict, file_field: str, file_path: Path) -> tuple[byt
         lines.append(b"")
         lines.append(str(value).encode())
 
-    mime = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
-    lines.append(f"--{boundary}".encode())
-    lines.append(f'Content-Disposition: form-data; name="{file_field}"; filename="{file_path.name}"'.encode())
-    lines.append(f"Content-Type: {mime}".encode())
-    lines.append(b"")
-    lines.append(file_path.read_bytes())
+    for field_name, file_path in files.items():
+        mime = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+        lines.append(f"--{boundary}".encode())
+        lines.append(
+            f'Content-Disposition: form-data; name="{field_name}"; filename="{file_path.name}"'.encode()
+        )
+        lines.append(f"Content-Type: {mime}".encode())
+        lines.append(b"")
+        lines.append(file_path.read_bytes())
     lines.append(f"--{boundary}--".encode())
     lines.append(b"")
 
@@ -97,8 +110,8 @@ def http_json(url: str, data: bytes = None, content_type: str = None, timeout: i
     sys.exit(3)
 
 
-def process_file(base_url: str, path: Path, task_type: str) -> dict:
-    """Upload one file to POST /process."""
+def process_file(base_url: str, path: Path, task_type: str, document_record: Optional[Path] = None) -> dict:
+    """Upload one file (and optional document_record baseline) to POST /process."""
     size = path.stat().st_size
     if size > MAX_UPLOAD_MB * 1024 * 1024:
         print(
@@ -114,7 +127,10 @@ def process_file(base_url: str, path: Path, task_type: str) -> dict:
             file=sys.stderr,
         )
         return {}
-    body, content_type = build_multipart({"task_type": task_type}, file_field="file", file_path=path)
+    files = {"file": path}
+    if document_record is not None:
+        files["document_record"] = document_record
+    body, content_type = build_multipart({"task_type": task_type}, files)
     return http_json(f"{base_url}/process", data=body, content_type=content_type)
 
 
@@ -167,6 +183,17 @@ def main() -> None:
         "--format", choices=["table", "csv", "json"], default="table", help="output format (default: table)"
     )
     parser.add_argument("--info", action="store_true", help="print service capabilities and limits, then exit")
+    parser.add_argument(
+        "--document-record",
+        metavar="PATH",
+        help="baseline ATRIUM Document JSON to accrete this tool's pages[]/lines[] fields onto "
+        "(docs/document_schema.md); requires exactly one input file",
+    )
+    parser.add_argument(
+        "--document-record-out-file",
+        metavar="PATH",
+        help="save the returned document_json_out record to PATH (default: only embedded in --format json output)",
+    )
     args = parser.parse_args()
 
     base_url = args.base_url.rstrip("/")
@@ -184,17 +211,35 @@ def main() -> None:
         print(f"File(s) not found: {', '.join(str(p) for p in missing)}", file=sys.stderr)
         sys.exit(1)
 
+    document_record_path = None
+    if args.document_record:
+        if len(paths) != 1:
+            parser.error("--document-record accretes onto a single document; pass exactly one input file")
+        document_record_path = Path(args.document_record)
+        if not document_record_path.is_file():
+            print(f"--document-record file not found: {document_record_path}", file=sys.stderr)
+            sys.exit(1)
+    if args.document_record_out_file and document_record_path is None:
+        parser.error("--document-record-out-file requires --document-record")
+
     raw_results = {}
     rows = []
+    record = None
     for path in paths:
-        result = process_file(base_url, path, task_type=args.task_type)
+        result = process_file(base_url, path, task_type=args.task_type, document_record=document_record_path)
         if result:
             raw_results[path.name] = result
             rows.extend(result_rows(path, result))
+            if result.get("document_json_out") is not None:
+                record = result["document_json_out"]
 
     if not rows:
         print("No results produced.", file=sys.stderr)
         sys.exit(1)
+
+    if args.document_record_out_file and record is not None:
+        Path(args.document_record_out_file).write_text(json.dumps(record, indent=2), encoding="utf-8")
+        print(f"Document JSON record written to {args.document_record_out_file}", file=sys.stderr)
 
     if args.format == "json":
         print(json.dumps(raw_results, indent=2, ensure_ascii=False))

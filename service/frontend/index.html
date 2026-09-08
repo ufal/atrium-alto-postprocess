@@ -466,7 +466,7 @@
             <h2>Pipeline Overview</h2>
             <p>Three models are applied in sequence to convert raw OCR output into
             classified, clean text lines. The service uses the same hybrid classifier
-            as the batch pipeline (<code>langID_classify.py</code>).</p>
+            as the batch pipeline (<code>classify_TEXT.py</code>).</p>
 
             <h2>1 · Layout Analysis (ALTO XML only)</h2>
             <p><strong>LayoutLMv3</strong> uses 2D bounding-box coordinates to reorder
@@ -480,7 +480,7 @@
 
             <h2>3 · Quality Classification — Hybrid Pipeline</h2>
             <p>Every line passes through two independent classification paths
-            implemented in <code>text_util_langID.py</code>, then a quality score
+            implemented in <code>text_util.py</code>, then a quality score
             breaks any disagreement:</p>
             <ul>
                 <li><strong>Structural path</strong> (<code>categorize_line</code>) —

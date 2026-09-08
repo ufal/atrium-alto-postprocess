@@ -38,7 +38,7 @@ Key features:
 
 * **Layout Analysis:** Uses **LayoutLMv3** to correctly reorder tokens from ALTO XML files based on 2D spatial layout, handling multi-column pages [^9].
 * **Text Cleaning:** Automatically detects and merges hyphenated words split across lines using ALTO `SUBS_TYPE` / `SUBS_CONTENT` attributes and regex-based reconstruction.
-* **Quality Classification:** Classifies every line with a composite **quality score** built from structural detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions, gibberish, fused/rotated tokens) and **Qwen2.5-0.5B** perplexity, implemented in `text_util_langID.py` [^6]. The category is then assigned from quality-score thresholds plus named overrides.
+* **Quality Classification:** Classifies every line with a composite **quality score** built from structural detectors (strange symbols, mid-word uppercase, letter–digit–letter fusions, gibberish, fused/rotated tokens) and **Qwen2.5-0.5B** perplexity, implemented in `text_util.py` [^6]. The category is then assigned from quality-score thresholds plus named overrides.
 * **GPU Support:** Automatically detects and utilises CUDA devices for inference if available [^3].
 * **Two Frontend Variants:** A self-contained standalone interface for direct use, and a LINDAT-integrated interface for deployment within the LINDAT Common framework.
 * **CORS Support:** Cross-Origin Resource Sharing is configurable via the `ALLOWED_ORIGINS` environment variable (defaults to `http://localhost:8080,http://localhost:5500`).
@@ -66,7 +66,7 @@ atrium-alto-postprocess/
 │   └── README.md                # API service documentation
 ├── setup/                       # ⚙️ Configuration and setup files
 │   └── setup_api_server.sh      # Sets up virtual environment and installs dependencies
-├── text_util_langID.py          # Structural quality detectors and categorisation logic
+├── text_util.py          # Structural quality detectors and categorisation logic
 ├── README.md                    # Project overview and documentation (this file)
 ├── LICENSE
 └── ...                          # Other project files (scripts, data samples, paradata)
@@ -96,13 +96,13 @@ The pipeline applies three models in sequence, balancing structural layout under
 
 The service classifies every text line into one of five categories. The first two (`Empty`, `Non-text`)
 are assigned by a fast CPU pre-filter before any model inference. The remaining three are assigned by
-`text_util_langID.categorize_line()` from the composite **quality score**, after immediate overrides.
+`text_util.categorize_line()` from the composite **quality score**, after immediate overrides.
 
 | Label         | Description                                                           | Primary Signal                                                                                    |
 |---------------|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| `Clear` 🟢    | **High quality.** Ready for downstream NLP.                           | `quality_score ≥ CATEG_NOISY_SCORE_MAX` (0.85), or a low-perplexity / clean-prose override.        |
+| `Clear` 🟢    | **High quality.** Ready for downstream NLP.                           | `quality_score ≥ CATEG_NOISY_SCORE_MAX` (0.85), or a low-perplexity / clean-prose override.       |
 | `Noisy` 🟡    | **Usable but degraded.** Minor OCR artefacts, recoverable downstream. | `CATEG_TRASH_SCORE_MAX` (0.55) ≤ `quality_score` < `CATEG_NOISY_SCORE_MAX` (0.85).                |
-| `Trash` 🔴    | **Structurally corrupt.** Not worth downstream processing.            | `quality_score < CATEG_TRASH_SCORE_MAX` (0.55), or a hard override (all-caps/no-vowel, inverted).  |
+| `Trash` 🔴    | **Structurally corrupt.** Not worth downstream processing.            | `quality_score < CATEG_TRASH_SCORE_MAX` (0.55), or a hard override (all-caps/no-vowel, inverted). |
 | `Non-text` 🔵 | **No meaningful text.** Purely numeric / separator content.           | CPU pre-filter: dates, page numbers, archive/stamp codes, or digit ratio > 40 % on short lines.   |
 | `Empty` ⚪     | **Blank line.** Whitespace only.                                      | `word_count == 0` / whitespace only.                                                              |
 
@@ -111,17 +111,33 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 > promotion, mostly-readable cap, and the document/page post-passes) are documented once in the main
 > [README → Categorisation Logic](../README.md#categorisation-logic) and are not duplicated here.
 
+> [!IMPORTANT]
+> `/process` classifies through **the same scoring function as the batch pipeline**
+> (`classify_TEXT.score_line()`), so the API and a pipeline run return the same category for the
+> same line. This was not always true: the endpoint used to assemble its own signals and had
+> drifted — it skipped the language remap, the two-tier trust scaling and `SHORT_PPL_CAP`, and it
+> never passed `orig_lang_score`, leaving that argument at its `1.0` default. Three Trash routes
+> that key on low language confidence (`rule_hard_sweep`, `rule_extreme_ppl`, `rule_wqx_rot`) could
+> therefore never fire from the API, which returned `Noisy` for lines the pipeline calls `Trash`.
+>
+> Two consequences worth knowing when comparing API output against a batch CSV:
+> * the service has no separate pre-repair text, so `garbage_density` and `vowel_ratio` are computed
+>   on the submitted line, whereas the pipeline computes them on the original pre-repair line;
+> * document- and page-level smoothing (`pp_*`) is a batch pass over a whole document and does not
+>   apply to single-line API calls.
+
 
 ## API Usage 📡
 
 ### Endpoints 🔗
 
-| Method | Path       | Description                                                                                   |
-|--------|------------|-----------------------------------------------------------------------------------------------|
-| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                              |
-| `GET`  | `/info`    | Service identity + capabilities: `service`, `version`, `endpoints`, `limits`, plus status, device, line fields, quality categories. |
-| `GET`  | `/health`  | Liveness probe; `?deep=true` also checks the quality/language models are loaded (503 on failure). |
-| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                  |
+| Method | Path       | Description                                                                                                                                                               |
+|--------|------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                                                                                                          |
+| `GET`  | `/info`    | Service identity + capabilities: `service`, `version`, `endpoints`, `limits`, plus status, device, line fields, quality categories.                                       |
+| `GET`  | `/health`  | Liveness probe — 200 always, even mid-shutdown. `?deep=true` also checks the quality/language models are loaded (503 on failure or while draining).                       |
+| `GET`  | `/ready`   | Readiness probe (issue #55) — 503 until model load finishes, 200 while serving, 503 the instant `SIGTERM` arrives. The Kubernetes `readinessProbe`/`startupProbe` target. |
+| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                                                                                              |
 
 ### Request Example 💻
 
@@ -129,8 +145,9 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 
 **Parameters (Form Data):**
 
-* `file`: The document file (`.xml` ALTO or `.txt`).
-* `task_type`: `alto`, `text`, or `auto` (default — detected from file extension).
+* `file`: The document file (`.xml` ALTO, `.txt` plain text, or `.json` generic OCR JSON).
+* `task_type`: `alto`, `text`, `json`, or `auto` (default — detected from file extension: `.xml`→`alto`,
+  `.txt`→`text`, `.json`→`json`).
 
 ```bash
 curl -X POST "http://localhost:8000/process" \
@@ -138,8 +155,19 @@ curl -X POST "http://localhost:8000/process" \
   -F "task_type=auto"
 ```
 
+For a generic JSON OCR-engine export, the endpoint walks the same key whitelist
+(`content`, `text`, `line`, `word`, …) as the batch pipeline's `extract_JSON_2_TXT.py`,
+treating each matched string as one line:
+
+```bash
+curl -X POST "http://localhost:8000/process" \
+  -F "file=@/path/to/page_01.json" \
+  -F "task_type=auto"
+```
+
 ### Response Schema
 
+The top-level `type` field is `alto_xml`, `plain_text`, or `json`, matching the routed `task_type`.
 Each item in `cleaned_lines` carries the fields used by the classification pipeline.
 
 ```json
@@ -189,18 +217,18 @@ Each item in `cleaned_lines` carries the fields used by the classification pipel
 
 **Response fields:**
 
-| Field           | Type   | Description                                                                                                                                |
-|-----------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| `line_num`      | int    | 1-based line position after layout reordering.                                                                                             |
-| `text`          | string | Cleaned line text with split-word merges applied.                                                                                          |
-| `lang`          | string | ISO language code predicted by FastText (e.g., `eng`, `ces`).                                                                              |
-| `lang_score`    | float  | FastText confidence score `[0, 1]`.                                                                                                        |
-| `perplexity`    | float  | Qwen2.5-0.5B perplexity. `0` means the line was pre-filtered and inference was skipped.                                                    |
-| `sym_count`     | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`).                                                  |
-| `upper_count`   | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).                                                          |
-| `word_weird`    | float  | Mean per-word weirdness score `[0, 1]`; combines strange-symbol, repeated-char, LDL-fusion, mid-uppercase and mirror-OCR (`w` / caps-prefix) signals; `0` = fully clean. |
+| Field           | Type   | Description                                                                                                                                                                                                                |
+|-----------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `line_num`      | int    | 1-based line position after layout reordering.                                                                                                                                                                             |
+| `text`          | string | Cleaned line text with split-word merges applied.                                                                                                                                                                          |
+| `lang`          | string | ISO language code predicted by FastText (e.g., `eng`, `ces`).                                                                                                                                                              |
+| `lang_score`    | float  | FastText confidence score `[0, 1]`.                                                                                                                                                                                        |
+| `perplexity`    | float  | Qwen2.5-0.5B perplexity. `0` means the line was pre-filtered and inference was skipped.                                                                                                                                    |
+| `sym_count`     | int    | Tokens containing characters outside the allowed internal set (`detect_strange_symbols`).                                                                                                                                  |
+| `upper_count`   | int    | Tokens with mid-word uppercase artefacts — Patterns 1–3 (`detect_mid_uppercase`).                                                                                                                                          |
+| `word_weird`    | float  | Mean per-word weirdness score `[0, 1]`; combines strange-symbol, repeated-char, LDL-fusion, mid-uppercase and mirror-OCR (`w` / caps-prefix) signals; `0` = fully clean.                                                   |
 | `quality_score` | float  | Composite quality score `[0, 1]`; weighted sum of nine signals (valid-word ratio, word-weirdness, perplexity, length, garbage density, vowel quality, language confidence, gibberish, fused-word ratio); higher = cleaner. |
-| `category`      | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                                                                    |
+| `category`      | string | One of: `Clear`, `Noisy`, `Trash`, `Non-text`, `Empty`.                                                                                                                                                                    |
 
 
 ## Installation & Setup 🛠
@@ -286,7 +314,7 @@ It is served directly by the FastAPI server at `http://localhost:8000` and works
 Features:
 - Drag-and-drop or click-to-upload for `.xml` and `.txt` files.
 - Processing mode selector (`auto` / `alto` / `text`).
-- Results table with `Sym`, `Upper`, and `PPL` columns aligned to `text_util_langID.py`.
+- Results table with `Sym`, `Upper`, and `PPL` columns aligned to `text_util.py`.
 - Category breakdown bar showing counts for all five labels.
 - Raw extracted text toggle.
 
@@ -354,11 +382,40 @@ For further details on the LINDAT development workflow see the
 with at least 48 GB of VRAM** (e.g., an NVIDIA RTX A6000 or a multi-GPU setup) to run the extraction pipeline
 successfully. Running this on consumer GPUs (like a 3090/4090) will likely result in Out-Of-Memory (OOM) crashes.
 * **Perplexity Threshold Coupling:** The service uses **Qwen2.5-0.5B** by default, matched to `PERPLEXITY_THRESHOLD_MAX
-= 1000.0` in `config_langID.txt`. If you switch the perplexity model via the `GPT2_MODEL_NAME` environment variable
+= 1000.0` in `config.txt`. If you switch the perplexity model via the `GPT2_MODEL_NAME` environment variable
 (e.g., to the English-only `distilgpt2`), you **must** recalibrate `PERPLEXITY_THRESHOLD_MAX` — perplexity scales differ
 wildly between architectures (≈ `3000.0` suits `distilgpt2`), so a value tuned for one model is mis-calibrated for the other.
 
 ---
+
+## Shutdown behavior 🛑
+
+Issue [#55](https://github.com/ufal/atrium-project/issues/55). The published `api` image
+(`ghcr.io/ufal/atrium-alto-postprocess:<version>-api`, new in that issue — before it this
+service was only reachable via a compose entrypoint override, so no API image existed to
+deploy) declares `HEALTHCHECK` (shallow `GET /health`, via the vendored
+`service/healthcheck.py`) and `STOPSIGNAL SIGTERM`. `service/text_api.py`'s own
+`__main__` block — which is this repo's production start path — passes
+`timeout_graceful_shutdown` (`GRACEFUL_SHUTDOWN_S`, default 20s).
+
+On `SIGTERM` the service flips `GET /ready` to **503** at once so an orchestrator stops
+routing to it, answers new `/process` calls with 503, and lets in-flight processing finish
+before exiting. `GET /health` deliberately stays 200 throughout — a liveness probe failing
+mid-shutdown would get the container killed before the drain completed.
+
+Inference now runs in a worker thread (`asyncio.to_thread`) rather than inline on the
+event loop. That was a prerequisite, not a tidy-up: uvicorn's `SIGTERM` handler is an
+event-loop callback, so while a synchronous `process_alto()` held the loop the signal
+could not be processed at all. Draining also matters here specifically because `/process`
+writes a `delete=False` temp file that only its own `finally` clause removes — a request
+killed by `SIGKILL` mid-flight leaves that file behind.
+
+⚠️ Model load failure at startup deliberately raises, so a misconfigured deployment
+crash-loops on the startup probe rather than sitting "not ready" forever. That is intended
+— see `docs/k8s_deployment.md` ("Known limits") in the hub.
+
+A clean shutdown exits **143** (128 + SIGTERM), not 0: uvicorn re-raises the captured
+signal on purpose so a supervisor sees the real cause. That is a normal stop, not a crash.
 
 ## Contacts 📧
 
