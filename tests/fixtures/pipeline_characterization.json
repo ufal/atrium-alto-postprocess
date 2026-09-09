@@ -87,27 +87,30 @@
       ]
     ],
     "short_garbage_vocabulary_without_strong_evidence": [
-      "Trash",
-      0.5499,
-      "trash_threshold",
+      "Clear",
+      0.8,
+      "clear_threshold",
       [
-        "rule_short_garbage"
+        "rule_short_garbage",
+        "rule_short_line"
       ]
     ],
     "short_garbage_binomial_without_strong_evidence": [
-      "Trash",
-      0.5499,
-      "trash_threshold",
+      "Clear",
+      0.8,
+      "clear_threshold",
       [
-        "rule_short_garbage"
+        "rule_short_garbage",
+        "rule_short_line"
       ]
     ],
     "short_garbage_shape_witness_without_strong_evidence": [
-      "Trash",
-      0.5499,
-      "trash_threshold",
+      "Clear",
+      0.8,
+      "clear_threshold",
       [
-        "rule_short_garbage"
+        "rule_short_garbage",
+        "rule_short_line"
       ]
     ],
     "short_line_clear": [
