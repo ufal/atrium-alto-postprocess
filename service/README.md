@@ -131,13 +131,13 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 
 ### Endpoints 🔗
 
-| Method | Path       | Description                                                                                                                                                               |
-|--------|------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                                                                                                          |
-| `GET`  | `/info`    | Service identity + capabilities: `service`, `version`, `endpoints`, `limits`, plus status, device, line fields, quality categories.                                       |
-| `GET`  | `/health`  | Liveness probe — 200 always, even mid-shutdown. `?deep=true` also checks the quality/language models are loaded (503 on failure or while draining).                       |
+| Method | Path       | Description                                                                                                                         |
+|--------|------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `GET`  | `/`        | Serves the standalone `index.html` interface for manual testing.                                                                    |
+| `GET`  | `/info`    | Service identity + capabilities: `service`, `version`, `endpoints`, `limits`, plus status, device, line fields, quality categories. |
+| `GET`  | `/health`  | Liveness probe — 200 always, even mid-shutdown. `?deep=true` also checks the quality/language models are loaded (503 on failure or while draining).  |
 | `GET`  | `/ready`   | Readiness probe (issue #55) — 503 until model load finishes, 200 while serving, 503 the instant `SIGTERM` arrives. The Kubernetes `readinessProbe`/`startupProbe` target. |
-| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                                                                                              |
+| `POST` | `/process` | Uploads a file for layout analysis, cleaning, and line-level classification.                                                        |
 
 ### Request Example 💻
 

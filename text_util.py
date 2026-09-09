@@ -13,6 +13,13 @@ Categories Outputted:
   - Trash     : Severe OCR corruption, high symbol density, gibberish, or failed language ID.
   - Noisy     : Partially degraded text (e.g., isolated strange symbols, mid-word uppercase).
   - Clear     : Structurally sound text with low perplexity.
+
+Those five, and only those five, are what this module writes into `lines[].categ`.
+They are bound to the CATEG_* label constants below (collected in
+CATEGORIES_EMITTED) and cross-checked at import time against the hub registry,
+atrium_vocab.LINE_CATEGORY_ORIGINATORS["alto-postprocess"]. The same block's other
+authorised originator, digital-convert, emits a DISJOINT set ({Garbage, Inverted});
+that is deliberate and is not drift to reconcile.
 """
 
 import configparser
@@ -23,6 +30,67 @@ import sys
 import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Line-category labels  (hub registry: atrium_vocab.LINE_CATEGORY_ORIGINATORS)
+# ---------------------------------------------------------------------------
+# The five strings below are the ONLY values this module ever writes into
+# `lines[].categ`. They are spelled out here as literals, not derived from the
+# registry, and that direction is deliberate:
+#
+#   * these strings ARE the emitted contract. Deriving them would make a stale or
+#     re-ordered vendored copy of atrium_vocab.py silently change what the
+#     pipeline outputs -- the registry is a description of behaviour, not a knob
+#     that steers it;
+#   * `lines[].categ` has a SECOND authorised originator (`digital-convert`, in
+#     atrium-llm-enrich) which emits {Garbage, Inverted}. The two sets are
+#     disjoint ON PURPOSE -- one is an OCR verdict over a rendered image, the
+#     other a decode-sanity verdict over an embedded text layer -- so "align the
+#     two" is never the fix for a disagreement found here.
+#
+# The registry's role is therefore advisory only: the check below reports a drift
+# between this file and the hub declaration and then gets out of the way. See
+# defect V-1 in the hub's docs/skos_strategy.md for why a consumer that filters
+# this field must handle BOTH sets.
+#
+# Naming note: the CATEG_*_SCORE_MAX / CATEG_GARBAGE_DENSITY_HIGH constants further
+# down are quality-score THRESHOLDS, not labels. Same prefix, different kind. And
+# "Process", which pre_filter_line() also returns, is NOT one of these: it is the
+# routing sentinel meaning "no verdict yet, score this line" (classify_TEXT.py gates
+# on `cat != "Process"`), and it never reaches lines[].categ.
+CATEG_EMPTY = "Empty"
+CATEG_NON_TEXT = "Non-text"
+CATEG_TRASH = "Trash"
+CATEG_NOISY = "Noisy"
+CATEG_CLEAR = "Clear"
+
+#: Every value `determine_category()` / `categorize_line()` can return, sorted so a
+#: comparison against the registry is order-independent. Consumers that need the
+#: set (service/text_api.py's `lines[]` projection documents it) should read this
+#: rather than re-typing the strings.
+CATEGORIES_EMITTED: tuple = tuple(sorted((CATEG_CLEAR, CATEG_EMPTY, CATEG_NOISY, CATEG_NON_TEXT, CATEG_TRASH)))
+
+# Advisory consistency check, NOT a gate. atrium_vocab is a vendored hub-canonical
+# file and is legitimately absent in some execution contexts (a bare `text_util.py`
+# copied next to a notebook, an image built before the vendor step). A missing
+# registry must never break the pipeline, so this follows the house idiom used by
+# atrium_document.py's origin check: abstain with a NOTE on stderr, never fatal.
+# Silence here means agreement; nothing is printed on the happy path.
+try:
+    from atrium_vocab import LINE_CATEGORY_ORIGINATORS as _VOCAB_LINE_CATEGORY_ORIGINATORS
+except ImportError:  # registry not vendored here - abstain, do not guess
+    _VOCAB_LINE_CATEGORY_ORIGINATORS = None
+else:
+    _declared = tuple(sorted(_VOCAB_LINE_CATEGORY_ORIGINATORS.get("alto-postprocess", ())))
+    if _declared and _declared != CATEGORIES_EMITTED:
+        print(
+            "[text_util] NOTE - line-category drift: this module emits "
+            f"{list(CATEGORIES_EMITTED)} but atrium_vocab declares {list(_declared)} for "
+            "originator 'alto-postprocess'. Emission is unchanged; reconcile the registry "
+            "or this file (see defect V-1 in the hub's docs/skos_strategy.md).",
+            file=sys.stderr,
+        )
+    del _declared
 
 # ---------------------------------------------------------------------------
 # Ablation Kill-Switch (Part B)
@@ -304,6 +372,22 @@ WX_REPEAT_MIN = _get_int("TEXT_UTILS", "WX_REPEAT_MIN", 2)
 
 ISOLATED_CHAR_RATIO_MAX = _get_float("TEXT_UTILS", "ISOLATED_CHAR_RATIO_MAX", 0.40)
 ISOLATED_CHAR_MIN_TOKENS = _get_int("TEXT_UTILS", "ISOLATED_CHAR_MIN_TOKENS", 3)
+
+# ── rule_short_garbage shape witness (issue #30) ────────────────────────────
+# OFF by default, like PAGE_PPL_BLEND_ENABLE above: the predicate ships defined,
+# unit-tested and measurable, and changes no category until someone turns it on
+# against a gold set. See _has_shape_garbage_evidence() for what it tests and,
+# just as importantly, what it deliberately does not.
+SHORT_GARBAGE_WITNESS_ENABLE = _get_str("TEXT_UTILS", "SHORT_GARBAGE_WITNESS_ENABLE", "false").strip().lower() in (
+    "true",
+    "1",
+    "yes",
+    "on",
+)
+SHORT_GARBAGE_WITNESS_MIN_ALPHA = _get_int("TEXT_UTILS", "SHORT_GARBAGE_WITNESS_MIN_ALPHA", 4)
+SHORT_GARBAGE_WITNESS_VARIETY_MIN_ALPHA = _get_int("TEXT_UTILS", "SHORT_GARBAGE_WITNESS_VARIETY_MIN_ALPHA", 7)
+SHORT_GARBAGE_WITNESS_VARIETY_MAX = _get_float("TEXT_UTILS", "SHORT_GARBAGE_WITNESS_VARIETY_MAX", 0.50)
+SHORT_GARBAGE_WITNESS_TRIPLE_MAX_ALPHA = _get_int("TEXT_UTILS", "SHORT_GARBAGE_WITNESS_TRIPLE_MAX_ALPHA", 8)
 SYM_LET_DIG_NONTEXT = _get_str("TEXT_UTILS", "SYM_LET_DIG_NONTEXT", "true").strip().lower() in (
     "true",
     "1",
@@ -1554,12 +1638,18 @@ def categorize_line(
         ghost_dominated,
     )
 
-    if categ == "Trash":
+    # Label constants, not literals, on the three sites where a category name is
+    # COMPARED against rather than emitted: the pairing of CATEG_TRASH with
+    # CATEG_TRASH_SCORE_MAX is the whole point of this block, and spelling both
+    # halves the same way keeps that visible. The `return` sites in
+    # determine_category() are deliberately left as literals - see the note at the
+    # head of this file.
+    if categ == CATEG_TRASH:
         aligned_score = min(qs, CATEG_TRASH_SCORE_MAX - 0.0001)
-    elif categ == "Noisy":
+    elif categ == CATEG_NOISY:
         aligned_score = max(qs, CATEG_TRASH_SCORE_MAX)
         aligned_score = min(aligned_score, CATEG_NOISY_SCORE_MAX - 0.0001)
-    elif categ == "Clear":
+    elif categ == CATEG_CLEAR:
         aligned_score = max(qs, CATEG_NOISY_SCORE_MAX)
     else:
         aligned_score = qs
@@ -1600,6 +1690,118 @@ def _has_strong_garbage_evidence(
 
     if not is_upright_czech and lang_score <= 0.40 and weird_ratio >= 0.40:
         return True
+
+    return False
+
+
+# ── rule_short_garbage shape witness (issue #30) ────────────────────────────
+# A SECOND WITNESS for the short-line garbage route, alongside
+# _has_strong_garbage_evidence(). It exists because that predicate returns False
+# on the ENTIRE population issue #30 is about -- valid_word_ratio 1.0 (because
+# compute_valid_ratio is shape-only), weird_ratio ~0.28-0.35, gibberish 0,
+# garbage_density 0.0, and a lang clause that fails on its FIRST conjunct at
+# trust-tier scores of 0.28-0.92. Pinned by
+# tests/test_calibration.py::test_strong_evidence_is_false_on_the_entire_disputed_population.
+# So on those lines "require a second witness" is not a narrowing of the rule;
+# there is no second witness to consult, and the rule simply stops convicting.
+#
+# SHAPE, NOT IDENTITY. It answers "is this spelled the way no European word is
+# spelled?", which characters can decide. It does not answer "is this a word?",
+# which they cannot: `edelite` is phonotactically legal and stays out of reach.
+# That residue is the part of #30 that genuinely needs a lexicon (D14).
+#
+# What is REUSED from detect_fused_words(): _RE_FUSED_VOWEL_RUN, by reference,
+# so the FUSED_VOWEL_RUN_MIN config key steers both.
+#
+# What is deliberately NOT reused, and why -- each of these was measured, and
+# each has a test naming the counterexample:
+#
+#   * `len(core) > 14`, detect_fused_words' third clause. Flags
+#     `Skelettmaterial`. Length is not evidence of garbage in a compounding
+#     language. See test_long_compound_is_not_witnessed.
+#
+#   * _RE_FUSED_CONSONANT_RUN (5+ consonants). Flags `vrstva`, `vrstvy`,
+#     `vrstvou`, `vrstvami`, `ctvrtek`, `ctvrt`, `zmrzl`, `scvrkl` -- ordinary
+#     diacritic-free Czech, and `vrstva` ("layer") is the commonest noun in
+#     archaeological field documentation. `vrstva 3` satisfies every condition
+#     of the short-garbage route at production signals, so a witness carrying
+#     this clause would Trash it. Nothing is lost by dropping it: `sektlll` and
+#     `Tthts I` are reached by the triple and geminate tests instead. See
+#     test_consonant_run_czech_is_not_witnessed.
+#
+#   * _has_repeated_run() / detect_repeated_chars(). Looks like the same idea
+#     and is not: it fires on `Kaaden` (aa) and `Pinii` (ii), both #30 fixtures
+#     that must survive. Unifying the two would either widen this predicate or
+#     narrow a detector that feeds compute_quality_score corpus-wide.
+#
+# detect_fused_words() itself is untouched for that last reason -- it feeds the
+# `fused_ratio` term of the quality score and the `fused_words` CSV column, so
+# narrowing it would move scores on every line in the corpus, not just here.
+#
+# KNOWN false positives of the vowel-run clause: Latin/French/German loans with
+# a 3+ vowel run (`Poaceae`, `Naiade`, `Beaune`, `Radiouhlik`,
+# `Sauerstoffflasche`). Most carry weird_ratio 0.0 and so never reach the route
+# at all -- a real but THIN margin, since it depends on a signal outside this
+# predicate. Measuring that class against annotated lines is a precondition for
+# enabling the flag, not a follow-up.
+# NO CALL SITE YET, and that is deliberate rather than an oversight. The only
+# place this belongs is the short-line garbage route, and on this branch that
+# route still convicts unconditionally -- so wiring it here today would change
+# nothing and would collide with the one-hunk patch under review in PR #48,
+# which is what introduces the conditional the witness would join. It lands as
+# a second disjunct in that condition once the PR merges. Until then the
+# predicate is exercised by tests/test_text_utils.py::TestShapeGarbageWitness
+# and by test_the_disjunction_the_gate_will_evaluate in tests/test_calibration.py,
+# which pins the composed condition on real production signal vectors.
+_RE_TRIPLE_ALPHA_RUN: re.Pattern = re.compile(r"([^\W\d_])\1\1", re.IGNORECASE)
+_RE_INITIAL_CONSONANT_GEMINATE: re.Pattern = re.compile(r"^([bcdfghjklmnpqrstvwxz])\1", re.IGNORECASE)
+
+
+def _has_shape_garbage_evidence(text_source: str) -> bool:
+    """Phonotactic evidence that a short line is OCR garbage, not rare vocabulary.
+
+    Read only when ``SHORT_GARBAGE_WITNESS_ENABLE`` is set. See the block above
+    for what it tests, what it refuses to test, and the counterexamples behind
+    each refusal.
+    """
+    if has_cz_diacs(text_source) or is_structured_line(text_source) or is_domain_notation(text_source):
+        return False
+
+    for word in text_source.split():
+        for sub in _split_subtokens(word):
+            core = sub.strip(_STRIP_CHARS)
+            letters = [c for c in core if c.isalpha()]
+
+            # Too short to have a phonotactic shape at all. This is also what
+            # keeps every SHORT_VALID_WORDS / _NEUTRAL_LEXICON member out by
+            # construction rather than by enumeration.
+            if len(letters) < SHORT_GARBAGE_WITNESS_MIN_ALPHA:
+                continue
+
+            lowered = core.lower()
+            if lowered in _NEUTRAL_LEXICON or lowered in SHORT_EXCEPTION_TOKENS or lowered in SHORT_VALID_WORDS:
+                continue
+
+            # 3+ consecutive vowels: `oueussd`, `cuxoaid`, `IDIDIDIDIDIDUOID`.
+            if _RE_FUSED_VOWEL_RUN.search(core):
+                return True
+
+            # The same character three times: `sektlll`, `NINNNIC`. Capped by
+            # length -- a long compound reaching three is `Schifffahrt`, a word.
+            if len(letters) <= SHORT_GARBAGE_WITNESS_TRIPLE_MAX_ALPHA and _RE_TRIPLE_ALPHA_RUN.search(core):
+                return True
+
+            # A doubled CONSONANT in first position: `Tthts`, `rragment`. No
+            # European orthography opens a word that way; a bare `^(.)\1` would
+            # also take `Aachen`, which several do.
+            if _RE_INITIAL_CONSONANT_GEMINATE.match(core):
+                return True
+
+            # Too few distinct letters for the length: `vansasaasasa`.
+            if len(letters) >= SHORT_GARBAGE_WITNESS_VARIETY_MIN_ALPHA and (
+                len({c.lower() for c in letters}) / len(letters) <= SHORT_GARBAGE_WITNESS_VARIETY_MAX
+            ):
+                return True
 
     return False
 
@@ -1907,9 +2109,16 @@ def is_domain_notation(text_source: str) -> bool:
     recovering grid references needs.
 
     Recognises notation, never vocabulary. `II/C`, `Reg.Bez.Aussig.` and `1 ks`
-    have a *shape*; `malakofauna` and `Equus caballus` do not, and separating
-    those from `oueussd` needs a lexicon rather than a pattern. They stay with
+    have a *shape*; `malakofauna` and `Equus caballus` do not, so they stay with
     `rule_short_garbage`.
+
+    This used to add "and separating those from `oueussd` needs a lexicon rather
+    than a pattern". That was too strong, and issue #30 has since shown where
+    the real boundary sits: `oueussd` is separable by SHAPE -- see
+    `_has_shape_garbage_evidence()`, which reaches it and leaves `malakofauna`
+    alone. What genuinely needs word knowledge is the phonotactically legal
+    residue: separating `malakofauna` from `edelite`, where no character-level
+    test can help because nothing about the spelling of either is wrong.
     """
     stripped = " ".join(text_source.split())
 
@@ -2021,8 +2230,15 @@ _RE_SIGLUM = re.compile(r"^([A-Za-zÁČĎÉĚÍŇÓŘŠŤŮÚÝŽáčďéěíň�
 # Scope is NOTATION, not vocabulary. Grid/context refs, counts, abbreviation
 # chains and labelled refs are shapes a regex can recognise. Latin binomials
 # (`Equus caballus`, `Ossa tarsi`) and bare foreign words (`malakofauna`) are
-# vocabulary — they need a lexicon, not a pattern, and are deliberately left to
-# `rule_short_garbage` here.
+# vocabulary, and are deliberately left to `rule_short_garbage` here.
+#
+# The scope line used to end "they need a lexicon, not a pattern". Keeping them
+# out of THIS predicate is still right -- a notation regex claiming binomials
+# would be claiming to solve the harder half of #30 -- but "needs a lexicon" was
+# a claim about the whole problem and it does not survive: much of the garbage
+# side is separable by shape (`_has_shape_garbage_evidence()`), and only the
+# phonotactically legal residue (`edelite` against `malakofauna`) needs word
+# knowledge.
 #
 # Dimensions (`12,5 cm`, `145-167mm`, `0,46m`) are NOT covered: they already
 # match `_looks_like_measurement()`, so they never reach rule_short_garbage in
