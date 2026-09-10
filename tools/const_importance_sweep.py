@@ -44,11 +44,13 @@ from recategorize_from_csv import (  # noqa: E402
     QS_WEIGHT_NAMES,
     TUNABLE_CONSTANTS,
     _load_lang_config,
+    add_gold_column_argument,
     coerce_constants,
     evaluate_dataframe,
     evaluate_per_document,
     load_csvs,
     read_config_constants,
+    short_cap_arms_hard_sweep,
     validate_constants,
 )
 
@@ -711,6 +713,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--sampler", choices=("random", "tpe"), default="random", help="Optuna sampler.")
     p.add_argument("--study-name", type=str, default="const_importance")
+    add_gold_column_argument(p)
     return p
 
 
@@ -737,18 +740,39 @@ def main(argv=None):
     print(f"Loaded {len(data):,} lines across {n_docs} document(s)")
 
     expected_langs, known_bases = _load_lang_config(args.config or str(Path("setup/config.txt")))
-    eval_kwargs = {"expected_langs": expected_langs, "known_bases": known_bases}
+    eval_kwargs = {
+        "expected_langs": expected_langs,
+        "known_bases": known_bases,
+        "gold_category_column": args.gold_column,
+    }
+
+    if short_cap_arms_hard_sweep(base_constants):
+        print(
+            "[NOTICE] SHORT_PPL_CAP is above HARD_SWEEP_PPL_MIN, so rule_hard_sweep is armed at "
+            "wc <= 2. Issue #30 measured 58,427 notation lines that are Clear only because the "
+            "cap sits below that floor. Report notation Clear-loss before adopting any config "
+            "found under this setting."
+        )
 
     baseline_metrics = evaluate_dataframe(data, base_constants, **eval_kwargs)
     save_json(args.output_dir / "baseline_metrics.json", baseline_metrics)
-    save_json(args.output_dir / "baseline_per_document.json", evaluate_per_document(data, base_constants))
+    save_json(
+        args.output_dir / "baseline_per_document.json",
+        evaluate_per_document(data, base_constants, gold_category_column=args.gold_column),
+    )
     save_json(args.output_dir / "base_config.json", base_constants)
     save_json(args.output_dir / "search_space.json", {name: SEARCH_SPACE[name] for name in params})
     print(
         f"Baseline (current config): flip_rate={baseline_metrics['flip_rate']:.4f} macro_f1={baseline_metrics['macro_f1']:.4f}"
     )
 
-    if baseline_metrics["flip_rate"] > 1e-9:
+    if args.gold_column:
+        print(
+            f"Objective is agreement with gold column {args.gold_column!r} "
+            f"({baseline_metrics['line_count']:,} annotated line(s)); "
+            "'flip_rate' below therefore means disagreement with gold, not drift."
+        )
+    elif baseline_metrics["flip_rate"] > 1e-9:
         print("[WARNING] baseline flip_rate is not ~0 — importances may be confounded.")
 
     common = dict(

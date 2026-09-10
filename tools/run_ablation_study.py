@@ -41,6 +41,7 @@ if str(_THIS_DIR) not in sys.path:
 from recategorize_from_csv import (  # noqa: E402
     QS_WEIGHT_NAMES,
     _load_lang_config,
+    add_gold_column_argument,
     evaluate_dataframe,
     load_csvs,
     read_config_constants,
@@ -171,11 +172,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run LOO Ablation on heuristics.")
     parser.add_argument("--input-dir", type=Path, required=True)
     parser.add_argument("--config", type=str, default="setup/config.txt")
+    add_gold_column_argument(parser)
     args = parser.parse_args()
 
     df = load_csvs(args.input_dir, recursive=True)
     expected_langs, known_bases = _load_lang_config(args.config)
-    run_ablation(df, {"expected_langs": expected_langs, "known_bases": known_bases}, read_config_constants(args.config))
+    eval_kwargs = {
+        "expected_langs": expected_langs,
+        "known_bases": known_bases,
+        "gold_category_column": args.gold_column,
+    }
+    run_ablation(df, eval_kwargs, read_config_constants(args.config))
 
 
 if __name__ == "__main__":

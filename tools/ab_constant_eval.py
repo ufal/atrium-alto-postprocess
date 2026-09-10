@@ -23,7 +23,7 @@ with that coupling in mind.
 Example
 -------
     python tools/ab_constant_eval.py \\
-        --input-dir data_samples/DOC_LINE_CATEG --config config.txt \\
+        --input-dir data_samples/DOC_LINE_CATEG --config setup/config.txt \\
         --const CATEG_GARBAGE_DENSITY_HIGH --values 0.35,0.55
 """
 
@@ -38,6 +38,7 @@ if str(_THIS_DIR) not in sys.path:
 
 from recategorize_from_csv import (  # noqa: E402
     _load_lang_config,
+    add_gold_column_argument,
     evaluate_dataframe,
     load_csvs,
     read_config_constants,
@@ -56,6 +57,32 @@ def _trash_recall(metrics: Dict[str, Any]) -> float:
     trash_row = conf.get("Trash", {})
     support = sum(int(v) for v in trash_row.values())
     return float(int(trash_row.get("Trash", 0)) / support) if support else float("nan")
+
+
+def _print_gold_verdict(rows: List[Dict[str, Any]], gold_column: str, margin: float = 0.0) -> None:
+    """Report each trial against gold, and against the shipped labels' own gold score.
+
+    Mirrors ``tools/quality_model/evaluate.py::gold_gate()``: a candidate passes only
+    when it is at least as good as the incumbent on human labels. Beating the
+    incumbent on the incumbent's own labels is not evidence of anything.
+    """
+    baseline = next((r["baseline_vs_gold_macro_f1"] for r in rows if r["baseline_vs_gold_macro_f1"] is not None), None)
+    print(f"\nScored against gold column {gold_column!r}.")
+    if baseline is None:
+        print("  No stored `categ` column alongside gold -- cannot compare against the shipped labels.")
+        return
+    print(f"  Shipped labels vs gold: macro_f1={baseline:.4f}")
+    for r in rows:
+        delta = r["macro_f1"] - baseline
+        verdict = "ADOPT-CANDIDATE" if delta > margin else ("parity" if delta >= -margin else "REGRESSION")
+        print(
+            f"  {r['value']}: macro_f1={r['macro_f1']:.4f} "
+            f"({delta:+.4f} vs shipped)  Clear-loss={r['clear_loss']:,}  -> {verdict}"
+        )
+    print(
+        "  A candidate is only worth adopting when it beats the shipped labels against gold "
+        "AND does not raise Clear-loss."
+    )
 
 
 def run_ab(
@@ -85,6 +112,10 @@ def run_ab(
                 "kl": float(metrics["kl_divergence"]),
                 "clear_loss": _clear_loss(metrics),
                 "trash_recall": _trash_recall(metrics),
+                "baseline_vs_gold_macro_f1": (
+                    float(metrics["baseline_vs_gold"]["macro_f1"]) if "baseline_vs_gold" in metrics else None
+                ),
+                "gold_delta_macro_f1": metrics.get("gold_delta_macro_f1"),
             }
         )
 
@@ -111,11 +142,17 @@ def run_ab(
             f"trash_rate {alt['trash_rate'] - ref['trash_rate']:+.4f}, "
             f"Clear-loss {alt['clear_loss'] - ref['clear_loss']:+d}"
         )
-    print(
-        "\nNote: ground-truth flip_rate is ~0 at the current config by construction, so a "
-        "non-zero flip_rate / macro_f1 < 1 here is deviation FROM the stored categories.\n"
-        "Run on the full DOC_LINE_CATEG corpus -- the bundled sample is a smoke fixture."
-    )
+    gold_column = eval_kwargs.get("gold_category_column")
+    if gold_column:
+        _print_gold_verdict(rows, gold_column)
+    else:
+        print(
+            "\nNote: ground-truth flip_rate is ~0 at the current config by construction, so a "
+            "non-zero flip_rate / macro_f1 < 1 here is deviation FROM the stored categories.\n"
+            "These numbers cannot tell an improvement from a regression -- pass --gold-column "
+            "to score against human labels instead (tools/GOLD.md).\n"
+            "Run on the full DOC_LINE_CATEG corpus -- the bundled sample is a smoke fixture."
+        )
 
 
 def main() -> None:
@@ -129,6 +166,7 @@ def main() -> None:
         default="0.35,0.55",
         help="Comma-separated values to test (first is the reference for deltas).",
     )
+    add_gold_column_argument(parser)
     args = parser.parse_args()
 
     values = [float(v.strip()) for v in args.values.split(",") if v.strip()]
@@ -139,7 +177,11 @@ def main() -> None:
     df = load_csvs(args.input_dir, recursive=True)
     expected_langs, known_bases = _load_lang_config(args.config)
     base_constants = read_config_constants(args.config)
-    eval_kwargs = {"expected_langs": expected_langs, "known_bases": known_bases}
+    eval_kwargs = {
+        "expected_langs": expected_langs,
+        "known_bases": known_bases,
+        "gold_category_column": args.gold_column,
+    }
 
     run_ab(df, args.const, values, base_constants, eval_kwargs)
 

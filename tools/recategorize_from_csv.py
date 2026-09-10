@@ -55,6 +55,8 @@ from classify_TEXT import (  # noqa: E402
     score_line,
 )
 from text_util import (  # noqa: E402
+    DEFAULT_EXPECTED_LANGS,
+    DEFAULT_TRUSTED_FOREIGN_LANGS,
     _lang_base,
     override_constants,
     probe_spaced_decimal_metre_candidate,
@@ -73,16 +75,52 @@ OUTPUT_CATEGORY_ORDER = ("Empty", "Non-text", "Trash", "Noisy", "Clear")
 # ---------------------------------------------------------------------------
 
 
-def _load_lang_config(config_path: str):
-    """Resolve EXPECTED_LANGS / TRUSTED_FOREIGN_LANGS exactly as classify_TEXT.main."""
+def _load_lang_config(config_path: str | None):
+    """Resolve EXPECTED_LANGS / TRUSTED_FOREIGN_LANGS exactly as classify_TEXT.main.
+
+    Two things this deliberately does NOT do, both of which it used to.
+
+    It no longer carries its own copy of the fallback strings. The offline copy
+    had drifted from the shipped one -- it was missing ``slk`` -- so a Slovak
+    line reached the guards at ``TRUST_TIER_UNKNOWN`` (0.50) here and
+    ``TRUST_TIER_TRUSTED`` (0.85) in production. The strings now live in
+    ``text_util`` and are imported by both callers.
+
+    And it no longer degrades silently. ``configparser.read()`` ignores a path
+    that does not exist, so a typo'd or stale ``--config`` used to fall through
+    to the defaults and produce a confident, differently-scored run. Every
+    documented command in this repository named ``config.txt``, which has not
+    existed at the repo root since the file moved to ``setup/``. A named config
+    that cannot be read, or that has no ``[CLASSIFY]`` section, is now an error.
+    """
     config = configparser.ConfigParser()
-    config.read(config_path)
+
+    if config_path is not None:
+        path = Path(config_path)
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Config file does not exist: {config_path}. "
+                "Refusing to fall back to built-in language defaults -- that silently "
+                "changes the trust tier of every non-expected language. "
+                "Did you mean setup/config.txt?"
+            )
+        read_ok = config.read(path)
+        if not read_ok:
+            raise ValueError(f"Config file could not be parsed: {config_path}")
+        if not config.has_section("CLASSIFY"):
+            raise ValueError(
+                f"Config file {config_path} has no [CLASSIFY] section, so EXPECTED_LANGS / "
+                "TRUSTED_FOREIGN_LANGS would silently fall back to the built-in defaults."
+            )
+
     expected = [
-        s.strip() for s in config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng").split(",") if s.strip()
+        s.strip()
+        for s in config.get("CLASSIFY", "EXPECTED_LANGS", fallback=DEFAULT_EXPECTED_LANGS).split(",")
+        if s.strip()
     ]
     trusted = [
         s.strip()
-        for s in config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback="deu,eng,fra,pol,ita").split(",")
+        for s in config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback=DEFAULT_TRUSTED_FOREIGN_LANGS).split(",")
         if s.strip()
     ]
     known_bases = frozenset(_lang_base(code) for code in (trusted + expected))
@@ -273,6 +311,14 @@ def rescore_csv(in_path: Path, constants: Mapping[str, Any] | None = None) -> tu
 
     if not old.empty:
         old = old.sort_values(by=["page_num", "line_num"], ascending=True)
+        # `new` comes back in the INPUT frame's order, so sorting only `old`
+        # leaves the two frames misaligned whenever a CSV is not already stored
+        # in (page_num, line_num) order -- and `_report` compares them
+        # positionally. Reversing the row order of a single document was enough
+        # to make it report 4 phantom category changes out of 9 lines while the
+        # category COUNTS stayed identical. Realign on the index, which both
+        # frames preserve, so the diff is about categories and never about order.
+        new = new.reindex(old.index)
     return old, new
 
 
@@ -464,6 +510,34 @@ def validate_constants(constants: Mapping[str, Any]) -> None:
         raise ValueError("Invalid constants: sum(QS_WEIGHT_*) must be positive")
 
 
+def short_cap_arms_hard_sweep(constants: Mapping[str, Any] | None = None) -> bool:
+    """True when perplexity can reach ``rule_hard_sweep`` on a 1-2 token line.
+
+    At the shipped defaults it cannot: ``SHORT_PPL_CAP`` (850) sits below
+    ``HARD_SWEEP_PPL_MIN`` (1000), so a short line's perplexity is flattened to
+    the cap before any perplexity rule sees it. That is not an incidental
+    ordering -- issue #30 measured **58,427 notation lines that are `Clear`
+    only because of it**, 50,221 of them sitting exactly at the cap. They are
+    `Clear` because the cap flattened their perplexity, not because the language
+    gate cleared them.
+
+    Raising the cap above the hard-sweep floor arms that route at ``wc <= 2``
+    for the first time and puts those lines in reach of `Trash`. It is a
+    legitimate configuration to explore -- ``SHORT_PPL_CAP`` sweeps [300, 950]
+    and ``HARD_SWEEP_PPL_MIN`` sweeps [500, 3000], so the joint move is inside
+    the search space even though no single-constant move reaches it -- but it
+    should be an informed choice, not something a sweep stumbles into. Callers
+    that report it are doing the informing.
+    """
+
+    def _g(name):
+        if constants and name in constants:
+            return float(constants[name])
+        return float(_live_default(name))
+
+    return _g("SHORT_PPL_CAP") > _g("HARD_SWEEP_PPL_MIN")
+
+
 # ---------------------------------------------------------------------------
 # Data loading + helpers
 # ---------------------------------------------------------------------------
@@ -627,31 +701,72 @@ def _metrics_from_labels(original: np.ndarray, predicted: np.ndarray) -> dict[st
     }
 
 
+def _stored_labels(df: pd.DataFrame, original_category_column: str) -> np.ndarray | None:
+    """The pipeline's own labels, or None when the frame carries none."""
+    if original_category_column in df.columns:
+        return df[original_category_column].map(normalize_category).to_numpy()
+    if "orig_categ" in df.columns:
+        return df["orig_categ"].map(normalize_category).to_numpy()
+    return None
+
+
 def evaluate_dataframe(
     df: pd.DataFrame,
     constants: Mapping[str, Any] | None = None,
     *,
     original_category_column: str = "categ",
+    gold_category_column: str | None = None,
     expected_langs: list[str] | None = None,
     known_bases: frozenset | None = None,
 ) -> dict[str, Any]:
-    """Faithfully re-categorise ``df`` under ``constants`` and score it against the
-    stored categories. The evaluation runs the real production engine
-    (document-aware, with page post-processing).
+    """Faithfully re-categorise ``df`` under ``constants`` and score the result.
+
+    The re-categorisation always runs the real production engine (document-aware,
+    with page post-processing). What the result is scored *against* depends on
+    ``gold_category_column``:
+
+    * ``None`` (default) -- score against the frame's own stored ``categ``. This is
+      the historical behaviour and it is **self-referential**: the shipped config
+      is the optimum by construction, and a genuine accuracy improvement scores as
+      pure damage. Use it to measure drift and parity, never to choose constants.
+    * a column name -- score against human gold labels in that column. The metrics
+      then mean agreement-with-gold, and ``baseline_vs_gold`` carries the same
+      metrics for the pipeline's *stored* labels so a trial can be compared against
+      the status quo rather than against itself.
+
+    A missing gold column is an error, never a silent fallback: scoring predictions
+    against themselves yields a perfect score, which is exactly the kind of quiet
+    no-op this repository has been bitten by before.
     """
-    if original_category_column in df.columns:
-        original = df[original_category_column].map(normalize_category).to_numpy()
-    elif "orig_categ" in df.columns:
-        original = df["orig_categ"].map(normalize_category).to_numpy()
+    stored = _stored_labels(df, original_category_column)
+
+    if gold_category_column is not None:
+        if gold_category_column not in df.columns:
+            raise KeyError(
+                f"gold column {gold_category_column!r} is not in the frame; "
+                f"available columns: {sorted(df.columns)}. Refusing to fall back to the "
+                "stored categories -- see tools/GOLD.md for the expected schema."
+            )
+        reference = df[gold_category_column].map(normalize_category).to_numpy()
     else:
-        original = None
+        reference = stored
 
     predicted_df = recategorize_dataframe(df, constants, expected_langs=expected_langs, known_bases=known_bases)
     predicted = predicted_df["categ"].map(normalize_category).to_numpy()
 
-    if original is None:
-        original = predicted.copy()
-    return _metrics_from_labels(original, predicted)
+    if reference is None:
+        reference = predicted.copy()
+
+    metrics = _metrics_from_labels(reference, predicted)
+
+    if gold_category_column is not None:
+        metrics["gold_column"] = gold_category_column
+        if stored is not None:
+            baseline = _metrics_from_labels(reference, stored)
+            metrics["baseline_vs_gold"] = baseline
+            metrics["gold_delta_macro_f1"] = float(metrics["macro_f1"] - baseline["macro_f1"])
+
+    return metrics
 
 
 def evaluate_per_document(
@@ -659,14 +774,19 @@ def evaluate_per_document(
     constants: Mapping[str, Any] | None = None,
     *,
     original_category_column: str = "categ",
+    gold_category_column: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Per-document metrics (importance can be collection-specific)."""
+    kwargs = {
+        "original_category_column": original_category_column,
+        "gold_category_column": gold_category_column,
+    }
     group_col = "file" if "file" in df.columns else ("_source_file" if "_source_file" in df.columns else None)
     if group_col is None:
-        return {"<all>": evaluate_dataframe(df, constants, original_category_column=original_category_column)}
+        return {"<all>": evaluate_dataframe(df, constants, **kwargs)}
     out: dict[str, dict[str, Any]] = {}
     for name, doc in df.groupby(group_col, sort=True):
-        out[str(name)] = evaluate_dataframe(doc, constants, original_category_column=original_category_column)
+        out[str(name)] = evaluate_dataframe(doc, constants, **kwargs)
     return out
 
 
@@ -709,6 +829,55 @@ def _category_counts(df: pd.DataFrame):
     return df["categ"].value_counts().to_dict()
 
 
+def _gold_report(old: pd.DataFrame, new: pd.DataFrame, gold_column: str) -> dict[str, Any] | None:
+    """Score stored and re-scored categories against a human-gold column.
+
+    Returns None when the frame has no gold column at all, so a mixed directory of
+    annotated and un-annotated documents still reports on the annotated ones. A
+    frame that HAS the column but leaves it blank contributes no rows, which is
+    reported as such rather than scored as perfect agreement.
+    """
+    if gold_column not in old.columns:
+        return None
+
+    gold_raw = old[gold_column].fillna("").astype(str)
+    mask = gold_raw.str.strip() != ""
+    if not mask.any():
+        return {"n": 0}
+
+    # Index-aligned on purpose: `new` may be ordered differently from `old`, and
+    # comparing two positionally-taken slices would score line N's prediction
+    # against line M's gold.
+    labels = old.index[mask]
+    gold = gold_raw.loc[labels].map(normalize_category).to_numpy()
+    stored = old.loc[labels, "categ"].map(normalize_category).to_numpy()
+    rescored = new["categ"].reindex(labels).map(normalize_category).to_numpy()
+
+    stored_metrics = _metrics_from_labels(gold, stored)
+    rescored_metrics = _metrics_from_labels(gold, rescored)
+    return {
+        "n": int(mask.sum()),
+        "stored_vs_gold": stored_metrics,
+        "rescored_vs_gold": rescored_metrics,
+        "delta_macro_f1": float(rescored_metrics["macro_f1"] - stored_metrics["macro_f1"]),
+    }
+
+
+def _print_gold_report(report: dict[str, Any] | None, gold_column: str) -> None:
+    if report is None:
+        return
+    if not report.get("n"):
+        print(f"  gold column {gold_column!r} present but empty - no rows scored")
+        return
+    stored = report["stored_vs_gold"]
+    rescored = report["rescored_vs_gold"]
+    delta = report["delta_macro_f1"]
+    print(f"  vs gold ({report['n']} annotated line(s), column {gold_column!r}):")
+    print(f"    stored   macro_f1={stored['macro_f1']:.4f}  agreement={1.0 - stored['flip_rate']:.4f}")
+    print(f"    rescored macro_f1={rescored['macro_f1']:.4f}  agreement={1.0 - rescored['flip_rate']:.4f}")
+    print(f"    delta    macro_f1={delta:+.4f}")
+
+
 def _report(in_path: Path, old: pd.DataFrame, new: pd.DataFrame) -> int:
     """Print a before/after report; return the number of changed lines."""
     oc, nc = _category_counts(old), _category_counts(new)
@@ -721,13 +890,18 @@ def _report(in_path: Path, old: pd.DataFrame, new: pd.DataFrame) -> int:
 
     changed = 0
     if "categ" in old.columns and "categ" in new.columns and len(old) == len(new):
-        old_cat = old["categ"].reset_index(drop=True)
-        new_cat = new["categ"].reset_index(drop=True)
+        # Align on the shared index rather than on position: a positional
+        # comparison silently reports phantom flips when the two frames are
+        # ordered differently (see the note in `rescore_csv`).
+        old_cat = old["categ"]
+        new_cat = new["categ"].reindex(old.index)
+        old_cat = old_cat.reset_index(drop=True)
+        new_cat = new_cat.reset_index(drop=True)
         diff_mask = old_cat != new_cat
         changed = int(diff_mask.sum())
         if changed:
             print(f"  --- {changed} line(s) changed category ---")
-            txt = new["text"].reset_index(drop=True) if "text" in new.columns else None
+            txt = new["text"].reindex(old.index).reset_index(drop=True) if "text" in new.columns else None
             shown = 0
             for i in diff_mask[diff_mask].index:
                 snippet = str(txt.iloc[i])[:48] if txt is not None else ""
@@ -742,6 +916,34 @@ def _report(in_path: Path, old: pd.DataFrame, new: pd.DataFrame) -> int:
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
+
+GOLD_COLUMN_DEFAULT = "gold_categ"
+
+GOLD_COLUMN_HELP = (
+    "Name of a human-gold category column in the input CSVs (conventionally "
+    f"{GOLD_COLUMN_DEFAULT!r}). Without it, every metric is computed against the "
+    "pipeline's OWN stored categories, which makes the shipped config optimal by "
+    "construction and scores a genuine improvement as damage. With it, metrics mean "
+    "agreement with human labels. A named column that is absent is an error, not a "
+    "silent fallback. See tools/GOLD.md."
+)
+
+
+def add_gold_column_argument(ap: argparse.ArgumentParser) -> None:
+    """Register ``--gold-column`` on a driver.
+
+    Single-sourced on purpose: five tools score through ``evaluate_dataframe`` and
+    the flag has to mean exactly the same thing in each, the same way there is one
+    scoring engine rather than five.
+    """
+    ap.add_argument(
+        "--gold-column",
+        dest="gold_column",
+        default=None,
+        metavar="COLUMN",
+        help=GOLD_COLUMN_HELP,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -763,6 +965,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override individual constants, e.g. CATEG_TRASH_SCORE_MAX=0.45.",
     )
     ap.add_argument("--report-only", action="store_true", help="Print the diff report but do not write CSVs.")
+    add_gold_column_argument(ap)
     ap.add_argument(
         "--probe-metre-candidate",
         action="store_true",
@@ -810,6 +1013,9 @@ def main(argv=None):
     for csv_path in csvs:
         old, new = rescore_csv(csv_path, constants)
         total_changed += _report(csv_path, old, new)
+
+        if args.gold_column:
+            _print_gold_report(_gold_report(old, new, args.gold_column), args.gold_column)
 
         if args.probe_metre_candidate:
             candidate_hits = _count_spaced_decimal_metre_candidates(old)

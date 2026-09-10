@@ -73,13 +73,13 @@ During the #5 configuration map, `rule_coverage_report.py` was executed against 
 # Smoke fixture (fast; proves the instrument works; results not authoritative)
 python tools/rule_coverage_report.py \
     --input-dir data_samples/DOC_LINE_CATEG \
-    --config config.txt \
+    --config setup/config.txt \
     --output rule_coverage_smoke.json
 
 # Full corpus (cluster; authoritative for retirement decisions)
 python tools/rule_coverage_report.py \
     --input-dir /path/to/full/DOC_LINE_CATEG \
-    --config config.txt \
+    --config setup/config.txt \
     --output rule_coverage_full.json
 
 # Coverage only (no LOO; faster when you only need fire counts)

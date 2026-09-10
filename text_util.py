@@ -210,13 +210,25 @@ def _get_csv_set(section, key, default):
     return frozenset(t.strip() for t in raw.split(",") if t.strip())
 
 
-COMMON_LANGS = ["ces", "deu", "eng"]
+# (#30) The two [CLASSIFY] language fallbacks, named once.
+#
+# They used to be spelled out at three call sites -- here, classify_TEXT.main()
+# and tools/recategorize_from_csv._load_lang_config() -- and they drifted: the
+# offline copy was missing `slk` after the shipped config gained it, so a
+# Slovak line reached the guards at TRUST_TIER_UNKNOWN (0.50) offline and
+# TRUST_TIER_TRUSTED (0.85) in production. That is the same trust-tier class of
+# divergence already fixed three times in this repository's test harnesses.
+# Import these rather than retyping the strings.
+DEFAULT_EXPECTED_LANGS = "ces,deu,eng"
+DEFAULT_TRUSTED_FOREIGN_LANGS = "deu,eng,fra,pol,ita,slk"
+
+COMMON_LANGS = [lang.strip() for lang in DEFAULT_EXPECTED_LANGS.split(",") if lang.strip()]
 if _config.has_section("CLASSIFY") and _config.has_option("CLASSIFY", "EXPECTED_LANGS"):
     COMMON_LANGS = [lang.strip() for lang in _config.get("CLASSIFY", "EXPECTED_LANGS").split(",") if lang.strip()]
 
 _TRUSTED_FOREIGN_LANG_BASES: frozenset = frozenset(
     lang.strip()
-    for lang in _get_str("CLASSIFY", "TRUSTED_FOREIGN_LANGS", "deu,eng,fra,pol,ita,slk").split(",")
+    for lang in _get_str("CLASSIFY", "TRUSTED_FOREIGN_LANGS", DEFAULT_TRUSTED_FOREIGN_LANGS).split(",")
     if lang.strip()
 )
 

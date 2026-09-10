@@ -43,7 +43,7 @@ Usage
   # With custom config and JSON output
   python tools/rule_coverage_report.py \\
       --input-dir data_samples/DOC_LINE_CATEG \\
-      --config config.txt \\
+      --config setup/config.txt \\
       --output rule_coverage.json
 
 Exit codes
@@ -72,9 +72,12 @@ import pandas as pd  # noqa: E402
 from text_util import override_constants, rule_fire_capture  # noqa: E402
 from tools.recategorize_from_csv import (  # noqa: E402
     _load_lang_config,
+    coerce_constants,
     evaluate_dataframe,
     load_csvs,
+    read_config_constants,
     recategorize_dataframe,
+    validate_constants,
 )
 
 # ---------------------------------------------------------------------------
@@ -172,17 +175,23 @@ def _loo_metrics(
     rule: str,
     expected_langs: list[str],
     known_bases: frozenset,
+    constants: dict | None = None,
 ) -> tuple[int, int]:
     """Return (decisive_count, clear_loss) for a single LOO disable of *rule*.
 
     decisive_count — lines whose category changes vs. the stored categ when
                      this rule is removed (flip_count from evaluate_dataframe).
     clear_loss     — among those flips, how many go Clear → Trash / Non-text.
+
+    ``constants`` is the resolved config for the run. Passing it matters: a rule
+    is only DEAD or LOAD-BEARING *relative to a configuration*, and measuring
+    that under the import-time defaults while the caller asked for another
+    config answers a question nobody posed.
     """
     with override_constants({"DISABLED_RULES": frozenset([rule])}):
         metrics = evaluate_dataframe(
             df,
-            constants=None,
+            constants=constants,
             expected_langs=expected_langs,
             known_bases=known_bases,
         )
@@ -237,16 +246,27 @@ def run_coverage(
     resolved_config = config_path or str(_ROOT / "setup" / "config.txt")
     expected_langs, known_bases = _load_lang_config(resolved_config)
 
+    # `--config` used to feed ONLY the language lists: this function never read
+    # the file's constants, so every threshold came from whatever text_util
+    # imported at start-up. Two runs with different `--config` files produced
+    # byte-identical reports, and an INVALID config (one that makes
+    # recategorize_from_csv raise) produced a clean table. Since this report is
+    # what classifies rules DEAD / LOAD-BEARING and gates retirement decisions
+    # in RULE_COVERAGE.md, it has to measure the configuration it was handed.
+    constants = coerce_constants(read_config_constants(resolved_config))
+    validate_constants(constants)
+
     n_total = len(df)
     n_scored = _n_scored(df)
     print(f"Loaded {n_total:,} lines ({n_scored:,} scored) from {in_path}")
+    print(f"Config: {resolved_config}")
 
     # ------------------------------------------------------------------
     # Phase 1: fire-count capture
     # ------------------------------------------------------------------
     print("Phase 1 — fire-count pass …")
     with rule_fire_capture() as raw_counts:
-        recategorize_dataframe(df, expected_langs=expected_langs, known_bases=known_bases)
+        recategorize_dataframe(df, constants, expected_langs=expected_langs, known_bases=known_bases)
 
     # ------------------------------------------------------------------
     # Phase 2: LOO decisive count (one recategorize pass per rule)
@@ -259,7 +279,7 @@ def run_coverage(
     else:
         print(f"Phase 2 — LOO pass ({len(RULES)} rules × 1 recategorize each) …")
         for i, rule in enumerate(RULES, 1):
-            decisive, closs = _loo_metrics(df, rule, expected_langs, known_bases)
+            decisive, closs = _loo_metrics(df, rule, expected_langs, known_bases, constants)
             loo[rule] = (decisive, closs)
             print(f"  [{i:>2}/{len(RULES)}] {rule:<34} decisive={decisive}  clear_loss={closs}")
 

@@ -30,10 +30,10 @@ The easiest way to execute the full parameter optimization suite (Coverage, RF, 
 ```bash
 # Smoke test (fast run on dummy data for verification)
 # Args: <input_dir> <config> <out_base> <ml_trials> <sobol_n> <morris_r>
-./tools/run_optim_pipeline.sh data_samples/DOC_LINE_CATEG config.txt sweep_output_smoke 64 64 10
+./tools/run_optim_pipeline.sh data_samples/DOC_LINE_CATEG setup/config.txt sweep_output_smoke 64 64 10
 
 # Full cluster run (authoritative analysis using default high-budget params)
-./tools/run_optim_pipeline.sh /path/to/full/DOC_LINE_CATEG config.txt sweep_output_production
+./tools/run_optim_pipeline.sh /path/to/full/DOC_LINE_CATEG setup/config.txt sweep_output_production
 ```
 
 ## Current figures — rule coverage regenerated 2026-09-09

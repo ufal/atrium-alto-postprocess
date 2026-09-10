@@ -49,6 +49,8 @@ from text_util import (
     _TRUSTED_FOREIGN_LANG_BASES,
     CATEG_TRASH_SCORE_MAX,
     COMMON_LANGS,
+    DEFAULT_EXPECTED_LANGS,
+    DEFAULT_TRUSTED_FOREIGN_LANGS,
     INVERTED_PAGE_MAJORITY,
     INVERTED_RUN_MIN,
     LANG_SCORE_ROUGH,
@@ -1144,11 +1146,12 @@ def main():
         print("          Qwen generally produces much lower perplexities than DistilGPT2.")
         print("          Consider lowering the threshold to avoid false 'Clear' categorizations.\n")
 
-    EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback="ces,deu,eng")
+    EXPECTED_LANGS_STR = config.get("CLASSIFY", "EXPECTED_LANGS", fallback=DEFAULT_EXPECTED_LANGS)
     EXPECTED_LANGS = [lang.strip() for lang in EXPECTED_LANGS_STR.split(",") if lang.strip()]
 
     # (#7 Phase 0) fallback aligned with the shipped config (slk was missing).
-    TRUSTED_FOREIGN_LANG_BASES = config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback="deu,eng,fra,pol,ita,slk")
+    # (#30) Now sourced from text_util so the offline path cannot drift from it.
+    TRUSTED_FOREIGN_LANG_BASES = config.get("CLASSIFY", "TRUSTED_FOREIGN_LANGS", fallback=DEFAULT_TRUSTED_FOREIGN_LANGS)
     _TRUSTED_FOREIGN_LANG_BASES = [lang.strip() for lang in TRUSTED_FOREIGN_LANG_BASES.split(",") if lang.strip()]
 
     out_dir = Path(OUTPUT_DIR)

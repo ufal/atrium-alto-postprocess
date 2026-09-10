@@ -40,7 +40,13 @@ _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR.parent))
 
-from recategorize_from_csv import _load_lang_config, evaluate_dataframe, load_csvs, read_config_constants  # noqa: E402
+from recategorize_from_csv import (  # noqa: E402
+    _load_lang_config,
+    add_gold_column_argument,
+    evaluate_dataframe,
+    load_csvs,
+    read_config_constants,
+)
 
 from text_util import override_constants  # noqa: E402
 
@@ -208,14 +214,14 @@ def main() -> None:
     parser.add_argument(
         "--input-dir",
         type=Path,
-        default=Path("../data_samples/DOC_LINE_CATEG"),
-        help="Path to cached DOC_LINE_CATEG CSV datasets (default: ../data_samples/DOC_LINE_CATEG).",
+        default=Path("data_samples/DOC_LINE_CATEG"),
+        help="Path to cached DOC_LINE_CATEG CSV datasets (default: data_samples/DOC_LINE_CATEG).",
     )
     parser.add_argument(
         "--config",
         type=str,
-        default="../setup/config.txt",
-        help="Path to the system configuration file (default: ../setup/config.txt).",
+        default="setup/config.txt",
+        help="Path to the system configuration file (default: setup/config.txt).",
     )
     parser.add_argument(
         "--macro-tol",
@@ -227,6 +233,7 @@ def main() -> None:
             "Raise it to permit small, deliberate accuracy trade-offs."
         ),
     )
+    add_gold_column_argument(parser)
     args = parser.parse_args()
 
     input_path = args.input_dir.resolve()
@@ -244,7 +251,11 @@ def main() -> None:
         sys.exit(1)
 
     expected_langs, known_bases = _load_lang_config(config_path)
-    eval_kwargs = {"expected_langs": expected_langs, "known_bases": known_bases}
+    eval_kwargs = {
+        "expected_langs": expected_langs,
+        "known_bases": known_bases,
+        "gold_category_column": args.gold_column,
+    }
 
     try:
         base_constants = read_config_constants(config_path)
