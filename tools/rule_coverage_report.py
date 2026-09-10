@@ -100,6 +100,7 @@ RULES: list[str] = sorted(
         "rule_garbage_density",
         "rule_trailing_fill_rescue",
         "rule_short_garbage",
+        "rule_short_garbage_witness",
         "rule_domain_notation",
         "rule_short_line",
         "rule_zero_alpha",
@@ -213,6 +214,100 @@ def _classify(fire_count: int, decisive_count: int) -> str:
     if decisive_count == 0:
         return "REDUNDANT-HERE"
     return "LOAD-BEARING"
+
+
+# ---------------------------------------------------------------------------
+# Word-count breakdown (issue #30)
+# ---------------------------------------------------------------------------
+
+WC_BUCKETS = ("1", "2", "3", "4", "5+")
+
+
+def _wc_bucket(wc: int) -> str:
+    if wc <= 0:
+        return "1"
+    return str(wc) if wc <= 4 else "5+"
+
+
+def run_wc_breakdown(
+    raw_path: str,
+    config_path: str | None = None,
+    quiet: bool = False,
+) -> dict[str, dict[str, int]]:
+    """Attribute every rule fire to the word count of the line that produced it.
+
+    Why this exists
+    ---------------
+    @david-spacil observed in issue #30 that "59.4% of hard-sweep-family firings
+    land exactly on `wc == 3`" and noted it was "not measured further". The
+    observation matters because the short-line regimes are structurally
+    different, not merely shorter: ``SHORT_PPL_CAP`` covers ``wc <= 2`` only, so
+    at three tokens raw perplexity reaches the sweep for the first time. That,
+    rather than "shorter is riskier", is what explains the error gradient the
+    thread argued about. Nothing in the repository could reproduce the figure,
+    so it stayed an anecdote.
+
+    Method, and its one caveat
+    --------------------------
+    Each line is scored individually inside its own ``rule_fire_capture()``
+    block, so a fire can be attributed to the line that caused it. This is the
+    PER-LINE decision only: ``apply_document_postprocessing`` is not run, because
+    page-level smoothing has no single owning line. Document post-processing
+    changes the category of a substantial share of lines, so the categories here
+    are not the pipeline's final answer -- the *fires* are, and those are what
+    this reports.
+    """
+    df, in_path = _load_dataframe(raw_path)
+    resolved_config = config_path or str(_ROOT / "setup" / "config.txt")
+    expected_langs, known_bases = _load_lang_config(resolved_config)
+    constants = coerce_constants(read_config_constants(resolved_config))
+    validate_constants(constants)
+
+    from tools.recategorize_from_csv import _is_fast_track, _rescore_row  # noqa: PLC0415
+
+    counts: dict[str, dict[str, int]] = {r: dict.fromkeys(WC_BUCKETS, 0) for r in RULES}
+    lines_by_bucket: dict[str, int] = dict.fromkeys(WC_BUCKETS, 0)
+    scored = 0
+
+    with override_constants(constants):
+        for _idx, row in df.iterrows():
+            rd = row.to_dict()
+            if _is_fast_track(rd):
+                continue
+            text = str(rd.get("text", "") or "")
+            bucket = _wc_bucket(len(text.split()))
+            lines_by_bucket[bucket] += 1
+            scored += 1
+            with rule_fire_capture() as fired:
+                _rescore_row(rd, expected_langs, known_bases)
+            for name in fired:
+                if name in counts:
+                    counts[name][bucket] += 1
+
+    if not quiet:
+        print(f"\n=== rule fires by word count (per-line; n_scored={scored:,}) ===")
+        print(f"  {'rule':<34} " + " ".join(f"{b:>7}" for b in WC_BUCKETS) + f" {'total':>8}  {'peak':>6}")
+        print("  " + "-" * 34 + "-" * (8 * len(WC_BUCKETS) + 18))
+        for rule in RULES:
+            row_counts = counts[rule]
+            total = sum(row_counts.values())
+            if not total:
+                continue
+            peak_bucket = max(WC_BUCKETS, key=lambda b: row_counts[b])
+            peak_share = row_counts[peak_bucket] / total
+            print(
+                f"  {rule:<34} "
+                + " ".join(f"{row_counts[b]:>7,}" for b in WC_BUCKETS)
+                + f" {total:>8,}  {peak_bucket:>3} {peak_share:>5.0%}"
+            )
+        print("  " + "-" * 34 + "-" * (8 * len(WC_BUCKETS) + 18))
+        print(f"  {'lines in bucket':<34} " + " ".join(f"{lines_by_bucket[b]:>7,}" for b in WC_BUCKETS))
+        print(
+            "\n  NOTE: per-line fires only -- document post-processing is not applied here,\n"
+            "  so the categories these fires lead to are not the pipeline's final answer."
+        )
+
+    return counts
 
 
 # ---------------------------------------------------------------------------
@@ -416,6 +511,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-loo", action="store_true", help="Skip the LOO decisive-count pass; report fire counts only."
     )
     ap.add_argument("--quiet", "-q", action="store_true", help="Suppress the per-rule table; only print the summary.")
+    ap.add_argument(
+        "--by-wc",
+        action="store_true",
+        help=(
+            "Instead of the coverage table, attribute every rule fire to the word count of the "
+            "line that caused it (issue #30). Per-line only: document post-processing is not applied."
+        ),
+    )
     return ap
 
 
@@ -428,6 +531,17 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.by_wc:
+        try:
+            counts = run_wc_breakdown(raw_path=raw_path, config_path=args.config, quiet=args.quiet)
+        except FileNotFoundError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if args.output:
+            Path(args.output).write_text(json.dumps(counts, indent=2), encoding="utf-8")
+            print(f"\nJSON written → {args.output}")
+        return 0
 
     try:
         results = run_coverage(

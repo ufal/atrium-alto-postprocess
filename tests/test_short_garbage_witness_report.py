@@ -1,9 +1,10 @@
 """
 Fast, model-free tests for `tools/short_garbage_witness_report.py` (issue #30).
 
-The report exists because `_has_shape_garbage_evidence()` has no call site yet,
-so the only way to measure it against a real collection is to ask the predicate
-directly. Two properties are worth pinning:
+The report exists because `_has_shape_garbage_evidence()` is wired but disabled
+(`SHORT_GARBAGE_WITNESS_ENABLE` defaults to false), so re-scoring a collection
+cannot show what it WOULD reach. Asking the predicate directly is the only way to
+measure its exposure before the flag is flipped. Two properties are worth pinning:
 
   * the report's per-clause diagnosis must not drift from the predicate it
     describes — the module asserts this per line, and

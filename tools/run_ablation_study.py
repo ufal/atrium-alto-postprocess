@@ -68,6 +68,7 @@ RULES_TO_ABLATE: List[str] = [
     "rule_garbage_density",
     "rule_zero_alpha",
     "rule_short_garbage",
+    "rule_short_garbage_witness",
     "rule_domain_notation",
     "rule_short_line",
     "rule_lowppl_clear",

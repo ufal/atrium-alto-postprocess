@@ -1370,15 +1370,47 @@ def determine_category(
             and (gibberish_present or weird_ratio > 0.0)
         ):
             _fire("rule_short_garbage")
-            if qs < CATEG_TRASH_SCORE_MAX + 0.35 and _has_strong_garbage_evidence(
-                text_source,
-                valid_word_ratio=valid_word_ratio,
-                lang_score=lang_score,
-                orig_lang_score=orig_lang_score,
-                gibberish_present=gibberish_present,
-                garbage_density=garbage_density,
-                weird_ratio=weird_ratio,
-                is_upright_czech=is_upright_czech,
+            # (#30 D15) The second witness.
+            #
+            # `_has_strong_garbage_evidence()` is False on the ENTIRE disputed
+            # population -- pinned on production vectors by
+            # tests/test_calibration.py::test_strong_evidence_is_false_on_the_
+            # entire_disputed_population -- so on these lines the merged gate is a
+            # suspension of the rule rather than a narrowing of it. That is the
+            # accepted debt: roughly 26,000 garbage lines reach `Clear`.
+            #
+            # `_has_shape_garbage_evidence()` is the narrowing. It is a pure
+            # function of the text and it separates the half that IS separable
+            # (`oueussd` from `malakofauna`); the phonotactically legal residue
+            # (`edelite`) still needs a lexicon and is out of scope by design.
+            #
+            # This is the ONLY site in the short-line path that returns `Trash`.
+            # Section 7's `damage` branch returns `Noisy`, so a witness placed
+            # there could improve `Clear` -> `Noisy` while never restoring a
+            # `Trash` verdict -- and the strict xfail that tracks the debt would
+            # stay green forever. That mistake was made once already; see the
+            # plan's "Did you run it, or read it?" note.
+            #
+            # SHIPS OFF. `SHORT_GARBAGE_WITNESS_ENABLE` defaults to false, so the
+            # disjunct below cannot change any outcome until the flag is flipped,
+            # and the flag must not be flipped until the witness is measured
+            # against a gold set (tools/gold/GOLD.md). Wiring and enabling are
+            # deliberately separate commits.
+            _shape_witness = SHORT_GARBAGE_WITNESS_ENABLE and _has_shape_garbage_evidence(text_source)
+            if _shape_witness:
+                _fire("rule_short_garbage_witness")
+            if qs < CATEG_TRASH_SCORE_MAX + 0.35 and (
+                _has_strong_garbage_evidence(
+                    text_source,
+                    valid_word_ratio=valid_word_ratio,
+                    lang_score=lang_score,
+                    orig_lang_score=orig_lang_score,
+                    gibberish_present=gibberish_present,
+                    garbage_density=garbage_density,
+                    weird_ratio=weird_ratio,
+                    is_upright_czech=is_upright_czech,
+                )
+                or _shape_witness
             ):
                 return "Trash", "trash_threshold"
 
@@ -1766,15 +1798,25 @@ def _has_strong_garbage_evidence(
 # at all -- a real but THIN margin, since it depends on a signal outside this
 # predicate. Measuring that class against annotated lines is a precondition for
 # enabling the flag, not a follow-up.
-# NO CALL SITE YET, and that is deliberate rather than an oversight. The only
-# place this belongs is the short-line garbage route, and on this branch that
-# route still convicts unconditionally -- so wiring it here today would change
-# nothing and would collide with the one-hunk patch under review in PR #48,
-# which is what introduces the conditional the witness would join. It lands as
-# a second disjunct in that condition once the PR merges. Until then the
-# predicate is exercised by tests/test_text_utils.py::TestShapeGarbageWitness
-# and by test_the_disjunction_the_gate_will_evaluate in tests/test_calibration.py,
-# which pins the composed condition on real production signal vectors.
+# WIRED, BUT OFF (#30 D15). PR #48 merged as `070620f`, creating the conditional
+# this predicate joins, and the witness is now read at gate 6 of
+# `determine_category()` as a second disjunct beside `_has_strong_garbage_evidence()`.
+# Gate 6 is the only site in the short-line path that returns `Trash`; section 7's
+# `damage` branch returns `Noisy`, so a witness placed there could never restore a
+# `Trash` verdict.
+#
+# `SHORT_GARBAGE_WITNESS_ENABLE` still defaults to false, so the disjunct cannot
+# change any outcome. Wiring and enabling are separate on purpose: the flag must
+# not be flipped until the witness is measured against a GOLD set, and the
+# repository has none for this population (tools/gold/GOLD.md; the 508- and
+# 1,567-line annotations are not in the tree). Flipping it also means moving the
+# four SHORT_GARBAGE_WITNESS_* constants out of `_DELIBERATELY_NOT_TUNABLE` and
+# into `_THRESHOLD_NAMES` + `SEARCH_SPACE`, in the same commit.
+#
+# Covered by tests/test_text_utils.py::TestShapeGarbageWitness (the predicate),
+# test_the_disjunction_the_gate_will_evaluate in tests/test_calibration.py (the
+# composed condition on production vectors), and
+# tests/test_short_garbage_witness_wiring.py (the call site, both flag states).
 _RE_TRIPLE_ALPHA_RUN: re.Pattern = re.compile(r"([^\W\d_])\1\1", re.IGNORECASE)
 _RE_INITIAL_CONSONANT_GEMINATE: re.Pattern = re.compile(r"^([bcdfghjklmnpqrstvwxz])\1", re.IGNORECASE)
 
@@ -2313,6 +2355,23 @@ _NOTATION_LABELS = frozenset(
         "blok",
         "segment",
         "horizont",
+        # (#30) Added after the closed lexicon regressed six graded lines to
+        # `Trash`, five of which were right before it landed. Measured against
+        # `is_domain_notation()` directly:
+        #
+        #   Orientace: SZ-JV   False -> True   (annotated Clear)
+        #   Orientace: SV-JZ   False -> True   (annotated Clear)
+        #   Komponenta: H      False -> True   (annotated Noisy)
+        #
+        # That recovers THREE of the six, not five. The other three are not
+        # fixed by adding label words and are deliberately left alone:
+        # `XIV: 7` and `XII: 2` satisfy the label shape without being words, so
+        # admitting them means admitting Roman numerals as labels -- which is the
+        # predicate claiming vocabulary it cannot justify (D2); and
+        # `Bokalisace: B-XII-c` is annotated Noisy, so lifting it to Clear was
+        # never the right answer either.
+        "orientace",
+        "komponenta",
     }
 )
 _NOTATION_LABELS_FOLDED = frozenset(_fold_diacritics(w) for w in _NOTATION_LABELS)

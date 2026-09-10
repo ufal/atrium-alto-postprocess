@@ -378,3 +378,52 @@ def test_ablation_rule_lists_are_subsets_of_the_registry():
         f"{sorted(set(CANDIDATE_RULES) - registry)}"
     )
     assert len(RULES_TO_ABLATE) == len(set(RULES_TO_ABLATE)), "RULES_TO_ABLATE contains duplicates"
+
+
+# ---------------------------------------------------------------------------
+# (#30 B2) Word-count attribution of rule fires.
+# ---------------------------------------------------------------------------
+
+
+def test_wc_breakdown_attributes_fires_to_word_counts():
+    """Every fire lands in exactly one word-count bucket, and buckets sum to totals.
+
+    @david-spacil reported that "59.4% of hard-sweep-family firings land exactly
+    on `wc == 3`" and that it was "not measured further, just noting it". Nothing
+    in the repository could reproduce that shape of figure, so it stayed an
+    anecdote for six weeks. This pins the instrument that can.
+    """
+    import tools.rule_coverage_report as RC
+
+    counts = RC.run_wc_breakdown(str(_SAMPLE_DIR), config_path=str(_ROOT / "setup" / "config.txt"), quiet=True)
+
+    assert set(counts) == set(RC.RULES), "the breakdown must cover the same registry as the coverage report"
+    for rule, buckets in counts.items():
+        assert set(buckets) == set(RC.WC_BUCKETS), f"{rule} has unexpected buckets: {sorted(buckets)}"
+        assert all(v >= 0 for v in buckets.values())
+
+    assert any(sum(b.values()) for b in counts.values()), "no rule fired at all; the capture is not wired"
+
+
+def test_wc_breakdown_totals_agree_with_the_coverage_pass():
+    """The two instruments must not disagree about which rules fire.
+
+    They measure the same thing by different routes -- the coverage pass scores
+    document-by-document, the breakdown line-by-line -- so a rule that fires in
+    one and not the other means one of them is lying. Fire COUNTS may legitimately
+    differ (the coverage pass applies document post-processing, the per-line
+    breakdown does not), so only the fired/not-fired sets are compared.
+    """
+    import tools.rule_coverage_report as RC
+
+    by_wc = RC.run_wc_breakdown(str(_SAMPLE_DIR), config_path=str(_ROOT / "setup" / "config.txt"), quiet=True)
+    coverage = RC.run_coverage(
+        str(_SAMPLE_DIR), config_path=str(_ROOT / "setup" / "config.txt"), quiet=True, skip_loo=True
+    )
+
+    fired_by_wc = {r for r, b in by_wc.items() if sum(b.values())}
+    fired_by_coverage = {r for r, v in coverage.items() if v["fire_count"]}
+    assert fired_by_wc == fired_by_coverage, (
+        f"instruments disagree on which rules fire: only in --by-wc {sorted(fired_by_wc - fired_by_coverage)}, "
+        f"only in coverage {sorted(fired_by_coverage - fired_by_wc)}"
+    )

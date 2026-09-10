@@ -442,12 +442,13 @@ def _second_witness(text, ppl, ls, lang):
 def test_the_disjunction_the_gate_will_evaluate_separates_the_population():
     """Composition test for the issue #30 second witness, on production vectors.
 
-    `_has_shape_garbage_evidence()` has no call site yet — see the note above it
-    in text_util.py. What will read it is the short-line garbage route, as a
-    second disjunct beside `_has_strong_garbage_evidence()`, once the gate that
-    introduces that condition lands. This pins the composed expression now, on
-    the same signal vectors production computes, so the wiring is a one-line
-    change against a tested condition rather than an untested one.
+    `_has_shape_garbage_evidence()` is read by the short-line garbage route as a
+    second disjunct beside `_has_strong_garbage_evidence()` (gate 6, #30 D15),
+    behind `SHORT_GARBAGE_WITNESS_ENABLE` which is still off by default. This
+    pins the composed expression on the same signal vectors production computes,
+    independently of the flag — so the condition stays tested whether or not the
+    call site is currently live. The call site itself is covered by
+    tests/test_short_garbage_witness_wiring.py.
 
     Both halves matter and neither is redundant:
 

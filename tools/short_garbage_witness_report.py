@@ -6,10 +6,9 @@ against real delivered `DOC_LINE_CATEG` CSVs (issue #30).
 WHY THIS EXISTS
 ---------------
 `_has_shape_garbage_evidence()` ships behind `SHORT_GARBAGE_WITNESS_ENABLE`
-(default false) and, on the current branch, has **no call site**: the short-line
-garbage route still convicts unconditionally, and the conditional the witness
-would join is the one-hunk change under review in PR #48. Two consequences,
-both verified:
+(default false). Since PR #48 merged it IS wired -- read by the short-line
+garbage gate as a second disjunct -- but the flag is still off, so it cannot
+change any outcome until someone turns it on. Two consequences, both verified:
 
   * turning the flag on changes **no category** — a full
     `tools/recategorize_from_csv.py` run over `data_samples/DOC_LINE_CATEG`
@@ -275,7 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     retained = witnessed_by_categ.get("Trash", 0)
     exposure = witnessed_by_categ.get("Clear", 0) + witnessed_by_categ.get("Noisy", 0)
     print("\n=== exposure (NOT an error rate — `categ` is the pipeline's answer, not gold) ===")
-    print(f"  witnessed and currently Trash        : {retained:8d}   would stay Trash under PR #48 + witness")
+    print(f"  witnessed and currently Trash        : {retained:8d}   would stay Trash with the witness armed")
     print(f"  witnessed and currently Clear/Noisy  : {exposure:8d}   false-positive candidates — annotate these first")
 
     if args.examples:

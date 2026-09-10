@@ -363,7 +363,10 @@ suppressed by the one signal that cannot. What genuinely needs word knowledge is
 `malakofauna` against `edelite` — where nothing about either spelling is wrong.
 * `693e1b4` acts on that: **`_has_shape_garbage_evidence()`**, four `SHORT_GARBAGE_WITNESS_*` constants,
 and `SHORT_GARBAGE_WITNESS_ENABLE` — **off by default, and with no call site**, because the conditional it
-would join is the one-hunk change still under review in PR #48. Measured 8/12 thread-reported garbage
+would join is the one-hunk change still under review in PR #48.
+*(Superseded: PR #48 merged as `070620f`, and the witness was wired into gate 6 as a second disjunct in the
+D15 follow-up. It is still **off by default** — wiring and enabling are separate, and the flag waits on a
+gold set. The "no call site" statement above describes `693e1b4` and is kept as the record of that commit.)* Measured 8/12 thread-reported garbage
 reached at 0/21 false positives on real vocabulary and notation, and 0 across all 33 committed positive
 fixtures. Two clauses were **deliberately not** reused from `detect_fused_words`: its `len > 14` test
 (flags `Skelettmaterial`) and `_RE_FUSED_CONSONANT_RUN` (flags `vrstva`, `vrstvy`, `ctvrtek` — and
