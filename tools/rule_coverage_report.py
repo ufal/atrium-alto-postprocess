@@ -72,6 +72,8 @@ import pandas as pd  # noqa: E402
 from text_util import override_constants, rule_fire_capture  # noqa: E402
 from tools.recategorize_from_csv import (  # noqa: E402
     _load_lang_config,
+    add_gold_column_argument,
+    attach_gold_sidecar_from_args,
     coerce_constants,
     evaluate_dataframe,
     load_csvs,
@@ -139,8 +141,14 @@ _W_CLASS = 17
 # ---------------------------------------------------------------------------
 
 
-def _load_dataframe(raw_path: str) -> tuple[pd.DataFrame, Path]:
-    """Load a single CSV or a directory of CSVs into one DataFrame."""
+def _load_dataframe(raw_path: str, gold_args=None) -> tuple[pd.DataFrame, Path]:
+    """Load a single CSV or a directory of CSVs into one DataFrame.
+
+    ``gold_args`` carries the gold flags (an argparse namespace, or None). This is step 1 of ``run_optim_pipeline.sh``
+    and it was the one loader in the repository with no sidecar join, so a gold
+    run would have reported coverage over an unannotated frame while every later
+    stage scored against gold.
+    """
     in_path = Path(raw_path)
     if in_path.is_dir():
         df = load_csvs(in_path)
@@ -150,6 +158,8 @@ def _load_dataframe(raw_path: str) -> tuple[pd.DataFrame, Path]:
         df["file"] = in_path.stem
     else:
         raise FileNotFoundError(f"Path not found: {in_path}")
+    if gold_args is not None:
+        df = attach_gold_sidecar_from_args(df, gold_args)
     return df, in_path
 
 
@@ -233,6 +243,7 @@ def run_wc_breakdown(
     raw_path: str,
     config_path: str | None = None,
     quiet: bool = False,
+    gold_args=None,
 ) -> dict[str, dict[str, int]]:
     """Attribute every rule fire to the word count of the line that produced it.
 
@@ -257,7 +268,7 @@ def run_wc_breakdown(
     are not the pipeline's final answer -- the *fires* are, and those are what
     this reports.
     """
-    df, in_path = _load_dataframe(raw_path)
+    df, in_path = _load_dataframe(raw_path, gold_args)
     resolved_config = config_path or str(_ROOT / "setup" / "config.txt")
     expected_langs, known_bases = _load_lang_config(resolved_config)
     constants = coerce_constants(read_config_constants(resolved_config))
@@ -321,6 +332,7 @@ def run_coverage(
     output_path: str | None = None,
     quiet: bool = False,
     skip_loo: bool = False,
+    gold_args=None,
 ) -> dict[str, dict]:
     """Run coverage instrumentation + optional LOO analysis over *raw_path*.
 
@@ -337,7 +349,7 @@ def run_coverage(
     dict mapping rule name → {fire_count, fire_rate, decisive_count,
                                clear_loss, class}.
     """
-    df, in_path = _load_dataframe(raw_path)
+    df, in_path = _load_dataframe(raw_path, gold_args)
     resolved_config = config_path or str(_ROOT / "setup" / "config.txt")
     expected_langs, known_bases = _load_lang_config(resolved_config)
 
@@ -519,6 +531,7 @@ def build_parser() -> argparse.ArgumentParser:
             "line that caused it (issue #30). Per-line only: document post-processing is not applied."
         ),
     )
+    add_gold_column_argument(ap)
     return ap
 
 
@@ -534,7 +547,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.by_wc:
         try:
-            counts = run_wc_breakdown(raw_path=raw_path, config_path=args.config, quiet=args.quiet)
+            counts = run_wc_breakdown(raw_path=raw_path, config_path=args.config, quiet=args.quiet, gold_args=args)
         except FileNotFoundError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
@@ -550,8 +563,12 @@ def main(argv: list[str] | None = None) -> int:
             output_path=args.output,
             quiet=args.quiet,
             skip_loo=args.skip_loo,
+            gold_args=args,
         )
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, ValueError) as exc:
+        # ValueError is the gold-sidecar join refusing a zero-match or a
+        # malformed sidecar. An operator running this as stage 1 of
+        # run_optim_pipeline.sh needs the reason, not a traceback.
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

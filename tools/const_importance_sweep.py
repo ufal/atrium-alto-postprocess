@@ -45,6 +45,7 @@ from recategorize_from_csv import (  # noqa: E402
     TUNABLE_CONSTANTS,
     _load_lang_config,
     add_gold_column_argument,
+    attach_gold_sidecar_from_args,
     coerce_constants,
     evaluate_dataframe,
     evaluate_per_document,
@@ -72,11 +73,12 @@ SEARCH_SPACE: dict[str, dict[str, Any]] = {
     "PPL_INVERTED_MIN": {"type": "float", "low": 50.0, "high": 500.0},
     "PERPLEXITY_THRESHOLD_MAX": {"type": "float", "low": 500.0, "high": 2000.0},
     "SHORT_PPL_CAP": {"type": "float", "low": 300.0, "high": 950.0},
+    # The three PAGE_PPL_BLEND_* knobs are deliberately absent: the blend is
+    # switched off by default, so they sweep as zero-importance and every driver
+    # reads zero variance as an argument to PRUNE. Restore them here and in
+    # _THRESHOLD_NAMES in the same commit that enables PAGE_PPL_BLEND_ENABLE.
     # Page-relative perplexity blend (issue #30). PAGE_PPL_BLEND_ENABLE is a
     # feature flag, not a tunable, so it is deliberately absent here.
-    "PAGE_PPL_BLEND_WEIGHT": {"type": "float", "low": 0.0, "high": 1.0},
-    "PAGE_PPL_LONG_MIN_WC": {"type": "int", "low": 3, "high": 8},
-    "PAGE_PPL_MIN_LONG_LINES": {"type": "int", "low": 1, "high": 10},
     "HARD_SWEEP_LANG_MAX": {"type": "float", "low": 0.20, "high": 0.70},
     "HARD_SWEEP_PPL_MIN": {"type": "float", "low": 500.0, "high": 3000.0},
     "PPL_EXTREME_MIN": {"type": "float", "low": 1500.0, "high": 6000.0},
@@ -735,6 +737,7 @@ def main(argv=None):
     print(f"Loading CSVs from {args.input_dir} ...")
 
     data = load_csvs(args.input_dir, recursive=args.recursive)
+    data = attach_gold_sidecar_from_args(data, args)
     data = maybe_sample_documents(data, sample_docs=args.sample_docs, seed=args.seed)
     n_docs = data["file"].nunique() if "file" in data.columns else 1
     print(f"Loaded {len(data):,} lines across {n_docs} document(s)")

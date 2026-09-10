@@ -2,7 +2,9 @@
 # tools/run_optim_pipeline.sh
 # Unified pipeline to run all parameter optimization and rule coverage tools (Issue #5).
 
-set -e
+# -u: an unset variable is a bug, not an empty string. -o pipefail: a failing
+# stage inside a pipe must not be masked by a succeeding `tee`/`head`.
+set -euo pipefail
 
 # --- Configuration ---
 INPUT_DIR="${1:-data_samples/DOC_LINE_CATEG}"
@@ -12,12 +14,45 @@ TRIALS="${4:-400}"         # For RF and Optuna
 SOBOL_N="${5:-256}"        # N parameter for Sobol (Note: total evals = N * (D+2))
 MORRIS_R="${6:-10}"        # Trajectories for Morris
 
+# --- Gold objective (issue #30) ---
+# Without these every stage scores the re-categorisation against the pipeline's
+# OWN stored labels. tools/gold/GOLD.md states the consequence plainly: the
+# shipped configuration is optimal by construction, and a genuine accuracy
+# improvement scores as pure damage. Set both, or read the banner below.
+#
+#   GOLD_SIDECAR=tools/gold/sidecars/issue30_gold_2067.csv \
+#   GOLD_COLUMN=gold_categ ./tools/run_optim_pipeline.sh <input-dir>
+GOLD_SIDECAR="${GOLD_SIDECAR:-}"
+GOLD_COLUMN="${GOLD_COLUMN:-}"
+
+# Expanded below as ${GOLD_ARGS[@]+"${GOLD_ARGS[@]}"} rather than "${GOLD_ARGS[@]}":
+# bash before 4.4 treats the latter as an unset variable under `set -u` and aborts
+# on an empty array, which is the default path.
+GOLD_ARGS=()
+if [ -n "$GOLD_SIDECAR" ] || [ -n "$GOLD_COLUMN" ]; then
+    if [ -z "$GOLD_SIDECAR" ] || [ -z "$GOLD_COLUMN" ]; then
+        echo "error: set BOTH GOLD_SIDECAR and GOLD_COLUMN, or neither." >&2
+        echo "       A sidecar without a column is scored self-referentially." >&2
+        exit 2
+    fi
+    if [ ! -f "$GOLD_SIDECAR" ]; then
+        echo "error: GOLD_SIDECAR does not exist: $GOLD_SIDECAR" >&2
+        exit 2
+    fi
+    GOLD_ARGS=(--gold-sidecar "$GOLD_SIDECAR" --gold-column "$GOLD_COLUMN")
+fi
+
 echo "============================================================"
 echo " ATRIUM ALTO Post-Process : Unified Optimization Pipeline"
 echo "============================================================"
 echo " Input Data   : $INPUT_DIR"
 echo " Config File  : $CONFIG"
 echo " Output Base  : $OUT_BASE"
+if [ ${#GOLD_ARGS[@]} -gt 0 ]; then
+    echo " Objective    : agreement with gold ($GOLD_SIDECAR :: $GOLD_COLUMN)"
+else
+    echo " Objective    : SELF-REFERENTIAL (no gold)"
+fi
 echo " ML Trials    : $TRIALS (RF/Optuna)"
 echo " Sobol N      : $SOBOL_N"
 echo "------------------------------------------------------------"
@@ -81,6 +116,26 @@ else
     fi
 fi
 
+if [ ${#GOLD_ARGS[@]} -eq 0 ]; then
+    echo ""
+    echo "############################################################"
+    echo "#  WARNING: running WITHOUT a gold set.                     #"
+    echo "############################################################"
+    echo "#  Every stage below scores the re-score against the        #"
+    echo "#  pipeline's OWN stored categories. That objective is      #"
+    echo "#  circular: the shipped config is optimal by construction, #"
+    echo "#  and a genuine accuracy improvement scores as damage.     #"
+    echo "#                                                           #"
+    echo "#  Importance rankings remain meaningful; any 'best_config' #"
+    echo "#  and every PRUNE/KEEP verdict do NOT.                     #"
+    echo "#                                                           #"
+    echo "#  Fix: GOLD_SIDECAR=tools/gold/sidecars/issue30_gold_2067.csv"
+    echo "#       GOLD_COLUMN=gold_categ                              #"
+    echo "#  See tools/gold/GOLD.md.                                  #"
+    echo "############################################################"
+    echo ""
+fi
+
 mkdir -p "$OUT_BASE"
 
 # ---------------------------------------------------------
@@ -88,9 +143,10 @@ mkdir -p "$OUT_BASE"
 # ---------------------------------------------------------
 echo ""
 echo "[1/6] Running Rule Coverage Report..."
-python tools/rule_coverage_report.py \
+"$PY_BIN" tools/rule_coverage_report.py \
     --input-dir "$INPUT_DIR" \
     --config "$CONFIG" \
+    ${GOLD_ARGS[@]+"${GOLD_ARGS[@]}"} \
     --output "$OUT_BASE/rule_coverage.json"
 
 # ---------------------------------------------------------
@@ -98,8 +154,9 @@ python tools/rule_coverage_report.py \
 # ---------------------------------------------------------
 echo ""
 echo "[2/6] Running Sklearn (Random Forest) Sweep..."
-python tools/const_importance_sweep.py \
+"$PY_BIN" tools/const_importance_sweep.py \
     --input-dir "$INPUT_DIR" \
+    ${GOLD_ARGS[@]+"${GOLD_ARGS[@]}"} \
     --config "$CONFIG" \
     --output-dir "$OUT_BASE/rf_sweep" \
     --backend sklearn \
@@ -125,8 +182,9 @@ python tools/const_importance_sweep.py \
 # ---------------------------------------------------------
 echo ""
 echo "[4/6] Running SALib Morris Screening Sweep..."
-python tools/const_importance_sweep.py \
+"$PY_BIN" tools/const_importance_sweep.py \
     --input-dir "$INPUT_DIR" \
+    ${GOLD_ARGS[@]+"${GOLD_ARGS[@]}"} \
     --config "$CONFIG" \
     --output-dir "$OUT_BASE/morris_sweep" \
     --backend morris \
@@ -138,8 +196,9 @@ python tools/const_importance_sweep.py \
 # ---------------------------------------------------------
 echo ""
 echo "[5/6] Running SALib Sobol Sweep (Computationally Heavy)..."
-python tools/const_importance_sweep.py \
+"$PY_BIN" tools/const_importance_sweep.py \
     --input-dir "$INPUT_DIR" \
+    ${GOLD_ARGS[@]+"${GOLD_ARGS[@]}"} \
     --config "$CONFIG" \
     --output-dir "$OUT_BASE/sobol_sweep" \
     --backend sobol \
@@ -152,7 +211,7 @@ python tools/const_importance_sweep.py \
 echo ""
 if [ -f "tools/importance_consensus.py" ]; then
     echo "[6/6] Generating Cross-Backend Parameter Consensus..."
-    python tools/importance_consensus.py \
+    "$PY_BIN" tools/importance_consensus.py \
         "$OUT_BASE/rf_sweep" \
         "$OUT_BASE/optuna_sweep" \
         "$OUT_BASE/morris_sweep" \

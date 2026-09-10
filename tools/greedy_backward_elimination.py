@@ -43,6 +43,7 @@ if str(_THIS_DIR) not in sys.path:
 from recategorize_from_csv import (  # noqa: E402
     _load_lang_config,
     add_gold_column_argument,
+    attach_gold_sidecar_from_args,
     evaluate_dataframe,
     load_csvs,
     read_config_constants,
@@ -69,7 +70,11 @@ CANDIDATE_RULES: Set[str] = {
     "rule_garbage_density",
     "rule_zero_alpha",
     "rule_short_garbage",
-    "rule_short_garbage_witness",
+    # rule_short_garbage_witness is deliberately NOT listed. It fires only when
+    # SHORT_GARBAGE_WITNESS_ENABLE is true and that ships false, so ablating it
+    # removes nothing, scores as a free win, and returns a PRUNE recommendation
+    # for a rule that has never run. Re-add it in the same commit that flips the
+    # flag. (#30, 2026-09-10 — same reasoning as _DELIBERATELY_NOT_TUNABLE.)
     "rule_domain_notation",
     "rule_short_line",
     "rule_lowppl_clear",
@@ -247,6 +252,7 @@ def main() -> None:
     print("Loading cached datasets into memory...")
     try:
         df = load_csvs(input_path, recursive=True)
+        df = attach_gold_sidecar_from_args(df, args)
     except Exception as e:
         print(f"Failed to load datasets: {e}", file=sys.stderr)
         sys.exit(1)

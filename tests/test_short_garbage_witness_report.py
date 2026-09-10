@@ -70,6 +70,24 @@ _NOT_WITNESSED = [
     "Schifffahrt",
     "mm",
     "edelite",
+    # The roman-numeral class. Added because its absence is precisely why the
+    # guard below passed while the tool was crashing on 0.74% of real lines:
+    # the predicate gained a roman-numeral exemption, the report's own copy of
+    # the clauses did not, and no case here could see the difference. These are
+    # the seven lines the 2026-09-10 witness measurement broke.
+    "Sonda VIII/3",
+    "12.VIII.1977,",
+    "CCV. CCVI.",
+    "205; CCLXII).",
+    "166. Hr.XLIII.1.",
+    "Lokalisace: I-VIII-eneol.II",
+    "w XVIII.",
+    # Drawn from the delivered collection rather than invented, so the corpus
+    # keeps a foothold in the shapes that actually occur.
+    "XVIII. '",
+    "23. VIII.1947.",
+    "580. Hr. VIII.4.",
+    "Cod.Mor. II,40.-D.O.VII,721.-VIII,99,100.-",
 ]
 
 
@@ -180,3 +198,38 @@ def test_flag_state_does_not_change_the_report():
     with tu.override_constants({"SHORT_GARBAGE_WITNESS_ENABLE": True}):
         after = R.classify_line("oueussd")
     assert before == after
+
+
+def test_the_report_has_no_clause_implementation_of_its_own():
+    """The structural guarantee, asserted rather than trusted.
+
+    `test_clause_diagnosis_matches_the_predicate` can only catch drift on the
+    lines it happens to list -- and it did not catch the roman-numeral case,
+    because none was listed. The durable fix is that there is nothing to drift:
+    the module re-exports `text_util`'s vocabulary and delegates to its
+    implementation. This test fails if anyone reintroduces a local copy.
+    """
+    assert R._CLAUSE_ORDER is tu.SHAPE_GARBAGE_CLAUSES, "the clause vocabulary must be text_util's, not a copy"
+    assert not hasattr(R, "_clauses_for_token"), (
+        "a per-token clause implementation is back in the report tool; "
+        "delegate to text_util.shape_garbage_clauses() instead"
+    )
+    assert R.clauses_for_line("oueussd") == tu.shape_garbage_clauses("oueussd")
+
+
+@pytest.mark.parametrize(
+    "text, clause",
+    [
+        ("oueussd", "vowel_run"),
+        ("sektlll", "triple"),
+        ("rragment", "initial_geminate"),
+        ("vansasaasasa", "low_variety"),
+    ],
+)
+def test_every_clause_name_is_still_reachable(text, clause):
+    """Each of the four clauses still has a line that reaches it.
+
+    The roman-numeral exemption sits above all four, so it could in principle
+    have made one unreachable. This is the check that it did not.
+    """
+    assert clause in R.clauses_for_line(text)

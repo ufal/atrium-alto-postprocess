@@ -150,7 +150,20 @@ def rule_fire_capture():
 ENV_PREFIX = "ATRIUM_"
 
 _config = configparser.RawConfigParser()
-_config_path = Path(os.getenv("LANGID_CONFIG", "setup/config.txt"))
+# Anchored to this file, NOT to the working directory. The default used to be the
+# relative "setup/config.txt", so a process started anywhere but the repo root
+# found nothing and ran every constant on its in-code default after one stderr
+# line -- while tools/recategorize_from_csv.py resolved the SAME file absolutely
+# via `_ROOT`, giving one process two different configurations.
+#
+# Measured 2026-09-10: 0 of 84 scalar constants currently differ between the file
+# and the in-code defaults, so this is behaviour-neutral today. That is exactly
+# why it is worth landing now -- the next round of runs exists to CHANGE those
+# constants, and the bug goes live the moment setup/config.txt stops being a
+# mirror of the defaults. A cluster job launched from a scheduler's working
+# directory would then silently score with the old values.
+_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "setup" / "config.txt"
+_config_path = Path(os.getenv("LANGID_CONFIG", str(_DEFAULT_CONFIG_PATH)))
 
 if _config_path.exists():
     _config.read(_config_path)
@@ -1831,16 +1844,45 @@ _RE_TRIPLE_ALPHA_RUN: re.Pattern = re.compile(r"([^\W\d_])\1\1", re.IGNORECASE)
 _RE_INITIAL_CONSONANT_GEMINATE: re.Pattern = re.compile(r"^([bcdfghjklmnpqrstvwxz])\1", re.IGNORECASE)
 
 
+# The clause names, in report order. Canonical here rather than in the reporting
+# tool, because a second copy of this vocabulary is a second thing to drift.
+SHAPE_GARBAGE_CLAUSES: tuple[str, ...] = ("vowel_run", "triple", "initial_geminate", "low_variety")
+
+
 def _has_shape_garbage_evidence(text_source: str) -> bool:
     """Phonotactic evidence that a short line is OCR garbage, not rare vocabulary.
 
     Read only when ``SHORT_GARBAGE_WITNESS_ENABLE`` is set. See the block above
     for what it tests, what it refuses to test, and the counterexamples behind
     each refusal.
+
+    The verdict is ``bool()`` of the clause list, so the predicate and the
+    diagnosis cannot disagree -- see ``shape_garbage_clauses()``.
+    """
+    return bool(shape_garbage_clauses(text_source))
+
+
+def shape_garbage_clauses(text_source: str) -> list[str]:
+    """Which witness clauses ``text_source`` satisfies, in ``SHAPE_GARBAGE_CLAUSES`` order.
+
+    THE single implementation of the witness. It exists because there used to be
+    two: ``tools/short_garbage_witness_report.py`` carried its own copy of these
+    four tests so it could name the clause that fired, guarded by an assertion
+    that the two agreed. The roman-numeral exemption was added here and not
+    there, and the guard did exactly what it was written to do -- it raised, on
+    0.74% of real lines, which is every line carrying a roman numeral. That is
+    the fourth harness divergence in this repository (see the digest's
+    "Harness divergence" section); the structural fix is that the reporting tool
+    no longer has an implementation to drift.
+
+    Returns every clause the line satisfies, not just the first. The predicate
+    short-circuited on the first hit; this does not, because the report needs the
+    full breakdown. The flag ships false, so nothing in production pays for it.
     """
     if has_cz_diacs(text_source) or is_structured_line(text_source) or is_domain_notation(text_source):
-        return False
+        return []
 
+    found: set[str] = set()
     for word in text_source.split():
         for sub in _split_subtokens(word):
             core = sub.strip(_STRIP_CHARS)
@@ -1885,26 +1927,26 @@ def _has_shape_garbage_evidence(text_source: str) -> bool:
 
             # 3+ consecutive vowels: `oueussd`, `cuxoaid`, `IDIDIDIDIDIDUOID`.
             if _RE_FUSED_VOWEL_RUN.search(core):
-                return True
+                found.add("vowel_run")
 
             # The same character three times: `sektlll`, `NINNNIC`. Capped by
             # length -- a long compound reaching three is `Schifffahrt`, a word.
             if len(letters) <= SHORT_GARBAGE_WITNESS_TRIPLE_MAX_ALPHA and _RE_TRIPLE_ALPHA_RUN.search(core):
-                return True
+                found.add("triple")
 
             # A doubled CONSONANT in first position: `Tthts`, `rragment`. No
             # European orthography opens a word that way; a bare `^(.)\1` would
             # also take `Aachen`, which several do.
             if _RE_INITIAL_CONSONANT_GEMINATE.match(core):
-                return True
+                found.add("initial_geminate")
 
             # Too few distinct letters for the length: `vansasaasasa`.
             if len(letters) >= SHORT_GARBAGE_WITNESS_VARIETY_MIN_ALPHA and (
                 len({c.lower() for c in letters}) / len(letters) <= SHORT_GARBAGE_WITNESS_VARIETY_MAX
             ):
-                return True
+                found.add("low_variety")
 
-    return False
+    return [c for c in SHAPE_GARBAGE_CLAUSES if c in found]
 
 
 def _looks_like_measurement(text_source: str) -> bool:

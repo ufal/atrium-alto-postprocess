@@ -84,47 +84,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import text_util as tu  # noqa: E402
 
-# The witness's four clauses, re-expressed for DIAGNOSIS ONLY so the report can
-# say which one fired. `_clauses_for_token` mirrors the structure of
-# `_has_shape_garbage_evidence`; `classify_line` then asserts the two agree, so
-# this cannot silently drift from the predicate it describes. If that assertion
-# ever fires, the predicate changed and this list is stale — fix this, not it.
-_CLAUSE_ORDER = ("vowel_run", "triple", "initial_geminate", "low_variety")
-
-
-def _clauses_for_token(core: str) -> list[str]:
-    """Which witness clauses a single sub-token satisfies (diagnosis only)."""
-    letters = [c for c in core if c.isalpha()]
-    if len(letters) < tu.SHORT_GARBAGE_WITNESS_MIN_ALPHA:
-        return []
-
-    lowered = core.lower()
-    if lowered in tu._NEUTRAL_LEXICON or lowered in tu.SHORT_EXCEPTION_TOKENS or lowered in tu.SHORT_VALID_WORDS:
-        return []
-
-    hits: list[str] = []
-    if tu._RE_FUSED_VOWEL_RUN.search(core):
-        hits.append("vowel_run")
-    if len(letters) <= tu.SHORT_GARBAGE_WITNESS_TRIPLE_MAX_ALPHA and tu._RE_TRIPLE_ALPHA_RUN.search(core):
-        hits.append("triple")
-    if tu._RE_INITIAL_CONSONANT_GEMINATE.match(core):
-        hits.append("initial_geminate")
-    if len(letters) >= tu.SHORT_GARBAGE_WITNESS_VARIETY_MIN_ALPHA and (
-        len({c.lower() for c in letters}) / len(letters) <= tu.SHORT_GARBAGE_WITNESS_VARIETY_MAX
-    ):
-        hits.append("low_variety")
-    return hits
+# The clause vocabulary, imported rather than restated. This module USED TO
+# carry its own copy of the four tests, mirroring `_has_shape_garbage_evidence`,
+# with an assertion in `classify_line` that the two agreed.
+#
+# The assertion earned its keep: the roman-numeral exemption (#30, 2026-09-10)
+# landed in the predicate and not in the copy, and the guard fired on 0.74% of
+# real lines -- every line carrying a roman numeral, which in archaeological
+# field documentation means `Sonda VIII/3`, `23. VIII.1947.`, `580. Hr. VIII.4.`
+# and thousands more. The tool aborted on the first one, which made it useless
+# for exactly the measurement the witness flag is gated on.
+#
+# So the copy is gone. `text_util.shape_garbage_clauses()` is the single
+# implementation and `_has_shape_garbage_evidence()` is `bool()` of it; this
+# module just re-exports the vocabulary. There is no longer a second thing to
+# drift, which is a better guarantee than an assertion that it has not.
+_CLAUSE_ORDER = tu.SHAPE_GARBAGE_CLAUSES
 
 
 def clauses_for_line(text: str) -> list[str]:
-    """Union of the clauses fired across a line's sub-tokens, in fixed order."""
-    if tu.has_cz_diacs(text) or tu.is_structured_line(text) or tu.is_domain_notation(text):
-        return []
-    found: set[str] = set()
-    for word in text.split():
-        for sub in tu._split_subtokens(word):
-            found.update(_clauses_for_token(sub.strip(tu._STRIP_CHARS)))
-    return [c for c in _CLAUSE_ORDER if c in found]
+    """Clauses fired across a line's sub-tokens, in fixed order.
+
+    A thin alias for `text_util.shape_garbage_clauses`, kept because this
+    module's CLI, tests and `--examples` output all name it.
+    """
+    return tu.shape_garbage_clauses(text)
 
 
 def classify_line(text: str, word_count: int | None = None) -> dict:
@@ -136,10 +120,12 @@ def classify_line(text: str, word_count: int | None = None) -> dict:
     witness = tu._has_shape_garbage_evidence(text)
     clauses = clauses_for_line(text)
 
-    # Guard against this module's diagnosis drifting from the predicate.
+    # Structurally guaranteed now that both come from `shape_garbage_clauses`,
+    # and kept as the tripwire if anyone reintroduces a second implementation.
     assert bool(clauses) == witness, (
         f"clause diagnosis disagrees with _has_shape_garbage_evidence() on {text!r}: "
-        f"clauses={clauses} witness={witness}. The predicate changed; update _clauses_for_token."
+        f"clauses={clauses} witness={witness}. Both must come from "
+        f"text_util.shape_garbage_clauses(); do not reintroduce a local copy."
     )
 
     return {

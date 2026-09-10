@@ -183,6 +183,17 @@ _DELIBERATELY_NOT_TUNABLE: dict[str, str] = {
     "SHORT_GARBAGE_WITNESS_VARIETY_MIN_ALPHA": "inert while the witness flag is false — register when it flips",
     "SHORT_GARBAGE_WITNESS_VARIETY_MAX": "inert while the witness flag is false — register when it flips",
     "SHORT_GARBAGE_WITNESS_TRIPLE_MAX_ALPHA": "inert while the witness flag is false — register when it flips",
+    # Issue #30, 2026-09-10. The same failure mode, found by applying the rule
+    # above to the rest of the registry: apply_page_perplexity_blend() returns
+    # early while PAGE_PPL_BLEND_ENABLE is false (it ships false), so these three
+    # cannot change any outcome either. They HAD been registered as tunables and
+    # were about to consume ~7% of a Sobol budget and produce three bogus prune
+    # recommendations. Same instruction as the witness four: move them back into
+    # _THRESHOLD_NAMES and const_importance_sweep.SEARCH_SPACE in the SAME commit
+    # that enables the blend.
+    "PAGE_PPL_BLEND_WEIGHT": "inert while PAGE_PPL_BLEND_ENABLE is false — register when it flips",
+    "PAGE_PPL_LONG_MIN_WC": "inert while PAGE_PPL_BLEND_ENABLE is false — register when it flips",
+    "PAGE_PPL_MIN_LONG_LINES": "inert while PAGE_PPL_BLEND_ENABLE is false — register when it flips",
 }
 
 

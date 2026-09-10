@@ -39,6 +39,7 @@ if str(_THIS_DIR) not in sys.path:
 from recategorize_from_csv import (  # noqa: E402
     _load_lang_config,
     add_gold_column_argument,
+    attach_gold_sidecar_from_args,
     evaluate_dataframe,
     load_csvs,
     read_config_constants,
@@ -175,6 +176,7 @@ def main() -> None:
         sys.exit(1)
 
     df = load_csvs(args.input_dir, recursive=True)
+    df = attach_gold_sidecar_from_args(df, args)
     expected_langs, known_bases = _load_lang_config(args.config)
     base_constants = read_config_constants(args.config)
     eval_kwargs = {

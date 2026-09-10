@@ -26,7 +26,9 @@ from recategorize_from_csv import (  # noqa: E402
     GOLD_COLUMN_DEFAULT,
     GOLD_SIDECAR_KEYS,
     _gold_report,
+    annotated_mask,
     attach_gold_sidecar,
+    document_decade,
     evaluate_dataframe,
     load_csvs,
     rescore_csv,
@@ -289,3 +291,128 @@ def test_joined_sidecar_scores_through_the_normal_gold_report():
 
     assert report["n"] == 4
     assert report["delta_macro_f1"] > 0, "a perfect re-score must beat an all-Clear incumbent"
+
+
+# ---------------------------------------------------------------------------
+# Partial annotation. THE case every gold test missed, and the one that matters
+# once gold arrives as a sidecar joined onto a much larger corpus.
+# ---------------------------------------------------------------------------
+
+
+def _partially_annotated_frame():
+    """A sample frame with 2 of 15 rows annotated, as a sidecar join leaves it."""
+    df = load_csvs(SAMPLE_DIR)
+    df[GOLD_COLUMN_DEFAULT] = ""
+    df.loc[df.index[0], GOLD_COLUMN_DEFAULT] = "Clear"
+    df.loc[df.index[1], GOLD_COLUMN_DEFAULT] = "Trash"
+    return df
+
+
+def test_unannotated_rows_are_not_scored_as_a_sixth_category():
+    """The defect this test exists for, stated as an assertion.
+
+    `normalize_category` maps a blank cell to `""`. Unmasked, that becomes a
+    class in the confusion matrix with support equal to the unannotated rows, it
+    drags every real class's precision down, and `macro_f1` -- the sweep's
+    default objective -- turns into a monotone function of the annotation RATE.
+    Measured before the fix on exactly this frame: `line_count` 15 against 2
+    annotated, `macro_f1` 0.0278, `flip_rate` 0.9333, and a `''` class of
+    support 13.
+
+    Every other gold test in this file uses a fully-annotated frame, which is
+    why none of them could see it.
+    """
+    df = _partially_annotated_frame()
+    n_annotated = int(annotated_mask(df, GOLD_COLUMN_DEFAULT).sum())
+    assert n_annotated == 2, "premise: only two rows carry a label"
+
+    metrics = evaluate_dataframe(df, gold_category_column=GOLD_COLUMN_DEFAULT)
+
+    assert metrics["line_count"] == n_annotated, "line_count must count annotated rows, not frame rows"
+    assert "" not in metrics["confusion"], "blank gold leaked in as a category"
+    assert "" not in metrics["per_class_f1"]
+    assert 0.0 <= metrics["flip_rate"] <= 1.0
+
+
+def test_the_two_gold_paths_agree_on_what_annotated_means():
+    """`evaluate_dataframe` and `_gold_report` used to disagree, and it mattered.
+
+    `_gold_report` masked; `evaluate_dataframe` -- the path every sweep,
+    ablation and A/B trial goes through -- did not. Both now route through
+    `annotated_mask`, and this pins that they agree on the count.
+    """
+    df = _partially_annotated_frame()
+    rescored = df.copy()
+    report = _gold_report(df, rescored, GOLD_COLUMN_DEFAULT)
+    metrics = evaluate_dataframe(df, gold_category_column=GOLD_COLUMN_DEFAULT)
+    assert report["n"] == metrics["line_count"]
+
+
+def test_gold_weights_change_the_score_and_are_opt_in():
+    """Sampling weights, which the metrics had no notion of at all.
+
+    Absent a `gold_weight` column nothing changes, so every existing caller is
+    untouched. Present, it reweights -- which is the point: this gold set is
+    stratified and its strata are inverted relative to the population, worth
+    about 10 points of headline agreement.
+    """
+    df = _partially_annotated_frame()
+    unweighted = evaluate_dataframe(df, gold_category_column=GOLD_COLUMN_DEFAULT)
+
+    df["gold_weight"] = "1.0"
+    df.loc[df.index[0], "gold_weight"] = "9.0"
+    weighted = evaluate_dataframe(df, gold_category_column=GOLD_COLUMN_DEFAULT)
+
+    assert weighted["line_count"] == unweighted["line_count"], "weights must not change the row count"
+    assert weighted["flip_rate"] != pytest.approx(unweighted["flip_rate"]), "weights were ignored"
+
+
+def test_a_malformed_gold_weight_raises_rather_than_being_dropped():
+    """A silently-dropped weight is a silently-reweighted objective."""
+    df = _partially_annotated_frame()
+    df["gold_weight"] = "1.0"
+    df.loc[df.index[0], "gold_weight"] = "not-a-number"
+    with pytest.raises(ValueError, match="non-numeric"):
+        evaluate_dataframe(df, gold_category_column=GOLD_COLUMN_DEFAULT)
+
+
+@pytest.mark.parametrize(
+    "file_id, expected",
+    [
+        ("CTX192400709", "1920s"),
+        ("MTX194500261", "1940s"),
+        ("CTX201600123", "2010s"),
+        ("MtX202100614", "2020s"),
+        ("P009_00014", "unknown"),
+        ("", "unknown"),
+    ],
+)
+def test_document_decade_parses_the_archive_naming(file_id, expected):
+    assert document_decade(file_id) == expected
+
+
+def test_the_gold_report_always_shows_its_composition():
+    """A single agreement figure over a stratified sample hides a weighting choice.
+
+    The issue-#30 sample over-represents the 1920s by ~95x and under-represents
+    the 2010s by ~10x; unweighted agreement over it is 62.8% against 72.7%
+    reweighted by decade. The report must name the strata so the headline cannot
+    be read as a population estimate.
+    """
+    gold = pd.read_csv(ISSUE30_SIDECAR, dtype=str, keep_default_na=False)
+    sample = pd.concat(
+        [gold[gold.file.str.startswith("CTX192")].head(4), gold[gold.file.str.startswith("CTX201")].head(4)]
+    )
+    old = sample.copy()
+    old["categ"] = "Clear"
+    new = old.copy()
+    new["categ"] = old[GOLD_COLUMN_DEFAULT]
+
+    report = _gold_report(old, new, GOLD_COLUMN_DEFAULT)
+
+    assert "strata" in report
+    assert "gold_source" in report["strata"], "the two annotation rounds are different populations"
+    assert "decade" in report["strata"], "decade is the stratification that is inverted vs the corpus"
+    assert {"1920s", "2010s"} <= set(report["strata"]["decade"])
+    for group in report["strata"]["decade"].values():
+        assert group["n"] > 0 and 0.0 <= group["agreement"] <= 1.0

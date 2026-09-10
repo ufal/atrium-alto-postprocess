@@ -472,7 +472,13 @@ def gpu_inference_worker(task_queue: mp.Queue, result_dict: dict, model_name: st
 # CPU workers — which re-import this module — see the same values without any
 # queue plumbing. Honors the LANGID_CONFIG env var set by run_pipeline.py.
 _config = configparser.ConfigParser()
-_config_path = Path(os.getenv("LANGID_CONFIG", "setup/config.txt"))
+# Anchored to this file rather than the working directory, matching text_util.
+# This copy was the quietest of the three: a relative default that missed printed
+# NOTHING at all, so FASTTEXT_MODEL, TRUST_TIER_TRUSTED and TRUST_TIER_UNKNOWN
+# silently fell back to their in-code defaults. Spawned CPU workers re-import
+# this module, so a mis-resolved path affected every one of them.
+_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "setup" / "config.txt"
+_config_path = Path(os.getenv("LANGID_CONFIG", str(_DEFAULT_CONFIG_PATH)))
 if _config_path.exists():
     _config.read(_config_path)
 

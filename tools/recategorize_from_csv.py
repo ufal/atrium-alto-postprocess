@@ -356,9 +356,10 @@ _THRESHOLD_NAMES = (
     "PPL_INVERTED_MIN",
     "PERPLEXITY_THRESHOLD_MAX",
     "SHORT_PPL_CAP",
-    "PAGE_PPL_BLEND_WEIGHT",
-    "PAGE_PPL_LONG_MIN_WC",
-    "PAGE_PPL_MIN_LONG_LINES",
+    # PAGE_PPL_BLEND_WEIGHT / PAGE_PPL_LONG_MIN_WC / PAGE_PPL_MIN_LONG_LINES were
+    # here. They are inert: apply_page_perplexity_blend() returns early while
+    # PAGE_PPL_BLEND_ENABLE is false, which it is. See _DELIBERATELY_NOT_TUNABLE
+    # in tests/test_recategorize_parity.py for the reason and the way back.
     # (#3) hard-sweep / extreme- and absolute-perplexity trash routes
     "HARD_SWEEP_LANG_MAX",
     "HARD_SWEEP_PPL_MIN",
@@ -589,29 +590,50 @@ def normalize_category(value: Any) -> str:
 # ---------------------------------------------------------------------------
 
 
-def confusion_matrix_dict(original: Iterable[Any], predicted: Iterable[Any]) -> dict[str, dict[str, int]]:
+def confusion_matrix_dict(
+    original: Iterable[Any],
+    predicted: Iterable[Any],
+    sample_weight: "np.ndarray | None" = None,
+) -> dict[str, dict[str, float]]:
+    """Confusion counts, or weighted mass when ``sample_weight`` is given.
+
+    Cells stay ints in the unweighted case so every existing caller and every
+    committed expectation is untouched; with weights they become floats, because
+    a design weight is not a count and rounding it to one would quietly discard
+    the reweighting.
+    """
     orig = [normalize_category(v) for v in original]
     pred = [normalize_category(v) for v in predicted]
     labels = sorted(set(orig) | set(pred) | set(OUTPUT_CATEGORY_ORDER))
     table = pd.crosstab(
         pd.Series(orig, name="original"),
         pd.Series(pred, name="predicted"),
+        values=None if sample_weight is None else pd.Series(sample_weight, dtype=float),
+        aggfunc=None if sample_weight is None else "sum",
         dropna=False,
     )
-    result: dict[str, dict[str, int]] = {}
+    cast = int if sample_weight is None else float
+    result: dict[str, dict[str, float]] = {}
     for row_label in labels:
         result[row_label] = {}
         for col_label in labels:
-            result[row_label][col_label] = int(
-                table.loc[row_label, col_label] if row_label in table.index and col_label in table.columns else 0
-            )
+            raw = table.loc[row_label, col_label] if row_label in table.index and col_label in table.columns else 0
+            if raw != raw:  # NaN, which crosstab emits for an empty weighted cell
+                raw = 0
+            result[row_label][col_label] = cast(raw)
     return result
 
 
-def f1_scores(confusion: dict[str, dict[str, int]]) -> dict[str, Any]:
+def f1_scores(confusion: dict[str, dict[str, float]]) -> dict[str, Any]:
+    """Per-class and averaged F1 from a confusion table.
+
+    Works on weighted mass as well as counts -- every term is a ratio, so the
+    unit cancels. ``weighted_f1`` averages by CLASS SUPPORT and is not the
+    design-weighted figure; sampling weights enter through the confusion table.
+    """
     labels = list(confusion.keys())
     per_label: dict[str, float] = {}
-    supports: dict[str, int] = {}
+    supports: dict[str, float] = {}
     for label in labels:
         tp = confusion[label].get(label, 0)
         fp = sum(confusion[row].get(label, 0) for row in labels) - tp
@@ -632,7 +654,7 @@ def f1_scores(confusion: dict[str, dict[str, int]]) -> dict[str, Any]:
     }
 
 
-def kl_divergence_from_counts(baseline_counts: dict[str, int], new_counts: dict[str, int]) -> float:
+def kl_divergence_from_counts(baseline_counts: dict[str, float], new_counts: dict[str, float]) -> float:
     labels = sorted(set(baseline_counts) | set(new_counts) | set(OUTPUT_CATEGORY_ORDER))
     p = np.array([baseline_counts.get(label, 0) for label in labels], dtype="float64")
     q = np.array([new_counts.get(label, 0) for label in labels], dtype="float64")
@@ -644,8 +666,16 @@ def kl_divergence_from_counts(baseline_counts: dict[str, int], new_counts: dict[
     return float(np.sum((p + eps) * np.log((p + eps) / (q + eps))))
 
 
-def costed_flip_score(original: Iterable[Any], predicted: Iterable[Any]) -> float:
-    """Operationally weighted per-line penalty; high cost to losing usable text."""
+def costed_flip_score(
+    original: Iterable[Any],
+    predicted: Iterable[Any],
+    sample_weight: "np.ndarray | None" = None,
+) -> float:
+    """Operationally weighted per-line penalty; high cost to losing usable text.
+
+    ``sample_weight`` is the SAMPLING weight and multiplies each line's penalty;
+    the cost table below is the operational weight and is unrelated to it.
+    """
     cost = {
         ("Clear", "Trash"): 3.0,
         ("Clear", "Non-text"): 3.0,
@@ -658,29 +688,63 @@ def costed_flip_score(original: Iterable[Any], predicted: Iterable[Any]) -> floa
         ("Non-text", "Clear"): 2.0,
         ("Empty", "Clear"): 2.0,
     }
+    # Materialised once: `original` is an Iterable and may be a one-shot
+    # generator, so it must not be walked twice to size the weights.
+    weights = None if sample_weight is None else list(sample_weight)
     total = 0.0
-    count = 0
-    for old_raw, new_raw in zip(original, predicted, strict=False):
+    count = 0.0
+    for i, (old_raw, new_raw) in enumerate(zip(original, predicted, strict=False)):
+        w = 1.0 if weights is None else (weights[i] if i < len(weights) else 1.0)
         old = normalize_category(old_raw)
         new = normalize_category(new_raw)
         if old != new:
-            total += cost.get((old, new), 1.0)
-        count += 1
+            total += cost.get((old, new), 1.0) * w
+        count += w
     return float(total / count) if count else 0.0
 
 
-def _metrics_from_labels(original: np.ndarray, predicted: np.ndarray) -> dict[str, Any]:
+def _metrics_from_labels(
+    original: np.ndarray,
+    predicted: np.ndarray,
+    sample_weight: "np.ndarray | None" = None,
+) -> dict[str, Any]:
+    """Every metric for one (reference, prediction) pair.
+
+    ``sample_weight`` is optional and opt-in; without it every number is exactly
+    what it was before. With it, counts become weighted mass and every rate is a
+    weighted rate, so a stratified gold set can be scored against the population
+    it is meant to represent rather than against its own composition.
+
+    ``line_count`` stays the unweighted row count, because it answers "how many
+    lines is this measured on" -- a question the weights must not change.
+    """
     total = len(original)
-    flip_count = int(np.sum(original != predicted))
-    flip_rate = float(flip_count / total) if total else 0.0
-    baseline_counts = Counter(original)
-    predicted_counts = Counter(predicted)
-    confusion = confusion_matrix_dict(original, predicted)
+    is_flip = original != predicted
+    if sample_weight is None:
+        flip_count = int(np.sum(is_flip))
+        flip_rate = float(flip_count / total) if total else 0.0
+        baseline_counts = Counter(original)
+        predicted_counts = Counter(predicted)
+        rate_total = float(total)
+    else:
+        w = np.asarray(sample_weight, dtype=float)
+        mass = float(w.sum())
+        flip_count = int(np.sum(is_flip))
+        flip_rate = float(w[is_flip].sum() / mass) if mass else 0.0
+        baseline_counts = Counter()
+        predicted_counts = Counter()
+        for label, weight in zip(original, w, strict=False):
+            baseline_counts[label] += float(weight)
+        for label, weight in zip(predicted, w, strict=False):
+            predicted_counts[label] += float(weight)
+        rate_total = mass
+    confusion = confusion_matrix_dict(original, predicted, sample_weight=sample_weight)
     f1 = f1_scores(confusion)
     kl = kl_divergence_from_counts(dict(baseline_counts), dict(predicted_counts))
-    cost = costed_flip_score(original, predicted)
+    cost = costed_flip_score(original, predicted, sample_weight=sample_weight)
     category_rates = {
-        label: float(predicted_counts.get(label, 0) / total) if total else 0.0 for label in OUTPUT_CATEGORY_ORDER
+        label: float(predicted_counts.get(label, 0) / rate_total) if rate_total else 0.0
+        for label in OUTPUT_CATEGORY_ORDER
     }
     return {
         "line_count": int(total),
@@ -708,6 +772,64 @@ def _stored_labels(df: pd.DataFrame, original_category_column: str) -> np.ndarra
     if "orig_categ" in df.columns:
         return df["orig_categ"].map(normalize_category).to_numpy()
     return None
+
+
+GOLD_WEIGHT_COLUMN = "gold_weight"
+
+
+def _gold_weights(df: pd.DataFrame, keep) -> "np.ndarray | None":
+    """Per-row sampling weights for the annotated rows, or None when unweighted.
+
+    Optional and opt-in: a sidecar that carries no ``gold_weight`` column scores
+    unweighted, exactly as before. It exists because this gold set is stratified
+    and the strata are inverted relative to the population it is used to tune --
+    the 1920s are ~95x over-represented and the 2010s ~10x under-represented,
+    which moves headline agreement by about 10 points on its own. An unweighted
+    objective silently tunes for the decades that are cheap to annotate.
+
+    Note this is NOT the same thing as ``weighted_f1``, which weights by CLASS
+    support. Anyone reading that field as the design-weighted figure is reading
+    the wrong number; `_print_gold_report` now says so.
+    """
+    if GOLD_WEIGHT_COLUMN not in df.columns:
+        return None
+    raw = pd.to_numeric(df.loc[keep, GOLD_WEIGHT_COLUMN], errors="coerce")
+    if raw.isna().any():
+        bad = int(raw.isna().sum())
+        raise ValueError(
+            f"{GOLD_WEIGHT_COLUMN!r} has {bad} non-numeric value(s) on annotated rows. "
+            "A silently-dropped weight is a silently-reweighted objective."
+        )
+    if (raw < 0).any():
+        raise ValueError(f"{GOLD_WEIGHT_COLUMN!r} contains negative weights")
+    if float(raw.sum()) <= 0.0:
+        raise ValueError(f"{GOLD_WEIGHT_COLUMN!r} sums to zero across the annotated rows")
+    return raw.to_numpy(dtype=float)
+
+
+def annotated_mask(df: pd.DataFrame, gold_column: str) -> pd.Series:
+    """Rows carrying an actual human label, as a boolean Series aligned to ``df``.
+
+    THE single definition of "annotated", because there used to be two and only
+    one of them was right. ``_gold_report`` masked; ``evaluate_dataframe`` -- the
+    path every sweep, ablation and A/B trial goes through -- did not.
+
+    That mattered the moment gold arrived as a key-indexed sidecar. A join leaves
+    every unmatched row blank, ``normalize_category`` maps blank to ``""``, and an
+    unmasked ``""`` becomes a sixth category in the confusion matrix. On a 15-row
+    frame with 2 rows annotated it reported ``line_count=15``, ``macro_f1=0.028``
+    and a ``""`` class with support 13; on a real corpus, where the annotated
+    share is well under 1%, ``macro_f1`` stops measuring agreement with humans
+    and becomes a monotone function of how much of the corpus is unannotated.
+    A sweep maximising it would have optimised the annotation rate for hours.
+    """
+    if gold_column not in df.columns:
+        raise KeyError(
+            f"gold column {gold_column!r} is not in the frame; "
+            f"available columns: {sorted(df.columns)}. Refusing to fall back to the "
+            "stored categories -- see tools/gold/GOLD.md for the expected schema."
+        )
+    return df[gold_column].fillna("").astype(str).str.strip() != ""
 
 
 def evaluate_dataframe(
@@ -740,29 +862,33 @@ def evaluate_dataframe(
     """
     stored = _stored_labels(df, original_category_column)
 
-    if gold_category_column is not None:
-        if gold_category_column not in df.columns:
-            raise KeyError(
-                f"gold column {gold_category_column!r} is not in the frame; "
-                f"available columns: {sorted(df.columns)}. Refusing to fall back to the "
-                "stored categories -- see tools/GOLD.md for the expected schema."
-            )
-        reference = df[gold_category_column].map(normalize_category).to_numpy()
-    else:
-        reference = stored
-
     predicted_df = recategorize_dataframe(df, constants, expected_langs=expected_langs, known_bases=known_bases)
     predicted = predicted_df["categ"].map(normalize_category).to_numpy()
+
+    if gold_category_column is not None:
+        # Score ONLY the annotated rows. `annotated_mask` explains why at length;
+        # the short version is that an unmatched sidecar row is not a wrong
+        # prediction, it is an absent opinion, and averaging it in as a sixth
+        # category makes every metric a measure of coverage instead of accuracy.
+        keep = annotated_mask(df, gold_category_column).to_numpy()
+        reference = df.loc[keep, gold_category_column].map(normalize_category).to_numpy()
+        predicted = predicted[keep]
+        if stored is not None:
+            stored = stored[keep]
+        weights = _gold_weights(df, keep)
+    else:
+        reference = stored
+        weights = None
 
     if reference is None:
         reference = predicted.copy()
 
-    metrics = _metrics_from_labels(reference, predicted)
+    metrics = _metrics_from_labels(reference, predicted, sample_weight=weights)
 
     if gold_category_column is not None:
         metrics["gold_column"] = gold_category_column
         if stored is not None:
-            baseline = _metrics_from_labels(reference, stored)
+            baseline = _metrics_from_labels(reference, stored, sample_weight=weights)
             metrics["baseline_vs_gold"] = baseline
             metrics["gold_delta_macro_f1"] = float(metrics["macro_f1"] - baseline["macro_f1"])
 
@@ -829,6 +955,53 @@ def _category_counts(df: pd.DataFrame):
     return df["categ"].value_counts().to_dict()
 
 
+_RE_DOC_YEAR = re.compile(r"^[A-Za-z]{2,4}(\d{4})")
+
+
+def document_decade(file_id: Any) -> str:
+    """Decade of a document, parsed from its identifier, or ``"unknown"``.
+
+    The archive names documents ``CTX<year><seq>`` / ``MTX<year><seq>``, so the
+    decade is free. Validated over the delivered population: 36,137 of 36,268
+    documents parse (99.6%) and every parsed year falls in 1920-2024, with no
+    outliers. The 131 that do not are a lowercase variant and a ``P009_*`` series.
+
+    It matters because the issue-#30 gold set is stratified by decade and its
+    strata are INVERTED relative to the population it is used to tune: the 1920s
+    are ~95x over-represented, the 2010s ~10x under-represented, and the 2010+
+    documents the issue is actually about are 55% of the changed population but
+    9% of the sample. Unweighted agreement over that sample is 62.8%; reweighted
+    by decade it is 72.7%. A single headline number hides a 10-point choice.
+    """
+    m = _RE_DOC_YEAR.match(str(file_id))
+    if not m:
+        return "unknown"
+    year = int(m.group(1))
+    return f"{(year // 10) * 10}s" if 1900 <= year <= 2030 else "unknown"
+
+
+def _stratum_breakdown(
+    frame: pd.DataFrame,
+    labels: pd.Index,
+    gold: np.ndarray,
+    rescored: np.ndarray,
+    column: str,
+) -> dict[str, dict[str, Any]]:
+    """Agreement per stratum, for one grouping column already present on ``frame``."""
+    if column not in frame.columns:
+        return {}
+    keys = frame.loc[labels, column].astype(str).to_numpy()
+    out: dict[str, dict[str, Any]] = {}
+    for key in sorted(set(keys)):
+        sel = keys == key
+        n = int(sel.sum())
+        if not n:
+            continue
+        agree = int((gold[sel] == rescored[sel]).sum())
+        out[key] = {"n": n, "agreement": float(agree / n), "share": float(n / len(keys))}
+    return out
+
+
 def _gold_report(old: pd.DataFrame, new: pd.DataFrame, gold_column: str) -> dict[str, Any] | None:
     """Score stored and re-scored categories against a human-gold column.
 
@@ -853,13 +1026,26 @@ def _gold_report(old: pd.DataFrame, new: pd.DataFrame, gold_column: str) -> dict
     stored = old.loc[labels, "categ"].map(normalize_category).to_numpy()
     rescored = new["categ"].reindex(labels).map(normalize_category).to_numpy()
 
-    stored_metrics = _metrics_from_labels(gold, stored)
-    rescored_metrics = _metrics_from_labels(gold, rescored)
+    weights = _gold_weights(old, mask.to_numpy())
+    stored_metrics = _metrics_from_labels(gold, stored, sample_weight=weights)
+    rescored_metrics = _metrics_from_labels(gold, rescored, sample_weight=weights)
+
+    # The composition, always. A headline agreement figure over a stratified
+    # sample is a weighted average whose weights nobody chose; printing the
+    # strata beside it is what stops the number being read as the population's.
+    strata = {"gold_source": _stratum_breakdown(old, labels, gold, rescored, "gold_source")}
+    if "file" in old.columns:
+        with_decade = old.loc[labels, ["file"]].copy()
+        with_decade["_decade"] = with_decade["file"].map(document_decade)
+        strata["decade"] = _stratum_breakdown(with_decade, labels, gold, rescored, "_decade")
+
     return {
         "n": int(mask.sum()),
+        "weighted": weights is not None,
         "stored_vs_gold": stored_metrics,
         "rescored_vs_gold": rescored_metrics,
         "delta_macro_f1": float(rescored_metrics["macro_f1"] - stored_metrics["macro_f1"]),
+        "strata": {k: v for k, v in strata.items() if v},
     }
 
 
@@ -872,10 +1058,26 @@ def _print_gold_report(report: dict[str, Any] | None, gold_column: str) -> None:
     stored = report["stored_vs_gold"]
     rescored = report["rescored_vs_gold"]
     delta = report["delta_macro_f1"]
-    print(f"  vs gold ({report['n']} annotated line(s), column {gold_column!r}):")
+    how = "design-weighted" if report.get("weighted") else "UNWEIGHTED"
+    print(f"  vs gold ({report['n']} annotated line(s), column {gold_column!r}, {how}):")
     print(f"    stored   macro_f1={stored['macro_f1']:.4f}  agreement={1.0 - stored['flip_rate']:.4f}")
     print(f"    rescored macro_f1={rescored['macro_f1']:.4f}  agreement={1.0 - rescored['flip_rate']:.4f}")
     print(f"    delta    macro_f1={delta:+.4f}")
+    print("    note: 'weighted_f1' above is weighted by CLASS SUPPORT, not by sampling design.")
+
+    for name, groups in (report.get("strata") or {}).items():
+        if len(groups) < 2:
+            continue
+        print(f"    by {name}:")
+        for key, g in sorted(groups.items(), key=lambda kv: -kv[1]["n"]):
+            print(f"      {key:<18} n={g['n']:>6}  {g['share']:>6.1%} of gold  agreement={g['agreement']:.4f}")
+        spread = max(g["agreement"] for g in groups.values()) - min(g["agreement"] for g in groups.values())
+        if spread >= 0.10 and not report.get("weighted"):
+            print(
+                f"      ^ agreement varies by {spread:.0%} across {name}. This sample is stratified and "
+                f"its strata do not match the population's, so the headline above is not a population "
+                f"estimate. Supply a {GOLD_WEIGHT_COLUMN!r} column to weight it."
+            )
 
 
 def _report(in_path: Path, old: pd.DataFrame, new: pd.DataFrame) -> int:
@@ -1002,9 +1204,27 @@ def attach_gold_sidecar(
 
 
 def attach_gold_sidecar_from_args(df: pd.DataFrame, args) -> pd.DataFrame:
-    """No-op unless ``--gold-sidecar`` was passed. Call right after ``load_csvs``."""
+    """No-op unless ``--gold-sidecar`` was passed. Call right after ``load_csvs``.
+
+    A sidecar without ``--gold-column`` is refused rather than ignored. Attaching
+    the labels and then not selecting them leaves ``gold_category_column=None``,
+    which scores the re-categorisation against the pipeline's OWN stored labels --
+    the circular objective this whole path exists to escape. It printed a
+    reassuring "N labels matched" line on the way past, so a multi-hour cluster
+    run looked exactly like a successful gold run and was worth nothing.
+    """
     path = getattr(args, "gold_sidecar", None)
-    return attach_gold_sidecar(df, path) if path else df
+    if not path:
+        return df
+    if not getattr(args, "gold_column", None):
+        raise SystemExit(
+            f"error: --gold-sidecar {path} was given without --gold-column.\n"
+            f"       The sidecar supplies the labels; --gold-column selects them. Without it "
+            f"every metric is scored against the pipeline's own stored categories, which makes "
+            f"the shipped config optimal by construction.\n"
+            f"       Add: --gold-column {GOLD_COLUMN_DEFAULT}"
+        )
+    return attach_gold_sidecar(df, path)
 
 
 def add_gold_column_argument(ap: argparse.ArgumentParser) -> None:
@@ -1051,6 +1271,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override individual constants, e.g. CATEG_TRASH_SCORE_MAX=0.45.",
     )
     ap.add_argument("--report-only", action="store_true", help="Print the diff report but do not write CSVs.")
+    ap.add_argument(
+        "--recursive",
+        action="store_true",
+        help=(
+            "Recurse into sub-directories. `csv_paths()` has always supported this; the CLI did not, "
+            "so a two-archive layout (ARUP/ and ARUB/ under one parent) silently found nothing and "
+            "reported success. Output mirrors the input tree, so same-named documents in different "
+            "archives cannot overwrite each other."
+        ),
+    )
+    ap.add_argument(
+        "--in-place",
+        action="store_true",
+        help=(
+            "Overwrite the input CSVs. Required to write without --out: the previous default was to "
+            "overwrite in place, which destroys the baseline a re-categorisation is measured against "
+            "and leaves a half-converted collection after a crash."
+        ),
+    )
     add_gold_column_argument(ap)
     ap.add_argument(
         "--probe-metre-candidate",
@@ -1080,7 +1319,7 @@ def main(argv=None):
     in_path = Path(raw_path)
 
     if in_path.is_dir():
-        csvs = sorted(in_path.glob("*.csv"))
+        csvs = csv_paths(in_path, recursive=args.recursive)
     else:
         csvs = [in_path]
     if not csvs:
@@ -1093,11 +1332,34 @@ def main(argv=None):
             f"Applying {sum(1 for k in constants if constants[k] != DEFAULT_CONSTANTS.get(k))} non-default constant(s)."
         )
 
+    if not args.report_only and not args.out and not args.in_place:
+        print(
+            "error: writing without --out would overwrite the input CSVs. Pass --out DIR to write "
+            "elsewhere, --in-place to overwrite deliberately, or --report-only to write nothing.",
+            file=sys.stderr,
+        )
+        return 2
+
     total_changed = 0
     grand_old: dict = {}
     grand_new: dict = {}
-    for csv_path in csvs:
-        old, new = rescore_csv(csv_path, constants)
+    failures: list[tuple[Path, str]] = []
+    for position, csv_path in enumerate(csvs, start=1):
+        # Progress on every file, not just at the end: a 113k-document run that
+        # dies must say where. Cheap next to a re-score.
+        if len(csvs) > 1:
+            print(f"[{position}/{len(csvs)}] {csv_path}", flush=True)
+
+        try:
+            old, new = rescore_csv(csv_path, constants)
+        except Exception as exc:  # noqa: BLE001 - one bad CSV must not end the run
+            # Previously a single malformed CSV aborted the whole loop, and
+            # because writes were in place it left a half-converted collection
+            # with nothing on disk saying where it stopped.
+            print(f"  ! FAILED: {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
+            failures.append((csv_path, f"{type(exc).__name__}: {exc}"))
+            continue
+
         total_changed += _report(csv_path, old, new)
 
         if args.gold_column:
@@ -1118,15 +1380,23 @@ def main(argv=None):
 
         if not args.report_only:
             if args.out:
-                out_path = Path(args.out)
+                out_root = Path(args.out)
                 if in_path.is_dir():
-                    out_path.mkdir(parents=True, exist_ok=True)
-                    out_path = out_path / csv_path.name
+                    # Mirror the input tree. Flattening to `out / name` would let
+                    # same-named documents in different archives (ARUP/CTX…csv and
+                    # ARUB/CTX…csv) overwrite each other silently under --recursive.
+                    out_path = out_root / csv_path.relative_to(in_path)
+                    out_path.parent.mkdir(parents=True, exist_ok=True)
                 else:
+                    out_path = out_root
                     out_path.parent.mkdir(parents=True, exist_ok=True)
             else:
                 out_path = csv_path
-            new.to_csv(out_path, index=False, encoding="utf-8")
+            # Write to a temp file and rename, so a kill mid-write cannot leave a
+            # truncated CSV that a later resume would treat as complete.
+            tmp_path = out_path.with_suffix(out_path.suffix + ".part")
+            new.to_csv(tmp_path, index=False, encoding="utf-8")
+            tmp_path.replace(out_path)
 
     if len(csvs) > 1:
         print("\n=== GRAND TOTAL ===")
@@ -1134,6 +1404,13 @@ def main(argv=None):
             b, a = grand_old.get(c, 0), grand_new.get(c, 0)
             print(f"  {c:<10} {b:>7} {a:>7} {a - b:>+7}")
         print(f"  total lines changed category: {total_changed}")
+        print(f"  files processed: {len(csvs) - len(failures)}/{len(csvs)}")
+
+    if failures:
+        print(f"\n=== {len(failures)} FILE(S) FAILED ===", file=sys.stderr)
+        for path, reason in failures:
+            print(f"  {path}: {reason}", file=sys.stderr)
+        return 1
     return 0
 
 
