@@ -1807,11 +1807,21 @@ def _has_strong_garbage_evidence(
 #
 # `SHORT_GARBAGE_WITNESS_ENABLE` still defaults to false, so the disjunct cannot
 # change any outcome. Wiring and enabling are separate on purpose: the flag must
-# not be flipped until the witness is measured against a GOLD set, and the
-# repository has none for this population (tools/gold/GOLD.md; the 508- and
-# 1,567-line annotations are not in the tree). Flipping it also means moving the
-# four SHORT_GARBAGE_WITNESS_* constants out of `_DELIBERATELY_NOT_TUNABLE` and
-# into `_THRESHOLD_NAMES` + `SEARCH_SPACE`, in the same commit.
+# not be flipped until the witness is measured against a GOLD set.
+#
+# UPDATE 2026-09-10 -- it has been measured once, and it did not pass. On the 508
+# annotated lines, flag-on moved 26: 12 fixed, 12 BROKEN, 2 borderline. Every
+# break carried a roman numeral, which the exemption in the predicate below now
+# clears. That exemption is a narrowing, not a green light: the 508 have NOT been
+# re-scored against it (that needs the delivered batch, which is not in the
+# tree), so the flag stays false.
+#
+# The annotations themselves are now here -- tools/gold/sidecars/, joined onto a
+# delivered batch with `--gold-sidecar`; see tools/gold/GOLD.md, including its
+# provenance note on the 55 labels that changed when the 508 were re-annotated.
+# Flipping the flag also means moving the four SHORT_GARBAGE_WITNESS_* constants
+# out of `_DELIBERATELY_NOT_TUNABLE` and into `_THRESHOLD_NAMES` + `SEARCH_SPACE`,
+# in the same commit.
 #
 # Covered by tests/test_text_utils.py::TestShapeGarbageWitness (the predicate),
 # test_the_disjunction_the_gate_will_evaluate in tests/test_calibration.py (the
@@ -1844,6 +1854,33 @@ def _has_shape_garbage_evidence(text_source: str) -> bool:
 
             lowered = core.lower()
             if lowered in _NEUTRAL_LEXICON or lowered in SHORT_EXCEPTION_TOKENS or lowered in SHORT_VALID_WORDS:
+                continue
+
+            # ROMAN NUMERALS are exempt, and the exemption sits above every
+            # clause below rather than inside one of them. Measured on the 508
+            # annotated lines (#30, 2026-09-10): flag-on moved 26 lines, and all
+            # 12 it broke carried a roman numeral -- `Sonda VIII/3`,
+            # `12.VIII.1977,`, `CCV. CCVI.`, `205; CCLXII).`, `166. Hr.XLIII.1.`,
+            # `Lokalisace: I-VIII-eneol.II`, `w XVIII.`.
+            #
+            # Placement is the whole point: `III` is BOTH a triple-character run
+            # and a 3-vowel run (`I` is a vowel), and `CC` opens a consonant
+            # geminate, so exempting any single clause leaves the others to
+            # convict the same line. Matching on the letters rather than `core`
+            # is also deliberate -- `_split_subtokens` yields `VIII/3` whole.
+            #
+            # `_RE_ROMAN_TOKEN` and not `RE_ROMAN_NUMERAL`: the latter accepts
+            # lowercase, and every letter of `lllll` is a numeral glyph, so it
+            # would exempt real garbage. Uppercase-only and capped at 7 keeps
+            # `IDIDIDIDIDIDUOID` convicted. Known cost: a 7-glyph all-numeral
+            # stutter such as `DIDIDID` is now exempt too.
+            #
+            # This NARROWS the witness; it does not enable it.
+            # `SHORT_GARBAGE_WITNESS_ENABLE` still defaults to false. Refusing to
+            # convict a roman numeral is not the predicate claiming the line is
+            # clean -- that asymmetry is why this does not contradict D2, which
+            # kept roman numerals OUT of `is_domain_notation()`'s label lexicon.
+            if _RE_ROMAN_TOKEN.match("".join(letters)):
                 continue
 
             # 3+ consecutive vowels: `oueussd`, `cuxoaid`, `IDIDIDIDIDIDUOID`.

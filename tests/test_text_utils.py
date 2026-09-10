@@ -701,6 +701,88 @@ class TestShapeGarbageWitness:
         """
         assert _has_shape_garbage_evidence(text) is False
 
+    # The roman-numeral false positives, measured on the 508 annotated lines
+    # (#30, 2026-09-10). Flag-on moved 26 of the 508 and broke 12; every broken
+    # line carried a roman numeral. Each row names the numeral and the clause
+    # that convicted it, so the exemption's cost stays visible.
+    ROMAN_NUMERAL_LINES = [
+        ("Sonda VIII/3", "VIII", "vowel run + triple character"),
+        ("12.VIII.1977,", "VIII", "vowel run + triple character"),
+        ("CCV. CCVI.", "CCVI", "initial consonant geminate"),
+        ("205; CCLXII).", "CCLXII", "initial consonant geminate"),
+        ("166. Hr.XLIII.1.", "XLIII", "vowel run + triple character"),
+        ("Lokalisace: I-VIII-eneol.II", "VIII", "vowel run + triple character"),
+        ("w XVIII.", "XVIII", "vowel run + triple character"),
+    ]
+
+    @pytest.mark.parametrize(
+        "text, numeral, clause",
+        ROMAN_NUMERAL_LINES,
+        ids=[t for t, _, _ in ROMAN_NUMERAL_LINES],
+    )
+    def test_roman_numerals_are_not_witnessed(self, text, numeral, clause):
+        """Premise and conclusion together: the clause matches, and we exempt it.
+
+        This is the one class the witness demonstrably got wrong on real
+        annotated lines rather than on invented ones, which is why it is pinned
+        line-for-line instead of by a single representative.
+        """
+        import text_util as tu
+
+        assert tu._RE_ROMAN_TOKEN.match(numeral), "premise: this is the numeral the exemption reads"
+        assert _has_shape_garbage_evidence(text) is False, f"{text!r} was convicted by the {clause} clause"
+
+    def test_the_exemption_sits_above_every_clause(self):
+        """Why the fix is not a change to the triple-character clause.
+
+        The thread's diagnosis was that the triple clause reads `III` as a
+        stutter. That is true and incomplete: `I` is a vowel, so `III` is a
+        3-vowel run as well, and `CC` opens a consonant geminate. Exempting any
+        single clause leaves the others to convict the same line -- which is why
+        the exemption is placed above all four.
+        """
+        import text_util as tu
+
+        assert tu._RE_FUSED_VOWEL_RUN.search("VIII"), "premise: the vowel-run clause also reaches VIII"
+        assert tu._RE_TRIPLE_ALPHA_RUN.search("VIII"), "premise: so does the triple clause"
+        assert tu._RE_INITIAL_CONSONANT_GEMINATE.match("CCVI"), "premise: and the geminate clause reaches CCVI"
+
+    @pytest.mark.parametrize(
+        "text",
+        ["sektlll", "utlll", "tirrttitt", "IAALAILIL", "SEEEEEEEEEEEE:"],
+    )
+    def test_the_lines_the_witness_fixes_are_still_witnessed(self, text):
+        """The other half of the same measurement: 12 lines it correctly fixed.
+
+        The exemption is only worth having if it costs none of these. All five
+        are the garbage the thread named by hand when the flag was measured.
+        """
+        assert _has_shape_garbage_evidence(text) is True
+
+    def test_lowercase_numeral_glyph_garbage_is_still_witnessed(self):
+        """Why `_RE_ROMAN_TOKEN` and not `RE_ROMAN_NUMERAL`.
+
+        Every letter of `lllll` is a roman numeral glyph, so the lowercase-
+        accepting pattern would exempt it. The uppercase-only token pattern is
+        what keeps this a numeral exemption rather than a hole.
+        """
+        import text_util as tu
+
+        assert tu.RE_ROMAN_NUMERAL.match("lllll"), "premise: the lowercase pattern would exempt this"
+        assert tu._RE_ROMAN_TOKEN.match("lllll") is None
+        assert _has_shape_garbage_evidence("lllll") is True
+
+    def test_the_exemptions_known_cost_is_recorded(self):
+        """The one case the exemption gives up, asserted rather than left implicit.
+
+        An all-numeral-glyph stutter inside the 7-character cap is now exempt.
+        `DIDIDID` is not a corpus line -- it is the shape `IDIDIDIDIDIDUOID`
+        would have if it were short enough -- and the length cap is what stops
+        the real one from following it out.
+        """
+        assert _has_shape_garbage_evidence("DIDIDID") is False
+        assert _has_shape_garbage_evidence("IDIDIDIDIDIDUOID") is True
+
     def test_witness_is_not_read_at_default_config(self):
         """The flag ships false, so nothing above changes a category yet."""
         import text_util as tu

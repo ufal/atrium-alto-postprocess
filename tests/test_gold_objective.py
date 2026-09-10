@@ -24,7 +24,9 @@ for _p in (str(_ROOT), str(_ROOT / "tools")):
 
 from recategorize_from_csv import (  # noqa: E402
     GOLD_COLUMN_DEFAULT,
+    GOLD_SIDECAR_KEYS,
     _gold_report,
+    attach_gold_sidecar,
     evaluate_dataframe,
     load_csvs,
     rescore_csv,
@@ -32,6 +34,8 @@ from recategorize_from_csv import (  # noqa: E402
 
 GOLD_DIR = _ROOT / "tools" / "gold"
 SAMPLE_DIR = _ROOT / "data_samples" / "DOC_LINE_CATEG"
+SIDECAR_DIR = GOLD_DIR / "sidecars"
+ISSUE30_SIDECAR = SIDECAR_DIR / "issue30_gold_2067.csv"
 
 
 # ---------------------------------------------------------------------------
@@ -153,3 +157,135 @@ def test_rescore_csv_returns_frames_sharing_an_index(tmp_path):
     for path in sorted(SAMPLE_DIR.glob("*.csv")):
         old, new = rescore_csv(path)
         assert list(old.index) == list(new.index), f"{path.name}: index mismatch"
+
+
+# ---------------------------------------------------------------------------
+# Key-indexed gold sidecars (`--gold-sidecar`).
+# ---------------------------------------------------------------------------
+
+
+def test_sidecars_are_not_reachable_as_per_document_gold():
+    """A sidecar in `tools/gold/` corrupts every driver that globs the directory.
+
+    The drivers treat each `*.csv` under an `--input-dir` as a scoreable
+    per-document gold set. A sidecar is neither per-document nor scoreable on its
+    own -- it has no `categ` column -- so one sitting beside `GOLD_CLEAR.csv`
+    poisons `load_csvs(GOLD_DIR)` and takes the per-document guard above with it.
+    This is the guard on the fix, not a style rule.
+    """
+    assert ISSUE30_SIDECAR.exists(), "the issue-#30 sidecar is missing"
+    stray = [p.name for p in GOLD_DIR.glob("*.csv") if "categ" not in pd.read_csv(p, nrows=0).columns]
+    assert not stray, f"sidecar-shaped CSVs directly in tools/gold/: {stray}"
+
+
+def test_issue30_sidecar_has_the_documented_shape():
+    """The contract GOLD.md states, asserted rather than described.
+
+    2,067 rows over 816 documents, split 508 / 1,559 by `gold_source`, no
+    duplicate keys. The counts are the delivery's own and are what every figure
+    quoted from this file assumes.
+    """
+    df = pd.read_csv(ISSUE30_SIDECAR, dtype=str, keep_default_na=False)
+
+    assert list(df.columns) == ["file", "page_num", "line_num", "gold_categ", "gold_source"]
+    assert len(df) == 2067
+    assert df["file"].nunique() == 816
+    assert not df.duplicated(subset=list(GOLD_SIDECAR_KEYS)).any(), "duplicate keys would double-count"
+    assert df["gold_source"].value_counts().to_dict() == {"calibration_1567": 1559, "issue30_508": 508}
+    assert set(df["gold_categ"]) <= {"Clear", "Noisy", "Trash", "Non-text", "Empty"}
+
+
+def test_sidecar_join_survives_a_locator_type_mismatch():
+    """The one real failure mode: str page_num against int page_num.
+
+    A sidecar is read as text; a delivered batch may carry its locators as
+    integers. Without the coercion both sides are well-formed, the join matches
+    nothing, and the run reports "no gold" instead of failing -- this
+    repository's recurring bug in a new place.
+    """
+    gold = pd.read_csv(ISSUE30_SIDECAR, dtype=str, keep_default_na=False).head(3)
+    batch = pd.DataFrame(
+        {
+            "file": list(gold["file"]),
+            "page_num": [int(x) for x in gold["page_num"]],
+            "line_num": [int(x) for x in gold["line_num"]],
+            "text": ["x"] * 3,
+            "categ": ["Clear"] * 3,
+        },
+        index=[7, 8, 9],
+    )
+
+    out = attach_gold_sidecar(batch, ISSUE30_SIDECAR, verbose=False)
+
+    assert list(out[GOLD_COLUMN_DEFAULT]) == list(gold["gold_categ"])
+    assert list(out.index) == [7, 8, 9], "index must survive; _gold_report realigns on it"
+    assert len(out) == len(batch), "a left join must not add or drop rows"
+
+
+def test_sidecar_keeps_unmatched_rows_and_leaves_their_gold_blank():
+    """Partial matches are correct, not a failure.
+
+    Only 484 of the issue-#30 508 keys are still in the changed population, so a
+    join that dropped unmatched rows would quietly change the population being
+    scored. Blank gold cells are already skipped by `_gold_report`.
+    """
+    gold = pd.read_csv(ISSUE30_SIDECAR, dtype=str, keep_default_na=False).head(2)
+    batch = pd.DataFrame(
+        {
+            "file": list(gold["file"]) + ["NOT_ANNOTATED"],
+            "page_num": [int(x) for x in gold["page_num"]] + [1],
+            "line_num": [int(x) for x in gold["line_num"]] + [1],
+            "text": ["x"] * 3,
+            "categ": ["Clear"] * 3,
+        }
+    )
+
+    out = attach_gold_sidecar(batch, ISSUE30_SIDECAR, verbose=False)
+
+    assert len(out) == 3
+    assert str(out[GOLD_COLUMN_DEFAULT].iloc[2]) in ("nan", "", "None")
+
+
+def test_sidecar_matching_nothing_raises_instead_of_scoring_no_gold():
+    """The silent version of this mistake is a run that looks like it used gold."""
+    batch = pd.DataFrame({"file": ["NO_SUCH_DOC"], "page_num": [1], "line_num": [1], "text": ["x"], "categ": ["Clear"]})
+
+    with pytest.raises(ValueError, match="matched 0 of"):
+        attach_gold_sidecar(batch, ISSUE30_SIDECAR, verbose=False)
+
+
+def test_sidecar_missing_a_key_column_raises(tmp_path):
+    """Same rule as `--gold-column`: malformed input is an error, not a fallback."""
+    bad = tmp_path / "bad.csv"
+    bad.write_text("file,gold_categ\nDOC,Clear\n", encoding="utf-8")
+    batch = pd.DataFrame({"file": ["DOC"], "page_num": [1], "line_num": [1], "text": ["x"], "categ": ["Clear"]})
+
+    with pytest.raises(ValueError, match="missing key column"):
+        attach_gold_sidecar(batch, bad, verbose=False)
+
+
+def test_joined_sidecar_scores_through_the_normal_gold_report():
+    """End to end: sidecar -> join -> `_gold_report`, with no special casing.
+
+    The join's only job is to put the column where the existing gold path already
+    looks for it. If this needed a second scoring route, the design would be wrong.
+    """
+    gold = pd.read_csv(ISSUE30_SIDECAR, dtype=str, keep_default_na=False).head(4)
+    batch = pd.DataFrame(
+        {
+            "file": list(gold["file"]),
+            "page_num": [int(x) for x in gold["page_num"]],
+            "line_num": [int(x) for x in gold["line_num"]],
+            "text": ["x"] * 4,
+            "categ": ["Clear"] * 4,
+        }
+    )
+
+    joined = attach_gold_sidecar(batch, ISSUE30_SIDECAR, verbose=False)
+    perfect = joined.copy()
+    perfect["categ"] = list(gold["gold_categ"])
+
+    report = _gold_report(joined, perfect, GOLD_COLUMN_DEFAULT)
+
+    assert report["n"] == 4
+    assert report["delta_macro_f1"] > 0, "a perfect re-score must beat an all-Clear incumbent"

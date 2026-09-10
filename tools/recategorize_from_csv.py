@@ -930,12 +930,91 @@ GOLD_COLUMN_HELP = (
 )
 
 
+GOLD_SIDECAR_HELP = (
+    "Path to a key-indexed gold sidecar CSV (file,page_num,line_num,gold_categ"
+    "[,gold_source]) to join onto the loaded rows before scoring. Use it when the "
+    "annotation arrives separately from the DOC_LINE_CATEG batch it labels, as the "
+    "issue-#30 sets did -- see tools/gold/sidecars/issue30_gold_2067.csv. Supplies the "
+    "column; --gold-column still selects it. See tools/gold/GOLD.md."
+)
+
+GOLD_SIDECAR_KEYS = ("file", "page_num", "line_num")
+
+
+def attach_gold_sidecar(
+    df: pd.DataFrame,
+    sidecar_path: Path | str,
+    *,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """Join a key-indexed gold sidecar onto ``df`` by (file, page_num, line_num).
+
+    A sidecar carries labels and nothing else, so it can only be scored once it is
+    attached to real rows. That is the whole operation: a left join that adds
+    ``gold_categ`` (and ``gold_source`` when present) and touches nothing else.
+
+    Both sides go through ``_coerce_locators`` first. The sidecar is read as text
+    and the batch may carry ``page_num`` as either, so without the coercion the
+    join silently matches zero rows -- which then scores as "no gold at all"
+    rather than as a failure.
+
+    Partial matches are normal and are reported rather than treated as an error:
+    only 484 of the issue-#30 508 keys are still in the changed population. A join
+    that matches *nothing* is a different matter and raises, because the quiet
+    version of that mistake is a run that looks like it scored against humans and
+    did not.
+    """
+    sidecar = pd.read_csv(Path(sidecar_path), dtype=str, keep_default_na=False)
+
+    missing = [k for k in GOLD_SIDECAR_KEYS if k not in sidecar.columns]
+    if missing:
+        raise ValueError(f"gold sidecar {sidecar_path} is missing key column(s): {', '.join(missing)}")
+    if GOLD_COLUMN_DEFAULT not in sidecar.columns:
+        raise ValueError(f"gold sidecar {sidecar_path} has no {GOLD_COLUMN_DEFAULT!r} column")
+
+    frame_missing = [k for k in GOLD_SIDECAR_KEYS if k not in df.columns]
+    if frame_missing:
+        raise ValueError(f"cannot join gold sidecar: the loaded rows lack {', '.join(frame_missing)}")
+
+    carried = [GOLD_COLUMN_DEFAULT] + [c for c in ("gold_source", "gold_note") if c in sidecar.columns]
+    sidecar = _coerce_locators(sidecar[list(GOLD_SIDECAR_KEYS) + carried].copy())
+    sidecar = sidecar.drop_duplicates(subset=list(GOLD_SIDECAR_KEYS), keep="first")
+
+    out = _coerce_locators(df.copy())
+    # Index is preserved on purpose: `_gold_report` realigns `old` and `new` by
+    # label, so a join that reset it would score line N against line M's gold.
+    original_index = out.index
+    out = out.merge(sidecar, on=list(GOLD_SIDECAR_KEYS), how="left", suffixes=("", "_sidecar"))
+    out.index = original_index
+
+    matched = int((out[GOLD_COLUMN_DEFAULT].fillna("").astype(str).str.strip() != "").sum())
+    if verbose:
+        print(
+            f"  gold sidecar {Path(sidecar_path).name}: {matched} of {len(sidecar)} labels "
+            f"matched onto {len(out)} rows ({len(sidecar) - matched} unmatched)"
+        )
+    if matched == 0:
+        raise ValueError(
+            f"gold sidecar {sidecar_path} matched 0 of {len(out)} rows on "
+            f"{GOLD_SIDECAR_KEYS}. Wrong batch, or the keys do not correspond."
+        )
+    return out
+
+
+def attach_gold_sidecar_from_args(df: pd.DataFrame, args) -> pd.DataFrame:
+    """No-op unless ``--gold-sidecar`` was passed. Call right after ``load_csvs``."""
+    path = getattr(args, "gold_sidecar", None)
+    return attach_gold_sidecar(df, path) if path else df
+
+
 def add_gold_column_argument(ap: argparse.ArgumentParser) -> None:
-    """Register ``--gold-column`` on a driver.
+    """Register ``--gold-column`` and ``--gold-sidecar`` on a driver.
 
     Single-sourced on purpose: five tools score through ``evaluate_dataframe`` and
     the flag has to mean exactly the same thing in each, the same way there is one
-    scoring engine rather than five.
+    scoring engine rather than five. ``--gold-sidecar`` is registered here for that
+    same reason -- it is where the gold column comes from when the annotation ships
+    separately from the rows.
     """
     ap.add_argument(
         "--gold-column",
@@ -943,6 +1022,13 @@ def add_gold_column_argument(ap: argparse.ArgumentParser) -> None:
         default=None,
         metavar="COLUMN",
         help=GOLD_COLUMN_HELP,
+    )
+    ap.add_argument(
+        "--gold-sidecar",
+        dest="gold_sidecar",
+        default=None,
+        metavar="PATH",
+        help=GOLD_SIDECAR_HELP,
     )
 
 
@@ -1015,7 +1101,11 @@ def main(argv=None):
         total_changed += _report(csv_path, old, new)
 
         if args.gold_column:
-            _print_gold_report(_gold_report(old, new, args.gold_column), args.gold_column)
+            # Attached to `old` only: `new` is the re-scored frame and gold is a
+            # property of the line, not of the prediction. `_gold_report` reads
+            # the column off `old` and realigns `new` by index.
+            scored = attach_gold_sidecar_from_args(old, args)
+            _print_gold_report(_gold_report(scored, new, args.gold_column), args.gold_column)
 
         if args.probe_metre_candidate:
             candidate_hits = _count_spaced_decimal_metre_candidates(old)
