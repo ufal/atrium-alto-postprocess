@@ -39,11 +39,18 @@ RUN pip install --index-url ${TORCH_INDEX_URL} torch \
 
 # 2) LayoutReader v3/ (translated from setup_api_server.sh) -> /app/v3 (on sys.path)
 #    Required by the GPU extraction method (extract_LytRdr_ALTO_2_TXT.py).
-RUN git clone --filter=blob:none --no-checkout --depth 1 \
-        https://github.com/FreeOCR-AI/layoutreader.git /tmp/layoutreader \
+#
+#    (#50 rider) Pinned to a commit. `--depth 1` on a branch resolves to whatever
+#    the tip is on the day of the build, so two builds a week apart could ship
+#    different LayoutReader helpers under the same image tag. A shallow clone
+#    cannot take a SHA via `--branch`, hence init + fetch --depth 1 <sha>.
+ARG LAYOUTREADER_COMMIT=3b46ee82cd02dcea94ee4064152e5f4de91e205e
+RUN git init /tmp/layoutreader \
+    && git -C /tmp/layoutreader remote add origin https://github.com/FreeOCR-AI/layoutreader.git \
     && git -C /tmp/layoutreader sparse-checkout init --cone \
     && git -C /tmp/layoutreader sparse-checkout set v3 \
-    && git -C /tmp/layoutreader checkout \
+    && git -C /tmp/layoutreader fetch --filter=blob:none --depth 1 origin ${LAYOUTREADER_COMMIT} \
+    && git -C /tmp/layoutreader checkout ${LAYOUTREADER_COMMIT} \
     && mv /tmp/layoutreader/v3 /app/v3 \
     && rm -rf /tmp/layoutreader
 

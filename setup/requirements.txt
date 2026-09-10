@@ -1,11 +1,10 @@
-# alto_stats_create.py shells out to the `alto-tools` CLI unconditionally, for
-# EVERY --method (it is the stats stage, not an extraction backend) — para_config.txt
-# and the README dependency table both already list it as "always" required. It was
-# never declared here, so the published image could not run its own stats stage.
-# Must come from git, NOT PyPI: the released alto-tools 0.1.0 wheel has no `-s`
-# statistics flag at all (verified: `alto-tools -s` -> "unrecognized arguments: -s").
-# Pinned to a commit rather than a floating branch so the image stays reproducible.
-alto-tools @ git+https://github.com/cneud/alto-tools.git@1f4f01e5f6ac3562740e39948442973b9cb94be4
+# (#50) `alto-tools` is NOT a dependency any more. The two code paths this repo used
+# — `-t` (text) and `-s` (statistics) — are vendored in ../alto_tools.py, from upstream
+# commit 1f4f01e5f6ac3562740e39948442973b9cb94be4, Apache-2.0, with the licence text in
+# ../LICENSES/alto-tools-Apache-2.0.txt. It was declared here as a `git+` requirement
+# (PyPI's 0.1.0 wheel has no `-s` flag at all), which meant the published image
+# re-resolved a GitHub URL to build itself and the E2E lane re-installed a moving
+# `master` inside the released image at run time. Vendoring removes both.
 fasttext>=0.9.3
 # (atrium-project#10 D4) RUNTIME dependency, not a test one: document_hook.py calls
 # atrium_document.validate_document() on every record this repo writes — the Layer D

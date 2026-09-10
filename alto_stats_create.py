@@ -5,19 +5,20 @@ Purpose:
 This script scans a given input folder for ALTO XML files. It can scan
 both the root of the folder and one level of subdirectories.
 
-For each ALTO XML file found, it executes the external command 'alto-tools -s'
-(statistics) to get counts of various XML elements (e.g., <TextLine>,
-<String>, <Illustration>).
+For each ALTO XML file found, it counts various XML elements (e.g., <TextLine>,
+<String>, <Illustration>) using the statistics code path vendored in
+`alto_tools.py` — copied from https://github.com/cneud/alto-tools (Apache-2.0),
+which is what the `alto-tools -s` CLI used to do in a subprocess.
 
-It then parses this output and compiles all the statistics into a single
-CSV file, along with the file/page identifiers derived from the filenames
-and the full path to the XML file.
+It then compiles all the statistics into a single CSV file, along with the
+file/page identifiers derived from the filenames and the full path to the XML
+file.
 
 This CSV is the primary input for the next step in the pipeline
 
 
 Dependencies:
-- alto-tools (must be installed and in the system's PATH)
+- alto_tools.py (vendored in this repository; no external binary, no PATH lookup)
 - pandas (Python library)
 
 Usage:
@@ -29,89 +30,40 @@ Example:
 
 import argparse
 import os
-import re  # For regular expressions, to parse the command output
-import subprocess  # To run external commands (like alto-tools)
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd  # To easily create the final CSV
 
+import alto_tools  # Vendored `alto-tools -s` statistics path (issue #50)
 from atrium_document import canonical_doc_id
 from atrium_paradata import ParadataLogger
 
 
-def parse_alto_tools_stats_line(line):
-    """
-    Parses a single line of output from `alto-tools -s`.
-
-    Example input line:
-      "# of <TextLine> elements: 33"
-
-    Example output dict:
-      {"textlines": 33}
-
-    Args:
-        line (str): A single line of text from the command output.
-
-    Returns:
-        dict or None: A dictionary with a normalized key (e.g., "textlines")
-                      and the integer count, or None if the line doesn't match.
-    """
-    # This regex looks for:
-    #   "# of <" + (one or more word characters) + "> elements:" + (optional whitespace) + (one or more digits)
-    m = re.match(r"# of <(\w+)> elements:\s+(\d+)", line.strip())
-
-    if not m:
-        # Line didn't match the pattern (e.g., it's an empty line)
-        return None
-
-    # m.groups() will be ("TextLine", "33")
-    element, count = m.groups()
-    element = element.lower()  # Normalize to lowercase (e.g., "textline")
-
-    # Map from the XML element name to the desired CSV column name
-    mapping = {
-        "textline": "textlines",
-        "string": "strings",
-        "glyph": "glyphs",
-        "illustration": "illustrations",
-        "graphicalelement": "graphics",
-    }
-
-    # Use the mapped name if it exists, otherwise just use the element name
-    key = mapping.get(element, element)
-    return {key: int(count)}
-
-
 def run_alto_tools_stats(xml_path):
     """
-    Runs the `alto-tools -s` command on a single XML file and parses its output.
+    Counts the ALTO elements of a single XML file.
+
+    (#50) This used to run `alto-tools -s <xml_path>` in a subprocess and regex
+    its "# of <TextLine> elements: 33" stdout lines back into a dict. Both halves
+    of that round-trip are gone: `alto_tools.statistics_from_file()` is the same
+    upstream counting code, vendored into this repository, and it returns the
+    dict directly under the keys this script writes to its CSV. The counts are
+    identical to the CLI's — pinned by tests/test_alto_tools.py.
 
     Args:
         xml_path (str): The full path to the ALTO XML file.
 
     Returns:
-        dict or None: A dictionary containing all statistics for the file,
-                      or None if the command fails.
+        dict or None: A dictionary containing all statistics for the file
+                      ("textlines", "strings", "glyphs", "illustrations",
+                      "graphics"), or None if the file could not be read.
     """
-    cmd = ["alto-tools", "-s", xml_path]
     try:
-        # Run the command and capture its standard output
-        # 'stderr=subprocess.STDOUT' merges error messages into the output
-        # 'text=True' decodes the output as text (not bytes)
-        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True)
-    except subprocess.CalledProcessError as e:
-        # The command failed (returned a non-zero exit code)
-        print(f"⚠️ Error running alto-tools on {xml_path}: {e.output}")
+        return alto_tools.statistics_from_file(xml_path)
+    except Exception as e:
+        # Same outcome as the old CalledProcessError branch: warn, skip the file.
+        print(f"⚠️ Error reading ALTO statistics from {xml_path}: {e}")
         return None
-
-    stats = {}
-    # Process the command's output line by line
-    for line in out.splitlines():
-        parsed = parse_alto_tools_stats_line(line)
-        if parsed:
-            # Add the parsed {key: value} to our main stats dictionary
-            stats.update(parsed)
-    return stats
 
 
 def _process_single_xml(xml_path, fname):
@@ -159,9 +111,10 @@ def process_alto_files_with_alto_tools(directory_path, max_workers=8):
     """
     Processes all ALTO XML files found directly within a given directory.
 
-    Uses a ThreadPoolExecutor to parallelise the `alto-tools -s` subprocess
-    calls.  Threads (rather than processes) are appropriate here because
-    the work is I/O-bound (spawning a subprocess and waiting for its output).
+    Uses a ThreadPoolExecutor to overlap the per-file work. (#50) That work is
+    now an in-process ElementTree parse rather than a spawned `alto-tools -s`
+    subprocess, so the pool buys less than it did — but each file also no longer
+    pays for an interpreter start-up, which dominated the old cost by far.
 
     Args:
         directory_path (str): The folder to scan for .xml files.
@@ -241,7 +194,7 @@ def main(argv=None):
             _total_inputs += doc_inputs
             _logger.log_success("csv", count=len(stats))
             for sk in doc_skips:
-                _logger.log_skip(sk, "alto-tools failed to parse this file")
+                _logger.log_skip(sk, "alto-tools statistics failed to parse this file")
             if stats:
                 # Convert the list of dictionaries into a pandas DataFrame
                 df = pd.DataFrame(stats)
@@ -260,7 +213,7 @@ def main(argv=None):
         _total_inputs += doc_inputs
         _logger.log_success("csv", count=len(stats))
         for sk in doc_skips:
-            _logger.log_skip(sk, "alto-tools failed to parse this file")
+            _logger.log_skip(sk, "alto-tools statistics failed to parse this file")
 
         if stats:
             df = pd.DataFrame(stats)

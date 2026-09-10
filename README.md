@@ -2,7 +2,7 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" title="Python Version"></a>
   <a href="https://huggingface.co/facebook/fasttext-language-identification"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-fasttext--langID-yellow.svg" title="FastText Language Identification"></a>
   <a href="https://huggingface.co/Qwen/Qwen2.5-0.5B"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-Qwen2.5--0.5B-yellow.svg" title="Qwen2.5-0.5B Perplexity"></a>
-  <a href="https://github.com/cneud/alto-tools"><img src="https://img.shields.io/badge/dep-alto--tools-lightgrey.svg" title="alto-tools"></a>
+  <a href="https://github.com/cneud/alto-tools"><img src="https://img.shields.io/badge/vendored-alto--tools-lightgrey.svg" title="alto-tools (vendored, Apache-2.0)"></a>
   <a href="https://opensource.org/license/mit/"><img src="https://img.shields.io/github/license/ufal/atrium-alto-postprocess" title="MIT License"></a>
   <a href="https://atrium-research.eu/"><img src="https://img.shields.io/badge/funded%20by-ATRIUM-8A2BE2.svg" title="ATRIUM Project"></a>
 </p>
@@ -39,6 +39,7 @@ and categorize noisy or unreliable **OCR** 🔍 output.
     - [4.2 Aggregate Statistics (Memory Bound) 🧠](#42-aggregate-statistics-memory-bound-)
   - [Paradata logging 🗒️](#paradata-logging)
     - [Output licensing ⚖️](#output-licensing-)
+- [Vendored code 📦](#vendored-code-)
 - [Acknowledgements 🙏](#acknowledgements-)
 
 ---
@@ -56,19 +57,16 @@ Before you begin, set up your environment.
     ```bash
     wget "[https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin](https://huggingface.co/facebook/fasttext-language-identification/resolve/main/model.bin)" -O lid.176.bin
     ```
-4. Clone and install `alto-tools` 🔧, which is used for statistics and text extraction in low memory environments:
-    ```bash
-    git clone [https://github.com/cneud/alto-tools.git](https://github.com/cneud/alto-tools.git)
-    cd alto-tools
-    pip install .
-    cd ..
-    ```
-5. Copy the `v3` folder from the 📐`layoutreader` 🔧 repository [^9] to the project directory for the LR-based text extraction method:
+4. Copy the `v3` folder from the 📐`layoutreader` 🔧 repository [^9] to the project directory for the LR-based text extraction method:
     ```bash
     git clone [https://github.com/ppaanngggg/layoutreader.git](https://github.com/ppaanngggg/layoutreader.git)
     cp -r layoutreader/v3/ ./
     rm -rf layoutreader/
     ```
+
+> [!NOTE]
+> There is no `alto-tools` 🔧 install step any more. The statistics and text-extraction code paths this
+> pipeline used are **vendored** in [alto_tools.py](alto_tools.py) 📎 — see [Vendored code 📦](#vendored-code-).
 
 You are now ready to start the workflow.
 
@@ -186,10 +184,10 @@ OCR-derived plane and half a digital-born one. A value that matches no known ori
 prefix silently switches that check off, which is why the resolution is verified and a
 mismatch warns 📣.
 
-| Input     | Default `origin` | Meaning                                                                    |
-|-----------|------------------|----------------------------------------------------------------------------|
-| ALTO XML  | `ABBYY-ALTO`     | ALTO from the ABBYY toolchain the extractors already assume (see `extract_LytRdr_ALTO_2_TXT.py`) |
-| JSON      | `ocr:generic`    | Generic OCR/Doc-AI export whose specific engine the file does not name      |
+| Input    | Default `origin` | Meaning                                                                                          |
+|----------|------------------|--------------------------------------------------------------------------------------------------|
+| ALTO XML | `ABBYY-ALTO`     | ALTO from the ABBYY toolchain the extractors already assume (see `extract_LytRdr_ALTO_2_TXT.py`) |
+| JSON     | `ocr:generic`    | Generic OCR/Doc-AI export whose specific engine the file does not name                           |
 
 Override it when the engine **is** known — the prefix must stay one this repo owns
 (`ABBYY-ALTO`, `ocr:<engine>`, `vlm:<engine>`):
@@ -224,7 +222,9 @@ CTX200205348, 2, 0, 1, 12, 0, /lnet/.../A-PAGE/CTX200205348/CTX200205348-2.alto.
 
 ```
 
-The extraction is powered by the **alto-tools** 🔧 framework [^1](https://github.com/cneud/alto-tools).
+The element counting is powered by the **alto-tools** 🔧 statistics code [^1](https://github.com/cneud/alto-tools),
+**vendored** in [alto_tools.py](alto_tools.py) 📎 (Apache-2.0) — see [Vendored code 📦](#vendored-code-).
+No external binary is called and nothing is downloaded at run time.
 
 * **Input 📥:** `../PAGE_ALTO/` (input directory with **ALTO XML** 📄 files split into pages from Step 1)
 * **Output 📤:** `output.csv` (table with page-level statistics and paths to ALTO files)
@@ -284,8 +284,10 @@ PAGE_TXT_LR/
 python3 extract_ALTO_2_TXT.py
 ```
 
-Uses the `alto-tools` 🔧 framework [^1](https://github.com/cneud/alto-tools) to extract text lines from **XML** 📄 elements directly,
-with no post-processing. Suitable for a quick overview of raw text content.
+Uses the `alto-tools` 🔧 text extractor [^1](https://github.com/cneud/alto-tools) — **vendored** in
+[alto_tools.py](alto_tools.py) 📎 (Apache-2.0), see [Vendored code 📦](#vendored-code-) — to extract text lines from
+**XML** 📄 elements directly, with no post-processing. Suitable for a quick overview of raw text content.
+The output is byte-identical to what the upstream `alto-tools -t` command line produced.
 
 Example of per-page text files: [PAGE_TXT](data_samples/PAGE_TXT) 📁.
 
@@ -763,7 +765,7 @@ them records it. For this repository the components and their effect on the **ef
 
 | Component                                                                              | License         | Counted     | Used by                                                        |
 |----------------------------------------------------------------------------------------|-----------------|-------------|----------------------------------------------------------------|
-| **alto-tools** 🔧 [^1](https://github.com/cneud/alto-tools)                            | Apache-2.0      | always      | page split, statistics, alto-tools text extraction             |
+| **alto-tools** 🔧 [^1](https://github.com/cneud/alto-tools) — vendored, see below      | Apache-2.0      | always      | page split, statistics, alto-tools text extraction             |
 | **FastText** 🌐 [^2](https://huggingface.co/facebook/fasttext-language-identification) | CC BY-NC 4.0    | always      | language identification (`classify_TEXT.py`)                   |
 | **Qwen2.5-0.5B** 🤖 [^6](https://huggingface.co/Qwen/Qwen2.5-0.5B)                     | Apache-2.0      | conditional | **perplexity** 📉 scoring (default, `classify_TEXT.py`)        |
 | **distilgpt2** 🤖                                                                      | Apache-2.0      | conditional | **perplexity** 📉 scoring (English-only alternative)           |
@@ -782,6 +784,61 @@ permissive components would resolve to **Apache-2.0**.
 
 ---
 
+## Vendored code 📦
+
+Some third-party code is **copied into this repository** rather than installed as a dependency. Vendored code
+keeps its original licence; the repository's own [LICENSE](LICENSE) 📎 (MIT) does not apply to it. Licence texts
+live in [LICENSES/](LICENSES) 📁.
+
+### `alto_tools.py` — ALTO text extraction & statistics 🔧
+
+|                  |                                                                                                                                                             |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Upstream**     | [cneud/alto-tools](https://github.com/cneud/alto-tools) [^1] by Clemens Neudecker                                                                           |
+| **Commit**       | [`1f4f01e5f6ac3562740e39948442973b9cb94be4`](https://github.com/cneud/alto-tools/commit/1f4f01e5f6ac3562740e39948442973b9cb94be4) (`__version__ = "0.1.0"`) |
+| **Source file**  | `src/alto_tools/alto_tools.py`                                                                                                                              |
+| **Licence**      | **Apache-2.0** — full text in [LICENSES/alto-tools-Apache-2.0.txt](LICENSES/alto-tools-Apache-2.0.txt) 📎                                                   |
+| **Local copy**   | [alto_tools.py](alto_tools.py) 📎                                                                                                                           |
+| **Used by**      | [alto_stats_create.py](alto_stats_create.py) 📎 (Step 2, statistics) and [extract_ALTO_2_TXT.py](extract_ALTO_2_TXT.py) 📎 (Step 3, alto-tools method)      |
+| **Parity tests** | [tests/test_alto_tools.py](tests/test_alto_tools.py) 📎                                                                                                     |
+
+**Only the used functionality was copied** — the code reachable from the two command-line flags this pipeline
+ever called:
+
+| Vendored                                       | Upstream flag   | Used by                 |
+|------------------------------------------------|-----------------|-------------------------|
+| `alto_parse()`                                 | (shared)        | both                    |
+| `alto_text()` / `text_from_file()`             | `alto-tools -t` | `extract_ALTO_2_TXT.py` |
+| `alto_statistics()` / `statistics_from_file()` | `alto-tools -s` | `alto_stats_create.py`  |
+
+Left behind, because nothing here calls it: `-c` mean word confidence, `-i` illustration boxes, `-g` graphic
+boxes, the `--dehyphenate` / `--detect-hyphens` branches (this repo does its own de-hyphenation in
+`extract_ALTO_2_TXT._dehyphenate`), the `argparse` command line, stdin input, directory walking and the
+`--xml-encoding` sniffing path. Every deviation from the original is marked with a `VENDORED:` comment in the
+file, as Apache-2.0 §4(b) requires for a derived work.
+
+**Why 📌** (issue [#50](https://github.com/ufal/atrium-alto-postprocess/issues/50)) — `alto-tools` has no PyPI
+release carrying the `-s` statistics flag, so it had to be declared as
+`alto-tools @ git+https://github.com/cneud/alto-tools.git@<commit>`. That made the published Docker image
+resolve a GitHub URL in order to build itself, and the end-to-end lane then re-installed a **moving `master`
+inside the already-released image, at run time** — so what CI exercised was not the artefact being shipped.
+Copying the two used code paths retires the `git+` requirement, the `shutil.which("alto-tools")` guard, the
+`PATH` export and the run-time `pip install`, all at once, and replaces two subprocess calls per page with two
+function calls.
+
+> [!IMPORTANT]
+> The vendored code produces **byte-identical output** to the upstream CLI it replaced: the same page text
+> (block/line separators, spacing, `<HYP>` handling, reading order) and the same element counts.
+> [tests/test_alto_tools.py](tests/test_alto_tools.py) 📎 pins this against output captured from the upstream
+> command line at the commit above, and re-derives it independently for every ALTO file in
+> [data_samples](data_samples) 📁.
+
+**Updating it 🔄** — re-copy the two code paths from a newer upstream commit, update `UPSTREAM_COMMIT` in
+[alto_tools.py](alto_tools.py) 📎 and the table above, then run `pytest tests/test_alto_tools.py`. Golden values
+in that file are upstream CLI output and must only change when upstream's behaviour genuinely does.
+
+---
+
 ## Acknowledgements 🙏
 
 **For support write to:** lutsai.k@gmail.com — responsible for this GitHub repository [^8](https://github.com/ufal/atrium-alto-postprocess) 🔗
@@ -789,6 +846,9 @@ permissive components would resolve to **Apache-2.0**.
 * **Developed by** UFAL [^7](https://ufal.mff.cuni.cz/home-page) 👥
 * **Funded by** ATRIUM [^4](https://atrium-research.eu/) 💰
 * **Shared by** ATRIUM [^4](https://atrium-research.eu/) & UFAL [^7](https://ufal.mff.cuni.cz/home-page) 🔗
+* **Vendored code**:
+  * **alto-tools** 🔧 [^1](https://github.com/cneud/alto-tools) by Clemens Neudecker, Apache-2.0 — ALTO text
+    extraction and element statistics ([alto_tools.py](alto_tools.py) 📎)
 * **Models used**:
   * **FastText** 🌐 [^2](https://huggingface.co/facebook/fasttext-language-identification) for language identification
   * **Qwen2.5-0.5B** 🤖 [^6](https://huggingface.co/Qwen/Qwen2.5-0.5B) for **perplexity** 📉 scoring

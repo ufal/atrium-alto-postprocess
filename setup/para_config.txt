@@ -18,7 +18,7 @@ repository_fallback = https://github.com/ufal/atrium-alto-postprocess
 # The perplexity model and the GPU-bound extraction backends are conditional:
 # they are recorded only by the script that actually loads them.
 
-alto_tools     = Apache-2.0      ; always      ; alto-tools statistics + text extraction (alto-tools method)
+alto_tools     = Apache-2.0      ; always      ; alto-tools statistics + text extraction, vendored in alto_tools.py (alto-tools method)
 fasttext       = CC BY-NC 4.0    ; always      ; FastText language identification weights (classify_TEXT)
 qwen2.5_0.5b   = Apache-2.0      ; conditional ; Qwen2.5-0.5B multilingual perplexity model (default)
 distilgpt2     = Apache-2.0      ; conditional ; distilgpt2 English-only perplexity model (alternative)

@@ -3,30 +3,35 @@
 extract_ALTO_2_TXT.py
 Step 3 (alto-tools method): Extract text from ALTO XML files in parallel.
 
-Uses the `alto-tools -t` CPU extractor. Output text lines are written verbatim
-except for end-of-line hyphenation, which is repaired by joining a word split
-across two lines back into its full form.
+Uses the CPU extractor vendored in `alto_tools.py` — the `alto-tools -t` code
+path, copied from https://github.com/cneud/alto-tools (Apache-2.0). Output text
+lines are written verbatim except for end-of-line hyphenation, which is repaired
+by joining a word split across two lines back into its full form.
 
 History / fixes
 ---------------
 * (#1) extract_single_page previously ran alto-tools but never wrote the result;
-  it now captures stdout, de-hyphenates, and writes the .txt file.
+  it now captures the extracted text, de-hyphenates, and writes the .txt file.
 * (#2) main() now wraps execution in try/finally, records every produced file via
   log_success("txt"), logs failures via log_skip, and always finalize()s so the
   alto-tools stage emits a paradata JSON like the other extraction methods.
+* (#50) the `alto-tools` CLI subprocess (and the `shutil.which` guard that fenced
+  it) is replaced by a direct call into the vendored `alto_tools` module, so the
+  published image no longer resolves a `git+` dependency at run time. The
+  extracted text is byte-identical to the CLI's stdout — see
+  tests/test_alto_tools.py.
 """
 
 import concurrent.futures
 import configparser
 import os
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
 import pandas as pd
 from tqdm import tqdm
 
+import alto_tools
 import document_hook
 from atrium_paradata import ParadataLogger
 
@@ -100,17 +105,17 @@ def extract_single_page(args: tuple) -> bool:
     if txt_path.exists():
         return True
 
-    # Run extraction (alto-tools); -t prints the page text to stdout.
-    cmd = ["alto-tools", "-t", str(xml_path)]
+    # (#50) Run extraction in-process via the vendored `alto-tools -t` code path.
+    # Any failure — unparseable XML, an unregistered namespace, a reading order
+    # this extractor cannot follow — is a skipped page, exactly as a non-zero
+    # exit status from the former subprocess was.
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    except subprocess.CalledProcessError:
-        return False
+        extracted = alto_tools.text_from_file(str(xml_path))
     except Exception:
         return False
 
     # (#1) Persist the result — previously the output was discarded.
-    page_text = _dehyphenate(result.stdout or "")
+    page_text = _dehyphenate(extracted or "")
     try:
         with open(txt_path, "w", encoding="utf-8") as f:
             f.write(page_text)
@@ -120,10 +125,8 @@ def extract_single_page(args: tuple) -> bool:
 
 
 def main() -> None:
-    # 1. Validate external dependencies first
-    if shutil.which("alto-tools") is None:
-        print("CRITICAL ERROR: 'alto-tools' binary not found in system PATH. Please install it before running.")
-        sys.exit(1)
+    # 1. (#50) No external-binary check: the extractor is vendored in alto_tools.py
+    #    and ships inside the image, so it can no longer be missing from PATH.
 
     # 2. Parse and Process
     try:

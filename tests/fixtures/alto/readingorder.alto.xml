@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synthetic ALTO 3 fixture for tests/test_alto_tools.py.
+  Exercises the two vendored code paths no data_samples/ file reaches:
+    * an explicit <ReadingOrder> that puts B2 before B1 (document order is B1, B2)
+    * a <HYP> element closing a TextLine (the vendored extractor appends "-")
+-->
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#">
+  <Layout>
+    <Page ID="P1">
+      <PrintSpace>
+        <ReadingOrder>
+          <OrderedGroup ID="RO">
+            <ElementRef ID="R2" REF="B2"/>
+            <ElementRef ID="R1" REF="B1"/>
+          </OrderedGroup>
+        </ReadingOrder>
+        <TextBlock ID="B1">
+          <TextLine ID="L1"><String ID="S1" CONTENT="first"/><SP/><String ID="S2" CONTENT="block"/></TextLine>
+        </TextBlock>
+        <TextBlock ID="B2">
+          <TextLine ID="L2"><String ID="S3" CONTENT="second"/><SP/><String ID="S4" CONTENT="blo"/><HYP CONTENT="-"/></TextLine>
+          <TextLine ID="L3"><String ID="S5" CONTENT="ck"/></TextLine>
+        </TextBlock>
+      </PrintSpace>
+    </Page>
+  </Layout>
+</alto>
