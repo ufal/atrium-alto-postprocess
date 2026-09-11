@@ -110,6 +110,27 @@ python tools/quality_model/report_correction_delta.py \
     --model Qwen/Qwen2.5-0.5B --fasttext lid.176.bin
 ```
 
+#### Pointing korektor somewhere else
+
+The `korektor-rest` backend is an **attachable backing service** (12-factor IV,
+[atrium-project#63](https://github.com/ufal/atrium-project/issues/63)): reach a
+self-hosted korektor, a mirror, or a local stub without a code change.
+
+```bash
+# environment — applies to every invocation
+KOREKTOR_URL=http://localhost:8080/korektor/api python tools/quality_model/correct.py ...
+
+# or per run, which wins over the environment
+python tools/quality_model/correct.py --korektor-url http://localhost:8080/korektor/api ...
+```
+
+Precedence is `--korektor-url` > `KOREKTOR_URL` > the LINDAT default, matching
+`UDPIPE_URL` / `NAMETAG_URL` in atrium-nlp-enrich and `TRANSLATION_URL` in
+atrium-translator. An empty `KOREKTOR_URL` counts as unset. This is a
+batch-pipeline knob, so it is deliberately **not** in `.env.example`, which
+[#60](https://github.com/ufal/atrium-project/issues/60) scopes to the service
+layer.
+
 Train the baseline and the encoder on a built dataset (config in
 `setup/config_quality_model.txt`; CLI flags override it):
 

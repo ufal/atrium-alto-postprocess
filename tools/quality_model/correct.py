@@ -36,6 +36,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -46,6 +47,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+# LINDAT's public Korektor service — the DEFAULT, not a fixed address.
+# Attachable via --korektor-url or KOREKTOR_URL (atrium-project#63): this is the
+# third LINDAT-hosted backing service in the ecosystem, alongside
+# atrium-nlp-enrich's UDPIPE_URL/NAMETAG_URL and the translator's
+# TRANSLATION_URL, and it resolves with the same precedence as all of them.
 KOREKTOR_API = "https://lindat.mff.cuni.cz/services/korektor/api"
 KOREKTOR_DEFAULT_MODEL = "czech-spellchecker-130202"
 
@@ -303,14 +309,14 @@ def _make_backend(args) -> CorrectionBackend:
     if args.backend == "noop":
         return NoopBackend()
     if args.backend == "korektor-rest":
-        return KorektorRestBackend(model=args.korektor_model)
+        # base_url was always a constructor parameter; nothing on the CLI path
+        # ever passed it, so the endpoint was effectively hardcoded.
+        return KorektorRestBackend(model=args.korektor_model, base_url=args.korektor_url)
     if args.backend == "korektor-local":
         if not args.korektor_model_path:
             raise SystemExit("--korektor-model-path is required for korektor-local")
         return KorektorLocalBackend(args.korektor_model_path)
     if args.backend == "llm":
-        import os
-
         return LlmBackend(args.llm_endpoint, args.llm_model, api_key=os.environ.get(args.llm_api_key_env, ""))
     raise SystemExit(f"unknown backend {args.backend}")
 
@@ -323,6 +329,14 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--only-categ", default="Noisy", help="Category to correct (default: Noisy). Use '' for all rows.")
     p.add_argument("--backend", choices=["noop", "korektor-rest", "korektor-local", "llm"], default="korektor-rest")
     p.add_argument("--korektor-model", default=KOREKTOR_DEFAULT_MODEL)
+    p.add_argument(
+        "--korektor-url",
+        # `or` rather than a get() default, so an empty KOREKTOR_URL means
+        # "unset" instead of "use the empty string" — matches the idiom in
+        # atrium-nlp-enrich's call_udpipe.py / call_nametag.py.
+        default=os.environ.get("KOREKTOR_URL") or KOREKTOR_API,
+        help="Korektor API base URL (default: LINDAT; env: KOREKTOR_URL).",
+    )
     p.add_argument("--korektor-model-path", default=None, help="Local korektor model file (korektor-local).")
     p.add_argument("--llm-endpoint", default="http://localhost:8000/v1/chat/completions")
     p.add_argument("--llm-model", default="glm-4")

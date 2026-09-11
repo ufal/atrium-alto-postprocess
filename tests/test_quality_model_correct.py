@@ -48,6 +48,70 @@ def test_korektor_rest_parses_result(monkeypatch):
     assert calls[0][1]["data"] == "mesto"
 
 
+# ── Endpoint attachability (atrium-project#63) ──────────────────────────────
+#
+# Korektor is the third LINDAT-hosted backing service in the ecosystem. It must
+# resolve its endpoint with the same precedence as the other two:
+#
+#     --korektor-url  >  KOREKTOR_URL  >  KOREKTOR_API (the LINDAT default)
+#
+# The constructor always accepted base_url; what was missing was any way to set
+# it from the CLI, so the address was hardcoded in practice.
+
+STUB_KOREKTOR = "http://127.0.0.1:9991/korektor"
+FLAG_KOREKTOR = "http://127.0.0.1:9992/from-flag"
+
+
+def _korektor_url_for(argv, monkeypatch, env=None):
+    """Build the backend the CLI would build, and report the URL it would call."""
+    monkeypatch.delenv("KOREKTOR_URL", raising=False)
+    if env is not None:
+        monkeypatch.setenv("KOREKTOR_URL", env)
+    args = CO._build_arg_parser().parse_args(
+        ["--input", "in.csv", "--out", "out.csv", "--backend", "korektor-rest", *argv]
+    )
+    return CO._make_backend(args).base_url
+
+
+def test_korektor_defaults_to_the_lindat_endpoint(monkeypatch):
+    assert _korektor_url_for([], monkeypatch) == CO.KOREKTOR_API.rstrip("/")
+
+
+def test_korektor_env_redirects_the_backend(monkeypatch):
+    assert _korektor_url_for([], monkeypatch, env=STUB_KOREKTOR) == STUB_KOREKTOR
+
+
+def test_korektor_flag_beats_env(monkeypatch):
+    url = _korektor_url_for(["--korektor-url", FLAG_KOREKTOR], monkeypatch, env=STUB_KOREKTOR)
+    assert url == FLAG_KOREKTOR
+
+
+def test_empty_korektor_url_means_unset(monkeypatch):
+    """A container always carries the variable, sometimes blank.
+
+    ``get(key, default)`` would return "" there and the backend would POST to
+    the empty string; ``get(key) or default`` treats blank as unset, which is
+    what the shell's ${VAR:-default} does everywhere else.
+    """
+    assert _korektor_url_for([], monkeypatch, env="") == CO.KOREKTOR_API.rstrip("/")
+
+
+def test_korektor_request_goes_to_the_configured_host(monkeypatch):
+    """Attachable only if the POST actually follows the configured endpoint."""
+    calls = []
+
+    def fake_post_form(url, data, timeout):
+        calls.append(url)
+        return {"result": "ok"}
+
+    monkeypatch.setattr(CO, "_post_form", fake_post_form)
+    monkeypatch.setenv("KOREKTOR_URL", STUB_KOREKTOR)
+    args = CO._build_arg_parser().parse_args(["--input", "in.csv", "--out", "out.csv", "--backend", "korektor-rest"])
+    CO._make_backend(args).correct("mesto")
+
+    assert calls == [f"{STUB_KOREKTOR}/correct"]
+
+
 def test_korektor_rest_retries_then_succeeds(monkeypatch):
     attempts = {"n": 0}
 
