@@ -25,6 +25,7 @@ Two frontend variants are included: a **standalone** interface (`frontend/`) and
   * [Running the Server 🚀](#running-the-server-)
   * [Standalone Frontend 🖥️](#standalone-frontend-)
   * [LINDAT-integrated Frontend 🎨](#lindat-integrated-frontend-)
+* [Configuration (environment) ⚙️](#configuration-environment-)
 * [Contacts 📧](#contacts-)
 * [Acknowledgements 🙏](#acknowledgements-)
 
@@ -388,6 +389,31 @@ wildly between architectures (≈ `3000.0` suits `distilgpt2`), so a value tuned
 
 ---
 
+## Configuration (environment) ⚙️
+
+| Variable              | Default   | Meaning                                                                 |
+|-----------------------|-----------|-------------------------------------------------------------------------|
+| `PORT`                | `8000`    | port the service **binds**, and the one `service/healthcheck.py` probes |
+| `HOST`                | `0.0.0.0` | bind address. ⚠️ see the warning below                                  |
+| `GRACEFUL_SHUTDOWN_S` | `20`      | seconds uvicorn waits for in-flight requests before closing them        |
+| `RELOAD`              | `false`   | filesystem auto-reload — development only, never in a deployment        |
+| `LOG_LEVEL`           | `INFO`    | root logger level for the start path below                              |
+| `ALLOWED_ORIGINS`     | `*`       | CSV of CORS origins                                                     |
+| `MAX_UPLOAD_MB`       | `10`      | canonical upload limit                                                  |
+| `GPT2_MODEL_NAME`     | see below | quality-estimation model id                                             |
+
+`PORT` and `HOST` are read by `service/text_api.py`'s `__main__` block, which is what the `api` image's `ENTRYPOINT` runs.
+
+alto-postprocess is the reference implementation for this contract: it has honoured
+`PORT`/`HOST` since issue #55, and issue #58 brought the other four services into line with
+it. Its entrypoint is `python service/text_api.py` (a script launch, made viable by the
+`sys.path` bootstrap at the top of that file) rather than the `python -m service.api` the
+other four use; the environment contract is identical either way.
+
+> ⚠️ `HOST=127.0.0.1` yields a container that reports **healthy** and serves nobody:
+> `service/healthcheck.py` always probes loopback by design and never reads `HOST`, so a
+> loopback bind passes every probe while being unreachable from outside the container.
+
 ## Shutdown behavior 🛑
 
 Issue [#55](https://github.com/ufal/atrium-project/issues/55). The published `api` image
@@ -396,7 +422,8 @@ service was only reachable via a compose entrypoint override, so no API image ex
 deploy) declares `HEALTHCHECK` (shallow `GET /health`, via the vendored
 `service/healthcheck.py`) and `STOPSIGNAL SIGTERM`. `service/text_api.py`'s own
 `__main__` block — which is this repo's production start path — passes
-`timeout_graceful_shutdown` (`GRACEFUL_SHUTDOWN_S`, default 20s).
+`timeout_graceful_shutdown` (`GRACEFUL_SHUTDOWN_S`, default 20s). See
+[Configuration (environment) ⚙️](#configuration-environment-) for the full set.
 
 On `SIGTERM` the service flips `GET /ready` to **503** at once so an orchestrator stops
 routing to it, answers new `/process` calls with 503, and lets in-flight processing finish
