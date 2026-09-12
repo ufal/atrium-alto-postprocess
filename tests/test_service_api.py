@@ -276,11 +276,14 @@ def test_process_text_upload_accretes_under_the_single_page_label(mock_process, 
 
 
 @patch("service.text_api.text_manager.process_alto", create=True)
-def test_process_refuses_to_attribute_a_multipage_upload(mock_process, tmp_path, monkeypatch, capsys):
+def test_process_refuses_to_attribute_a_multipage_upload(mock_process, tmp_path, monkeypatch, caplog):
     """The service's inference flattens every <Page> into one list scaled by the first
     page's geometry, so `result` cannot say which page a line came from. Guessing would
     write misattributed rows into a record other tools align their fields onto, so the
-    accretion is skipped — loudly — while the response still carries the lines."""
+    accretion is skipped — loudly — while the response still carries the lines.
+
+    The warning moved from print(file=sys.stderr) to logger.warning() under issue #61
+    (logs as an event stream); assert on caplog rather than capsys accordingly."""
     monkeypatch.chdir(tmp_path)
     mock_process.return_value = {"type": "alto_xml", "cleaned_lines": _CLASSIFIED_LINES}
     baseline_path = _real_baseline(tmp_path, pages=("7", "8"))
@@ -299,4 +302,4 @@ def test_process_refuses_to_attribute_a_multipage_upload(mock_process, tmp_path,
     record = body["document_json_out"]
     assert "lines" not in record
     assert record["pages"] == json.loads(baseline_path.read_text(encoding="utf-8"))["pages"]
-    assert "2 <Page> elements" in capsys.readouterr().err
+    assert "2 <Page> elements" in caplog.text

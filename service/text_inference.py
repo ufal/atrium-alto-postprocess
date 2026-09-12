@@ -24,10 +24,19 @@ project_root = current_dir.parent
 if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
+# (12-factor XI) No basicConfig() here. This module is imported as a library by
+# text_api.py and by tests; configuring the ROOT logger at import time is a
+# side effect that silently overrides whatever the host application chose.
+# Emit to a named logger and let the entry point decide handlers and level.
+# Declared here, ahead of the imports below, so the one call that can fire at
+# import time (the CRITICAL in the except branch immediately below) has a
+# logger to use instead of falling back to print(). (issue #61)
+logger = logging.getLogger(__name__)
+
 try:
     from v3.helpers import boxes2inputs, parse_logits, prepare_inputs
 except ImportError:
-    print("CRITICAL: 'v3' folder not found in project root — layout reordering unavailable.")
+    logger.critical("'v3' folder not found in project root — layout reordering unavailable.")
     prepare_inputs = boxes2inputs = parse_logits = None  # type: ignore[assignment]
 
 # Import the full quality-analysis toolkit from the main pipeline module.
@@ -47,12 +56,6 @@ from text_util import (  # noqa: E402
     detect_strange_symbols,
     parse_line_splits,
 )
-
-# (12-factor XI) No basicConfig() here. This module is imported as a library by
-# text_api.py and by tests; configuring the ROOT logger at import time is a
-# side effect that silently overrides whatever the host application chose.
-# Emit to a named logger and let the entry point decide handlers and level.
-logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # CONFIGURATION

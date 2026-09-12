@@ -5,6 +5,7 @@ FastAPI wrapper for the ATRIUM text processing service.
 
 import asyncio
 import json
+import logging
 import os
 import shutil
 import sys
@@ -74,6 +75,8 @@ from utils import parse_alto_page_labels  # noqa: E402
 from atrium_document import canonical_doc_id  # noqa: E402
 from atrium_paradata import ParadataLogger  # noqa: E402
 from document_hook import PROGRAM_NAME, quality_band, write_document_block  # noqa: E402
+
+logger = logging.getLogger(__name__)
 
 # Canonical upload limit (§4.5): MAX_UPLOAD_MB, with a MAX_UPLOAD_BYTES fallback.
 MAX_UPLOAD_MB = resolve_max_upload_mb(25)
@@ -282,13 +285,13 @@ def _accretion_records(task_type: str, upload_path: str, result: Dict[str, Any])
     """
     page_labels = parse_alto_page_labels(upload_path) if task_type == "alto" else []
     if len(page_labels) > 1:
-        print(
-            f"[document] WARNING – upload has {len(page_labels)} <Page> elements: "
-            f"/process classifies them as one flattened page, so no pages[]/lines[] "
-            f"contribution can be attributed per page. Skipping the accretion for this "
-            f"request — split the document first (page_split.py) and post one page per "
-            f"request, or use the batch pipeline.",
-            file=sys.stderr,
+        logger.warning(
+            "upload has %d <Page> elements: /process classifies them as one "
+            "flattened page, so no pages[]/lines[] contribution can be attributed "
+            "per page. Skipping the accretion for this request — split the "
+            "document first (page_split.py) and post one page per request, or "
+            "use the batch pipeline.",
+            len(page_labels),
         )
         return [], []
 
