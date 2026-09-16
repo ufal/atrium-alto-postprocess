@@ -3,6 +3,6 @@ pyarrow>=25.0.1
 # so this floor is the same interpreter boundary documented at length in
 # setup/requirements-sweep.txt. The repo standardises on 3.11 (CI, Dockerfile,
 # and pandas>=3.0.5 in requirements-test.txt all require it).
-scikit-learn>=1.9.0
+scikit-learn>=1.9.1
 scipy>=1.18.1
 httpx>=0.28.1
