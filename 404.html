@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found — alto-postprocess — ATRIUM</title>
+<meta name="description" content="Post-processing of ALTO XML files — turns OCR output into per-page ALTO, extracted text and a scored line-quality table.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="canonical" href="https://ufal.github.io/atrium-alto-postprocess/">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">
+    <a href="https://ufal.github.io/atrium-project/">ATRIUM</a>
+    <span class="sep">/</span>
+    <span>alto-postprocess</span>
+  </div>
+
+  <main class="card">
+    <p class="notfound-code">404 &middot; page not found</p>
+    <h1>ALTO XML Files Postprocessing Pipeline</h1>
+    <p class="sub">That page is not on this stub &mdash; try the documentation site.</p>
+    <p class="tagline">Post-processing of ALTO XML files — turns OCR output into per-page ALTO, extracted text and a scored line-quality table.</p>
+    <p class="role">Deserialisation and OCR quality control. The fan-out point of the whole pipeline.</p>
+
+    <ul class="chips">
+      <li><a class="chip" href="https://www.python.org/downloads/" rel="noopener"><span class="k">python</span><span class="v">3.11</span></a></li>
+      <li><a class="chip" href="https://huggingface.co/facebook/fasttext-language-identification" rel="noopener"><span class="k">🤗 HF</span><span class="v">fasttext-langID</span></a></li>
+      <li><a class="chip" href="https://huggingface.co/Qwen/Qwen2.5-0.5B" rel="noopener"><span class="k">🤗 HF</span><span class="v">Qwen2.5-0.5B</span></a></li>
+      <li><a class="chip" href="https://github.com/cneud/alto-tools" rel="noopener"><span class="k">vendored</span><span class="v">alto-tools</span></a></li>
+      <li><a class="chip" href="https://opensource.org/license/mit/" rel="noopener"><span class="k">license</span><span class="v">MIT</span></a></li>
+      <li><a class="chip" href="https://atrium-research.eu/" rel="noopener"><span class="k">funded by</span><span class="v">ATRIUM</span></a></li>
+    </ul>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="https://ufal.github.io/atrium-project/tools/alto-postprocess/">Documentation &rarr;</a>
+      <a class="btn" href="https://github.com/ufal/atrium-alto-postprocess">Source on GitHub</a>
+      <a class="btn" href="https://ufal.github.io/atrium-project/">ATRIUM docs home</a>
+    </div>
+
+    <div class="pipeline">
+      <h2>Where this sits in the pipeline</h2>
+      <ul class="stages">
+      <li><a href="https://ufal.github.io/atrium-project/tools/page-classification/">page-classification</a></li>
+      <li class="arrow">&rarr;</li>
+      <li><span class="here">alto-postprocess</span></li>
+      <li class="arrow">&rarr;</li>
+      <li><a href="https://ufal.github.io/atrium-project/tools/translator/">translator</a></li>
+      <li class="arrow">&rarr;</li>
+      <li><a href="https://ufal.github.io/atrium-project/tools/nlp-enrich/">nlp-enrich</a></li>
+      <li class="arrow">&rarr;</li>
+      <li><a href="https://ufal.github.io/atrium-project/tools/llm-enrich/">llm-enrich</a></li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>
+    <p>This page is a published stub. The documentation itself lives in the
+       <a href="https://ufal.github.io/atrium-project/tools/alto-postprocess/">ATRIUM hub site</a>; the code lives on the
+       <a href="https://github.com/ufal/atrium-alto-postprocess/tree/master"><code>master</code></a> branch.</p>
+    <p>Developed by <a href="https://ufal.mff.cuni.cz">UFAL</a>, Charles University &middot;
+       funded by <a href="https://atrium-research.eu/">ATRIUM</a> &middot;
+       MIT licensed &middot; generated 2026-09-18</p>
+  </footer>
+
+</div>
+</body>
+</html>
