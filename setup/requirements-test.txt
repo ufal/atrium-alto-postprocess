@@ -32,7 +32,7 @@ PyYAML
 # test-time imports of first-party modules that legitimately depend on pandas
 # and numpy, so declaring them here is the fix; the pins mirror
 # setup/requirements.txt exactly so the two can never resolve differently.
-pandas>=3.0.5,<4.0
+pandas>=3.0.6,<4.0
 numpy>=2.4.6
 tqdm>=4.70.1
 lxml>=6.1.3

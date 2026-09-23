@@ -20,11 +20,11 @@ lxml>=6.1.3
 # through pandas/torch, which is an undeclared dependency by any other name.
 # Pin mirrors setup/requirements-test.txt so the two cannot resolve differently.
 numpy>=2.4.6
-pandas>=3.0.5,<4.0
+pandas>=3.0.6,<4.0
 pillow>=12.3.0
 torch>=2.1,<3.0
 tqdm>=4.70.1
 transformers>=4.57.6,<5.0
-httpx2>=2.12.0
+httpx2>=2.13.0
 bitsandbytes>=0.50.2
 accelerate>=1.15.0
