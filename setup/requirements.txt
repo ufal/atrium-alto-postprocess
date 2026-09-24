@@ -28,3 +28,12 @@ transformers>=4.57.6,<5.0
 httpx2>=2.13.0
 bitsandbytes>=0.50.2
 accelerate>=1.15.0
+# (#31) text-lines input path (text_formats.py). Both are imported lazily, only for
+# the files that need them. pypdfium2 (Apache-2.0 / BSD-3-Clause; bundles PDFium) reads
+# PDF text layers — chosen over pdfplumber (pdfminer.six + Pillow on top of the same
+# pypdfium2) as the lighter option and over PyMuPDF, which is AGPL. The >=5.9 floor
+# matches pdfplumber 0.11.10's own requirement in atrium-llm-enrich, so a shared
+# environment resolves one version. charset-normalizer (MIT) detects the encoding of
+# non-UTF-8 plain text. DOCX/XLSX/PPTX/ODF/EPUB/HTML/XML need only lxml (above).
+pypdfium2>=5.9.0,<6.0
+charset-normalizer>=3.4,<4.0

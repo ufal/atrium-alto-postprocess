@@ -36,3 +36,7 @@ pandas>=3.0.6,<4.0
 numpy>=2.4.6
 tqdm>=4.70.1
 lxml>=6.1.3
+# (#31) the text-lines readers' optional dependencies, declared here so their tests
+# RUN in the fast lane instead of skipping; pins mirror setup/requirements.txt.
+pypdfium2>=5.9.0,<6.0
+charset-normalizer>=3.4,<4.0

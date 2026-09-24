@@ -24,3 +24,8 @@ qwen2.5_0.5b   = Apache-2.0      ; conditional ; Qwen2.5-0.5B multilingual perpl
 distilgpt2     = Apache-2.0      ; conditional ; distilgpt2 English-only perplexity model (alternative)
 layoutlmv3     = CC BY-NC-SA 4.0 ; conditional ; LayoutLMv3 layout-aware reading-order extraction (LayoutReader method)
 glm4v_9b       = glm-4           ; conditional ; GLM-4v-9b generative OCR from page images (GLM method)
+# (#31) text-lines input readers, logged by text_split.py only when used. pypdfium2 is
+# dual-licensed Apache-2.0 OR BSD-3-Clause; recorded as Apache-2.0 because
+# para_licenses does not parse SPDX `OR` expressions (either choice is permissive).
+pypdfium2          = Apache-2.0  ; conditional ; PDFium PDF text-layer reader (text-lines method, text_split.py)
+charset_normalizer = MIT         ; conditional ; encoding detection for non-UTF-8 plain text (text-lines method)

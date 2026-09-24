@@ -216,3 +216,56 @@ def test_resolve_settings_config_fallback():
     assert settings["input_dir"] == "cfg/input"
     assert settings["skip_split"] is True
     assert settings["text_dir"] == "cfg/out_llm"
+
+
+# ── (#31) --method text-lines: any other text-bearing input ──────────────────
+
+
+def test_resolve_settings_text_lines_format():
+    settings = resolve_settings(_args(method="text-lines", input_dir="data/TEXT"), configparser.ConfigParser())
+    assert settings["input_format"] == "text"
+    assert settings["page_text_dir"] == "data_samples/PAGE_TEXT"
+    assert settings["stats_scan_dir"] == "data_samples/PAGE_TEXT"
+    assert settings["text_dir"] == "./data_samples/PAGE_TXT_TEXT"
+    assert settings["outputs"]["split"] == "data_samples/PAGE_TEXT"
+
+
+def test_build_plan_text_lines_routes_all_three_new_stages():
+    settings = resolve_settings(_args(method="text-lines", input_dir="data/TEXT"), configparser.ConfigParser())
+    plan = {s["key"]: s for s in build_plan(settings, "config.txt")}
+    py = sys.executable or "python3"
+    assert plan["split"]["cmd"] == [py, "text_split.py", "data/TEXT", "data_samples/PAGE_TEXT"]
+    assert plan["split"]["logged"] is True
+    assert plan["stats"]["cmd"][:3] == [py, "text_stats_create.py", "data_samples/PAGE_TEXT"]
+    assert plan["extract"]["cmd"] == [py, "extract_TEXT_2_TXT.py"]
+    assert plan["classify"]["cmd"] == [py, "classify_TEXT.py"]
+
+
+def test_resolve_settings_page_text_dir_cli_and_config():
+    cfg = configparser.ConfigParser()
+    cfg.read_dict({"PIPELINE": {"PAGE_TEXT_DIR": "cfg/PAGE_TEXT"}})
+    assert resolve_settings(_args(method="text-lines"), cfg)["page_text_dir"] == "cfg/PAGE_TEXT"
+    settings = resolve_settings(_args(method="text-lines", page_text_dir="cli/PT"), cfg)
+    assert settings["page_text_dir"] == settings["stats_scan_dir"] == "cli/PT"
+
+
+def test_alto_and_json_page_dirs_unchanged_by_the_text_format():
+    """The lookup table that replaced the binary alto/json choice resolves exactly as before."""
+    alto = resolve_settings(_args(method="alto-tools"), configparser.ConfigParser())
+    assert alto["stats_scan_dir"] == alto["outputs"]["split"] == "data_samples/PAGE_ALTO"
+    plan = {s["key"]: s for s in build_plan(alto, "config.txt")}
+    assert plan["split"]["cmd"][1:] == ["page_split.py", "data_samples/ALTO", "data_samples/PAGE_ALTO"]
+    assert plan["split"]["logged"] is False
+
+
+def test_input_csv_mismatch_warns_for_each_stage_that_reads_the_config():
+    """(#31) --input-csv reaches only the stats stage; say so instead of letting extract
+    and classify silently read another CSV."""
+    from run_pipeline import input_csv_mismatches
+
+    cfg = configparser.ConfigParser()
+    cfg.read_dict({"EXTRACT": {"INPUT_CSV": "a.csv"}, "CLASSIFY": {"INPUT_CSV": "a.csv"}})
+    assert input_csv_mismatches(None, cfg) == []
+    assert input_csv_mismatches("a.csv", cfg) == []
+    warnings = input_csv_mismatches("b.csv", cfg)
+    assert len(warnings) == 2 and "[EXTRACT].INPUT_CSV" in warnings[0] and "[CLASSIFY].INPUT_CSV" in warnings[1]

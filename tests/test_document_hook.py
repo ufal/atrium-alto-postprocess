@@ -314,3 +314,62 @@ def test_write_document_block_records_source_once(tmp_path):
     )
     record = load_document(document_path(doc_dir, "CTX03"))
     assert record["source"]["sha256"] == "a" * 64
+
+
+# ── (#31) the origin guard: no OCR-path blocks in a digital-born record ───────
+
+_PAGES = [{"page": "1", "quality_score": 0.9, "quality_band": "Clear"}]
+_LINES = [{"page": "1", "line": 1, "text": "a line", "categ": "Clear", "quality_score": 0.9}]
+
+
+def _seed_source(doc_dir, doc_id, origin, pages=None):
+    from atrium_document import DocumentRecord
+
+    with DocumentRecord(doc_id, "digital-convert" if origin.startswith("digital") else "alto-postprocess",
+                        out_dir=str(doc_dir)) as doc:  # fmt: skip
+        doc.set_source(sha256="c" * 64, filename=f"{doc_id}.bin", origin=origin)
+        if pages:
+            doc.merge_block("pages", pages)
+
+
+def test_guard_drops_positional_blocks_for_a_digital_born_record(tmp_path, capsys):
+    doc_dir = str(tmp_path)
+    _seed_source(doc_dir, "DB1", "digital-born-docx")
+    write_document_block(doc_dir, "DB1", run_id="r1", merge_blocks={"pages": _PAGES, "lines": _LINES})
+    record = load_document(document_path(doc_dir, "DB1"))
+    assert "lines" not in record and not record.get("pages")
+    assert record["source"]["origin"] == "digital-born-docx"
+    assert "not writing lines, pages" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("origin", ["ABBYY-ALTO", "ocr:pdf-text-layer", "unknown-method"])
+def test_guard_keeps_blocks_for_own_or_unmatched_origins(tmp_path, origin):
+    doc_dir = str(tmp_path)
+    _seed_source(doc_dir, "OK1", origin)
+    write_document_block(doc_dir, "OK1", run_id="r1", merge_blocks={"lines": _LINES})
+    assert load_document(document_path(doc_dir, "OK1"))["lines"][0]["text"] == "a line"
+
+
+def test_guard_honours_the_needs_ocr_hand_off(tmp_path):
+    """digital-convert marked a page needs_ocr: this repo is ASKED to re-originate it."""
+    doc_dir = str(tmp_path)
+    _seed_source(
+        doc_dir, "HO1", "digital-born-pdf",
+        pages=[{"page": "1", "needs_ocr": True, "needs_ocr_reason": "garbled text layer"}],
+    )  # fmt: skip
+    write_document_block(doc_dir, "HO1", run_id="r1", merge_blocks={"lines": _LINES})
+    assert load_document(document_path(doc_dir, "HO1"))["lines"][0]["categ"] == "Clear"
+
+
+def test_guard_reads_the_origin_of_this_calls_source_when_no_baseline(tmp_path):
+    doc_dir = str(tmp_path)
+    write_document_block(
+        doc_dir,
+        "NEW1",
+        run_id="r1",
+        source={"sha256": "d" * 64, "filename": "NEW1.pdf", "origin": "digital-born-pdf"},
+        merge_blocks={"pages": _PAGES},
+    )
+    record = load_document(document_path(doc_dir, "NEW1"))
+    assert record["source"]["origin"] == "digital-born-pdf"
+    assert not record.get("pages")

@@ -146,9 +146,13 @@ are assigned by a fast CPU pre-filter before any model inference. The remaining 
 
 **Parameters (Form Data):**
 
-* `file`: The document file (`.xml` ALTO, `.txt` plain text, or `.json` generic OCR JSON).
-* `task_type`: `alto`, `text`, `json`, or `auto` (default — detected from file extension: `.xml`→`alto`,
-  `.txt`→`text`, `.json`→`json`).
+* `file`: The document file (`.xml` ALTO, `.txt` plain text, or `.json` generic OCR JSON) — or (#31) any other
+  text-bearing document: PDF, DOCX, ODT/ODS/ODP, XLSX, PPTX, EPUB, RTF, HTML/hOCR, PAGE XML, TEI, Markdown,
+  CSV/TSV, JSON Lines.
+* `task_type`: `alto`, `text`, `json`, `document`, or `auto` (default). `auto` maps `.txt`→`text` and
+  `.json`→`json` by extension; `.xml` and every other upload are decided **from the bytes** — an ALTO root →
+  `alto`, anything else readable → `document`. An unsupported file (image, legacy `.doc`, other binary) is a
+  `400` naming the reason code; an unreadable document (encrypted, corrupt, no text) is a `422`.
 
 ```bash
 curl -X POST "http://localhost:8000/process" \
@@ -168,7 +172,13 @@ curl -X POST "http://localhost:8000/process" \
 
 ### Response Schema
 
-The top-level `type` field is `alto_xml`, `plain_text`, or `json`, matching the routed `task_type`.
+The top-level `type` field is `alto_xml`, `plain_text`, `json`, or `document`, matching the routed `task_type`.
+A `document` result also carries `format` (the detected kind), `origin` (the truthful `source.origin` class),
+a `pages` list (`page`, `page_label`, `lines`, PDF `text_layer` / `needs_ocr_reason`), and `page` /
+`page_label` on every line, whose `line_num` restarts per page as in the batch `DOC_LINE_CATEG`. Lines are read
+and shaped by the same `text_formats.py` code as the batch text-lines method (blank lines dropped, lines over
+1000 characters wrapped). With `document_record`, lines accrete per page — except for born-digital uploads
+(DOCX, visible-text PDF, …), whose record belongs to llm-enrich's `digital-convert` (atrium_document §1a).
 Each item in `cleaned_lines` carries the fields used by the classification pipeline.
 
 ```json
@@ -313,8 +323,9 @@ It is served directly by the FastAPI server at `http://localhost:8000` and works
 **To use it**, simply start the server (see above) and open `http://localhost:8000` in your browser.
 
 Features:
-- Drag-and-drop or click-to-upload for `.xml` and `.txt` files.
-- Processing mode selector (`auto` / `alto` / `text`).
+- Drag-and-drop or click-to-upload for `.xml`, `.txt` and `.json` files and (#31) PDF, DOCX, ODT, XLSX, PPTX, EPUB,
+  RTF, HTML/hOCR, Markdown and CSV documents.
+- Processing mode selector (`auto` / `alto` / `text` / `json` / `document`).
 - Results table with `Sym`, `Upper`, and `PPL` columns aligned to `text_util.py`.
 - Category breakdown bar showing counts for all five labels.
 - Raw extracted text toggle.

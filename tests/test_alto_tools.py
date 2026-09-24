@@ -40,7 +40,15 @@ import alto_tools
 _ROOT = Path(__file__).resolve().parent.parent
 _FIXTURES = Path(__file__).resolve().parent / "fixtures" / "alto"
 
-SAMPLE_ALTO = sorted(glob.glob(str(_ROOT / "data_samples" / "**" / "*.xml"), recursive=True))
+
+def _is_alto(path: str) -> bool:
+    """(#31) data_samples/ also holds non-ALTO XML now (TEXT/ has a PAGE XML sample for the
+    text-lines method), so select by root element rather than by the .xml extension."""
+    with open(path, "rb") as fh:
+        return b"<alto" in fh.read(4096).lower()
+
+
+SAMPLE_ALTO = sorted(p for p in glob.glob(str(_ROOT / "data_samples" / "**" / "*.xml"), recursive=True) if _is_alto(p))
 
 # ── 1. Golden literals from the pinned upstream CLI ──────────────────────────
 #

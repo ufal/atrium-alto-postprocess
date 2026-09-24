@@ -130,3 +130,44 @@ def test_split_output_directory_is_named_by_the_same_derivation(tmp_path):
     assert split_alto_xml(str(src), str(out)) == 1
     doc_id = canonical_doc_id(src.name)
     assert (out / doc_id / f"{doc_id}-1.alto.xml").exists()
+
+
+# ── (#31) the text-lines path ─────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "parent,name,doc_id,page",
+    [
+        ("CTX000000001", "CTX000000001-1.txt", "CTX000000001", "1"),
+        ("sbn.2019", "sbn.2019-7.txt", "sbn.2019", "7"),
+        # A hyphenated doc_id: text_split names the directory after it, so the stats
+        # stage keeps it whole (the ALTO/JSON scripts' split("-") would say "my", "doc").
+        ("my-doc", "my-doc-3.txt", "my-doc", "3"),
+        # Not in a doc_id directory: the LAST hyphen separates the page.
+        ("loose", "a-b-12.txt", "a-b", "12"),
+    ],
+)
+def test_text_stats_create_composes_canonical_with_text_split(parent, name, doc_id, page, tmp_path):
+    import text_stats_create
+
+    path = tmp_path / parent / name
+    path.parent.mkdir()
+    path.write_text("one line\n", encoding="utf-8")
+    assert text_stats_create.file_page_from_path(str(path)) == (doc_id, page)
+    assert f"{doc_id}-{page}" == canonical_doc_id(name)
+
+
+@pytest.mark.parametrize("name", ["report.final.docx", "sbn.2019.txt", "CTX000000001.pdf", "scan.alto.xml"])
+def test_run_pipeline_single_input_doc_id_text_format(name, tmp_path):
+    """--document-json bridging for --method text-lines keys the record exactly as
+    text_split.py does (page_split._doc_id_from_filename → canonical_doc_id)."""
+    (tmp_path / name).write_bytes(b"x")
+    (tmp_path / ".hidden").write_bytes(b"x")  # ignored by text_split, so ignored here
+    (tmp_path / "~$lock.docx").write_bytes(b"x")
+    assert _single_input_doc_id(str(tmp_path), "text") == canonical_doc_id(name) == _doc_id_from_filename(name)
+
+
+def test_run_pipeline_single_input_doc_id_text_format_needs_exactly_one(tmp_path):
+    (tmp_path / "a.txt").write_bytes(b"x")
+    (tmp_path / "b.pdf").write_bytes(b"x")
+    assert _single_input_doc_id(str(tmp_path), "text") is None

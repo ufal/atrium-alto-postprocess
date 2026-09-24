@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15">
+ <Metadata><Creator>synthetic</Creator><Created>2024-09-01T00:00:00</Created><LastChange>2024-09-01T00:00:00</LastChange></Metadata>
+ <Page imageFilename="CTX000000009-1.jpg" imageWidth="2480" imageHeight="3508">
+  <ReadingOrder><OrderedGroup id="ro"><RegionRefIndexed index="0" regionRef="r_title"/><RegionRefIndexed index="1" regionRef="r_body"/></OrderedGroup></ReadingOrder>
+  <TextRegion id="r_body"><Coords points="0,0 1,1"/>
+   <TextLine id="l2"><Coords points="0,0 1,1"/><TextEquiv><Unicode>Val byl přerušen recentním zásahem.</Unicode></TextEquiv></TextLine>
+   <TextLine id="l3"><Coords points="0,0 1,1"/><TextEquiv><Unicode>Nál3zy ul0ženy v dep0zitáři.</Unicode></TextEquiv></TextLine>
+  </TextRegion>
+  <TextRegion id="r_title"><Coords points="0,0 1,1"/>
+   <TextLine id="l1"><Coords points="0,0 1,1"/><TextEquiv><Unicode>Hradiště u Horní Mezí — sonda II</Unicode></TextEquiv></TextLine>
+  </TextRegion>
+ </Page>
+</PcGts>

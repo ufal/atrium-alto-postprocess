@@ -29,7 +29,7 @@ import sys
 from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from atrium_document import DocumentRecord, load_document, validate_document
+from atrium_document import DocumentRecord, load_document, resolve_originator, validate_document
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,15 @@ PROGRAM_NAME = "alto-postprocess"
 #: them — repeating the same line per record would bury every other diagnostic the
 #: run emits. Loud once is the point; loud 5000 times is noise that gets filtered.
 _VALIDATION_UNAVAILABLE_WARNED = False
+
+#: (#31) The blocks whose WRITER is decided by `source.origin` (atrium_document
+#: BLOCK_OWNERS lists two originators for each — this repo and llm-enrich's
+#: digital-convert — and Issue #18 §1a lets the record's origin pick one).
+POSITIONAL_BLOCKS = ("pages", "content", "lines", "tables")
+
+#: (#31) doc_ids already warned about by the origin guard in this process — one line
+#: per document, not one per stage call.
+_FOREIGN_ORIGIN_WARNED: set = set()
 
 
 def _warn(message: str) -> None:
@@ -153,6 +162,33 @@ def paradata_ref_for(logger) -> str:
     return os.path.join(logger.paradata_dir, f"{logger.run_id}_{logger.program}.json")
 
 
+def foreign_origin(path: str, source: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """The record's `source.origin` when it authorises ANOTHER originator, else None (#31).
+
+    Reads the baseline record at `path` (its `source` is first-writer-wins, so it is
+    the one that counts), falling back to the `source` this call is about to write.
+    Returns None — "nothing to hold back" — when there is no origin, when the origin
+    matches no ORIGIN_ORIGINATORS prefix (§1a abstains; so do we), when it authorises
+    this repo, and when the record already carries the documented OCR hand-off
+    (some `pages[].needs_ocr` is true, written by digital-convert to ask for exactly
+    this repo's pass — atrium_document `_ocr_handoff_requested`).
+    """
+    record: Dict[str, Any] = {}
+    if path and os.path.exists(path):
+        try:
+            record = load_document(path) or {}
+        except Exception:
+            record = {}
+    origin = (record.get("source") or {}).get("origin") or (source or {}).get("origin")
+    if not origin:
+        return None
+    if resolve_originator(origin) in (None, PROGRAM_NAME):
+        return None
+    if any(isinstance(p, dict) and p.get("needs_ocr") is True for p in record.get("pages") or []):
+        return None
+    return origin
+
+
 def write_document_block(
     document_json_dir: str,
     doc_id: str,
@@ -185,6 +221,29 @@ def write_document_block(
         return
 
     path = document_path(document_json_dir, doc_id)
+
+    # (#31) The §1a originator check in atrium_document only WARNS when not strict
+    # and then writes the block anyway — so without this guard every stage of this
+    # repo (the unchanged classify/aggregate included) would put OCR-path fields and
+    # categories into a record that digital-convert originates, the half-OCR/half-
+    # digital plane §1a exists to refuse. `source` is still written; the CSV outputs
+    # of the run are unaffected.
+    if set_blocks or merge_blocks:
+        foreign = foreign_origin(path, source)
+        if foreign:
+            dropped = sorted((set(set_blocks or {}) | set(merge_blocks or {})) & set(POSITIONAL_BLOCKS))
+            if dropped and doc_id not in _FOREIGN_ORIGIN_WARNED:
+                _FOREIGN_ORIGIN_WARNED.add(doc_id)
+                _warn(
+                    f"{doc_id}: source.origin {foreign!r} is originated by {resolve_originator(foreign)!r}, "
+                    f"not {PROGRAM_NAME!r} — not writing {', '.join(dropped)} into its record "
+                    f"(atrium_document §1a). The CSV outputs are unaffected."
+                )
+            set_blocks = {k: v for k, v in (set_blocks or {}).items() if k not in POSITIONAL_BLOCKS} or None
+            merge_blocks = {k: v for k, v in (merge_blocks or {}).items() if k not in POSITIONAL_BLOCKS} or None
+            if not any([source, set_blocks, merge_blocks]):
+                return
+
     baseline_was_invalid = _baseline_is_invalid(path)
     with DocumentRecord.open(
         doc_id,

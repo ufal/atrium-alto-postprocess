@@ -82,6 +82,8 @@ jobs:
              classify_TEXT.py \
              document_hook.py \
              extract_JSON_2_TXT.py \
+             page_split.py \
+             text_formats.py \
              text_util.py \
              atrium-service/
 

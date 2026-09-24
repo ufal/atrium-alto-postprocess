@@ -945,3 +945,59 @@ archive, or does damaged Czech produce them? It decides whether the German-diacr
 out (~239 witnessed lines on the gold corpus, 156 kept today) is worth its own measurement.
 * Suite 1,449 → **1,452 passed**, 13 skipped, 2 xfailed; `ruff check` and `ruff format --check`
 clean; `check_version` agrees. Committed locally, not pushed.
+
+## 2026-09-23 (third entry)
+- **#31** — **`--method text-lines`: any text-bearing input → ordered pages × lines → CSV rows.**
+K4TEL re-scoped the issue:
+  * DOCX and PDF must be accepted as ordered pages;
+  * every sequentially readable textual format should be;
+  * lines become CSV rows;
+  * pages and lines encode reading order and blocks for non-paged formats;
+  * input handling must be strict;
+  * readers should be lightweight;
+  * ALTO is untouched and categorization is not run.
+  Delivered as full files in chat for review — **not committed or pushed**. Plan § "Phase 3"
+  (D9–D20); digest refreshed.
+* **Status reconciled first.** `31.plan.md`/`31.digest.md` had said "design only" since 07-25 while
+  the JSON design (D1–D8) was on `test`; #37 had since added `--force-single-page` and the E2E suite.
+* **Sibling survey.** nlp-enrich has no PDF/DOCX reader (its flexiconv→TEITOK adapter is
+  non-functional, nlp-enrich #10). llm-enrich's `digital_to_json.py` (pdfplumber + python-docx) is
+  `digital-convert`'s: extension-only, no corrupt/encrypted handling, DOCX as one page. Reused: its
+  PDF text-layer thresholds, its deterministic fixture builders, and its no-AGPL licence policy.
+* **New:**
+  * `text_formats.py`: content-first detection; stdlib + lxml readers for DOCX, XLSX, PPTX,
+    ODT/ODS/ODP, EPUB, RTF, HTML/hOCR, PAGE XML, TEI, XML, JSON/JSONL, CSV/TSV, Markdown and TXT;
+    pypdfium2 for PDF (a per-page text-layer class: none/garbled/ocr/digital);
+    charset-normalizer restricted to cp1250/iso8859-2/cp1252.
+  * the stage scripts `text_split.py` (pages + `ingest_report.csv`/`pages_report.csv`),
+    `text_stats_create.py` (hyphen-safe ids) and `extract_TEXT_2_TXT.py` (classify-ready text +
+    `DOC_LINES_TEXT/<doc>.csv` line tables whose numbering equals `DOC_LINE_CATEG`'s).
+* **Robustness:** a reason code per file; zip-bomb caps checked on declared sizes; no-entity XML
+  parsing; PDFs in a subprocess with a timeout; atomic page directories; doc_id collision and
+  invalid-id refusal; symlink/FIFO/lock-file skipping; `--strict`.
+* **Contract.** `source.origin` is truthful per class (`ocr:*` / `digital-born-<kind>`). New guard
+  in `document_hook`: §1a only warns when not strict, so without it classify/aggregate would have
+  written OCR categories into digital-convert's records. Positional blocks are held back for them,
+  unless a page carries the `needs_ocr` hand-off.
+* **Other code changes:**
+  * `classify_TEXT.load_page_index` keeps `0001`/`NA` doc ids;
+  * `run_pipeline` is table-driven per format, with a warning when `--input-csv` does not reach
+    extract/classify (a trap that predates this work);
+  * `/process` accepts all of the above as `task_type=document`;
+  * `release.yml` bundles `text_formats.py` + `page_split.py`;
+  * config `[TEXT_INGEST]`, two conditional `para_config` components, requirements.
+* **Samples and docs:** `data_samples/TEXT/` (CTX000000004–14) and `data_samples/JSON/CTX000000015.json`
+  (closes the "no JSON sample" gap). New `docs/text_inputs.md`; README Steps 1–3, API and paradata
+  sections (plus three stale spots fixed); `service/README.md`; `CONTRIBUTING.md`.
+* **Unchanged, verified:** `page_split.py`, the ALTO/JSON stats scripts and extractors,
+  `aggregate_STAT.py` and every hub-canonical file. `run_pipeline --dry-run` for all four ALTO/JSON
+  methods is byte-identical before and after.
+* **Suite 1448 → 1581 passed**, 11 skipped, 2 xfailed, 0 failed. `ruff check` and
+  `ruff format --check` are clean; coverage is 72.7%. `tests/test_alto_tools.py` now selects ALTO
+  samples by root element (the same 10 files), so the new PAGE XML sample is not treated as ALTO.
+* **Cross-repo follow-ups:**
+  * hub `KNOWN_PIPELINE_SUFFIXES` (office/PDF suffixes);
+  * hub `test_document_required.py` (a fifth extractor twin);
+  * hub docs that call alto's input ALTO-only;
+  * llm-enrich V-1;
+  * the stale llm-enrich "program name" TODO.

@@ -1163,6 +1163,19 @@ def process_document(task):
         return {"status": "error", "file_id": file_id, "reason": str(e)}
 
 
+def load_page_index(csv_path) -> "pd.DataFrame":
+    """Read the page statistics CSV that drives this stage (and extract_TEXT_2_TXT.py).
+
+    (#31) `file` is read as a string: with pandas' default type inference a document
+    id such as `0001` became the integer 1 and `NA`/`null` became NaN, so the page
+    files under `<TEXT_DIR>/0001/` were never found and the document was skipped in
+    silence. Only `file` changes — `page` stays numeric (the sort below relies on it)
+    and an empty cell is still NaN, exactly as before; ALTO ids (`CTX…`) are
+    unaffected. Text-lines inputs are named by users, so their ids can be anything.
+    """
+    return pd.read_csv(csv_path, dtype={"file": str}, keep_default_na=False, na_values=[""])
+
+
 def main():
     """Initializes queue managers, sets up models, and maps CPU document tasks."""
     config_path = os.getenv("LANGID_CONFIG", "setup/config.txt")
@@ -1200,7 +1213,7 @@ def main():
 
     print(f"[Main] Classifying text from: {TEXT_DIR}")
 
-    df = pd.read_csv(INPUT_CSV)
+    df = load_page_index(INPUT_CSV)
     sort_cols = ["file", "page", "line_order"] if "line_order" in df.columns else ["file", "page"]
     df = df.sort_values(by=sort_cols)
 

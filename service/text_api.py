@@ -72,9 +72,10 @@ from utils import parse_alto_page_labels  # noqa: E402
 # everywhere except the one launch context that matters in production
 # (`python service/text_api.py`, the `api` stage ENTRYPOINT), where the image died at
 # import. Keep them below the bootstrap; `tests/test_service_entrypoint.py` enforces it.
-from atrium_document import canonical_doc_id  # noqa: E402
+from atrium_document import canonical_doc_id, resolve_originator  # noqa: E402
 from atrium_paradata import ParadataLogger  # noqa: E402
 from document_hook import PROGRAM_NAME, quality_band, write_document_block  # noqa: E402
+from text_formats import READERS, IngestError, sniff_kind  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -226,7 +227,8 @@ def _lines_records_from_result(result: Dict[str, Any], page: str = SERVICE_PAGE_
             # `line` is a required key field; a row without one cannot be merged
             # (merge_block would align every such row onto the same null key).
             continue
-        record: Dict[str, Any] = {"page": page, "line": int(line_num)}
+        # (#31) document uploads carry their own per-line page; the others use `page`.
+        record: Dict[str, Any] = {"page": str(entry.get("page") or page), "line": int(line_num)}
         for source_key, schema_field in (
             ("text", "text"),
             ("lang", "lang"),
@@ -283,6 +285,23 @@ def _accretion_records(task_type: str, upload_path: str, result: Dict[str, Any])
     still returned in the HTTP response; only the accretion is skipped, and loudly.
     Multi-page documents belong to the batch pipeline (page_split.py splits first).
     """
+    if task_type == "document":
+        # (#31) Pages come from the reader, one label per line; but a born-digital
+        # upload (DOCX, visible-text PDF, ...) is digital-convert's to originate
+        # (atrium_document §1a) — this repo contributes nothing to its record.
+        origin = result.get("origin") or ""
+        if resolve_originator(origin) not in (None, PROGRAM_NAME):
+            logger.warning(
+                "born-digital upload (origin %r): no pages[]/lines[] contribution to the document "
+                "record — it is originated by %r (atrium_document §1a). The classified lines are "
+                "still returned.",
+                origin,
+                resolve_originator(origin),
+            )
+            return [], []
+        lines = _lines_records_from_result(result)
+        return _page_records_from_lines(lines), lines
+
     page_labels = parse_alto_page_labels(upload_path) if task_type == "alto" else []
     if len(page_labels) > 1:
         logger.warning(
@@ -316,7 +335,12 @@ async def info() -> Dict[str, Any]:
         limits={"max_upload_mb": MAX_UPLOAD_MB},
         status="active",
         device=text_manager.device,
-        supported_formats=["ALTO XML (.xml)", "Plain Text (.txt)", "Generic JSON (.json)"],
+        supported_formats=["ALTO XML (.xml)", "Plain Text (.txt)", "Generic JSON (.json)"]
+        + [
+            f"{spec.label} ({', '.join(spec.extensions)})"
+            for kind, spec in READERS.items()
+            if kind not in ("alto", "txt", "json")
+        ],
         quality_categories=["Clear", "Noisy", "Trash", "Non-text", "Empty"],
         line_fields=[
             "line_num",
@@ -344,7 +368,12 @@ async def process_document(
     document_record: UploadFile = File(None),  # Added optional input
 ) -> JSONResponse:
     """
-    Upload an ALTO XML, plain-text, or generic JSON file.
+    Upload an ALTO XML, plain-text or generic JSON file — or (#31) any other text-bearing
+    document: PDF, DOCX, ODT, XLSX/ODS, PPTX/ODP, EPUB, RTF, HTML/hOCR, PAGE XML, TEI,
+    Markdown, CSV/TSV, JSON Lines. `task_type="auto"` keeps `.txt` → text and
+    `.json` → json; `.xml` and every other extension are decided from the bytes
+    (an ALTO root → alto, anything readable → document). Document results carry
+    `page`/`page_label` per line and a `pages` summary.
 
     Returns a list of classified lines.  Each entry carries:
 
@@ -383,17 +412,15 @@ async def process_document(
         raise HTTPException(status_code=422, detail="Filename has no usable document id.")
 
     if task_type == "auto":
-        if filename.endswith(".xml"):
-            task_type = "alto"
-        elif filename.endswith(".txt"):
+        if filename.endswith(".txt"):
             task_type = "text"
         elif filename.endswith(".json"):
             task_type = "json"
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot auto-detect file type. Set task_type='alto', 'text', or 'json'.",
-            )
+            # (#31) .xml and every other extension: decided from the uploaded bytes
+            # below (an ALTO root stays on the ALTO path; anything else readable is a
+            # "document"); an unsupported file is still a 400.
+            task_type = "sniff"
 
     _refuse_if_draining()
 
@@ -408,6 +435,17 @@ async def process_document(
         if os.path.getsize(tmp_path) > MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_UPLOAD_MB} MB.")
 
+        if task_type == "sniff":
+            try:
+                kind = await asyncio.to_thread(sniff_kind, tmp_path)
+            except IngestError as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot auto-detect a supported file type ({exc.code}: {exc.message}). "
+                    "Set task_type='alto', 'text', 'json' or 'document'.",
+                ) from exc
+            task_type = "alto" if kind == "alto" else "document"
+
         # Execute text inference, off the event loop (issue #55). These are synchronous
         # torch calls (LayoutReader + Qwen perplexity + fastText); run inline in an
         # `async def` they blocked the ONLY event loop, so uvicorn's SIGTERM handler —
@@ -417,6 +455,11 @@ async def process_document(
             result = await asyncio.to_thread(text_manager.process_alto, tmp_path)
         elif task_type == "json":
             result = await asyncio.to_thread(text_manager.process_json, tmp_path)
+        elif task_type == "document":
+            try:
+                result = await asyncio.to_thread(text_manager.process_document, tmp_path)
+            except IngestError as exc:
+                raise HTTPException(status_code=422, detail=f"{exc.code}: {exc.message}") from exc
         else:
             result = await asyncio.to_thread(text_manager.process_text_file, tmp_path)
 

@@ -423,7 +423,7 @@
         <form id="processForm">
             <div class="upload-box" id="uploadBox">
                 <input type="file" id="fileInput" name="file"
-                       accept=".xml,.txt" required style="display:none">
+                       accept=".xml,.txt,.json,.pdf,.docx,.odt,.rtf,.epub,.xlsx,.ods,.pptx,.odp,.html,.htm,.xhtml,.hocr,.md,.csv,.tsv,.jsonl,.ndjson" required style="display:none">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="1.5">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -432,7 +432,7 @@
                     <polyline points="9 15 12 12 15 15"/>
                 </svg>
                 <p><strong>Click to upload</strong> or drag and drop</p>
-                <p>ALTO XML (.xml) or plain text (.txt)</p>
+                <p>ALTO XML, plain text or JSON — or PDF, DOCX, ODT, RTF, EPUB, XLSX/ODS, PPTX/ODP, HTML/hOCR, PAGE XML, TEI, Markdown, CSV/TSV</p>
                 <p id="fileNameDisplay" class="file-selected-text"></p>
             </div>
 
@@ -443,6 +443,8 @@
                         <option value="auto" selected>Auto-detect (by extension)</option>
                         <option value="alto">ALTO XML — layout analysis + extraction</option>
                         <option value="text">Plain text — cleaning + classification</option>
+                        <option value="json">Generic JSON — text keys + classification</option>
+                        <option value="document">Any other document — pages + classification</option>
                     </select>
                 </div>
             </div>
@@ -541,8 +543,8 @@
 
             <h2>Form Parameters</h2>
             <ul>
-                <li><code>file</code> — <code>.xml</code> (ALTO) or <code>.txt</code></li>
-                <li><code>task_type</code> — <code>"auto"</code> | <code>"alto"</code> | <code>"text"</code></li>
+                <li><code>file</code> — <code>.xml</code> (ALTO, PAGE XML, TEI, …), <code>.txt</code>, <code>.json</code>, or a PDF, DOCX, ODT, RTF, EPUB, XLSX/ODS, PPTX/ODP, HTML/hOCR, Markdown or CSV/TSV document</li>
+                <li><code>task_type</code> — <code>"auto"</code> | <code>"alto"</code> | <code>"text"</code> | <code>"json"</code> | <code>"document"</code></li>
             </ul>
 
             <h2>cURL Example</h2>

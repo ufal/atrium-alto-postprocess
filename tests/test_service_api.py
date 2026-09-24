@@ -1,6 +1,7 @@
 import json
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from atrium_document import DocumentRecord, canonical_doc_id, load_document
@@ -108,12 +109,150 @@ def test_info_lists_json_as_supported_format():
 
 
 def test_process_unrecognized_extension_still_rejected():
-    """Auto-detect must still 400 on formats outside alto/text/json (#8)."""
-    files = {"file": ("document.pdf", b"%PDF-1.4", "application/pdf")}
+    """Auto-detect must still 400 on a file no reader supports (#8).
+
+    (#31) PDF used to be the example here; it is a supported "document" now, so the
+    unsupported case is plain binary — the 400 names the reason code."""
+    files = {"file": ("document.bin", bytes(range(256)) * 4, "application/octet-stream")}
     data = {"task_type": "auto"}
 
     response = client.post("/process", files=files, data=data)
     assert response.status_code == 400
+    assert "binary_content" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "name, content",
+    [
+        ("scan.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 64),
+        ("letter.doc", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 512),
+    ],
+)
+def test_process_rejects_images_and_legacy_office_with_reason(name, content):
+    response = client.post(
+        "/process", files={"file": (name, content, "application/octet-stream")}, data={"task_type": "auto"}
+    )
+    assert response.status_code == 400
+    assert ("image_needs_ocr" if name.endswith(".png") else "legacy_office_unsupported") in response.json()["detail"]
+
+
+# ── (#31) any other text-bearing upload → task_type "document" ───────────────
+
+_DOC_RESULT = {
+    "type": "document",
+    "format": "pdf",
+    "media_type": "application/pdf",
+    "origin": "ocr:pdf-text-layer",
+    "pages": [{"page": "1", "page_label": "i", "lines": 1}, {"page": "2", "page_label": "ii", "lines": 1}],
+    "cleaned_lines": [
+        {"text": "Strana jedna", "lang": "ces", "quality_score": 0.9, "category": "Clear", "line_num": 1, "page": "1"},
+        {"text": "Str4na dv4", "lang": "ces", "quality_score": 0.5, "category": "Trash", "line_num": 1, "page": "2"},
+    ],
+}
+
+
+@patch("service.text_api.text_manager.process_document", create=True)
+def test_process_pdf_auto_routes_to_document(mock_process):
+    mock_process.return_value = dict(_DOC_RESULT)
+    files = {"file": ("scan.pdf", b"%PDF-1.4\n%minimal", "application/pdf")}
+    response = client.post("/process", files=files, data={"task_type": "auto"})
+    assert response.status_code == 200
+    assert response.json()["type"] == "document"
+    assert mock_process.call_count == 1
+
+
+@patch("service.text_api.text_manager.process_document", create=True)
+def test_process_docx_is_sniffed_by_content_not_name(mock_process):
+    """A DOCX uploaded under a wrong extension is still read as a document."""
+    from tests.text_format_fixtures import docx_bytes, w_p, w_t
+
+    mock_process.return_value = dict(_DOC_RESULT)
+    files = {"file": ("report.bin", docx_bytes(w_p(w_t("Ahoj"))), "application/octet-stream")}
+    response = client.post("/process", files=files, data={"task_type": "auto"})
+    assert response.status_code == 200
+    assert mock_process.call_count == 1
+
+
+@patch("service.text_api.text_manager.process_document", create=True)
+@patch("service.text_api.text_manager.process_alto", create=True)
+def test_process_xml_routes_by_root_element(mock_alto, mock_document):
+    """ALTO keeps the ALTO path; PAGE XML (also .xml) becomes a document."""
+    mock_alto.return_value = {"type": "alto_xml", "cleaned_lines": []}
+    mock_document.return_value = dict(_DOC_RESULT)
+    alto = b'<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#"><Layout/></alto>'
+    page = b'<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15"><Page/></PcGts>'
+
+    assert client.post("/process", files={"file": ("a.xml", alto, "application/xml")}).json()["type"] == "alto_xml"
+    assert client.post("/process", files={"file": ("p.xml", page, "application/xml")}).json()["type"] == "document"
+    assert (mock_alto.call_count, mock_document.call_count) == (1, 1)
+
+
+@patch("service.text_api.text_manager.process_document", create=True)
+def test_process_document_read_failure_is_422_with_reason(mock_process):
+    from text_formats import IngestError
+
+    mock_process.side_effect = IngestError("encrypted", "password-protected PDF")
+    response = client.post("/process", files={"file": ("x.pdf", b"%PDF-1.4", "application/pdf")})
+    assert response.status_code == 422
+    assert response.json()["detail"].startswith("encrypted")
+
+
+def test_info_lists_document_formats():
+    formats = client.get("/info").json()["supported_formats"]
+    assert formats[:3] == ["ALTO XML (.xml)", "Plain Text (.txt)", "Generic JSON (.json)"]
+    assert any(fmt.startswith("PDF") for fmt in formats)
+    assert any("DOCX" in fmt for fmt in formats)
+
+
+@patch("service.text_api.text_manager.process_document", create=True)
+def test_process_document_accretes_per_page(mock_process, tmp_path, monkeypatch):
+    """An OCR-class document (PDF with an OCR text layer) accretes each line under its
+    own page, with per-page metrics computed from that page's lines."""
+    monkeypatch.chdir(tmp_path)
+    mock_process.return_value = json.loads(json.dumps(_DOC_RESULT))
+    baseline_path = _real_baseline(tmp_path, pages=("1", "2"))
+
+    response = client.post(
+        "/process",
+        files={
+            "file": (f"{_DOC_ID}.pdf", b"%PDF-1.4", "application/pdf"),
+            "document_record": (f"{_DOC_ID}.document.json", baseline_path.read_bytes(), "application/json"),
+        },
+        data={"task_type": "document"},
+    )
+    assert response.status_code == 200
+    record = response.json()["document_json_out"]
+    assert [(line["page"], line["line"], line["categ"]) for line in record["lines"]] == [
+        ("1", 1, "Clear"),
+        ("2", 1, "Trash"),
+    ]
+    by_page = {page["page"]: page for page in record["pages"]}
+    assert by_page["1"]["quality_band"] == "Clear" and by_page["2"]["quality_band"] == "Trash"
+
+
+@patch("service.text_api.text_manager.process_document", create=True)
+def test_process_born_digital_document_contributes_nothing_to_the_record(mock_process, tmp_path, monkeypatch, caplog):
+    """A born-digital upload (DOCX, visible-text PDF) is digital-convert's to originate
+    (atrium_document §1a): the lines are returned, the record gets no pages/lines."""
+    monkeypatch.chdir(tmp_path)
+    result = json.loads(json.dumps(_DOC_RESULT))
+    result["origin"] = "digital-born-docx"
+    mock_process.return_value = result
+    baseline_path = _real_baseline(tmp_path, pages=("1",))
+
+    response = client.post(
+        "/process",
+        files={
+            "file": (f"{_DOC_ID}.docx", b"PK\x03\x04", "application/octet-stream"),
+            "document_record": (f"{_DOC_ID}.document.json", baseline_path.read_bytes(), "application/json"),
+        },
+        data={"task_type": "document"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["cleaned_lines"]) == 2
+    assert "lines" not in body["document_json_out"]
+    assert "born-digital upload" in caplog.text
 
 
 # ── (atrium-project#10 J1 + D2) the `document_record` accretion parameter ─────

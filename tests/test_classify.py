@@ -56,3 +56,16 @@ def test_main_graceful_exit(mock_cfg_class, mock_read_csv):
 
     with pytest.raises(FileNotFoundError, match="Missing INPUT_CSV"):
         main()
+
+
+def test_load_page_index_keeps_file_ids_as_strings(tmp_path):
+    """(#31) `0001` must not become 1 and `NA` must not become NaN — the page files of
+    such a document were never found and it was skipped in silence."""
+    from classify_TEXT import load_page_index
+
+    csv_path = tmp_path / "stats.csv"
+    csv_path.write_text("file,page,path\n0001,1,a\nNA,2,b\nx-y,10,c\nCTX000000001,,d\n", encoding="utf-8")
+    df = load_page_index(csv_path)
+    assert list(df["file"]) == ["0001", "NA", "x-y", "CTX000000001"]
+    assert list(df["page"][:3]) == [1, 2, 10]
+    assert pd.isna(df["page"].iloc[3])  # empty cells stay NaN, as before

@@ -4,7 +4,7 @@ run_pipeline.py — end-to-end OCR-output postprocessing orchestrator.
 
 Runs the repository's processing scripts sequentially on a directory of
 input documents and, at the end, merges every per-stage paradata log into
-ONE summary JSON. Supports two input formats, selected implicitly via
+ONE summary JSON. Supports three input formats, selected implicitly via
 --method (each method is tagged with the format it consumes):
 
   ALTO XML (--method alto-tools|layoutreader|glm):
@@ -19,6 +19,13 @@ ONE summary JSON. Supports two input formats, selected implicitly via
     1. page_split.py            JSON/            -> PAGE_JSON/        (split into pages)  (#31)
     2. json_stats_create.py     PAGE_JSON/       -> <stats>.csv       (page statistics)   [paradata]
     3. extract_JSON_2_TXT.py    <stats>.csv      -> PAGE_TXT_JSON/    (text extraction)   [paradata]
+
+  Any other text-bearing file (--method text-lines, #31): PDF, DOCX, ODT, XLSX/ODS,
+  PPTX/ODP, EPUB, RTF, HTML/hOCR, PAGE XML, TEI, XML, JSON/JSONL, CSV/TSV, Markdown,
+  plain text — recognised by content (text_formats.py; docs/text_inputs.md):
+    1. text_split.py            TEXT/            -> PAGE_TEXT/        (pages + reports)   [paradata]
+    2. text_stats_create.py     PAGE_TEXT/       -> <stats>.csv       (page statistics)   [paradata]
+    3. extract_TEXT_2_TXT.py    <stats>.csv      -> PAGE_TXT_TEXT/    (+ DOC_LINES_TEXT/ line tables) [paradata]
 
   4. classify_TEXT.py       PAGE_TXT*/       -> DOC_LINE_CATEG/   (line classify)     [paradata]
   5. aggregate_STAT.py DOC_LINE_CATEG/  -> DOC_LINE_STATS/   (page aggregate)    [paradata]
@@ -47,6 +54,7 @@ Usage
   python3 run_pipeline.py                        # all settings from config ([PIPELINE].METHOD)
   python3 run_pipeline.py --method glm           # override just the extraction backend
   python3 run_pipeline.py --method json-keys --input-dir data_samples/JSON  # generic JSON input
+  python3 run_pipeline.py --method text-lines --input-dir data_samples/TEXT  # PDF/DOCX/TXT/... (#31)
   python3 run_pipeline.py --skip-split           # PAGE_ALTO already populated
   python3 run_pipeline.py --skip-extract         # PAGE_TXT* already populated (avoids model load)
   python3 run_pipeline.py --start-from classify  # run classify + aggregate only
@@ -83,17 +91,19 @@ EXTRACT_METHODS = {
     "layoutreader": ("extract_LytRdr_ALTO_2_TXT.py", "OUTPUT_TXT_LR", "./data_samples/PAGE_TXT_LR", "alto"),
     "glm": ("extract_LLM_ALTO_2_TXT.py", "OUTPUT_TXT_LLM", "./data_samples/PAGE_TXT_LLM", "alto"),
     "json-keys": ("extract_JSON_2_TXT.py", "OUTPUT_TXT_JSON", "./data_samples/PAGE_TXT_JSON", "json"),
+    "text-lines": ("extract_TEXT_2_TXT.py", "OUTPUT_TXT_TEXT", "./data_samples/PAGE_TXT_TEXT", "text"),
 }
 
-# input format -> (page_split script or None, stats-CSV-builder script).
-# split_script is None when the format has no page-splitting concept at all
-# (stage 1 becomes a permanent no-op for that format); the stats script then
-# scans the raw input_dir instead of a page-output dir. (#31) Both formats
-# currently split into pages — json now goes through page_split.py's
-# split_json_document() just like alto goes through split_alto_xml().
+# input format -> its stage-1 split script, stage-2 stats-CSV builder, and the
+# settings key of the per-page directory the split writes and the stats stage scans.
+# (#31) Every format splits into pages: alto via page_split.split_alto_xml(), json
+# via page_split.split_json_document(), text (any other text-bearing file) via
+# text_split.py. build_plan() still accepts split_script=None (a permanent no-op
+# stage), but no format uses it.
 INPUT_FORMATS = {
-    "alto": {"split_script": "page_split.py", "stats_script": "alto_stats_create.py"},
-    "json": {"split_script": "page_split.py", "stats_script": "json_stats_create.py"},
+    "alto": {"split_script": "page_split.py", "stats_script": "alto_stats_create.py", "page_dir": "page_alto_dir"},
+    "json": {"split_script": "page_split.py", "stats_script": "json_stats_create.py", "page_dir": "page_json_dir"},
+    "text": {"split_script": "text_split.py", "stats_script": "text_stats_create.py", "page_dir": "page_text_dir"},
 }
 
 _DEFAULTS = {
@@ -101,6 +111,7 @@ _DEFAULTS = {
     "input_dir": "data_samples/ALTO",
     "page_alto_dir": "data_samples/PAGE_ALTO",
     "page_json_dir": "data_samples/PAGE_JSON",
+    "page_text_dir": "data_samples/PAGE_TEXT",
     "skip_split": False,
     "paradata_dir": "paradata",
     "input_csv": "test_alto_stats.csv",
@@ -137,6 +148,11 @@ def _resolve_extract_outdir(method: str, cfg: configparser.ConfigParser) -> str:
     return (_cfg_get(cfg, "EXTRACT", key, default) or default).strip()
 
 
+def _page_dir_for(settings: Dict, fmt: str) -> str:
+    """The per-page directory for input format `fmt` (INPUT_FORMATS[fmt]["page_dir"])."""
+    return settings[INPUT_FORMATS[fmt]["page_dir"]]
+
+
 def _resolve_skips(args, cfg: configparser.ConfigParser) -> Dict[str, bool]:
     """Per-stage skip map: CLI --skip-<stage> OR [PIPELINE].SKIP_<STAGE>.
 
@@ -167,6 +183,11 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         getattr(args, "page_json_dir", None) or _cfg_get(cfg, "PIPELINE", "PAGE_JSON_DIR", _DEFAULTS["page_json_dir"])
     ).strip()
 
+    # (#31) getattr(): unit tests build partial Namespaces without this flag.
+    page_text = (
+        getattr(args, "page_text_dir", None) or _cfg_get(cfg, "PIPELINE", "PAGE_TEXT_DIR", _DEFAULTS["page_text_dir"])
+    ).strip()
+
     input_dir = (args.input_dir or _cfg_get(cfg, "PIPELINE", "INPUT_DIR", _DEFAULTS["input_dir"])).strip()
     page_alto = (args.page_alto_dir or _cfg_get(cfg, "PIPELINE", "PAGE_ALTO_DIR", _DEFAULTS["page_alto_dir"])).strip()
     # page_json = (
@@ -187,9 +208,11 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
     stats_dir = (_cfg_get(cfg, "AGGREGATE", "OUTPUT_DOC_DIR", _DEFAULTS["stats_dir"]) or _DEFAULTS["stats_dir"]).strip()
 
     # (#31/D8) The per-page-output dir for the SELECTED format — page_alto_dir
-    # for "alto", page_json_dir for "json". Both formats now split into pages,
-    # so the stats-CSV builder scans this same dir uniformly for either format.
-    page_dir = page_alto if input_format == "alto" else page_json
+    # for "alto", page_json_dir for "json", page_text_dir for "text". Every format
+    # splits into pages, so the stats-CSV builder scans this dir uniformly.
+    page_dir = _page_dir_for(
+        {"page_alto_dir": page_alto, "page_json_dir": page_json, "page_text_dir": page_text}, input_format
+    )
     stats_scan_dir = page_dir
 
     skip = _resolve_skips(args, cfg)
@@ -200,6 +223,7 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         "input_dir": input_dir,
         "page_alto_dir": page_alto,
         "page_json_dir": page_json,
+        "page_text_dir": page_text,
         "stats_scan_dir": stats_scan_dir,
         "paradata_dir": paradata_dir,
         "document_json_dir": document_json_dir,
@@ -210,9 +234,8 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         "skip_split": skip["split"],
         "start_from": getattr(args, "start_from", None),
         # Resolved output location per stage (used for the pre-flight existence check).
-        # "split" is the per-format page dir for both formats now that json
-        # also splits into pages (#31); None remains supported here for any
-        # future format with no split-stage concept at all.
+        # "split" is the per-format page dir for every format (#31); None
+        # remains supported here for a format with no split-stage concept.
         "outputs": {
             "split": page_dir,
             "stats": input_csv,
@@ -221,6 +244,21 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
             "aggregate": stats_dir,
         },
     }
+
+
+def input_csv_mismatches(cli_input_csv: Optional[str], cfg: configparser.ConfigParser) -> List[str]:
+    """Warnings for each config INPUT_CSV that a --input-csv override does NOT reach."""
+    if not cli_input_csv:
+        return []
+    out = []
+    for section in ("EXTRACT", "CLASSIFY"):
+        configured = (_cfg_get(cfg, section, "INPUT_CSV", "") or "").strip()
+        if configured and os.path.abspath(configured) != os.path.abspath(cli_input_csv.strip()):
+            out.append(
+                f"--input-csv {cli_input_csv} is written by the stats stage, but [{section}].INPUT_CSV "
+                f"is {configured} and that is what the {section.lower()} stage reads — set it in the config too."
+            )
+    return out
 
 
 def _snapshot(paradata_dir: Path) -> set:
@@ -270,6 +308,16 @@ def _single_input_doc_id(input_dir: str, input_format: str) -> Optional[str]:
     for that document is orphaned. Sharing the hub's single derivation is the coupling
     that is actually safe, because it is the contract both stages are held to.
     """
+    if input_format == "text":
+        # (#31) Any file text_split.py would read — the same candidate filter
+        # (regular, non-hidden, non-lock files), so both derive the same doc_id.
+        from text_split import iter_candidate_files
+
+        try:
+            matches = [path for _name, path in iter_candidate_files(input_dir)]
+        except OSError:
+            return None
+        return canonical_doc_id(matches[0]) if len(matches) == 1 else None
     pattern = "*.xml" if input_format == "alto" else "*.json"
     matches = sorted(glob.glob(str(Path(input_dir) / pattern)))
     if len(matches) != 1:
@@ -321,12 +369,13 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
     stats_script = INPUT_FORMATS[fmt]["stats_script"]
 
     if split_script:
-        page_out_dir = settings["page_alto_dir"] if fmt == "alto" else settings["page_json_dir"]
+        page_out_dir = _page_dir_for(settings, fmt)
         split_stage = {
             "key": "split",
             "name": f"1. {split_script} ({fmt} -> {page_out_dir})",
             "cmd": [py, split_script, settings["input_dir"], page_out_dir],
-            "logged": False,
+            # text_split.py always emits paradata; page_split's tag is left as it was.
+            "logged": fmt == "text",
         }
     else:
         split_stage = {
@@ -386,10 +435,16 @@ def main() -> int:
     ap.add_argument(
         "--input-dir",
         default=None,
-        help="Override [PIPELINE].INPUT_DIR (document-level ALTO XMLs, or JSON files for --method json-keys).",
+        help="Override [PIPELINE].INPUT_DIR (document-level ALTO XMLs, JSON files for --method json-keys, or "
+        "any text-bearing files — PDF, DOCX, TXT, ... — for --method text-lines).",
     )
     ap.add_argument("--page-alto-dir", default=None, help="Override [PIPELINE].PAGE_ALTO_DIR (per-page ALTO dir).")
     ap.add_argument("--page-json-dir", default=None, help="Override [PIPELINE].PAGE_JSON_DIR (per-page JSON dir, #31).")
+    ap.add_argument(
+        "--page-text-dir",
+        default=None,
+        help="Override [PIPELINE].PAGE_TEXT_DIR (per-page text dir written by text_split.py, --method text-lines, #31).",
+    )
     ap.add_argument("--input-csv", default=None, help="Override [EXTRACT].INPUT_CSV (page-stats CSV).")
     ap.add_argument("--paradata-dir", default=None, help="Override [PIPELINE].PARADATA_DIR.")
     ap.add_argument(
@@ -496,7 +551,15 @@ def main() -> int:
         f"input_csv={settings['input_csv']} "
         f"text_dir={settings['text_dir']} paradata_dir={settings['paradata_dir']} "
         f"document_json_dir={settings['document_json_dir']}"
+        + (f" page_text_dir={settings['page_text_dir']}" if settings["input_format"] == "text" else "")
     )
+
+    # (#31) --input-csv only redirects the stats stage's `-o`: the extract scripts and
+    # classify_TEXT read [EXTRACT].INPUT_CSV / [CLASSIFY].INPUT_CSV from the config file
+    # themselves (run_pipeline passes them no arguments). Say so when the two disagree —
+    # otherwise the later stages silently process whatever CSV the config names.
+    for warning in input_csv_mismatches(args.input_csv, cfg):
+        print(f"  ! WARNING: {warning}", file=sys.stderr)
 
     # Pre-flight: a skipped stage's output must already exist for downstream stages.
     # A None output (e.g. "split" for formats with no split stage) has nothing

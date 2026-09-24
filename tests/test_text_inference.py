@@ -115,6 +115,47 @@ def test_process_json_extracts_target_keys_only(tmp_path, monkeypatch):
     assert [c["text"] for c in result["cleaned_lines"]] == ["Hello", "World"]
 
 
+def test_process_document_keeps_pages_and_restarts_line_numbers(tmp_path, monkeypatch):
+    """(#31) Any other text-bearing upload: pages kept, blank lines dropped, line_num per page."""
+    _patched_ppl(monkeypatch)
+    m = _manager_with_mocked_ft()
+
+    txt_path = tmp_path / "doc.md"
+    txt_path.write_text("# First page\n\nSecond line\n\fOther page\n", encoding="utf-8")
+
+    result = m.process_document(str(txt_path))
+
+    assert result["type"] == "document"
+    assert result["format"] == "md"
+    assert result["origin"] == "ocr:generic"
+    assert [(c["page"], c["line_num"], c["text"]) for c in result["cleaned_lines"]] == [
+        ("1", 1, "First page"),
+        ("1", 2, "Second line"),
+        ("2", 1, "Other page"),
+    ]
+    assert [p["lines"] for p in result["pages"]] == [2, 1]
+
+
+def test_process_document_batches_perplexity_calls(tmp_path, monkeypatch):
+    """(#31) A long document must not become one perplexity batch."""
+    import service.text_inference as ti
+
+    calls = []
+
+    def _fake_ppl(texts, *_a, **_k):
+        calls.append(len(texts))
+        return [50.0] * len(texts)
+
+    monkeypatch.setattr(ti, "calculate_perplexity_batch", _fake_ppl)
+    m = _manager_with_mocked_ft()
+    (tmp_path / "long.txt").write_text("\n".join(f"line {i}" for i in range(300)), encoding="utf-8")
+
+    result = m.process_document(str(tmp_path / "long.txt"))
+
+    assert len(result["cleaned_lines"]) == 300
+    assert max(calls) <= ti.DOCUMENT_BATCH_LINES
+
+
 def test_process_alto_reorders_and_dehyphenates_across_lines(tmp_path, monkeypatch):
     """layout_model=None (the class default) forces the document-order
     fallback deterministically, regardless of whether v3.helpers happens to be

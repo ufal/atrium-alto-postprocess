@@ -50,6 +50,15 @@ except ImportError:
 from classify_TEXT import score_line  # noqa: E402
 from extract_JSON_2_TXT import TARGET_KEYS, _yield_json_text_by_keys  # noqa: E402
 from service.utils import normalize_boxes, parse_alto_xml_lines, post_process_text  # noqa: E402
+
+# (#31) The text-lines readers (PDF, DOCX, ODT, XLSX, PPTX, EPUB, RTF, HTML/hOCR, PAGE
+# XML, TEI, CSV, Markdown, ...). Stdlib + lxml at import; pypdfium2/charset-normalizer
+# load lazily and only for the uploads that need them.
+from text_formats import (  # noqa: E402
+    default_source_origin,
+    read_document_isolated,
+    shape_lines,
+)
 from text_util import (  # noqa: E402
     _lang_base,
     calculate_perplexity_batch,
@@ -68,6 +77,11 @@ FASTTEXT_MODEL_PATH = MODEL_DIR / "lid.176.bin"
 # the service otherwise has no dependency on setup/config.txt.
 LR_CHUNK_SIZE = int(os.getenv("LR_CHUNK_SIZE", 350))
 LR_MIN_CHUNK_SIZE = int(os.getenv("LR_MIN_CHUNK_SIZE", 50))
+
+# (#31) Lines per perplexity forward pass for document uploads: calculate_perplexity_batch
+# pads one batch to its longest line, so a 500-page PDF must not be one batch. Same as
+# the batch pipeline's [CLASSIFY].BATCH_SIZE default.
+DOCUMENT_BATCH_LINES = 128
 
 
 class TextModelManager:
@@ -161,6 +175,47 @@ class TextModelManager:
         with open(path, "r", encoding="utf-8") as f:
             lines = [ln.strip() for ln in f if ln.strip()]
         return {"type": "plain_text", "cleaned_lines": self._classify_lines(lines)}
+
+    def process_document(self, path: str, kind: Optional[str] = None) -> Dict[str, Any]:
+        """Classify any other text-bearing upload (#31): PDF, DOCX, ODT, XLSX, PPTX, ...
+
+        Reads the file with the same text_formats readers and the same line shaping
+        (shape_lines: blank lines dropped, long lines wrapped) as the text-lines batch
+        method, so one file yields the same lines through either path. Pages are kept:
+        every entry carries `page` (1-based index, the batch path's page id) and
+        `page_label` (the source's own label), and `line_num` restarts per page like
+        DOC_LINE_CATEG's. Raises text_formats.IngestError for unreadable input.
+        """
+        doc = read_document_isolated(path, kind=kind)
+        cleaned: List[Dict[str, Any]] = []
+        pages: List[Dict[str, Any]] = []
+        for n, page in enumerate(doc.pages, 1):
+            lines = shape_lines(page.lines)
+            entries: List[Dict[str, Any]] = []
+            for start in range(0, len(lines), DOCUMENT_BATCH_LINES):
+                entries.extend(self._classify_lines(lines[start : start + DOCUMENT_BATCH_LINES]))
+            for line_num, entry in enumerate(entries, start=1):
+                entry["line_num"] = line_num
+                entry["page"] = str(n)
+                entry["page_label"] = page.label
+            cleaned.extend(entries)
+            pages.append(
+                {
+                    "page": str(n),
+                    "page_label": page.label,
+                    "lines": len(entries),
+                    "text_layer": page.text_layer,
+                    "needs_ocr_reason": page.needs_ocr_reason,
+                }
+            )
+        return {
+            "type": "document",
+            "format": doc.kind,
+            "media_type": doc.media_type,
+            "origin": default_source_origin(doc),
+            "pages": pages,
+            "cleaned_lines": cleaned,
+        }
 
     def process_json(self, path: str) -> Dict[str, Any]:
         """Classify a generic JSON OCR upload.

@@ -1,0 +1,45 @@
+{
+  "apiVersion": "2024-11-30",
+  "analyzeResult": {
+    "modelId": "prebuilt-read",
+    "content": "HRADIŠTĚ U HORNÍ MEZÍ\nZpráva o výzkumu 2024\nSonda II: val, vnitřní líc\nNálezy uloženy v depozitáři.",
+    "pages": [
+      {
+        "pageNumber": 1,
+        "width": 8.5,
+        "height": 11,
+        "unit": "inch",
+        "lines": [
+          {
+            "content": "HRADIŠTĚ U HORNÍ MEZÍ"
+          },
+          {
+            "content": "Zpráva o výzkumu 2024"
+          }
+        ],
+        "words": [
+          {
+            "content": "HRADIŠTĚ"
+          },
+          {
+            "content": "U"
+          }
+        ]
+      },
+      {
+        "pageNumber": 2,
+        "width": 8.5,
+        "height": 11,
+        "unit": "inch",
+        "lines": [
+          {
+            "content": "Sonda II: val, vnitřní líc"
+          },
+          {
+            "content": "Nálezy uloženy v depozitáři."
+          }
+        ]
+      }
+    ]
+  }
+}

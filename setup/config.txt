@@ -13,6 +13,13 @@ JSON_DIR =
 # Empty = use the per-format default (ABBYY-ALTO for ALTO XML input, ocr:generic for
 # generic JSON OCR input). Set it when the engine is known, e.g. `ocr:pero`.
 # Overridable per-run via --source-origin or the DOCUMENT_SOURCE_ORIGIN env var.
+# (#31) text_split.py (--method text-lines) records a truthful per-format default
+# when this is empty: ocr:page-xml / ocr:hocr / ABBYY-ALTO / ocr:pdf-text-layer (a PDF
+# whose text is an invisible OCR layer) / ocr:generic (TXT, MD, CSV, JSON, TEI, XML)
+# for OCR output, and digital-born-<kind> for DOCX, ODT, XLSX, PPTX, EPUB, RTF, HTML
+# and visible-text PDF. A digital-born record belongs to llm-enrich's digital-convert:
+# this repo then writes only `source` into it (document_hook guard); CSV outputs are
+# unaffected. A value set HERE overrides that default for every text-lines input too.
 SOURCE_ORIGIN =
 
 [EXTRACT]
@@ -38,6 +45,11 @@ WORKERS_MAX_JSON   = 16
 # source page for a document into a single pages[] row. Overridable per-run via
 # the --force-single-page CLI flag, which takes precedence over this value.
 FORCE_SINGLE_PAGE_JSON = false
+# (#31) text-lines method (extract_TEXT_2_TXT.py): classify-ready page text, and the
+# per-document line tables (file,page_num,line_num,text,page_label) — keep the line
+# tables OUT of [CLASSIFY].OUTPUT_LINES_LOG (the script refuses to write there).
+OUTPUT_TXT_TEXT    = ./data_samples/PAGE_TXT_TEXT
+OUTPUT_LINES_TEXT  = ./data_samples/DOC_LINES_TEXT
 
 [CLASSIFY]
 INPUT_CSV = data_samples/test_alto_stats.csv
@@ -466,6 +478,48 @@ PPL_GARBAGE_ABSOLUTE        = 30000.0
 # P1 minimum ghost-token share for the broadened per-line inverted-scan route.
 GHOST_HITS_INVERTED_MIN     = 1
 
+[TEXT_INGEST]
+# (#31) Input reading for --method text-lines (text_split.py, extract_TEXT_2_TXT.py)
+# and for /process uploads that are not ALTO/TXT/JSON. docs/text_inputs.md has the
+# per-format page/line rules and the reason codes these limits produce.
+#
+# Hard caps — a file over any of them is refused (reason `too_large` or
+# `zip_limits_exceeded`) and the run continues with the next file.
+MAX_FILE_MB        = 256
+# ZIP containers (DOCX/XLSX/PPTX/ODF/EPUB): declared sizes are checked BEFORE reading
+# anything, so a zip bomb costs nothing. RATIO applies to members over 1 MiB.
+ZIP_MAX_MEMBERS    = 10000
+ZIP_MAX_TOTAL_MB   = 1024
+ZIP_MAX_MEMBER_MB  = 256
+ZIP_MAX_RATIO      = 200
+MAX_PAGES          = 20000
+# A block (sheet, JSON child, form-feed section) longer than this is continued on
+# extra pages; a real page (PDF, ALTO, PAGE XML, hOCR) longer than this is refused.
+MAX_LINES_PER_PAGE = 100000
+# PDFs are read in a child process; a hung or crashed PDF costs that file only.
+READER_TIMEOUT_S   = 300
+# Lines longer than this are wrapped at a word boundary before categorization (the
+# perplexity batch pads to its longest line). 0 = never wrap.
+MAX_LINE_CHARS     = 1000
+# Blank lines become `Empty` rows in classify_TEXT; by default they are dropped.
+KEEP_BLANK_LINES   = false
+# Tried in order (and offered to charset-normalizer) for plain text that is not
+# UTF-8 and has no BOM. cp1250 first: this archive's legacy Czech files.
+FALLBACK_ENCODINGS = cp1250, iso8859_2, cp1252
+# DOCX/ODT pagination: auto = explicit page/section breaks plus the page breaks
+# Word/LibreOffice rendered when the file was last saved (lastRenderedPageBreak,
+# soft-page-break); explicit = only breaks the author inserted; none = one page.
+PAGE_BREAKS        = auto
+# PDF per-page text-layer classes (pages_report.csv, text_layer): fewer than
+# MIN_TEXT_CHARS characters = no text layer; more than GARBLE_THRESHOLD of U+FFFD/
+# control/private-use characters = garbled; at least OCR_LAYER_MIN_RATIO of the text
+# objects invisible (render mode 3) = an OCR layer (origin ocr:pdf-text-layer).
+PDF_MIN_TEXT_CHARS      = 3
+PDF_GARBLE_THRESHOLD    = 0.15
+PDF_OCR_LAYER_MIN_RATIO = 0.5
+# Exit status 1 from text_split.py when any file failed (CLI: --strict).
+STRICT             = false
+
 [PIPELINE]
 METHOD        = layoutreader
 INPUT_DIR     = data_samples/ALTO
@@ -473,6 +527,10 @@ PAGE_ALTO_DIR = data_samples/PAGE_ALTO
 # (#31) Per-page output dir for generic JSON input (--method json-keys),
 # parallel to PAGE_ALTO_DIR.
 PAGE_JSON_DIR = data_samples/PAGE_JSON
+# (#31) Per-page text dir for any other text-bearing input (--method text-lines):
+# text_split.py writes <doc_id>/<doc_id>-<n>.txt plus ingest_report.csv and
+# pages_report.csv here.
+PAGE_TEXT_DIR = data_samples/PAGE_TEXT
 PARADATA_DIR  = paradata
 # Per-stage skip flags (#6): skip a stage whose outputs already exist. CLI
 # --skip-<stage> / --start-from override these. A skipped stage's outputs must
