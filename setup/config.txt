@@ -1,5 +1,5 @@
 [DOCUMENT]
-# atrium-project#13 (paradata pair): directory of <doc_id>.document.json records,
+# atrium-llm-enrich#13 (document-JSON contract): directory of <doc_id>.document.json records,
 # shared across every stage below. Empty = disabled (default); every stage then
 # behaves exactly as it did before this section existed. Overridable per-run via
 # the DOCUMENT_JSON_DIR env var (see document_hook.resolve_document_json_dir).

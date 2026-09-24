@@ -319,6 +319,48 @@ def test_tei_pages_at_pb_lines_at_lb_header_skipped(tmp_path):
     assert _lines(_read(tmp_path, "t.xml", xml)) == [["First", "second line"], ["Page two"]]
 
 
+def test_teitok_pages_keep_their_labels_and_empty_pages(tmp_path):
+    """Every <pb> is a page (a blank one too), labelled with pb@n -- the pages
+    atrium-nlp-enrich's TEITOK readers count, so a table made from a TEITOK file lines up with
+    its layout. Page labels used to be renumbered and a blank page dropped."""
+    xml = (
+        '<TEI><text><body><pb n="I"/><p>Titul</p><pb n="II"/><pb n="1"/><p>Text</p>'
+        "<pb/><p>Konec</p></body></text></TEI>"
+    )
+    doc = _read(tmp_path, "t.teitok.xml", xml)
+    assert [(p.label, p.lines) for p in doc.pages] == [
+        ("I", ["Titul"]),
+        ("II", []),
+        ("1", ["Text"]),
+        ("4", ["Konec"]),
+    ]
+
+
+def test_tokenized_teitok_lines_are_its_lb_lines(tmp_path):
+    """nlp-enrich's format 2: sentences inline, <lb/> for physical lines, a sentence running
+    over a page break with its <pb/> inside. <s> is not a line there; <lb/> and <pb/> are."""
+    xml = (
+        '<TEI xmlnsoff="http://www.tei-c.org/ns/1.0"><text><body><pb n="1" id="pb-1"/>'
+        '<div type="TextBlock" id="b-1.1"><s id="s-1" text="Jedna. Dvě tři">'
+        '<lb id="lb-1.1"/><tok id="w-1" join="right">Jedna</tok><tok id="w-2">.</tok></s> '
+        '<s id="s-2"><tok id="w-3">Dvě</tok>\n<lb id="lb-1.2"/><tok id="w-4">tři</tok>\n'
+        '<pb n="2" id="pb-2"/><lb id="lb-2.1"/><name id="n-1" type="LOC"><tok id="w-5">Praha</tok></name>'
+        "</s></div></body></text></TEI>"
+    )
+    doc = _read(tmp_path, "CTX.teitok.xml", xml)
+    assert [(p.label, p.lines) for p in doc.pages] == [
+        ("1", ["Jedna. Dvě", "tři"]),
+        ("2", ["Praha"]),
+    ]
+
+
+def test_legacy_teitok_name_close_quirk_is_repaired_not_recovered(tmp_path):
+    xml = '<TEI><text><body><pb n="1"/><p>V <name type="LOC">Praze</n> a dál</p></body></text></TEI>'
+    doc = _read(tmp_path, "old.teitok.xml", xml)
+    assert doc.pages[0].lines == ["V Praze a dál"]
+    assert "name_close_repaired" in doc.notes and "xml_recovered" not in doc.notes
+
+
 def test_generic_xml_blocks_and_mixed_content(tmp_path):
     xml = "<records><record><title>R1</title><body>Body <i>one</i> text</body></record><record><title>R2</title></record></records>"
     doc = _read(tmp_path, "g.xml", xml)

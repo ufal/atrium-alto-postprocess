@@ -1,5 +1,5 @@
 # 📓 atrium-alto-postprocess — agent_dev_logs/DEVLOG.md (timeline index)
-> _OCR/ALTO post-processing + line categorization. 7 open issues (#2, #3, #4, #23, #30, #31, #37); #5/#6 closed. **v1.5.1-beta** released 2026-09-22 at `09c9640`; `master` is at `3b02959` and `test` at `68fcbcb` (the same tree plus an issue-log refresh), carrying the post-tag #30 work as `5b27900` (docs, D40, the tie-break, D43, D44), `0c30517` (the word lists) and `3b02959` (D45, the grid guard restored). Next tag needs the version bump in `CITATION.cff` + `setup/para_config.txt`._
+> _OCR/ALTO post-processing + line categorization. 7 open issues (#2, #3, #4, #23, #30, #31, #37); #5/#6 closed. **v1.5.1-beta** released 2026-09-22 at `09c9640`; `master` is at `3b02959` and `test` at `68fcbcb` (the same tree plus an issue-log refresh), carrying the post-tag #30 work as `5b27900` (docs, D40, the tie-break, D43, D44), `0c30517` (the word lists) and `3b02959` (D45, the grid guard restored). Next tag needs the version bump in `CITATION.cff` + `setup/para_config.txt`. Since 2026-09-24 `test` is at `103e30a` (#31's `--method text-lines`, unreleased), then `4378c9f` (issue exports). The 2026-09-24 TEITOK follow-ups are delivered as files and not yet on `test`._
 > _Per-issue detail: `digests/{id}.digest.md` · `plans/{id}.plan.md` · `issues/` exports (source of truth). Cross-repo/hub history lives in `ufal/atrium-project/agent_dev_logs/DEVLOG.md` (deduplicated out of this file)._
 
 ## 2026-03-13
@@ -1001,3 +1001,21 @@ K4TEL re-scoped the issue:
   * hub docs that call alto's input ALTO-only;
   * llm-enrich V-1;
   * the stale llm-enrich "program name" TODO.
+
+## 2026-09-24
+
+* **#31 on `test`.** `103e30a` "edits issue #31 - non-alto input formats added" landed the `--method text-lines` work
+  delivered on 09-23 (the "not committed or pushed" note above is historical). Not in a release yet.
+* **TEITOK round 4 (atrium-nlp-enrich umbrella plan, Stage 7) — audit, dev logs.** Checked this repo's TEI/TEITOK
+  reader against nlp-enrich's TEITOK format 2 (v0.21.0): `read_tei` renumbers pages (ignores `<pb n>`, drops empty
+  pages), ends a line at every `</s>`, and has no `</n>` repair or TEITOK fixture. nlp-enrich now depends on this repo's
+  `page_num` (its UDPipe chunks were being counted as pages), and with `FLEXICONV_ANNOTATE` a `DOC_LINE_CATEG` table
+  wins at its stage 1 while the layout comes from flexiconv. Seven code comments cite `atrium-project#13` where they
+  mean atrium-llm-enrich #13. #31 digest + plan refreshed ("not on test" and "nlp-enrich flexiconv path
+  non-functional" corrected; a TEITOK handoff section and follow-ups added).
+* **#31** — K4TEL posted the `text-lines` status on the issue (06:48).
+* **TEITOK follow-ups — implemented the same day (delivered as files, not yet on `test`).** `read_tei` keeps every
+  `<pb/>` as a page (blank ones too) labelled with `pb@n`, and in tokenized TEITOK takes lines from `<lb/>` rather
+  than `</s>`; `parse_xml_bytes` repairs the legacy `</n>` exactly (`name_close_repaired`); three new tests;
+  `docs/text_inputs.md`; the seven `atrium-project#13` comments now say `atrium-llm-enrich#13`. Suite **1588 passed**
+  (1585 before), 0 failed; `ruff` clean.

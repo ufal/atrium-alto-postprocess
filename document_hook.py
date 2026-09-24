@@ -1,6 +1,6 @@
 """
 document_hook.py — repo-local glue between this repo's stage scripts and the
-hub-canonical `atrium_document.py` paired-hook model (issue #13 / atrium-project#13).
+hub-canonical `atrium_document.py` paired-hook model (atrium-llm-enrich#13).
 
 Unlike `atrium_document.py`/`atrium_document.schema.json` themselves, this module is
 NOT hub-canonical and is not copied byte-identical across the tool repos (no

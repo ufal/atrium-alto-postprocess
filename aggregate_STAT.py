@@ -315,7 +315,7 @@ def main():
                         doc_out = output_dir / f"stats_{original_file.stem}.csv"
                         result.to_csv(doc_out, index=False, encoding="utf-8")
                         logger.log_success("csv")
-                        # (atrium-project#13) pages[] is field-owned here: quality_score/
+                        # (atrium-llm-enrich#13) pages[] is field-owned here: quality_score/
                         # quality_band only — page-classification's category/
                         # category_confidence and nlp-enrich's teitok_surface pass through
                         # untouched via merge_block.

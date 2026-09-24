@@ -1146,7 +1146,7 @@ def process_document(task):
             df = df[CSV_HEADER]  # guard: write columns in canonical order
             df.to_csv(out_path, index=False, encoding="utf-8")
 
-            # (atrium-project#13) lines[] is field-owned here: categ/quality_score/
+            # (atrium-llm-enrich#13) lines[] is field-owned here: categ/quality_score/
             # lang/text only — a co-contributor's fields on the same row (nlp-enrich's
             # lemma/upos/feats/teitok_ref/bbox) survive untouched via merge_block.
             document_hook.write_document_block(
@@ -1254,7 +1254,7 @@ def main():
     _ppl_component = "distilgpt2" if "distilgpt2" in MODEL_NAME.lower() else "qwen2.5_0.5b"
     logger.log_component(_ppl_component)
 
-    # (atrium-project#13) resolved once here — cheap primitives, safe to hand to
+    # (atrium-llm-enrich#13) resolved once here — cheap primitives, safe to hand to
     # every worker process; the ParadataLogger object itself is not passed down.
     _doc_cfg = configparser.ConfigParser()
     _doc_cfg.read(config_path)

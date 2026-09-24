@@ -722,6 +722,8 @@ def _zip_read(zf: zipfile.ZipFile, name: str) -> bytes:
 
 
 _ENTITY_DECL = re.compile(rb"<!ENTITY", re.IGNORECASE)
+# Older TEITOK exports (atrium-nlp-enrich's format 1) close <name> with </n>: not well-formed.
+_NAME_CLOSE = re.compile(rb"</n\s*>")
 _XML_DECL = re.compile(r"^\s*<\?xml[^>]*\?>", re.IGNORECASE)
 
 
@@ -757,7 +759,9 @@ def parse_xml_bytes(data: bytes, fallbacks: Sequence[str] = ReaderOptions.fallba
 
     Entity declarations fail closed. A parse error gets one retry after re-decoding
     through the decode chain, and a last one in recover mode (flagged
-    `xml_recovered`, since recovered text may be incomplete).
+    `xml_recovered`, since recovered text may be incomplete). Before recovering, a document
+    with `<name>` elements closed by `</n>` (the quirk of older TEITOK exports) is repaired
+    exactly instead (flagged `name_close_repaired`): recover mode would drop text.
     """
     etree = _etree()
     if _has_bom(data) or b"\x00" in data[:4096]:
@@ -773,6 +777,15 @@ def parse_xml_bytes(data: bytes, fallbacks: Sequence[str] = ReaderOptions.fallba
         return etree.fromstring(data, _xml_parser())
     except (etree.XMLSyntaxError, IngestError):
         pass
+    if b"<name" in data and _NAME_CLOSE.search(data):
+        try:
+            root = etree.fromstring(_NAME_CLOSE.sub(b"</name>", data), _xml_parser())
+        except etree.XMLSyntaxError:
+            pass
+        else:
+            if notes is not None:
+                notes.append("name_close_repaired")
+            return root
     try:
         root = etree.fromstring(data, _xml_parser(recover=True))
     except etree.XMLSyntaxError as exc:
@@ -1482,9 +1495,36 @@ def _flow_read(root, blocks, skip_names, line_break, page_break, collapse=True, 
 
 
 def read_tei(root, ctx: "_Ctx") -> List[TextPage]:
-    """TEI/TEITOK: pages at <pb/>, lines at <lb/> and block ends; header skipped."""
+    """TEI/TEITOK: pages at <pb/>, lines at <lb/> and block ends; header skipped.
+
+    Every `<pb/>` starts a page (text before the first one is page 1), empty pages
+    included, labelled with `pb@n` ("I", "7a"; the page's ordinal when it has none) -- the
+    pages atrium-nlp-enrich's TEITOK reader and layout reader count, so a table made from a
+    TEITOK file lines up with that file's layout. In a tokenized TEITOK document
+    (`<tok>` and `<lb/>`), `<s>` is a sentence, not a line: lines are the `<lb/>` ones, and a
+    sentence running over a line or page break (nlp-enrich puts `<lb/>`/`<pb/>` inside it)
+    is split there.
+    """
     text_el = next((e for e in root.iter("{*}text")), None)
-    return _flow_read(text_el if text_el is not None else root, _TEI_BLOCKS, _TEI_SKIP, {"lb"}, {"pb"})
+    scope = text_el if text_el is not None else root
+    names = {_local(e.tag) for e in scope.iter() if isinstance(e.tag, str)}
+    blocks = _TEI_BLOCKS - {"s"} if {"tok", "lb"} <= names else _TEI_BLOCKS
+    seen_pb = [False]
+
+    def on_pb(el, flow):
+        if _local(el.tag) != "pb":
+            return False
+        flow.line_break()
+        if seen_pb[0] or flow.pages[-1].lines or len(flow.pages) > 1:
+            flow.pages.append(TextPage([]))
+        seen_pb[0] = True
+        flow.pages[-1].label = (el.get("n") or "").strip()
+        return True
+
+    pages = _flow_read(scope, blocks, _TEI_SKIP, {"lb"}, {"pb"}, extra_start=on_pb)
+    for n, page in enumerate(pages, 1):
+        page.label = page.label or str(n)
+    return pages
 
 
 def read_generic_xml(root, ctx: "_Ctx") -> List[TextPage]:

@@ -187,7 +187,7 @@ def main() -> None:
             else:
                 _logger.log_skip(t[2], "alto-tools extraction failed")
 
-        # (atrium-project#13) pages[].ocr + content are field-/block-owned here;
+        # (atrium-llm-enrich#13) pages[].ocr + content are field-/block-owned here;
         # read the just-written .txt files back per document rather than keeping
         # text in memory across the process pool boundary.
         for doc_id, page_ids in document_hook.group_tasks_by_doc(tasks).items():

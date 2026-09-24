@@ -524,7 +524,7 @@ def main(argv=None):
                 _logger.log_success(fmt, count=page_count)  # pages produced
                 if page_count > 0:
                     _docs_ok += 1
-                    # (atrium-project#13) page_split is the first stage to see the
+                    # (atrium-llm-enrich#13) page_split is the first stage to see the
                     # original input, so it is the natural first writer of `source`
                     # — set_source() is itself a no-op if a baseline already has one.
                     #

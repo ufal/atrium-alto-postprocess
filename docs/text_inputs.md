@@ -21,45 +21,45 @@ order, when they arrive mixed with other files.
 
 The **content** decides. The extension is only used to choose between plain-text dialects:
 
-| Order | Test                                                                      | Result                                                  |
-|-------|---------------------------------------------------------------------------|---------------------------------------------------------|
-| 1     | empty file                                                                | refused `empty_file`                                    |
-| 2     | `%PDF-` in the first 1 KiB                                                | **pdf**                                                 |
-| 3     | OLE2 signature `D0 CF 11 E0`                                              | refused `legacy_office_unsupported` (.doc/.xls/.ppt)    |
-| 4     | ZIP signature → `mimetype` member (ODF/EPUB) or `_rels/.rels` main part (OOXML) | **odt/ods/odp/epub** or **docx/xlsx/pptx**; any other ZIP `archive_unsupported` |
-| 5     | PNG/JPEG/GIF/TIFF/WebP/JPEG 2000 signature                                | refused `image_needs_ocr`                               |
-| 6     | gzip/bzip2/xz/7z/rar/zstd signature                                       | refused `archive_unsupported`                           |
-| 7     | `{\rtf`                                                                   | **rtf**                                                 |
-| 8     | NUL/control-heavy bytes that are not UTF-16                               | refused `binary_content`                                |
-| 9     | starts with `<`: root element `alto` / `PcGts` / `TEI` / `html` (hOCR if `ocr_page`/`ocr_line` classes) / other | **alto / page-xml / tei / hocr / html / xml** |
-| 10    | `.jsonl`/`.ndjson` → **jsonl**; `.json` → **json**; other `{`/`[` files → json if it parses, jsonl if every record does | |
-| 11    | `.csv` → **csv**; `.tsv`/`.tab` → **tsv**; `.md`/`.markdown` → **md**; anything else → **txt** | |
+| Order | Test                                                                                                                    | Result                                                                          |
+|-------|-------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------|
+| 1     | empty file                                                                                                              | refused `empty_file`                                                            |
+| 2     | `%PDF-` in the first 1 KiB                                                                                              | **pdf**                                                                         |
+| 3     | OLE2 signature `D0 CF 11 E0`                                                                                            | refused `legacy_office_unsupported` (.doc/.xls/.ppt)                            |
+| 4     | ZIP signature → `mimetype` member (ODF/EPUB) or `_rels/.rels` main part (OOXML)                                         | **odt/ods/odp/epub** or **docx/xlsx/pptx**; any other ZIP `archive_unsupported` |
+| 5     | PNG/JPEG/GIF/TIFF/WebP/JPEG 2000 signature                                                                              | refused `image_needs_ocr`                                                       |
+| 6     | gzip/bzip2/xz/7z/rar/zstd signature                                                                                     | refused `archive_unsupported`                                                   |
+| 7     | `{\rtf`                                                                                                                 | **rtf**                                                                         |
+| 8     | NUL/control-heavy bytes that are not UTF-16                                                                             | refused `binary_content`                                                        |
+| 9     | starts with `<`: root element `alto` / `PcGts` / `TEI` / `html` (hOCR if `ocr_page`/`ocr_line` classes) / other         | **alto / page-xml / tei / hocr / html / xml**                                   |
+| 10    | `.jsonl`/`.ndjson` → **jsonl**; `.json` → **json**; other `{`/`[` files → json if it parses, jsonl if every record does |                                                                                 |
+| 11    | `.csv` → **csv**; `.tsv`/`.tab` → **tsv**; `.md`/`.markdown` → **md**; anything else → **txt**                          |                                                                                 |
 
 A mismatch between extension and content is recorded in the ingest report's `notes`, for example
 `extension .txt but content is pdf`, and the file is still read by its content.
 
 ## 2. What a page and a line are, per format
 
-| Kind                    | Page (block)                                                                 | Line                                                           | Library        |
-|-------------------------|------------------------------------------------------------------------------|----------------------------------------------------------------|----------------|
-| TXT                     | form-feed (`\f`) section; otherwise the whole file                           | physical line                                                  | stdlib         |
-| Markdown                | form-feed section                                                            | physical line, with front matter, code fences, comments, rules and link definitions dropped; heading/list/quote markers and inline markup stripped; table rows become tab-joined cells | stdlib |
-| CSV / TSV               | the file; or groups of a `page`/`page_num`/`page_number` column, in first-seen order | the `text`/`line`/`content`/`transcription`/`sentence`/`string` column; otherwise all non-empty cells joined by tab | stdlib `csv` |
-| JSON                    | page list (`pages`, …) or page-tagged list (`Page`, `pageNumber`, …), the same detection as json-keys; otherwise each top-level child object/list that holds text | string leaf under a text key (`content`, `text`, `line`, …); when none exist, every string containing a letter (noted `json_all_strings`) | stdlib |
-| JSON Lines              | record                                                                       | as JSON                                                        | stdlib         |
-| ALTO v2/v3/v4           | `Page` (label `PHYSICAL_IMG_NR`)                                             | `TextLine`: `String@CONTENT` joined by spaces, `HYP` → `-`     | lxml           |
-| PAGE XML                | `Page` (label = image file stem)                                             | `TextLine` in `ReadingOrder` region order: first `TextEquiv/Unicode`, else its `Word`s | lxml |
-| hOCR                    | `ocr_page` (label from `ppageno`, 1-based)                                   | `ocr_line`, `ocrx_line`, `ocr_caption`, `ocr_header`, `ocr_textfloat` | lxml.html |
-| HTML / XHTML            | CSS `page-break-before/after` (`break-before: page`); otherwise one page     | block element (`p`, `h1`–`h6`, `li`, `td`, …) or `<br>`; `script`/`style`/`head` dropped | lxml.html |
-| TEI / TEITOK            | `<pb/>`                                                                      | `<lb/>` and block ends (`p`, `head`, `l`, `item`, `cell`, `ab`, …); `teiHeader` skipped | lxml |
-| other XML               | root child elements, when two or more hold text                              | an element with its own (mixed) text; pure containers are descended into | lxml |
-| PDF                     | PDF page (label = the PDF's page label, else its number)                     | text-layer line, in PDFium's order                             | **pypdfium2**  |
-| DOCX                    | explicit page break, `pageBreakBefore`, non-continuous section break; in `auto` mode also Word's rendered breaks | paragraph (`w:br`/`w:cr` split it); table cells row by row; text boxes after their anchor paragraph | zipfile + lxml |
-| ODT                     | `fo:break-before/after="page"` paragraph styles; in `auto` mode also `text:soft-page-break` | paragraph / heading (`text:line-break` splits it); table cells | zipfile + lxml |
-| XLSX / ODS              | sheet, in workbook order (label = sheet name)                                | row: its text cells joined by tab; numbers, dates, booleans dropped | zipfile + lxml |
-| PPTX / ODP              | slide, in presentation order                                                 | paragraph                                                      | zipfile + lxml |
-| EPUB                    | spine chapter (label = file stem)                                            | as HTML                                                        | zipfile + lxml |
-| RTF                     | `\page`                                                                      | `\par`, `\line`, `\row`; `\cell` → tab; header/footer/footnote/picture/field-instruction groups skipped; `\'xx` decoded with `\ansicpgN` | stdlib |
+| Kind          | Page (block)                                                                                                                                                      | Line                                                                                                                                                                                   | Library        |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|
+| TXT           | form-feed (`\f`) section; otherwise the whole file                                                                                                                | physical line                                                                                                                                                                          | stdlib         |
+| Markdown      | form-feed section                                                                                                                                                 | physical line, with front matter, code fences, comments, rules and link definitions dropped; heading/list/quote markers and inline markup stripped; table rows become tab-joined cells | stdlib         |
+| CSV / TSV     | the file; or groups of a `page`/`page_num`/`page_number` column, in first-seen order                                                                              | the `text`/`line`/`content`/`transcription`/`sentence`/`string` column; otherwise all non-empty cells joined by tab                                                                    | stdlib `csv`   |
+| JSON          | page list (`pages`, …) or page-tagged list (`Page`, `pageNumber`, …), the same detection as json-keys; otherwise each top-level child object/list that holds text | string leaf under a text key (`content`, `text`, `line`, …); when none exist, every string containing a letter (noted `json_all_strings`)                                              | stdlib         |
+| JSON Lines    | record                                                                                                                                                            | as JSON                                                                                                                                                                                | stdlib         |
+| ALTO v2/v3/v4 | `Page` (label `PHYSICAL_IMG_NR`)                                                                                                                                  | `TextLine`: `String@CONTENT` joined by spaces, `HYP` → `-`                                                                                                                             | lxml           |
+| PAGE XML      | `Page` (label = image file stem)                                                                                                                                  | `TextLine` in `ReadingOrder` region order: first `TextEquiv/Unicode`, else its `Word`s                                                                                                 | lxml           |
+| hOCR          | `ocr_page` (label from `ppageno`, 1-based)                                                                                                                        | `ocr_line`, `ocrx_line`, `ocr_caption`, `ocr_header`, `ocr_textfloat`                                                                                                                  | lxml.html      |
+| HTML / XHTML  | CSS `page-break-before/after` (`break-before: page`); otherwise one page                                                                                          | block element (`p`, `h1`–`h6`, `li`, `td`, …) or `<br>`; `script`/`style`/`head` dropped                                                                                               | lxml.html      |
+| TEI / TEITOK  | `<pb/>`, every one, a blank page too (label `pb@n`, else its number)                                                                                              | `<lb/>` and block ends (`p`, `head`, `l`, `item`, `cell`, `ab`, …); `<s>` too, except in tokenized TEITOK (`<tok>` + `<lb/>`), where a sentence is not a line; `teiHeader` skipped     | lxml           |
+| other XML     | root child elements, when two or more hold text                                                                                                                   | an element with its own (mixed) text; pure containers are descended into                                                                                                               | lxml           |
+| PDF           | PDF page (label = the PDF's page label, else its number)                                                                                                          | text-layer line, in PDFium's order                                                                                                                                                     | **pypdfium2**  |
+| DOCX          | explicit page break, `pageBreakBefore`, non-continuous section break; in `auto` mode also Word's rendered breaks                                                  | paragraph (`w:br`/`w:cr` split it); table cells row by row; text boxes after their anchor paragraph                                                                                    | zipfile + lxml |
+| ODT           | `fo:break-before/after="page"` paragraph styles; in `auto` mode also `text:soft-page-break`                                                                       | paragraph / heading (`text:line-break` splits it); table cells                                                                                                                         | zipfile + lxml |
+| XLSX / ODS    | sheet, in workbook order (label = sheet name)                                                                                                                     | row: its text cells joined by tab; numbers, dates, booleans dropped                                                                                                                    | zipfile + lxml |
+| PPTX / ODP    | slide, in presentation order                                                                                                                                      | paragraph                                                                                                                                                                              | zipfile + lxml |
+| EPUB          | spine chapter (label = file stem)                                                                                                                                 | as HTML                                                                                                                                                                                | zipfile + lxml |
+| RTF           | `\page`                                                                                                                                                           | `\par`, `\line`, `\row`; `\cell` → tab; header/footer/footnote/picture/field-instruction groups skipped; `\'xx` decoded with `\ansicpgN`                                               | stdlib         |
 
 Pages are written as `<doc>-1 … <doc>-N` in reading order. The original label (sheet name, PDF
 page label, JSON page number, `record[2]` …) is kept in `pages_report.csv` and in the line table's
@@ -119,20 +119,21 @@ Each file is processed on its own, and a failure costs only that file. It gets a
 `ingest_report.csv` with its reason code, a `skipped_files_detail` entry in paradata, and the run
 continues. `--strict` (or `STRICT = true`) makes `text_split.py` exit 1 if any file failed.
 
-| `[TEXT_INGEST]` key       | Default | Guards against                                                                 |
-|---------------------------|---------|--------------------------------------------------------------------------------|
-| `MAX_FILE_MB`             | 256     | oversized files (`too_large`)                                                  |
-| `ZIP_MAX_MEMBERS`         | 10000   | ZIP containers with absurd member counts (`zip_limits_exceeded`)               |
-| `ZIP_MAX_TOTAL_MB`        | 1024    | zip bombs: declared unpacked size, checked **before** anything is read          |
-| `ZIP_MAX_MEMBER_MB`       | 256     | one huge member                                                                |
-| `ZIP_MAX_RATIO`           | 200     | compression ratio of members over 1 MiB                                        |
-| `MAX_PAGES`               | 20000   | page-count bombs (`too_large`)                                                 |
-| `MAX_LINES_PER_PAGE`      | 100000  | a real page over it is refused; a block over it continues on pages labelled `<label>+1`, `+2`, … |
-| `READER_TIMEOUT_S`        | 300     | a PDF that hangs PDFium. PDFs are read in a **separate process**, so a crash or hang costs one file (`timeout`, `reader_crashed`) |
+| `[TEXT_INGEST]` key  | Default | Guards against                                                                                                                    |
+|----------------------|---------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `MAX_FILE_MB`        | 256     | oversized files (`too_large`)                                                                                                     |
+| `ZIP_MAX_MEMBERS`    | 10000   | ZIP containers with absurd member counts (`zip_limits_exceeded`)                                                                  |
+| `ZIP_MAX_TOTAL_MB`   | 1024    | zip bombs: declared unpacked size, checked **before** anything is read                                                            |
+| `ZIP_MAX_MEMBER_MB`  | 256     | one huge member                                                                                                                   |
+| `ZIP_MAX_RATIO`      | 200     | compression ratio of members over 1 MiB                                                                                           |
+| `MAX_PAGES`          | 20000   | page-count bombs (`too_large`)                                                                                                    |
+| `MAX_LINES_PER_PAGE` | 100000  | a real page over it is refused; a block over it continues on pages labelled `<label>+1`, `+2`, …                                  |
+| `READER_TIMEOUT_S`   | 300     | a PDF that hangs PDFium. PDFs are read in a **separate process**, so a crash or hang costs one file (`timeout`, `reader_crashed`) |
 
 XML is parsed without entity resolution, DTD loading or network access, and with libxml2's size and
 depth limits on. A document that declares entities is refused (`xml_entity_declaration`). Broken XML
-gets one retry in recovery mode, noted `xml_recovered`. Encrypted inputs are refused (`encrypted`):
+gets one retry in recovery mode, noted `xml_recovered` — except the `<name>…</n>` quirk of older
+TEITOK exports, which is repaired exactly (noted `name_close_repaired`) because recovery may drop text. Encrypted inputs are refused (`encrypted`):
 password PDFs, ZIP members with the encryption flag, ODF with `encryption-data`, and DRM-protected
 EPUB chapters (EPUB font obfuscation alone is fine).
 
@@ -147,36 +148,36 @@ earlier version.
 
 ### Reason codes
 
-| Code                        | Meaning                                                              |
-|-----------------------------|----------------------------------------------------------------------|
-| `empty_file`                | zero bytes                                                           |
-| `too_large`                 | a size/page/line cap was exceeded                                    |
-| `binary_content`            | not text and not a supported container                               |
-| `legacy_office_unsupported` | OLE2 `.doc/.xls/.ppt`; save it as DOCX/XLSX/PPTX                     |
-| `image_needs_ocr`           | an image; run OCR first and feed its output (ALTO, PAGE XML, hOCR, TXT) |
-| `archive_unsupported`       | a ZIP/archive that is not DOCX/XLSX/PPTX/ODF/EPUB                    |
-| `zip_limits_exceeded`       | ZIP caps above                                                       |
-| `xml_entity_declaration`    | XML with `<!ENTITY>`                                                 |
-| `malformed`                 | broken for its format (bad JSON, unparseable XML/CSV, too deeply nested) |
-| `corrupt`                   | the container could not be opened                                    |
-| `encrypted`                 | password- or DRM-protected                                           |
-| `timeout` / `reader_crashed`| the isolated PDF reader hung or died                                 |
-| `dependency_missing`        | `pypdfium2` (PDF) or `lxml` not installed                            |
-| `decode_failed`             | no configured encoding decodes the text                              |
-| `no_text`                   | read fine, but no text lines. For a PDF: no text layer on any page, so run OCR first |
-| `doc_id_collision` / `doc_id_invalid` | see above                                                  |
-| `output_failed`             | writing the page files or the document record failed                 |
+| Code                                  | Meaning                                                                              |
+|---------------------------------------|--------------------------------------------------------------------------------------|
+| `empty_file`                          | zero bytes                                                                           |
+| `too_large`                           | a size/page/line cap was exceeded                                                    |
+| `binary_content`                      | not text and not a supported container                                               |
+| `legacy_office_unsupported`           | OLE2 `.doc/.xls/.ppt`; save it as DOCX/XLSX/PPTX                                     |
+| `image_needs_ocr`                     | an image; run OCR first and feed its output (ALTO, PAGE XML, hOCR, TXT)              |
+| `archive_unsupported`                 | a ZIP/archive that is not DOCX/XLSX/PPTX/ODF/EPUB                                    |
+| `zip_limits_exceeded`                 | ZIP caps above                                                                       |
+| `xml_entity_declaration`              | XML with `<!ENTITY>`                                                                 |
+| `malformed`                           | broken for its format (bad JSON, unparseable XML/CSV, too deeply nested)             |
+| `corrupt`                             | the container could not be opened                                                    |
+| `encrypted`                           | password- or DRM-protected                                                           |
+| `timeout` / `reader_crashed`          | the isolated PDF reader hung or died                                                 |
+| `dependency_missing`                  | `pypdfium2` (PDF) or `lxml` not installed                                            |
+| `decode_failed`                       | no configured encoding decodes the text                                              |
+| `no_text`                             | read fine, but no text lines. For a PDF: no text layer on any page, so run OCR first |
+| `doc_id_collision` / `doc_id_invalid` | see above                                                                            |
+| `output_failed`                       | writing the page files or the document record failed                                 |
 
 ## 5. PDF text layers
 
 `pages_report.csv` classifies every PDF page, using the thresholds of llm-enrich's `pdf_to_md`:
 
-| `text_layer` | Test                                                                                   | Meaning                                    |
-|--------------|----------------------------------------------------------------------------------------|--------------------------------------------|
-| `none`       | fewer than `PDF_MIN_TEXT_CHARS` (3) visible characters                                 | an image-only page: needs OCR              |
+| `text_layer` | Test                                                                                        | Meaning                                                       |
+|--------------|---------------------------------------------------------------------------------------------|---------------------------------------------------------------|
+| `none`       | fewer than `PDF_MIN_TEXT_CHARS` (3) visible characters                                      | an image-only page: needs OCR                                 |
 | `garbled`    | more than `PDF_GARBLE_THRESHOLD` (15%) U+FFFD / control / format / private-use / unassigned | a subset font without `/ToUnicode`: the layer does not decode |
-| `ocr`        | at least `PDF_OCR_LAYER_MIN_RATIO` (50%) of the text objects are invisible (render mode 3) | the classic OCR layer under a scanned image |
-| `digital`    | anything else                                                                          | born-digital text                          |
+| `ocr`        | at least `PDF_OCR_LAYER_MIN_RATIO` (50%) of the text objects are invisible (render mode 3)  | the classic OCR layer under a scanned image                   |
+| `digital`    | anything else                                                                               | born-digital text                                             |
 
 A garbled layer is still extracted, because its lines are exactly what the categorizer is meant to
 flag as `Trash`. A document whose text-bearing pages are mostly `ocr` gets `source.origin`
@@ -192,11 +193,11 @@ hOCR). llm-enrich records a DOCX as one page, and an invented count would confli
 The origin is **truthful per class** unless `--source-origin`, `DOCUMENT_SOURCE_ORIGIN` or
 `[DOCUMENT].SOURCE_ORIGIN` overrides it:
 
-| Class                      | Formats                                                              | Default origin                               | Positional blocks written by this repo |
-|----------------------------|----------------------------------------------------------------------|----------------------------------------------|----------------------------------------|
-| OCR output                 | ALTO, PAGE XML, hOCR, PDF with an OCR layer                          | `ABBYY-ALTO`, `ocr:page-xml`, `ocr:hocr`, `ocr:pdf-text-layer` | yes                                   |
-| text of unknown provenance | TXT, Markdown, CSV/TSV, JSON/JSONL, TEI, other XML                   | `ocr:generic` (as json-keys)                 | yes                                    |
-| born-digital               | DOCX, ODT/ODS/ODP, XLSX, PPTX, EPUB, RTF, plain HTML, visible-text PDF | `digital-born-<kind>`                      | **no**: `source` only                  |
+| Class                      | Formats                                                                | Default origin                                                 | Positional blocks written by this repo |
+|----------------------------|------------------------------------------------------------------------|----------------------------------------------------------------|----------------------------------------|
+| OCR output                 | ALTO, PAGE XML, hOCR, PDF with an OCR layer                            | `ABBYY-ALTO`, `ocr:page-xml`, `ocr:hocr`, `ocr:pdf-text-layer` | yes                                    |
+| text of unknown provenance | TXT, Markdown, CSV/TSV, JSON/JSONL, TEI, other XML                     | `ocr:generic` (as json-keys)                                   | yes                                    |
+| born-digital               | DOCX, ODT/ODS/ODP, XLSX, PPTX, EPUB, RTF, plain HTML, visible-text PDF | `digital-born-<kind>`                                          | **no**: `source` only                  |
 
 A `digital-born-*` origin authorises llm-enrich's **digital-convert** to originate the record's
 `pages`/`content`/`lines`/`tables` (`atrium_document` §1a), and the hub's digital end-to-end test
