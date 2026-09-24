@@ -24,8 +24,18 @@ Inputs for the other two methods (#31) — same fictional world, new ids so noth
   - CTX000000012.pdf — "scanned" PDF with an invisible OCR text layer (render mode 3)
   - CTX000000013.xlsx — two sheets = two pages; rows = lines, numbers dropped
   - CTX000000014.odt — a paragraph style with a page break before it
+  - CTX000000016.tsv — Tesseract TSV, 2 pages, words grouped into lines (OCR noise on both pages)
+  - CTX000000017.xml — ABBYY FineReader 10 XML, 2 pages, one character per `charParams`, a table block
+  - CTX000000018.xml — DjVuXML, two `OBJECT` pages of `LINE`/`WORD`s
+  - CTX000000019.srt — SubRip subtitles with `<i>` and `{\an8}` markup (dropped)
+  - CTX000000020.vtt — WebVTT with a header, a `NOTE` block and `<v Speaker>` voices
+  - CTX000000021.eml — a multipart e-mail (text + HTML alternative, Q-encoded Czech subject)
+  - CTX000000022.mbox — a mailbox of two messages (one page each), a `>From ` quoted body line
+  - CTX000000023.txt.gz — a gzip-compressed page transcript (read through)
+  - CTX000000024.zip — a Transkribus-style export: two PAGE XML pages plus METS and doc metadata, read as one
+    two-page document
 
-  The binary members (DOCX, PDF, XLSX, ODT) are generated, byte-for-byte reproducibly, by
+  The binary members (DOCX, PDF, XLSX, ODT, `.txt.gz`, `.zip`) are generated, byte-for-byte reproducibly, by
   `tests/text_format_fixtures.write_samples()`; the tests never read this directory. The
   text-lines outputs go to PAGE_TEXT/ (pages + ingest_report.csv/pages_report.csv), PAGE_TXT_TEXT/
   (classify-ready text) and DOC_LINES_TEXT/ (per-document line tables) — not committed.

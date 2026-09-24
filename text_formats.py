@@ -1278,12 +1278,14 @@ def _sniff_zip(path: str, limits: Limits) -> str:
             raise IngestError("archive_unsupported", f"OOXML package with unsupported main part {main!r}")
         if names & _OFFICE_MARKERS or {"content.xml", "META-INF/manifest.xml"} <= names:
             raise IngestError("archive_unsupported", "damaged office/EPUB package (its type marker is missing)")
-        classes = [bundle_member_class(i) for i in infos]
-        if "candidate" in classes:
+        kinds = {_bundle_member_kind(i) for i in infos}
+        if "candidate" in kinds:
             return "zip-bundle"
-        if any(i.filename.lower().endswith(tuple(_IMAGE_EXTENSIONS)) for i in infos):
+        if "image" in kinds and not kinds & {"unknown", "refused"}:
+            # Only images (besides metadata): scans. A package that merely carries a
+            # preview image next to its own data (Apple .pages) is not one.
             raise IngestError("image_needs_ocr", "a ZIP of page images — run OCR first, then feed its output")
-        if "refused" in classes:
+        if "refused" in kinds:
             raise IngestError(
                 "archive_unsupported",
                 "a ZIP of PDFs or nested containers — unpack it (PDFs are read in an isolated process, not inside "
@@ -1542,13 +1544,12 @@ _BUNDLE_NESTED_EXTS = frozenset(
 )  # fmt: skip
 
 
-def bundle_member_class(info: zipfile.ZipInfo) -> str:
-    """`candidate` (a page file), `ignored` (metadata, images, unknown types) or
-    `refused` (a PDF or a nested container: not read inside a bundle) — by name only."""
+def _bundle_member_kind(info: zipfile.ZipInfo) -> str:
+    """By name only: `dir`, `metadata`, `image`, `refused` (a PDF or a nested
+    container), `candidate` (a page file) or `unknown`."""
     if info.is_dir():
-        return "ignored"
-    path = info.filename
-    parts = [p for p in path.split("/") if p]
+        return "dir"
+    parts = [p for p in info.filename.split("/") if p]
     base = parts[-1] if parts else ""
     if (
         not base
@@ -1559,13 +1560,22 @@ def bundle_member_class(info: zipfile.ZipInfo) -> str:
         or base.lower() in _BUNDLE_METADATA_NAMES
         or _BUNDLE_METADATA_RE.match(base)
     ):
-        return "ignored"
+        return "metadata"
     ext = posixpath.splitext(base)[1].lower()
+    if ext in _IMAGE_EXTENSIONS:
+        return "image"
     if ext in _BUNDLE_REFUSED_EXTS or ext in _BUNDLE_NESTED_EXTS:
         return "refused"
     if ext in _BUNDLE_EXTS:
         return "candidate"
-    return "ignored"
+    return "unknown"
+
+
+def bundle_member_class(info: zipfile.ZipInfo) -> str:
+    """`candidate` (a page file), `ignored` (metadata, images, unknown types) or
+    `refused` (a PDF or a nested container: not read inside a bundle) — by name only."""
+    kind = _bundle_member_kind(info)
+    return kind if kind in ("candidate", "refused") else "ignored"
 
 
 # ── readers: plain-text family ────────────────────────────────────────────────

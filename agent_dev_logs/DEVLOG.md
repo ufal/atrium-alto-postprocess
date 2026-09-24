@@ -1,5 +1,5 @@
 # 📓 atrium-alto-postprocess — agent_dev_logs/DEVLOG.md (timeline index)
-> _OCR/ALTO post-processing + line categorization. 7 open issues (#2, #3, #4, #23, #30, #31, #37); #5/#6 closed. **v1.5.1-beta** released 2026-09-22 at `09c9640`; `master` is at `3b02959` and `test` at `68fcbcb` (the same tree plus an issue-log refresh), carrying the post-tag #30 work as `5b27900` (docs, D40, the tie-break, D43, D44), `0c30517` (the word lists) and `3b02959` (D45, the grid guard restored). Next tag needs the version bump in `CITATION.cff` + `setup/para_config.txt`. Since 2026-09-24 `test` is at `103e30a` (#31's `--method text-lines`, unreleased), then `4378c9f` (issue exports). The 2026-09-24 TEITOK follow-ups are delivered as files and not yet on `test`._
+> _OCR/ALTO post-processing + line categorization. 7 open issues (#2, #3, #4, #23, #30, #31, #37); #5/#6 closed. **v1.5.1-beta** released 2026-09-22 at `09c9640`; `master` is at `3b02959` and `test` at `68fcbcb` (the same tree plus an issue-log refresh), carrying the post-tag #30 work as `5b27900` (docs, D40, the tie-break, D43, D44), `0c30517` (the word lists) and `3b02959` (D45, the grid guard restored). Next tag needs the version bump in `CITATION.cff` + `setup/para_config.txt`. Since 2026-09-24 `test` is at `103e30a` (#31's `--method text-lines`, unreleased), then `4378c9f` (issue exports) and `fb72526` (the #31 TEITOK follow-ups). #31 Phase 4 (2026-09-24, second entry) is on `test` since `267e334`; its docs, dev logs and the `tests/test_env_contract.py` restore follow._
 > _Per-issue detail: `digests/{id}.digest.md` · `plans/{id}.plan.md` · `issues/` exports (source of truth). Cross-repo/hub history lives in `ufal/atrium-project/agent_dev_logs/DEVLOG.md` (deduplicated out of this file)._
 
 ## 2026-03-13
@@ -1018,4 +1018,89 @@ K4TEL re-scoped the issue:
   `<pb/>` as a page (blank ones too) labelled with `pb@n`, and in tokenized TEITOK takes lines from `<lb/>` rather
   than `</s>`; `parse_xml_bytes` repairs the legacy `</n>` exactly (`name_close_repaired`); three new tests;
   `docs/text_inputs.md`; the seven `atrium-project#13` comments now say `atrium-llm-enrich#13`. Suite **1588 passed**
-  (1585 before), 0 failed; `ruff` clean.
+  (1585 before), 0 failed; `ruff` clean. *(Superseded: on `test` since `fb72526`.)*
+
+## 2026-09-24 (second entry)
+- **#31 Phase 4 — hardening and more dialects** (plan § "Phase 4", D21–D35; digest refreshed). K4TEL asked for the
+  subtask to be re-inspected against every issue's dev logs and the sibling repos, and for its gaps in docs, code and
+  config to be closed:
+  * handling of users' inputs strict enough;
+  * every sequentially readable textual format accepted;
+  * ordered lines as CSV rows;
+  * the ALTO workflow unchanged;
+  * categorization never run.
+
+  Audited at `fb72526` with all four repos fetched at their `test` HEADs. Delivered as full files in chat; the
+  code, tests, config and samples landed on `test` as `267e334` (unreleased).
+* **K4TEL's decisions:**
+  * a per-kind origin override, `[DOCUMENT].SOURCE_ORIGIN_BY_KIND`;
+  * the doc-id fix in classify/aggregate, ALTO-neutral and never run;
+  * DOCX/ODT notes on their page, `[TEXT_INGEST].NOTES = page|end|skip`;
+  * all four new input groups (OCR exports, ZIP bundles, compression wrappers, subtitles + e-mail).
+* **New kinds:**
+  * `tesseract-tsv`, `abbyy-xml` and `djvu-xml`, with native pages and `ocr:*` origins. Word and character rows are
+    joined into lines; they used to come out as one word or one character per line.
+  * `srt`, `vtt`, `eml` and `mbox`: a page per message, Subject then text/plain.
+  * gzip/bzip2/xz wrappers, under the existing size and ratio caps.
+  * `zip-bundle`: a ZIP of per-page OCR files read as one document, in natural order. Metadata and images are
+    ignored, one kind is kept per stem, and PDFs and nested containers are skipped.
+  * Sniffing is rewritten over bytes. `%PDF-` must lead the file, so a ZIP storing a PDF is no longer "pdf". A new
+    reason code `unreadable`.
+* **Reader fixes:**
+  * PAGE-XML table cells and nested regions;
+  * CSV/TSV stray-quote re-parse (`csv_unbalanced_quote`), and a numeric column is never the text;
+  * JSON line granularity (Azure Read v3 and Textract no longer duplicate each line); JSON no longer imports pandas;
+  * sheets over `MAX_LINES_PER_PAGE` continue on further pages;
+  * ODS comments and numbers dropped, hidden sheets and slides counted;
+  * RTF per-font code pages and surrogate pairs;
+  * lone surrogates dropped (they crashed the page write);
+  * TEI P4, corpora and `<choice>`;
+  * EPUB `%`-hrefs;
+  * lxml elements tracked by identity, not `id()`: a real flake that could skip a PAGE-XML line.
+* **Strictness:**
+  * ingest status `partial` (read with a lossy note), which `--strict` counts;
+  * page directories: only a directory of nothing but `<doc>-<n>.txt` is ever replaced, and the previous pages of a
+    failing document are removed (`stale_pages_removed`). This closes the `rmtree` hazard of output dir `.` with an
+    input `setup.txt`;
+  * per-document isolation in the extract and stats stages;
+  * `--strict/--no-strict` on both stages and through `run_pipeline`;
+  * `STRICT` validated.
+* **Other code:**
+  * `document_hook`: the `SOURCE_ORIGIN_BY_KIND` parser and resolver, `DIGITAL_CONVERT_KINDS`, and a docstring
+    rewrite (stale program names, dead link).
+  * `run_pipeline`: `[PIPELINE].INPUT_DIR_TEXT` (a bare `--method text-lines` used to ingest the ALTO samples);
+    `--input-csv`, `--strict` and `--source-origin` pass-through.
+  * classify/aggregate read `file` as text, and aggregate sorts naturally. `0001` stayed `1` before, and mixed ids
+    crashed the sort.
+  * The service honours `[TEXT_INGEST]` and the origin keys and decodes `.txt` like the batch path. Unsupported →
+    400, everything else → 422, including a new `no_text`.
+  * Both frontends' `accept=` lists are pinned to `supported_extensions()`.
+  * Report-only page flags: `mojibake_cp1252` (llm-enrich's CP1250↔CP1252 table, made conservative), and
+    `mirrored_text` / `rotated_text` from PDF matrices.
+* **Config, samples, docs:**
+  * `setup/config.txt` (`SOURCE_ORIGIN_BY_KIND`, `NOTES`, `INPUT_DIR_TEXT`), `.gitignore`, `.env.example`;
+  * `data_samples/TEXT/CTX000000016–24`: Tesseract, ABBYY, DjVu, SRT, VTT, EML, MBOX, `.txt.gz` and a bundle;
+  * `docs/text_inputs.md` rewritten (detection order, matrix, bundles, notes, blank pages, page ids, reports and
+    statuses, reason codes with HTTP statuses, flags, the origin override);
+  * `README.md`, `CONTRIBUTING.md`, `service/README.md`, `data_samples/README.md`;
+  * plan header repaired; digest title typo "othet" fixed.
+* **Unchanged, verified:**
+  * the ALTO/JSON scripts (`page_split.py`, both stats scripts, the three ALTO extractors, `extract_JSON_2_TXT.py`)
+    and every hub-canonical file;
+  * `run_pipeline --dry-run` byte-identical to `fb72526` for eight ALTO/JSON variants;
+  * classify's re-read and aggregate's sort replayed byte-identical on `data_samples/DOC_LINE_CATEG(_gpt)`;
+  * strict E2E on the 20 text samples: all `ok`, 94/94 line-table rows match, every `doc.json` validates;
+  * a hostile-input directory gave a reason for every file and wrote nothing outside `out/`.
+* **`267e334` turned Paradata Canonical Drift red.** The hub-canonical `tests/test_env_contract.py` held the contents
+  of `tests/env_contract_data.py` (a file mapped to the wrong path on apply), and the data file kept its old text.
+  Both were re-sent: the test byte-identical to hub `v1` (`eec0682`), the data file in its Phase 4 version. A local
+  replay of the drift loop passes all 17 manifest files. The same follow-up carries the docs and dev logs and an Apple
+  `.pages` fix: a package with a preview image is `archive_unsupported`, not `image_needs_ocr`.
+* **Suite 1584 → 1707 passed**, 11 skipped, 2 xfailed, 0 failed (baseline at `fb72526` in the same environment).
+  `ruff check` and `ruff format --check` are clean. Categorization was not run: torch and fasttext are not installed.
+* **Cross-repo follow-ups:**
+  * hub `KNOWN_PIPELINE_SUFFIXES` (office/PDF/new suffixes; `.md` is already there);
+  * hub `test_document_required.py` (the text writers; drifted line references);
+  * ALTO-only hub docs;
+  * the hub `ORIGIN_ORIGINATORS` `digital-born` prefix, which covers kinds digital-convert cannot read;
+  * llm-enrich V-1.

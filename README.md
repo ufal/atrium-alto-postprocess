@@ -80,7 +80,8 @@ You are now ready to start the workflow.
 
 The process is divided into sequential steps, starting from raw **ALTO** 📄 files — or generic
 OCR **JSON**, or (#31) any other text-bearing file: PDF, DOCX, ODT, XLSX, PPTX, EPUB, RTF,
-HTML/hOCR, PAGE XML, TEI, Markdown, CSV or plain text — and ending with extracted linguistic
+HTML/hOCR, PAGE XML, TEI, ABBYY/DjVu XML, Tesseract TSV, Markdown, CSV, subtitles, e-mail or
+plain text, also compressed or as a ZIP of page files — and ending with extracted linguistic
 and statistic data 📊.
 
 You can run the **entire pipeline end-to-end** with a single command (see below), or run each
@@ -100,7 +101,7 @@ intermediate file formats produced, and the **effective end-to-end output licens
 python3 run_pipeline.py                      # all settings from config.txt
 python3 run_pipeline.py --method glm         # override just the extraction backend
 python3 run_pipeline.py --method json-keys --input-dir data_samples/JSON   # generic OCR JSON (#31)
-python3 run_pipeline.py --method text-lines --input-dir data_samples/TEXT  # PDF/DOCX/TXT/... (#31)
+python3 run_pipeline.py --method text-lines  # PDF/DOCX/TXT/... from [PIPELINE].INPUT_DIR_TEXT (#31)
 python3 run_pipeline.py --skip-split         # PAGE_ALTO already populated
 python3 run_pipeline.py --dry-run            # print the resolved plan, run nothing
 ```
@@ -115,15 +116,23 @@ JSON; `text-lines` for every other text-bearing format (#31). The method also se
 Step 1/2 scripts for its input format. The choice flows through to the merged license: a
 **LayoutReader** 📐 run resolves to **CC BY-NC-SA 4.0**, an **alto-tools** 🧰 run to
 **CC BY-NC 4.0**.
-* **`--input-csv` ⚠️:** redirects only the stats CSV written by Step 2. Steps 3–4 read
-`[EXTRACT].INPUT_CSV` / `[CLASSIFY].INPUT_CSV` from the config, and the orchestrator warns when
-they differ from the flag — set them in the config for a run that must use another CSV.
+* **`--input-csv` ⚠️:** redirects the stats CSV written by Step 2. For `text-lines` it also
+reaches Step 3 (`extract_TEXT_2_TXT.py --input-csv`); otherwise Step 3 reads
+`[EXTRACT].INPUT_CSV`, and Step 4 always reads `[CLASSIFY].INPUT_CSV`, from the config. The
+orchestrator warns when those differ from the flag — set them in the config for a run that must
+use another CSV. The stock config points text-lines at the same `data_samples/test_alto_stats.csv`
+as the ALTO methods, so give text-lines runs their own config.
+* **text-lines extras (#31):** without `--input-dir` it reads `[PIPELINE].INPUT_DIR_TEXT`
+(`data_samples/TEXT`); `--strict` / `--no-strict` reach `text_split.py` and
+`extract_TEXT_2_TXT.py` (a strict failure stops the pipeline); `--source-origin ocr:<engine>`
+reaches the split stage of every method.
 * **Output 📤:** a merged `<YYMMDD-HHmmss>_pipeline-run.json` in the [paradata](paradata) 📁
 directory, alongside the individual per-stage logs.
 
 > [!NOTE]
 > Every stage — Step 1 (`page_split.py` / `text_split.py`) included — writes its own paradata
-> log, so a full run merges **five** logged stages. The merged license is re-derived from the
+> log, so a full run merges **five** logged stages. (The dry-run still tags `page_split.py`
+> `[no log]`; the tag is kept so the ALTO/JSON dry-run output stays byte-identical.) The merged license is re-derived from the
 > **union** of components used across all stages, so the end-to-end most-restrictive rule holds.
 
 > [!TIP]
@@ -188,13 +197,16 @@ PAGE_JSON/
 #### Any other text-bearing input: PDF, DOCX, TXT, … (#31) 📄
 
 ```
-python3 text_split.py <input_dir> <output_dir> [--source-origin ocr:<engine>] [--strict]
+python3 text_split.py <input_dir> <output_dir> [--source-origin ocr:<engine>] [--strict | --no-strict]
 ```
 
 The `<format>-2-txt` step for everything that is not ALTO or json-keys JSON: **PDF** (text
 layer), **DOCX**, **ODT/ODS/ODP**, **XLSX**, **PPTX**, **EPUB**, **RTF**, **HTML/XHTML** and
-**hOCR**, **PAGE XML**, **TEI/TEITOK** and any other **XML**, **JSON/JSONL**, **CSV/TSV**,
-**Markdown** and **plain text** in UTF-8/16/32 or a legacy code page (cp1250 first). Formats
+**hOCR**, **PAGE XML**, **TEI/TEITOK**, the OCR exports **ABBYY FineReader XML**, **DjVuXML** and
+**Tesseract TSV**, any other **XML**, **JSON/JSONL**, **CSV/TSV**, **Markdown**, **SRT/WebVTT**
+subtitles, **EML/MBOX** e-mail and **plain text** in UTF-8/16/32 or a legacy code page (cp1250
+first). A **gzip/bzip2/xz**-compressed file is read through (`scan.txt.gz`), and a **ZIP of
+per-page files** — a Transkribus or eScriptorium export — is one multi-page document. Formats
 are recognised by **content**, not by extension, so a misnamed file is still read correctly and
 an unreadable one is refused with a reason.
 
@@ -208,18 +220,25 @@ normalisation rules, the limits and the reason codes are in
 
 * **Input 📥:** `../TEXT/` (any mix of the formats above — example: [data_samples/TEXT](data_samples/TEXT) 📁)
 * **Output 📤:** `../PAGE_TEXT/` — `<doc_id>/<doc_id>-<n>.txt` per page, plus two reports:
-  * `ingest_report.csv`: one row per input file, with its status and reason code, the detected
-    kind and encoding, page/line counts and the `source.origin` recorded;
+  * `ingest_report.csv`: one row per input file, with its status (`ok` / `partial` / `error` /
+    `ignored`) and reason code, the detected kind and encoding, page/line counts and the
+    `source.origin` recorded;
   * `pages_report.csv`: one row per page, with its original label (sheet name, PDF page label,
-    JSON page number) and, for PDFs, the text-layer class (`none` / `garbled` / `ocr` / `digital`)
-    and a needs-OCR reason.
+    JSON page number, bundle member) and, for PDFs, the text-layer class (`none` / `garbled` /
+    `ocr` / `digital`), a needs-OCR reason and report-only flags (`mojibake_cp1252`,
+    `mirrored_text=N`, `rotated_text=N`).
 
 A file that cannot be read costs **that file only**: images (`image_needs_ocr`), legacy
 `.doc/.xls` (`legacy_office_unsupported`), encrypted, corrupt, empty or oversized files are
-listed with their reason and the run continues (`--strict` turns any failure into exit code 1).
-PDFs are read in an isolated child process with a timeout, ZIP containers are checked against
-zip-bomb caps before anything is unpacked, and XML with entity declarations is refused. All
-caps live in `[TEXT_INGEST]` in [config.txt](setup/config.txt) 📎.
+listed with their reason and the run continues. A file read with a possible loss (recovered XML,
+a skipped bundle member, a stray CSV quote, a bad JSONL record) is `partial`: written, processed
+downstream, its reasons listed. `--strict` turns any failure or partial read into exit code 1.
+PDFs are read in an isolated child process with a timeout, ZIP containers and compressed files are
+checked against bomb caps before anything is unpacked, and XML with entity declarations is refused.
+A re-run never leaves stale pages of a document that now fails, and a page directory is only ever
+replaced when it holds nothing but that document's page files. DOCX/ODT footnotes end the page
+that cites them (`[TEXT_INGEST].NOTES`). All caps live in `[TEXT_INGEST]` in
+[config.txt](setup/config.txt) 📎.
 
 ```
 PAGE_TEXT/
@@ -249,15 +268,22 @@ mismatch warns 📣.
 | JSON     | `ocr:generic`    | Generic OCR/Doc-AI export whose specific engine the file does not name                           |
 
 For `text_split.py` (#31) the default is **truthful per format**. The OCR outputs are
-`ABBYY-ALTO` (ALTO), `ocr:page-xml`, `ocr:hocr`, `ocr:pdf-text-layer` (a PDF whose text is an
-invisible OCR layer under the page image) and `ocr:generic` (TXT, Markdown, CSV/TSV,
-JSON/JSONL, TEI, XML). Born-digital documents are `digital-born-<kind>` (DOCX, ODT/ODS/ODP,
-XLSX, PPTX, EPUB, RTF, plain HTML, a PDF with visible text). A born-digital record is
+`ABBYY-ALTO` (ALTO), `ocr:page-xml`, `ocr:hocr`, `ocr:abbyy-finereader`, `ocr:djvu`,
+`ocr:tesseract`, `ocr:pdf-text-layer` (a PDF whose text is an invisible OCR layer under the page
+image) and `ocr:generic` (TXT, Markdown, CSV/TSV, JSON/JSONL, TEI, XML, subtitles); a ZIP bundle
+takes its members' origin. Born-digital documents are `digital-born-<kind>` (DOCX, ODT/ODS/ODP,
+XLSX, PPTX, EPUB, RTF, plain HTML, e-mail, a PDF with visible text). A born-digital record is
 originated by llm-enrich's `digital-convert`, so this repo then writes **only** `source` into
 it: `document_hook` holds back the `pages`/`content`/`lines` blocks of every stage
 (`atrium_document` §1a), unless a page carries the `needs_ocr` hand-off. The CSV outputs of the
 run are produced either way. `--source-origin ocr:<engine>` overrides the default when the
 files are known OCR output.
+
+digital-convert reads only PDF and DOCX, so born-digital records of the other kinds keep `source`
+only. When files of such a kind really are OCR or transcription exports, say so per kind:
+`[DOCUMENT].SOURCE_ORIGIN_BY_KIND = xlsx = ocr:generic, pptx = ocr:generic`. For text-lines the
+precedence is CLI flag > env var > `SOURCE_ORIGIN_BY_KIND` > `SOURCE_ORIGIN` > per-format default
+([docs/text_inputs.md §6](docs/text_inputs.md#6-provenance-sourceorigin)).
 
 Override it when the engine **is** known — the prefix must stay one this repo owns
 (`ABBYY-ALTO`, `ocr:<engine>`, `vlm:<engine>`):
@@ -482,7 +508,7 @@ still opt in. The CLI flag takes precedence over the config value when both are 
 > and `text_stats_create.py` from Step 2.
 
 ```
-python3 extract_TEXT_2_TXT.py [--input-csv CSV] [--output-dir DIR] [--lines-dir DIR]
+python3 extract_TEXT_2_TXT.py [--input-csv CSV] [--output-dir DIR] [--lines-dir DIR] [--strict | --no-strict]
 ```
 
 Prepares each page's text for categorization. Lines are normalized (NFC; control, zero-width
@@ -500,7 +526,9 @@ stays **one line**.
 
 Page files in any encoding are accepted, so a hand-made directory of page TXT files works
 with `--skip-split`. With `[DOCUMENT].JSON_DIR` set, `pages[].ocr` (`engine: text-lines`) and
-`content` are accreted like the other methods (not into born-digital records, see Step 1).
+`content` are accreted like the other methods (not into born-digital records, see Step 1). A
+page, a line table or a document record that fails costs that page or document only; `--strict`
+(or `[TEXT_INGEST].STRICT`) turns such a failure into exit code 1.
 
 ---
 
@@ -851,10 +879,13 @@ the core `text_util_langID` quality classification engine over HTTP. The `/proce
 plain-text, and generic JSON uploads (`task_type` `alto` / `text` / `json`, or `auto`-detected from the file
 extension), returning the same per-line classification fields as the batch pipeline for all three formats.
 (#31) It also accepts **every text-lines format** (PDF, DOCX, ODT, XLSX, PPTX, EPUB, RTF, HTML/hOCR, PAGE XML,
-TEI, Markdown, CSV/TSV, JSONL) as `task_type` `document`. `auto` keeps `.txt`/`.json` as before and decides `.xml`
-and every other upload **from its bytes**: an ALTO root stays on the ALTO path, a non-text file is a 400 naming the
-reason code, and an unreadable document is a 422. Document results carry `page`/`page_label` per line and a
-`pages` summary, and are read and shaped by the same `text_formats.py` code as the batch method.
+TEI, ABBYY/DjVu XML, Tesseract TSV, Markdown, CSV/TSV, JSONL, SRT/VTT, EML/MBOX, compressed files and ZIP bundles)
+as `task_type` `document`. `auto` keeps `.txt`/`.json` as before and decides `.xml` and every other upload
+**from its bytes**: an uncompressed ALTO root stays on the ALTO path, a file of a kind the service does not read is
+a 400 naming the reason code, and a supported file that cannot be read — a document without a single text line
+included (`no_text`) — is a 422. Document results carry `page`/`page_label` per line and a `pages` summary, and
+are read and shaped by the same `text_formats.py` code and the same `[TEXT_INGEST]` settings as the batch method;
+a `.txt` upload is decoded the same way (any common encoding, cp1250 first).
 
 The batch pipeline and the API service share the same `text_util_langID` categorization engine and `config.txt`
 settings — including the default **Qwen2.5-0.5B** 🤖 perplexity model — to ensure zero drift between local processing

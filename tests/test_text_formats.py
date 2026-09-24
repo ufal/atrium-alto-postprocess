@@ -863,6 +863,9 @@ def test_zip_bundles_that_cannot_be_read(tmp_path):
     assert _code(tmp_path, "i.zip", make_zip([("1.jpg", b"\xff\xd8\xff"), ("2.png", b"x")])) == "image_needs_ocr"
     assert _code(tmp_path, "d.zip", make_zip([("word/document.xml", "<x/>")])) == "archive_unsupported"
     assert _code(tmp_path, "b.zip", make_zip([("1.txt", bytes(range(256)) * 8)])) == "binary_content"
+    # A package with a preview image next to its own data (Apple .pages) is no scan: no OCR advice.
+    pages = make_zip([("Index/Document.iwa", b"\x00\x01"), ("preview.jpg", b"\xff\xd8\xff")])
+    assert _code(tmp_path, "a.pages", pages) == "archive_unsupported"
 
 
 # ── CSV/TSV and OCR tables ────────────────────────────────────────────────────
