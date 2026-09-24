@@ -219,10 +219,36 @@ def _page_records_from_stats(page_stats_df) -> list:
     return records
 
 
+def _natural_file_key(file_id) -> tuple:
+    """Sort key for document ids: all-digit ids in numeric order (as when pandas read
+    them as integers), every other id in code-point order after them."""
+    text = str(file_id)
+    return (0, int(text), text) if text.isascii() and text.isdigit() else (1, 0, text)
+
+
+def sort_page_stats(df: "pd.DataFrame") -> "pd.DataFrame":
+    """The final page-stats order: by file (natural order), then page.
+
+    (#31 Phase 4) `file` is read as text now, so `0001` stays `0001` — sorting that
+    column as plain strings would reorder all-numeric ALTO ids ("10" < "9"), and ids
+    of mixed type used to make sort_values raise. Mapping each id to its rank in
+    natural order keeps every existing order byte-identical: numeric ids numerically,
+    CTX… ids by code point.
+    """
+    if "file" not in df.columns or "page_num" not in df.columns:
+        return df
+    rank = {v: i for i, v in enumerate(sorted(df["file"].astype(str).unique(), key=_natural_file_key))}
+    return df.sort_values(
+        by=["file", "page_num"], key=lambda col: col.astype(str).map(rank) if col.name == "file" else col
+    )
+
+
 def process_csv_file(file_path, STANDARD_COLS):
     """Reads a single CSV file and returns aggregated page metrics."""
     try:
         dtype_map = {
+            # (#31 Phase 4) a document id is text: `0001` must not become 1.
+            "file": str,
             "split_ws": str,
             "split_we": str,
             "word_count": "float64",
@@ -243,6 +269,10 @@ def process_csv_file(file_path, STANDARD_COLS):
             return None
 
         df.columns = df.columns.str.strip()
+        if "file" in df.columns:
+            # One CSV per document (classify writes <file_id>.csv): an id pandas still
+            # reads as missing (`NA`, `null`) is this file's own.
+            df["file"] = df["file"].fillna(Path(file_path).stem)
 
         return _sum_metrics(df, STANDARD_COLS)
 
@@ -336,8 +366,7 @@ def main():
             print("Consolidating final page stats ...")
             final_df = pd.concat(all_page_stats, ignore_index=True)
 
-            if "file" in final_df.columns and "page_num" in final_df.columns:
-                final_df.sort_values(by=["file", "page_num"], inplace=True)
+            final_df = sort_page_stats(final_df)
 
             final_df.to_csv(output_stats_path, index=False, encoding="utf-8")
             print(f"Done. Final stats saved to {output_stats_path}")

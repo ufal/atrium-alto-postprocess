@@ -442,3 +442,52 @@ def test_process_refuses_to_attribute_a_multipage_upload(mock_process, tmp_path,
     assert "lines" not in record
     assert record["pages"] == json.loads(baseline_path.read_text(encoding="utf-8"))["pages"]
     assert "2 <Page> elements" in caplog.text
+
+
+# ── (#31 Phase 4) one status mapping: unsupported → 400, unreadable → 422 ─────
+
+
+def test_a_damaged_container_found_by_sniffing_is_422():
+    files = {"file": ("report.docx", b"PK\x03\x04" + b"\x00" * 64, "application/octet-stream")}
+    response = client.post("/process", files=files, data={"task_type": "auto"})
+    assert response.status_code == 422 and response.json()["detail"].startswith("corrupt")
+
+
+def test_an_explicit_document_that_is_an_image_is_400():
+    files = {"file": ("scan.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 64, "image/png")}
+    response = client.post("/process", files=files, data={"task_type": "document"})
+    assert response.status_code == 400 and response.json()["detail"].startswith("image_needs_ocr")
+
+
+def test_a_document_without_text_is_422_no_text():
+    files = {"file": ("blank.md", b"\n\n   \n", "text/markdown")}
+    response = client.post("/process", files=files, data={"task_type": "document"})
+    assert response.status_code == 422 and response.json()["detail"].startswith("no_text")
+
+
+def test_a_text_upload_that_is_not_text_is_400():
+    files = {"file": ("blob.txt", bytes(range(256)) * 8, "text/plain")}
+    response = client.post("/process", files=files, data={"task_type": "auto"})
+    assert response.status_code == 400 and response.json()["detail"].startswith("binary_content")
+
+
+def test_every_reason_code_maps_to_400_or_422():
+    from service.text_api import UNSUPPORTED_REASONS, _ingest_http_error
+    from text_formats import REASON_CODES, IngestError
+
+    assert UNSUPPORTED_REASONS <= set(REASON_CODES)
+    for code in REASON_CODES:
+        status = _ingest_http_error(IngestError(code)).status_code
+        assert status == (400 if code in UNSUPPORTED_REASONS else 422), code
+
+
+@patch("service.text_api.text_manager.process_document", create=True)
+@patch("service.text_api.text_manager.process_alto", create=True)
+def test_a_compressed_alto_upload_goes_to_the_document_reader(mock_alto, mock_document):
+    from tests.text_format_fixtures import compress_bytes
+
+    mock_document.return_value = dict(_DOC_RESULT)
+    alto = b'<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#"><Layout/></alto>'
+    files = {"file": ("a.alto.xml.gz", compress_bytes(alto), "application/gzip")}
+    assert client.post("/process", files=files).json()["type"] == "document"
+    assert (mock_alto.call_count, mock_document.call_count) == (0, 1)

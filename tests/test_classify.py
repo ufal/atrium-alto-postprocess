@@ -69,3 +69,36 @@ def test_load_page_index_keeps_file_ids_as_strings(tmp_path):
     assert list(df["file"]) == ["0001", "NA", "x-y", "CTX000000001"]
     assert list(df["page"][:3]) == [1, 2, 10]
     assert pd.isna(df["page"].iloc[3])  # empty cells stay NaN, as before
+
+
+# ── (#31 Phase 4) classify's re-read of its own per-document CSV ──────────────
+
+
+def test_read_doc_line_csv_keeps_the_document_id_and_the_text_na_semantics(tmp_path):
+    from classify_TEXT import read_doc_line_csv
+
+    path = tmp_path / "0001.csv"
+    path.write_text("file,page_num,line_num,text,categ\n0001,1,1,NA,Clear\n0001,1,2,Ahoj,Clear\n", encoding="utf-8")
+    df = read_doc_line_csv(path, "0001")
+    assert list(df["file"]) == ["0001", "0001"]
+    assert pd.isna(df["text"][0]) and df["text"][1] == "Ahoj"  # text "NA" is still NaN, exactly as before
+    na = tmp_path / "NA.csv"
+    na.write_text("file,page_num,line_num,text\nNA,1,1,x\n", encoding="utf-8")
+    assert list(read_doc_line_csv(na, "NA")["file"]) == ["NA"]
+
+
+@pytest.mark.parametrize("folder", ["data_samples/DOC_LINE_CATEG", "data_samples/DOC_LINE_CATEG_gpt"])
+def test_read_doc_line_csv_is_byte_identical_on_the_samples(folder):
+    """The committed categorized samples round-trip exactly as the old inline read did."""
+    from pathlib import Path
+
+    from classify_TEXT import read_doc_line_csv
+
+    old_dtypes = {"text": str, "original_text": str, "split_ws": str, "split_we": str, "lang": str,
+                  "original_lang": str, "categ": str}  # fmt: skip
+    paths = sorted(Path(folder).glob("*.csv"))
+    if not paths:
+        pytest.skip(f"no samples in {folder}")
+    for path in paths:
+        old = pd.read_csv(path, dtype=old_dtypes).to_csv(index=False)
+        assert read_doc_line_csv(path, path.stem).to_csv(index=False) == old

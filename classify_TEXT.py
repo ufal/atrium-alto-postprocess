@@ -1119,18 +1119,7 @@ def process_document(task):
             )
 
         if out_path.exists():
-            df = pd.read_csv(
-                out_path,
-                dtype={
-                    "text": str,
-                    "original_text": str,
-                    "split_ws": str,
-                    "split_we": str,
-                    "lang": str,
-                    "original_lang": str,
-                    "categ": str,
-                },
-            )
+            df = read_doc_line_csv(out_path, file_id)
 
             if not df.empty:
                 df = apply_page_perplexity_blend(
@@ -1161,6 +1150,34 @@ def process_document(task):
 
     except Exception as e:
         return {"status": "error", "file_id": file_id, "reason": str(e)}
+
+
+#: The dtypes classify re-reads its own per-document CSV with (see read_doc_line_csv).
+_DOC_CSV_DTYPES = {
+    "file": str,
+    "text": str,
+    "original_text": str,
+    "split_ws": str,
+    "split_we": str,
+    "lang": str,
+    "original_lang": str,
+    "categ": str,
+}
+
+
+def read_doc_line_csv(path, file_id) -> "pd.DataFrame":
+    """Re-read one document's DOC_LINE_CATEG CSV for the document-level passes.
+
+    (#31 Phase 4) `file` is pinned to the task's own id: every row of `<file_id>.csv`
+    was written for that id, and pandas' type inference used to turn `0001` into 1
+    (and `NA` into NaN) on this re-read, so the finalised CSV named another document.
+    The text columns keep pandas' default NA handling exactly as before, so ALTO
+    output is unchanged.
+    """
+    df = pd.read_csv(path, dtype=_DOC_CSV_DTYPES)
+    if "file" in df.columns:
+        df["file"] = str(file_id)
+    return df
 
 
 def load_page_index(csv_path) -> "pd.DataFrame":

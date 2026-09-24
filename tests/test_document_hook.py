@@ -373,3 +373,38 @@ def test_guard_reads_the_origin_of_this_calls_source_when_no_baseline(tmp_path):
     record = load_document(document_path(doc_dir, "NEW1"))
     assert record["source"]["origin"] == "digital-born-pdf"
     assert not record.get("pages")
+
+
+# ── (#31 Phase 4) SOURCE_ORIGIN_BY_KIND ───────────────────────────────────────
+
+
+def test_parse_origin_by_kind_accepts_commas_newlines_and_any_case():
+    parsed = document_hook.parse_origin_by_kind("XLSX = ocr:generic,\n pptx=ocr:tesseract ,", ["xlsx", "pptx", "odt"])
+    assert parsed == {"xlsx": "ocr:generic", "pptx": "ocr:tesseract"}
+    assert document_hook.parse_origin_by_kind("", ["xlsx"]) == {}
+
+
+@pytest.mark.parametrize(
+    "raw,why",
+    [
+        ("xlsx ocr:generic", "is not <kind> = <origin>"),
+        ("xls = ocr:generic", "unknown kind"),
+        ("xlsx = ocr:a, xlsx = ocr:b", "given twice"),
+        ("xlsx =", "empty origin"),
+        ("xlsx = scanned", "matches no known originator"),
+    ],
+)
+def test_parse_origin_by_kind_rejects_typos_naming_the_key(raw, why):
+    with pytest.raises(ValueError, match="SOURCE_ORIGIN_BY_KIND") as info:
+        document_hook.parse_origin_by_kind(raw, ["xlsx", "pptx"])
+    assert why in str(info.value)
+
+
+def test_resolve_input_origin_precedence():
+    kw = dict(override="ocr:cli", env="ocr:env", configured="ocr:cfg", by_kind={"xlsx": "ocr:kind"})
+    resolve = document_hook.resolve_input_origin
+    assert resolve("xlsx", "digital-born-xlsx", **kw) == "ocr:cli"
+    assert resolve("xlsx", "digital-born-xlsx", **{**kw, "override": ""}) == "ocr:env"
+    assert resolve("xlsx", "digital-born-xlsx", **{**kw, "override": "", "env": ""}) == "ocr:kind"
+    assert resolve("docx", "digital-born-docx", **{**kw, "override": "", "env": ""}) == "ocr:cfg"
+    assert resolve("docx", "digital-born-docx") == "digital-born-docx"

@@ -15,10 +15,17 @@ empty (the default), every function below is a no-op — standalone runs are
 unaffected, matching rule 3 of the accretion contract.
 
 Ownership note: every write here uses PROGRAM_NAME = "alto-postprocess", the single
-name `atrium_document.BLOCK_OWNERS` recognises for this repo's blocks — NOT each
-stage's own ParadataLogger `program` string (`langID-classify`, `langID-aggregate`,
-...). Normalising those paradata program names is a separate, still-open item (see
-`agent_dev_logs/digests/13.digest.md` §Open/next) and is deliberately untouched here.
+name `atrium_document.BLOCK_OWNERS` recognises for this repo's blocks. Every stage's
+ParadataLogger stamps that same `program` (classify, aggregate and the text-lines
+stages import PROGRAM_NAME from here; the other stages spell the literal) and names
+the script in `config.script`. The older per-stage names (`langID-classify`,
+`langID-aggregate`) survive only in the 2026-06 sample logs under `paradata/`, so
+atrium-llm-enrich#13's "normalise the alto-postprocess program names" TODO is done
+(agent_dev_logs/plans/31.plan.md, Phase 4).
+
+(#31 Phase 4) `SOURCE_ORIGIN_BY_KIND` — a per-kind `source.origin` override for the
+text-lines inputs — is parsed and resolved here (`parse_origin_by_kind`,
+`resolve_input_origin`), so text_split.py and the service agree on it.
 """
 
 from __future__ import annotations
@@ -49,6 +56,70 @@ POSITIONAL_BLOCKS = ("pages", "content", "lines", "tables")
 #: (#31) doc_ids already warned about by the origin guard in this process — one line
 #: per document, not one per stage call.
 _FOREIGN_ORIGIN_WARNED: set = set()
+
+#: (#31 Phase 4) The text-lines kinds llm-enrich's digital-convert can read (its
+#: api_util/digital_to_json.py dispatches by extension: .pdf, .docx/.docm). A
+#: `digital-born-<kind>` origin for any OTHER kind hands the positional plane to an
+#: originator that cannot produce it, so the record keeps `source` only — which is
+#: what `[DOCUMENT].SOURCE_ORIGIN_BY_KIND` exists to let an operator decide.
+DIGITAL_CONVERT_KINDS = frozenset({"pdf", "docx"})
+
+_ORIGIN_BY_KIND_KEY = "[DOCUMENT] SOURCE_ORIGIN_BY_KIND"
+
+
+def parse_origin_by_kind(raw: str, known_kinds: Iterable[str]) -> Dict[str, str]:
+    """`xlsx = ocr:generic, pptx = ocr:generic` → {"xlsx": "ocr:generic", ...}.
+
+    Entries are separated by commas or newlines. A malformed entry, a kind no reader
+    registers, a kind given twice, an empty value, or an origin no ORIGIN_ORIGINATORS
+    prefix recognises raises ValueError naming the key: a typo must fail the run, not
+    quietly switch the §1a ownership check off for that kind.
+    """
+    known = {k.lower() for k in known_kinds}
+    out: Dict[str, str] = {}
+    for item in (part.strip() for chunk in (raw or "").splitlines() for part in chunk.split(",")):
+        if not item:
+            continue
+        if "=" not in item:
+            raise ValueError(f"{_ORIGIN_BY_KIND_KEY}: {item!r} is not <kind> = <origin>")
+        kind, _, origin = (x.strip() for x in item.partition("="))
+        kind = kind.lower()
+        if kind not in known:
+            raise ValueError(f"{_ORIGIN_BY_KIND_KEY}: unknown kind {kind!r} (known: {', '.join(sorted(known))})")
+        if kind in out:
+            raise ValueError(f"{_ORIGIN_BY_KIND_KEY}: kind {kind!r} is given twice")
+        if not origin:
+            raise ValueError(f"{_ORIGIN_BY_KIND_KEY}: kind {kind!r} has an empty origin")
+        if resolve_originator(origin) is None:
+            raise ValueError(
+                f"{_ORIGIN_BY_KIND_KEY}: origin {origin!r} for {kind!r} matches no known originator prefix "
+                f"(ocr:…, vlm:…, ABBYY-ALTO, digital-born-…)"
+            )
+        out[kind] = origin
+    return out
+
+
+def resolve_input_origin(
+    kind: str,
+    default: str,
+    *,
+    override: str = "",
+    env: str = "",
+    configured: str = "",
+    by_kind: Optional[Dict[str, str]] = None,
+) -> str:
+    """`source.origin` for one text-lines input. Precedence: the CLI flag (`override`)
+    > the DOCUMENT_SOURCE_ORIGIN env var (`env`) > `[DOCUMENT].SOURCE_ORIGIN_BY_KIND` for
+    this kind > `[DOCUMENT].SOURCE_ORIGIN` (`configured`) > the truthful per-kind default.
+
+    The flag and the env var are per-run statements about every input, so they win
+    over the config; within the config the per-kind entry is the more specific one.
+    Pure — the caller reads the environment.
+    """
+    for value in (override, env, (by_kind or {}).get((kind or "").lower(), ""), configured):
+        if value and value.strip():
+            return value.strip()
+    return default
 
 
 def _warn(message: str) -> None:

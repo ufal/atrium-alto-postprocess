@@ -423,7 +423,7 @@
         <form id="processForm">
             <div class="upload-box" id="uploadBox">
                 <input type="file" id="fileInput" name="file"
-                       accept=".xml,.txt,.json,.pdf,.docx,.odt,.rtf,.epub,.xlsx,.ods,.pptx,.odp,.html,.htm,.xhtml,.hocr,.md,.csv,.tsv,.jsonl,.ndjson" required style="display:none">
+                       accept=".xml,.txt,.json,.bz2,.csv,.docm,.docx,.dotx,.eml,.epub,.gz,.hocr,.htm,.html,.jsonl,.log,.markdown,.mbox,.mbx,.md,.mdown,.ndjson,.odp,.ods,.odt,.pdf,.pptm,.pptx,.rtf,.srt,.tab,.tei,.text,.tsv,.vtt,.xhtml,.xlsm,.xlsx,.xz,.zip" required style="display:none">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="1.5">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -432,7 +432,7 @@
                     <polyline points="9 15 12 12 15 15"/>
                 </svg>
                 <p><strong>Click to upload</strong> or drag and drop</p>
-                <p>ALTO XML, plain text or JSON — or PDF, DOCX, ODT, RTF, EPUB, XLSX/ODS, PPTX/ODP, HTML/hOCR, PAGE XML, TEI, Markdown, CSV/TSV</p>
+                <p>ALTO XML, plain text or JSON — or PDF, DOCX, ODT, RTF, EPUB, XLSX/ODS, PPTX/ODP, HTML/hOCR, PAGE XML, TEI, ABBYY/DjVu XML, Tesseract TSV, Markdown, CSV/TSV, SRT/VTT, EML/MBOX — also .gz/.bz2/.xz, or a ZIP of page files</p>
                 <p id="fileNameDisplay" class="file-selected-text"></p>
             </div>
 
@@ -543,7 +543,7 @@
 
             <h2>Form Parameters</h2>
             <ul>
-                <li><code>file</code> — <code>.xml</code> (ALTO, PAGE XML, TEI, …), <code>.txt</code>, <code>.json</code>, or a PDF, DOCX, ODT, RTF, EPUB, XLSX/ODS, PPTX/ODP, HTML/hOCR, Markdown or CSV/TSV document</li>
+                <li><code>file</code> — <code>.xml</code> (ALTO, PAGE XML, TEI, ABBYY, DjVu, …), <code>.txt</code>, <code>.json</code>, or a PDF, DOCX, ODT, RTF, EPUB, XLSX/ODS, PPTX/ODP, HTML/hOCR, Markdown, CSV/TSV, Tesseract TSV, SRT/VTT or EML/MBOX document; gzip/bzip2/xz-compressed, or a ZIP of per-page files (one document)</li>
                 <li><code>task_type</code> — <code>"auto"</code> | <code>"alto"</code> | <code>"text"</code> | <code>"json"</code> | <code>"document"</code></li>
             </ul>
 

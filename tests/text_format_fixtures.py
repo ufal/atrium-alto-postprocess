@@ -13,14 +13,22 @@ on every machine; nothing is committed as a binary blob.
 
 `pdf_bytes()` ports `_pdf_escape` / `_text_block` / `_build_pdf` from
 atrium-llm-enrich tests/fixtures/digital/make_fixtures.py (MIT, same project), adding
-an `invisible` switch (text render mode 3 — the OCR-layer construction) and pages with
-no text at all.
+an `invisible` switch (text render mode 3 — the OCR-layer construction), a text
+`matrix` (mirrored / rotated text) and pages with no text at all.
+
+(#31 Phase 4) Compressed wrappers (`compress_bytes`, fixed mtime), tar, OCR engine
+exports (Tesseract TSV, ABBYY FineReader XML, DjVuXML, PAGE XML), e-mail and mailbox
+builders, and DOCX notes/headers.
 """
 
 from __future__ import annotations
 
+import bz2
+import gzip
 import io
+import lzma
 import os
+import tarfile
 import zipfile
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -76,8 +84,22 @@ def w_t(text: str) -> str:
     return f'<w:r><w:t xml:space="preserve">{text}</w:t></w:r>'
 
 
-def docx_bytes(body_xml: str, *, main_part: str = "word/document.xml", strict: bool = False) -> bytes:
-    """A minimal DOCX whose <w:body> is `body_xml` (w: prefix bound to the chosen namespace)."""
+def docx_bytes(
+    body_xml: str,
+    *,
+    main_part: str = "word/document.xml",
+    strict: bool = False,
+    footnotes: Optional[Dict[str, str]] = None,
+    endnotes: Optional[Dict[str, str]] = None,
+    header: Optional[str] = None,
+) -> bytes:
+    """A minimal DOCX whose <w:body> is `body_xml` (w: prefix bound to the chosen namespace).
+
+    `footnotes`/`endnotes` map a note id to its text; each part also carries Word's
+    separator (id -1) and continuationSeparator (id 0) notes, plus a separator-typed
+    note under an ordinary id (7) — so a reader must filter by `w:type`, not by id.
+    `header` adds a header part with that text.
+    """
     ns = W_NS_STRICT if strict else W_NS
     rel_type = OFFICE_DOC_STRICT if strict else OFFICE_DOC
     document = (
@@ -88,22 +110,49 @@ def docx_bytes(body_xml: str, *, main_part: str = "word/document.xml", strict: b
         f'xmlns:v="urn:schemas-microsoft-com:vml">'
         f"<w:body>{body_xml}</w:body></w:document>"
     )
-    return make_zip(
-        [
-            ("[Content_Types].xml", _CT),
-            ("_rels/.rels", _rels([("rId1", rel_type, main_part)])),
-            (main_part, document),
-        ]
-    )
+    members: List[Tuple[str, str]] = [
+        ("[Content_Types].xml", _CT),
+        ("_rels/.rels", _rels([("rId1", rel_type, main_part)])),
+        (main_part, document),
+    ]
+    part_rels = []
+    for kind, notes in (("footnote", footnotes), ("endnote", endnotes)):
+        if notes is None:
+            continue
+        body = "".join(
+            f'<w:{kind} w:type="{typ}" w:id="{nid}"><w:p><w:r><w:t>SEPARATOR</w:t></w:r></w:p></w:{kind}>'
+            for typ, nid in (("separator", "-1"), ("continuationSeparator", "0"), ("separator", "7"))
+        ) + "".join(
+            f'<w:{kind} w:id="{nid}"><w:p><w:r><w:{kind}Ref/></w:r><w:r><w:t xml:space="preserve">{text}</w:t></w:r>'
+            f"</w:p></w:{kind}>"
+            for nid, text in notes.items()
+        )
+        members.append((f"word/{kind}s.xml", f'<w:{kind}s xmlns:w="{ns}">{body}</w:{kind}s>'))
+        part_rels.append((f"r{kind}", f"{R_NS}/{kind}s", f"{kind}s.xml"))
+    if header is not None:
+        members.append(("word/header1.xml", f'<w:hdr xmlns:w="{ns}"><w:p><w:r><w:t>{header}</w:t></w:r></w:p></w:hdr>'))
+        part_rels.append(("rhdr", f"{R_NS}/header", "header1.xml"))
+    if part_rels:
+        base, name = main_part.rsplit("/", 1)
+        members.append((f"{base}/_rels/{name}.rels", _rels(part_rels)))
+    return make_zip(members)
+
+
+def w_note_ref(note_id: str, kind: str = "footnote") -> str:
+    return f'<w:r><w:{kind}Reference w:id="{note_id}"/></w:r>'
 
 
 # ── XLSX ──────────────────────────────────────────────────────────────────────
 
 
 def xlsx_bytes(
-    sheets: Sequence[Tuple[str, List[List[Optional[Union[str, int, float]]]]]], *, inline: bool = False
+    sheets: Sequence[Tuple[str, List[List[Optional[Union[str, int, float]]]]]],
+    *,
+    inline: bool = False,
+    hidden: Sequence[str] = (),
 ) -> bytes:
-    """A minimal XLSX: `sheets` = [(name, rows)], strings via sharedStrings (or inline)."""
+    """A minimal XLSX: `sheets` = [(name, rows)], strings via sharedStrings (or inline);
+    sheets named in `hidden` get `state="hidden"`."""
     shared: List[str] = []
     index: Dict[str, int] = {}
 
@@ -132,7 +181,8 @@ def xlsx_bytes(
         members.append(
             (f"xl/worksheets/sheet{n}.xml", f'<worksheet xmlns="{SS_NS}"><sheetData>{row_xml}</sheetData></worksheet>')
         )
-        sheet_entries.append(f'<sheet name="{name}" sheetId="{n}" r:id="rId{n}"/>')
+        state = ' state="hidden"' if name in hidden else ""
+        sheet_entries.append(f'<sheet name="{name}" sheetId="{n}"{state} r:id="rId{n}"/>')
         rel_entries.append((f"rId{n}", f"{R_NS}/worksheet", f"worksheets/sheet{n}.xml"))
     rel_entries.append(("rIdSS", f"{R_NS}/sharedStrings", "sharedStrings.xml"))
     members.append(
@@ -150,8 +200,11 @@ def xlsx_bytes(
 # ── PPTX ──────────────────────────────────────────────────────────────────────
 
 
-def pptx_bytes(slides: Sequence[List[str]], *, order: Optional[Sequence[int]] = None) -> bytes:
-    """A minimal PPTX; `order` lists slide part numbers (1-based) in presentation order."""
+def pptx_bytes(
+    slides: Sequence[List[str]], *, order: Optional[Sequence[int]] = None, hidden: Sequence[int] = ()
+) -> bytes:
+    """A minimal PPTX; `order` lists slide part numbers (1-based) in presentation order;
+    slide parts in `hidden` get `show="0"`."""
     members: List[Tuple[str, str]] = [
         ("[Content_Types].xml", _CT),
         ("_rels/.rels", _rels([("rId1", OFFICE_DOC, "ppt/presentation.xml")])),
@@ -159,10 +212,12 @@ def pptx_bytes(slides: Sequence[List[str]], *, order: Optional[Sequence[int]] = 
     rels = []
     for n, paragraphs in enumerate(slides, 1):
         paras = "".join(f"<a:p><a:r><a:t>{t}</a:t></a:r></a:p>" for t in paragraphs)
+        show = ' show="0"' if n in hidden else ""
         members.append(
             (
                 f"ppt/slides/slide{n}.xml",
-                f'<p:sld xmlns:p="{P_NS}" xmlns:a="{A_NS}"><p:cSld><p:spTree><p:sp><p:txBody>{paras}'
+                f'<p:sld xmlns:p="{P_NS}" xmlns:a="{A_NS}"{show}>'
+                f"<p:cSld><p:spTree><p:sp><p:txBody>{paras}"
                 f"</p:txBody></p:sp></p:spTree></p:cSld></p:sld>",
             )
         )
@@ -216,12 +271,19 @@ def odf_bytes(kind: str, body_inner: str, *, automatic_styles: str = "", encrypt
     return make_zip([("mimetype", mimetype), ("content.xml", content), ("META-INF/manifest.xml", manifest)])
 
 
-def epub_bytes(chapters: Sequence[Tuple[str, str]], *, encrypt: Sequence[str] = ()) -> bytes:
-    """EPUB 3: chapters = [(href, xhtml body inner)] in spine order."""
+def epub_bytes(
+    chapters: Sequence[Tuple[str, str]], *, encrypt: Sequence[str] = (), missing_spine: Sequence[str] = ()
+) -> bytes:
+    """EPUB 3: chapters = [(member name, xhtml body inner)] in spine order. The
+    manifest href is the member name %-escaped, as EPUB requires (a space → %20);
+    `missing_spine` adds spine items whose member does not exist."""
+    from urllib.parse import quote
+
+    items = list(chapters) + [(h, None) for h in missing_spine]
     manifest = "".join(
-        f'<item id="c{i}" href="{h}" media-type="application/xhtml+xml"/>' for i, (h, _b) in enumerate(chapters)
+        f'<item id="c{i}" href="{quote(h)}" media-type="application/xhtml+xml"/>' for i, (h, _b) in enumerate(items)
     )
-    spine = "".join(f'<itemref idref="c{i}"/>' for i in range(len(chapters)))
+    spine = "".join(f'<itemref idref="c{i}"/>' for i in range(len(items)))
     members: List[Tuple[str, str]] = [
         ("mimetype", "application/epub+zip"),
         (
@@ -269,8 +331,17 @@ def _pdf_escape(raw: bytes) -> bytes:
     return out.replace(b"(", b"\\(").replace(b")", b"\\)")
 
 
-def _text_block(x: int, y: int, lines: List[bytes], *, invisible: bool = False, leading: int = 14) -> bytes:
-    parts = [b"BT", b"/F1 12 Tf", f"{x} {y} Td".encode("ascii"), f"{leading} TL".encode("ascii")]
+def _text_block(
+    x: int,
+    y: int,
+    lines: List[bytes],
+    *,
+    invisible: bool = False,
+    leading: int = 14,
+    matrix: Optional[Tuple[float, float, float, float]] = None,
+) -> bytes:
+    position = f"{matrix[0]} {matrix[1]} {matrix[2]} {matrix[3]} {x} {y} Tm" if matrix is not None else f"{x} {y} Td"
+    parts = [b"BT", b"/F1 12 Tf", position.encode("ascii"), f"{leading} TL".encode("ascii")]
     if invisible:
         parts.append(b"3 Tr")
     for i, line in enumerate(lines):
@@ -313,17 +384,181 @@ def _build_pdf(streams: List[bytes], font_obj: bytes = FONT_CLEAN) -> bytes:
     return bytes(out)
 
 
-def pdf_bytes(pages: Sequence[Sequence[str]], *, invisible: Union[bool, Sequence[bool]] = False) -> bytes:
+def pdf_bytes(
+    pages: Sequence[Sequence[str]],
+    *,
+    invisible: Union[bool, Sequence[bool]] = False,
+    matrix: Optional[Tuple[float, float, float, float]] = None,
+) -> bytes:
     """A PDF with one text block per page (an empty list = a page with no text).
 
     `invisible` (per page or for all) renders the text in mode 3 — how OCR engines
-    lay their text layer under a scanned image. Text is encoded as cp1252 (WinAnsi).
+    lay their text layer under a scanned image. `matrix` (a, b, c, d) sets the text
+    matrix: (-1, 0, 0, 1) mirrors, (0, 1, -1, 0) rotates by 90°. Text is encoded as
+    cp1252 (WinAnsi).
     """
     flags = [invisible] * len(pages) if isinstance(invisible, bool) else list(invisible)
     streams = []
     for lines, inv in zip(pages, flags, strict=True):
-        streams.append(_text_block(72, 720, [ln.encode("cp1252") for ln in lines], invisible=inv) if lines else b"")
+        streams.append(
+            # A transformed block starts mid-page so mirrored/rotated text stays on the page;
+            # the default position is unchanged, which keeps the committed sample PDFs identical.
+            _text_block(
+                *((300, 400) if matrix is not None else (72, 720)),
+                [ln.encode("cp1252") for ln in lines],
+                invisible=inv,
+                matrix=matrix,
+            )
+            if lines
+            else b""
+        )
     return _build_pdf(streams)
+
+
+# ── compression wrappers and archives ─────────────────────────────────────────
+
+
+def compress_bytes(data: Union[str, bytes], fmt: str = "gzip") -> bytes:
+    """gzip (mtime 0, so reproducible), bzip2 or xz of `data`."""
+    raw = data.encode("utf-8") if isinstance(data, str) else data
+    if fmt == "gzip":
+        return gzip.compress(raw, mtime=0)
+    if fmt == "bz2":
+        return bz2.compress(raw)
+    if fmt == "xz":
+        return lzma.compress(raw, format=lzma.FORMAT_XZ)
+    raise ValueError(fmt)
+
+
+def tar_bytes(members: Sequence[Tuple[str, Union[str, bytes]]]) -> bytes:
+    """A reproducible ustar archive (fixed mtime, uid/gid 0)."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w", format=tarfile.USTAR_FORMAT) as tf:
+        for name, data in members:
+            raw = data.encode("utf-8") if isinstance(data, str) else data
+            info = tarfile.TarInfo(name)
+            info.size, info.mtime, info.uid, info.gid = len(raw), 0, 0, 0
+            tf.addfile(info, io.BytesIO(raw))
+    return buf.getvalue()
+
+
+# ── OCR engine exports ────────────────────────────────────────────────────────
+
+PAGE_NS = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15"
+ABBYY_NS = "http://www.abbyy.com/FineReader_xml/FineReader10-schema-v1.xml"
+TESSERACT_HEADER = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext"
+
+
+def page_xml(page_inner: str, *, image: str = "scan_0001.jpg") -> str:
+    """A PAGE 2019 document with one Page whose content is `page_inner`."""
+    return f'<PcGts xmlns="{PAGE_NS}"><Page imageFilename="{image}">{page_inner}</Page></PcGts>'
+
+
+def tesseract_tsv(pages: Sequence[Sequence[Sequence[str]]]) -> str:
+    """Tesseract's TSV: pages → lines → words (level 5 rows), with the level 1-4 rows
+    Tesseract writes around them."""
+    rows = [TESSERACT_HEADER]
+    for p, lines in enumerate(pages, 1):
+        rows.append(f"1\t{p}\t0\t0\t0\t0\t0\t0\t2480\t3508\t-1\t")
+        rows.append(f"2\t{p}\t1\t0\t0\t0\t10\t10\t900\t400\t-1\t")
+        rows.append(f"3\t{p}\t1\t1\t0\t0\t10\t10\t900\t400\t-1\t")
+        for ln, words in enumerate(lines, 1):
+            rows.append(f"4\t{p}\t1\t1\t{ln}\t0\t10\t{10 * ln}\t900\t40\t-1\t")
+            for wn, word in enumerate(words, 1):
+                rows.append(f"5\t{p}\t1\t1\t{ln}\t{wn}\t{10 * wn}\t{10 * ln}\t40\t30\t91.5\t{word}")
+    return "\n".join(rows) + "\n"
+
+
+def abbyy_xml(pages: Sequence[Sequence[str]], *, table: Optional[Sequence[Sequence[str]]] = None) -> str:
+    """ABBYY FineReader 10 XML: one charParams per character (spaces included, the
+    first letter of each word `wordStart="true"`); `table` rows go into a Table block
+    on the first page."""
+
+    def line(text: str) -> str:
+        chars, start = [], True
+        for ch in text:
+            flag = ' wordStart="true"' if start and ch != " " else ' wordStart="false"'
+            chars.append(f"<charParams{flag}>{ch}</charParams>")
+            start = ch == " "
+        return f'<line baseline="10"><formatting lang="Czech">{"".join(chars)}</formatting></line>'
+
+    out = []
+    for n, lines in enumerate(pages):
+        body = f'<block blockType="Text"><text><par>{"".join(line(t) for t in lines)}</par></text></block>'
+        if table is not None and n == 0:
+            rows = "".join(
+                "<row>" + "".join(f"<cell><text><par>{line(c)}</par></text></cell>" for c in r) + "</row>"
+                for r in table
+            )
+            body += f'<block blockType="Table">{rows}</block>'
+        out.append(f'<page width="2480" height="3508" resolution="300">{body}</page>')
+    return f'<?xml version="1.0" encoding="UTF-8"?><document xmlns="{ABBYY_NS}" version="1.0">{"".join(out)}</document>'
+
+
+def djvu_xml(pages: Sequence[Tuple[str, Sequence[str]]]) -> str:
+    """DjVuXML (djvutoxml): pages = [(page file, lines)]."""
+    objects = []
+    for page_file, lines in pages:
+        text = "".join("<LINE>" + "".join(f"<WORD>{w}</WORD>" for w in ln.split()) + "</LINE>" for ln in lines)
+        objects.append(
+            f'<OBJECT data="file://localhost/{page_file}" type="image/x.djvu" width="2480" height="3508">'
+            f'<PARAM name="PAGE" value="{page_file}"/><HIDDENTEXT><PAGECOLUMN><REGION><PARAGRAPH>{text}'
+            "</PARAGRAPH></REGION></PAGECOLUMN></HIDDENTEXT></OBJECT>"
+        )
+    return f'<?xml version="1.0"?><DjVuXML><HEAD/><BODY>{"".join(objects)}</BODY></DjVuXML>'
+
+
+# ── e-mail ────────────────────────────────────────────────────────────────────
+
+
+def eml_bytes(
+    subject: str,
+    plain: Optional[str] = None,
+    html: Optional[str] = None,
+    *,
+    charset: str = "utf-8",
+    attachments: int = 0,
+) -> bytes:
+    """An RFC 5322 message: Q-encoded subject, text/plain and/or text/html parts
+    (quoted-printable), `attachments` base64 parts. Fixed boundary and ids."""
+    import quopri
+    from email.header import Header
+
+    head = (
+        "From: Eva Prochazkova <eva@example.org>\r\nTo: Jan Novotny <jan@example.org>\r\n"
+        f"Subject: {Header(subject, 'utf-8').encode()}\r\nDate: Mon, 2 Sep 2024 10:00:00 +0200\r\n"
+        "Message-ID: <sample-1@example.org>\r\nMIME-Version: 1.0\r\n"
+    )
+    parts = []
+    for subtype, body in (("plain", plain), ("html", html)):
+        if body is not None:
+            encoded = quopri.encodestring(body.encode(charset)).decode("ascii")
+            parts.append(
+                f"Content-Type: text/{subtype}; charset={charset}\r\nContent-Transfer-Encoding: quoted-printable"
+                f"\r\n\r\n{encoded}\r\n"
+            )
+    for n in range(attachments):
+        parts.append(
+            f'Content-Type: image/png\r\nContent-Disposition: attachment; filename="scan{n}.png"\r\n'
+            "Content-Transfer-Encoding: base64\r\n\r\niVBORw0KGgo=\r\n"
+        )
+    if len(parts) == 1:
+        return (head + parts[0]).encode("ascii")
+    sub = "alternative" if not attachments else "mixed"
+    boundary = "==atrium-boundary=="
+    body = "".join(f"--{boundary}\r\n{p}" for p in parts) + f"--{boundary}--\r\n"
+    return (head + f'Content-Type: multipart/{sub}; boundary="{boundary}"\r\n\r\n' + body).encode("ascii")
+
+
+def mbox_bytes(messages: Sequence[bytes]) -> bytes:
+    """An mboxo mailbox: a `From ` separator line per message, body `From ` lines quoted."""
+    out = b""
+    for n, msg in enumerate(messages, 1):
+        quoted = b"\n".join(
+            b">" + ln if ln.startswith(b"From ") else ln for ln in msg.replace(b"\r\n", b"\n").split(b"\n")
+        )
+        out += f"From sender{n}@example.org Mon Sep  2 10:00:00 2024\n".encode("ascii") + quoted + b"\n"
+    return out
 
 
 # ── sample set ────────────────────────────────────────────────────────────────
@@ -379,6 +614,35 @@ def write_samples(out_dir: str) -> List[str]:
             '<text:p text:style-name="PB">Den druhý: dokumentace západního profilu.</text:p>',
             automatic_styles='<style:style style:name="PB" style:family="paragraph">'
             '<style:paragraph-properties fo:break-before="page"/></style:style>',
+        ),
+        # (#31 Phase 4) A gzip-wrapped page transcript, and a ZIP bundle of two per-page
+        # PAGE XML files with the METS and doc metadata a Transkribus export carries.
+        "CTX000000023.txt.gz": compress_bytes(
+            "Terénní deník, sonda IV — den třetí.\nZačištění profilu, odběr vzorků na uhlíky.\n"
+            "Zapsala Eva Procházková.\n"
+        ),
+        "CTX000000024.zip": make_zip(
+            [
+                ("CTX000000024/mets.xml", '<mets xmlns="http://www.loc.gov/METS/"/>'),
+                ("CTX000000024/doc.xml", "<trpDocMetadata><title>CTX000000024</title></trpDocMetadata>"),
+                (
+                    "CTX000000024/page/0001.xml",
+                    page_xml(
+                        '<TextRegion id="r1"><TextLine id="l1"><TextEquiv><Unicode>Nálezová zpráva, strana 1.'
+                        '</Unicode></TextEquiv></TextLine><TextLine id="l2"><TextEquiv><Unicode>Sonda V, vrstva'
+                        " 201.</Unicode></TextEquiv></TextLine></TextRegion>",
+                        image="0001.jpg",
+                    ),
+                ),
+                (
+                    "CTX000000024/page/0002.xml",
+                    page_xml(
+                        '<TextRegion id="r1"><TextLine id="l1"><TextEquiv><Unicode>Strana 2: keramika, kosti.'
+                        "</Unicode></TextEquiv></TextLine></TextRegion>",
+                        image="0002.jpg",
+                    ),
+                ),
+            ]
         ),
     }
     written = []

@@ -64,3 +64,62 @@ def test_main_writes_the_seven_column_csv(tmp_path, monkeypatch):
         assert reader.fieldnames == ["file", "page", "textlines", "illustrations", "graphics", "strings", "path"]
         assert [r["file"] for r in reader] == ["d"]
     assert text_stats_create.main([str(tmp_path / "missing"), "-o", str(out)]) == 1
+
+
+# ── (#31 Phase 4) configured encodings, damaged reports, unreadable folders ───
+
+
+def test_fallback_encodings_come_from_the_config(tmp_path, monkeypatch):
+    root = tmp_path / "PAGE_TEXT"
+    _write(root / "d" / "d-1.txt", "Grüße aus Köln\n", encoding="cp1252")
+    config = tmp_path / "config.txt"
+    config.write_text("[TEXT_INGEST]\nFALLBACK_ENCODINGS = cp1252\n", encoding="utf-8")
+    monkeypatch.setattr(text_stats_create, "CONFIG_PATH", str(config))
+    seen = []
+    real = text_stats_create.decode_bytes
+
+    def spy(data, fallbacks=()):
+        seen.append(tuple(fallbacks))
+        return real(data, fallbacks)
+
+    monkeypatch.setattr(text_stats_create, "decode_bytes", spy)
+    monkeypatch.chdir(tmp_path)
+    assert text_stats_create.main([str(root), "-o", str(tmp_path / "s.csv")]) == 0
+    assert seen == [("cp1252",)]
+
+
+def test_a_damaged_pages_report_does_not_stop_the_stage(tmp_path, monkeypatch):
+    root = tmp_path / "PAGE_TEXT"
+    _write(root / "d" / "d-1.txt", "x\n")
+    (root / "pages_report.csv").write_bytes(b"\xff\xfe\x00\x01broken")
+    monkeypatch.chdir(tmp_path)
+    assert text_stats_create.main([str(root), "-o", str(tmp_path / "s.csv")]) == 0
+    with open(tmp_path / "s.csv", encoding="utf-8", newline="") as fh:
+        assert [r["illustrations"] for r in csv.DictReader(fh)] == ["0"]
+
+
+def test_an_unreadable_subdirectory_is_skipped_and_reported(tmp_path, monkeypatch):
+    root = tmp_path / "PAGE_TEXT"
+    _write(root / "good" / "good-1.txt", "x\n")
+    _write(root / "bad" / "bad-1.txt", "y\n")
+    real = text_stats_create.os.scandir
+
+    def scandir(path):
+        if str(path).endswith("bad"):
+            raise PermissionError("denied")
+        return real(path)
+
+    monkeypatch.setattr(text_stats_create.os, "scandir", scandir)
+    rows, skipped = text_stats_create.process_text_files(str(root))
+    assert [r["file"] for r in rows] == ["good"]
+    assert len(skipped) == 1 and "unreadable directory" in skipped[0][1]
+
+
+def test_an_invalid_config_exits_2(tmp_path, monkeypatch):
+    root = tmp_path / "PAGE_TEXT"
+    root.mkdir()
+    config = tmp_path / "config.txt"
+    config.write_text("[TEXT_INGEST]\nFALLBACK_ENCODINGS = no-such-codec\n", encoding="utf-8")
+    monkeypatch.setattr(text_stats_create, "CONFIG_PATH", str(config))
+    monkeypatch.chdir(tmp_path)
+    assert text_stats_create.main([str(root)]) == 2

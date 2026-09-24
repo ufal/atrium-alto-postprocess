@@ -29,8 +29,13 @@ With [DOCUMENT].JSON_DIR set, pages/content are accreted into `<file>.document.j
 exactly like the other extractors (engine "text-lines"); for a born-digital record the
 document_hook guard keeps them out (see docs/text_inputs.md).
 
+A page, a line table or a document record that fails costs that page or document
+only (logged as a skip). The exit status is 0 unless --strict (or [TEXT_INGEST].STRICT)
+is set and something failed; an unreadable statistics CSV or a bad configuration
+stops the stage (1 / 2).
+
 Usage:
-    python extract_TEXT_2_TXT.py [--input-csv CSV] [--output-dir DIR] [--lines-dir DIR]
+    python extract_TEXT_2_TXT.py [--input-csv CSV] [--output-dir DIR] [--lines-dir DIR] [--strict | --no-strict]
 """
 
 from __future__ import annotations
@@ -69,6 +74,12 @@ def _parse_args(argv: Optional[list] = None) -> argparse.Namespace:
         default=None,
         help=f"Line table output dir (default: [EXTRACT].OUTPUT_LINES_TEXT, {DEFAULT_LINES_DIR}).",
     )
+    parser.add_argument(
+        "--strict",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Exit with status 1 if any page or document failed (default: [TEXT_INGEST].STRICT, else false).",
+    )
     return parser.parse_args(argv)
 
 
@@ -91,15 +102,37 @@ def read_page_lines(path: str, fallbacks) -> List[str]:
 
 
 def _page_labels(page_csv_dir: str) -> Dict[Tuple[str, str], str]:
-    """{(file, page): original label} from text_split's pages_report.csv, if it is there."""
+    """{(file, page): original label} from text_split's pages_report.csv, if it is there.
+
+    A damaged report costs the labels (the page number is used instead), never the stage.
+    """
     path = os.path.join(page_csv_dir, "pages_report.csv")
     labels: Dict[Tuple[str, str], str] = {}
     if not os.path.isfile(path):
         return labels
-    with open(path, encoding="utf-8", newline="") as fh:
-        for row in csv.DictReader(fh):
-            labels[(row.get("file", ""), str(row.get("page", "")))] = row.get("page_label", "")
+    try:
+        with open(path, encoding="utf-8", newline="") as fh:
+            for row in csv.DictReader(fh):
+                labels[(row.get("file", ""), str(row.get("page", "")))] = row.get("page_label", "")
+    except (OSError, UnicodeDecodeError, csv.Error) as exc:
+        print(f"WARNING: ignoring unreadable {path} ({exc}); page labels fall back to page numbers", file=sys.stderr)
+        return {}
     return labels
+
+
+class _LabelIndex:
+    """Page labels looked up per page directory — the pages_report.csv next to each
+    document's own `<doc>/` folder, read once. (One report for all tasks, taken from
+    the first task's folder, mislabelled every other input directory.)"""
+
+    def __init__(self):
+        self._by_dir: Dict[str, Dict[Tuple[str, str], str]] = {}
+
+    def get(self, file_id: str, page: int, path: str) -> str:
+        report_dir = str(Path(path).parent.parent)
+        if report_dir not in self._by_dir:
+            self._by_dir[report_dir] = _page_labels(report_dir)
+        return self._by_dir[report_dir].get((file_id, str(page)), str(page))
 
 
 def main(argv: Optional[list] = None) -> int:
@@ -108,6 +141,9 @@ def main(argv: Optional[list] = None) -> int:
     cfg.read(CONFIG_PATH, encoding="utf-8")
     try:
         _limits, options = text_formats.load_settings(cfg)
+        strict = (
+            args.strict if args.strict is not None else text_formats.config_bool(cfg, "TEXT_INGEST", "STRICT", False)
+        )
     except ValueError as exc:
         print(f"CRITICAL ERROR: invalid configuration in {CONFIG_PATH}: {exc}", file=sys.stderr)
         return 2
@@ -137,6 +173,9 @@ def main(argv: Optional[list] = None) -> int:
     except FileNotFoundError:
         print(f"CRITICAL ERROR: Could not find input file {input_csv}", file=sys.stderr)
         return 1
+    except Exception as exc:  # a damaged or unreadable CSV (pandas ParserError, EmptyDataError, …)
+        print(f"CRITICAL ERROR: cannot read {input_csv}: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
     missing = {"file", "page", "path"} - set(df.columns)
     if missing:
         print(f"CRITICAL ERROR: {input_csv} lacks column(s) {', '.join(sorted(missing))}", file=sys.stderr)
@@ -148,14 +187,16 @@ def main(argv: Optional[list] = None) -> int:
         return 0
 
     tasks = []
+    bad_rows = []
     for _, row in df.iterrows():
         try:
             page = int(row["page"])
         except (TypeError, ValueError):
+            bad_rows.append(f"{row['file']}: page {row['page']!r}")
             continue
         tasks.append((str(row["file"]), page, str(row["path"])))
 
-    labels = _page_labels(str(Path(tasks[0][2]).parent.parent)) if tasks else {}
+    labels = _LabelIndex()
     _logger = ParadataLogger(
         program=document_hook.PROGRAM_NAME,
         config={
@@ -166,6 +207,7 @@ def main(argv: Optional[list] = None) -> int:
             "lines_dir": str(lines_dir),
             "max_line_chars": options.max_line_chars,
             "keep_blank_lines": options.keep_blank_lines,
+            "strict": bool(strict),
         },
         paradata_dir="paradata",
         output_types=["txt", "csv"],
@@ -175,9 +217,12 @@ def main(argv: Optional[list] = None) -> int:
 
     doc_json_dir = document_hook.resolve_document_json_dir(cfg.get("DOCUMENT", "JSON_DIR", fallback=""))
     doc_ref = document_hook.paradata_ref_for(_logger)
-    ok = failed = 0
+    ok = failed = failed_docs = 0
     table_rows: Dict[str, List[Dict[str, object]]] = {}
     try:
+        for bad in bad_rows:
+            failed += 1
+            _logger.log_skip(bad, "text-lines extraction skipped: page number is not an integer")
         for file_id, page, path in tasks:
             out_path = Path(output_dir) / file_id / f"{file_id}-{page}.txt"
             try:
@@ -197,7 +242,7 @@ def main(argv: Optional[list] = None) -> int:
                 continue
             ok += 1
             _logger.log_success("txt")
-            label = labels.get((file_id, str(page)), str(page))
+            label = labels.get(file_id, page, path)
             rows = table_rows.setdefault(file_id, [])
             rows.extend(
                 {"file": file_id, "page_num": page, "line_num": n, "text": text, "page_label": label}
@@ -207,29 +252,40 @@ def main(argv: Optional[list] = None) -> int:
         os.makedirs(lines_dir, exist_ok=True)
         for file_id, rows in table_rows.items():
             rows.sort(key=lambda r: (r["page_num"], r["line_num"]))
-            with open(os.path.join(lines_dir, f"{file_id}.csv"), "w", encoding="utf-8", newline="") as fh:
-                writer = csv.DictWriter(fh, fieldnames=LINE_TABLE_COLUMNS)
-                writer.writeheader()
-                writer.writerows(rows)
+            try:
+                with open(os.path.join(lines_dir, f"{file_id}.csv"), "w", encoding="utf-8", newline="") as fh:
+                    writer = csv.DictWriter(fh, fieldnames=LINE_TABLE_COLUMNS)
+                    writer.writeheader()
+                    writer.writerows(rows)
+            except OSError as exc:
+                failed_docs += 1
+                _logger.log_skip(file_id, f"line table not written: {exc}")
+                print(f"  line table for {file_id} not written: {exc}", file=sys.stderr)
+                continue
             _logger.log_success("csv")
 
         for doc_id, page_ids in document_hook.group_tasks_by_doc(tasks).items():
-            pages, content = document_hook.pages_and_content_from_text(
-                output_dir, doc_id, page_ids, engine="text-lines"
-            )
-            document_hook.write_document_block(
-                doc_json_dir,
-                doc_id,
-                _logger.run_id,
-                doc_ref,
-                merge_blocks={"pages": pages} if pages else None,
-                set_blocks={"content": content} if pages else None,
-            )
+            try:
+                pages, content = document_hook.pages_and_content_from_text(
+                    output_dir, doc_id, page_ids, engine="text-lines"
+                )
+                document_hook.write_document_block(
+                    doc_json_dir,
+                    doc_id,
+                    _logger.run_id,
+                    doc_ref,
+                    merge_blocks={"pages": pages} if pages else None,
+                    set_blocks={"content": content} if pages else None,
+                )
+            except Exception as exc:  # one record that fails validation costs that document only
+                failed_docs += 1
+                _logger.log_skip(doc_id, f"document record not written: {type(exc).__name__}: {exc}")
+                print(f"  document record for {doc_id} not written: {type(exc).__name__}: {exc}", file=sys.stderr)
         total = ok + failed
         print(f"Extraction complete. Success rate: {ok / total:.2%}" if total else "Nothing extracted.")
     finally:
-        _logger.finalize(input_total=len(tasks), processed_total=ok)
-    return 0
+        _logger.finalize(input_total=len(tasks) + len(bad_rows), processed_total=ok)
+    return 1 if strict and (failed or failed_docs) else 0
 
 
 if __name__ == "__main__":

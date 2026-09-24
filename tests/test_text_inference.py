@@ -209,3 +209,72 @@ def test_process_alto_uses_layout_reader_when_model_available(tmp_path, monkeypa
 
     mock_reader.assert_called_once()
     assert [c["text"] for c in result["cleaned_lines"]] == ["thing"]
+
+
+# ── (#31 Phase 4) the service reads uploads like the batch path ───────────────
+
+
+@pytest.fixture
+def ingest_config(tmp_path, monkeypatch):
+    """Point LANGID_CONFIG at a scratch config and reset the cached settings around the test."""
+    import service.text_inference as ti
+
+    def write(text):
+        path = tmp_path / "config.txt"
+        path.write_text(text, encoding="utf-8")
+        monkeypatch.setenv("LANGID_CONFIG", str(path))
+        ti.ingest_settings.cache_clear()
+
+    ti.ingest_settings.cache_clear()
+    yield write
+    ti.ingest_settings.cache_clear()
+
+
+def test_process_text_file_decodes_legacy_encodings(tmp_path, monkeypatch, ingest_config):
+    ingest_config("[TEXT_INGEST]\n")
+    _patched_ppl(monkeypatch)
+    m = _manager_with_mocked_ft()
+    path = tmp_path / "cp1250.txt"
+    path.write_bytes("Zpráva o sondě\n\nčíslo tři\n".encode("cp1250"))
+    result = m.process_text_file(str(path))
+    assert result["type"] == "plain_text"
+    assert [c["text"] for c in result["cleaned_lines"]] == ["Zpráva o sondě", "číslo tři"]
+
+
+def test_process_text_file_refuses_binary(tmp_path, ingest_config):
+    from text_formats import IngestError
+
+    ingest_config("[TEXT_INGEST]\n")
+    path = tmp_path / "blob.txt"
+    path.write_bytes(bytes(range(256)) * 8)
+    with pytest.raises(IngestError) as info:
+        _manager_with_mocked_ft().process_text_file(str(path))
+    assert info.value.code == "binary_content"
+
+
+def test_uploads_follow_the_configured_ingest_settings(tmp_path, monkeypatch, ingest_config):
+    ingest_config("[TEXT_INGEST]\nMAX_LINE_CHARS = 12\n\n[DOCUMENT]\nSOURCE_ORIGIN_BY_KIND = md = ocr:tesseract\n")
+    _patched_ppl(monkeypatch)
+    m = _manager_with_mocked_ft()
+    (tmp_path / "d.md").write_text("jedna dva tři čtyři pět\n", encoding="utf-8")
+    result = m.process_document(str(tmp_path / "d.md"))
+    assert [c["text"] for c in result["cleaned_lines"]] == ["jedna dva", "tři čtyři", "pět"]
+    assert result["origin"] == "ocr:tesseract"
+
+
+def test_a_bad_ingest_setting_raises_naming_the_key(ingest_config):
+    import service.text_inference as ti
+
+    ingest_config("[TEXT_INGEST]\nNOTES = margin\n")
+    with pytest.raises(ValueError, match="NOTES"):
+        ti.ingest_settings()
+
+
+def test_process_document_without_a_text_line_is_no_text(tmp_path, ingest_config):
+    from text_formats import IngestError
+
+    ingest_config("[TEXT_INGEST]\n")
+    (tmp_path / "blank.md").write_text("\n\n   \n", encoding="utf-8")
+    with pytest.raises(IngestError) as info:
+        _manager_with_mocked_ft().process_document(str(tmp_path / "blank.md"))
+    assert info.value.code == "no_text"

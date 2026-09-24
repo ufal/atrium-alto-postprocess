@@ -15,6 +15,8 @@ coverage.xml
 .cache/
 *.log
 *.zip
+# (#31 Phase 4) the ZIP-bundle sample of the text-lines inputs is committed.
+!data_samples/TEXT/*.zip
 .env
 .idea/
 ./.idea/

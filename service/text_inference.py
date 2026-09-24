@@ -48,6 +48,7 @@ except ImportError:
 # extract_LytRdr_ALTO_2_TXT's eager torch/transformers/pandas imports into a
 # module that must stay importable without ML libraries installed.
 from classify_TEXT import score_line  # noqa: E402
+from document_hook import parse_origin_by_kind, resolve_input_origin  # noqa: E402
 from extract_JSON_2_TXT import TARGET_KEYS, _yield_json_text_by_keys  # noqa: E402
 from service.utils import normalize_boxes, parse_alto_xml_lines, post_process_text  # noqa: E402
 
@@ -55,7 +56,12 @@ from service.utils import normalize_boxes, parse_alto_xml_lines, post_process_te
 # XML, TEI, CSV, Markdown, ...). Stdlib + lxml at import; pypdfium2/charset-normalizer
 # load lazily and only for the uploads that need them.
 from text_formats import (  # noqa: E402
+    READERS,
+    IngestError,
+    decode_bytes,
     default_source_origin,
+    load_settings,
+    no_text_message,
     read_document_isolated,
     shape_lines,
 )
@@ -171,9 +177,20 @@ class TextModelManager:
         return cleaned_lines
 
     def process_text_file(self, path: str) -> Dict[str, Any]:
-        """Classify a plain-text upload, one line per non-empty line."""
-        with open(path, "r", encoding="utf-8") as f:
-            lines = [ln.strip() for ln in f if ln.strip()]
+        """Classify a plain-text upload, one line per non-empty line.
+
+        (#31 Phase 4) Decoded and shaped like the batch text-lines path: any common
+        encoding (cp1250 first), lines normalized and wrapped at MAX_LINE_CHARS. It
+        used to be read as UTF-8 only, so a legacy-encoded upload failed with a 500.
+        Raises text_formats.IngestError for bytes that are not text.
+        """
+        _limits, options, _configured, _by_kind = ingest_settings()
+        with open(path, "rb") as f:
+            data = f.read()
+        lines: List[str] = []
+        if data:
+            text, _enc, _flags = decode_bytes(data, options.fallback_encodings)
+            lines = shape_lines([text], options.max_line_chars, keep_blank=False)
         return {"type": "plain_text", "cleaned_lines": self._classify_lines(lines)}
 
     def process_document(self, path: str, kind: Optional[str] = None) -> Dict[str, Any]:
@@ -184,13 +201,20 @@ class TextModelManager:
         method, so one file yields the same lines through either path. Pages are kept:
         every entry carries `page` (1-based index, the batch path's page id) and
         `page_label` (the source's own label), and `line_num` restarts per page like
-        DOC_LINE_CATEG's. Raises text_formats.IngestError for unreadable input.
+        DOC_LINE_CATEG's. Raises text_formats.IngestError for unreadable input, and
+        `no_text` for a document without a single text line (a scan with no text layer).
+        The [TEXT_INGEST] settings and the origin keys come from the config
+        (ingest_settings); blank lines are always dropped here, since this path has no
+        `Empty` fast track and each one would go through the perplexity model.
         """
-        doc = read_document_isolated(path, kind=kind)
+        limits, options, configured, by_kind = ingest_settings()
+        doc = read_document_isolated(path, limits, options, kind=kind)
+        if doc.line_count() == 0:
+            raise IngestError("no_text", no_text_message(doc))
         cleaned: List[Dict[str, Any]] = []
         pages: List[Dict[str, Any]] = []
         for n, page in enumerate(doc.pages, 1):
-            lines = shape_lines(page.lines)
+            lines = shape_lines(page.lines, options.max_line_chars, keep_blank=False)
             entries: List[Dict[str, Any]] = []
             for start in range(0, len(lines), DOCUMENT_BATCH_LINES):
                 entries.extend(self._classify_lines(lines[start : start + DOCUMENT_BATCH_LINES]))
@@ -212,7 +236,9 @@ class TextModelManager:
             "type": "document",
             "format": doc.kind,
             "media_type": doc.media_type,
-            "origin": default_source_origin(doc),
+            "origin": resolve_input_origin(
+                doc.kind, default_source_origin(doc), configured=configured, by_kind=by_kind
+            ),
             "pages": pages,
             "cleaned_lines": cleaned,
         }
@@ -329,6 +355,23 @@ def _run_layout_reader(lines: List[str], norm_boxes: List[List[int]], layout_mod
 # ---------------------------------------------------------------------------
 # Helper: classify one line (mirrors process_and_write_batch in classify_TEXT)
 # ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def ingest_settings():
+    """(limits, options, SOURCE_ORIGIN, SOURCE_ORIGIN_BY_KIND) for /process uploads (#31 Phase 4).
+
+    The same [TEXT_INGEST] and [DOCUMENT] keys the batch text-lines stages read, from
+    the same config (LANGID_CONFIG), read once — so an upload and a batch run of one
+    file yield the same lines. The DOCUMENT_SOURCE_ORIGIN env var is a batch-run knob
+    and is not read here. Raises ValueError, naming the key, for a malformed value.
+    """
+    cfg = configparser.ConfigParser(inline_comment_prefixes=None)
+    cfg.read(os.getenv("LANGID_CONFIG", str(project_root / "setup" / "config.txt")), encoding="utf-8")
+    limits, options = load_settings(cfg)
+    configured = cfg.get("DOCUMENT", "SOURCE_ORIGIN", fallback="").strip()
+    by_kind = parse_origin_by_kind(cfg.get("DOCUMENT", "SOURCE_ORIGIN_BY_KIND", fallback=""), READERS)
+    return limits, options, configured, by_kind
 
 
 @lru_cache(maxsize=1)

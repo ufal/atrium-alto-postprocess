@@ -19,7 +19,9 @@ Hyphen-safe ids: `file` is the parent directory's name whenever the file is name
 report file `my`, page `doc`). Other names fall back to the LAST "-". A file with no
 numeric page suffix cannot be addressed by classify_TEXT and is skipped with a warning.
 Hand-written page text files work too (`--skip-split`), in any encoding: the extract
-stage decodes them.
+stage decodes them (with [TEXT_INGEST].FALLBACK_ENCODINGS, as this stage counts them).
+A damaged pages_report.csv or an unreadable subdirectory costs its counts or its files
+(reported), never the stage.
 
 Usage:
     python text_stats_create.py <input_folder> [-o <output_csv>]
@@ -28,15 +30,17 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import configparser
 import csv
 import os
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from atrium_document import canonical_doc_id
 from atrium_paradata import ParadataLogger
-from text_formats import IngestError, decode_bytes
+from text_formats import IngestError, ReaderOptions, decode_bytes, load_settings
 
+CONFIG_PATH = os.getenv("LANGID_CONFIG", os.path.join("setup", "config.txt"))
 COLUMNS = ["file", "page", "textlines", "illustrations", "graphics", "strings", "path"]
 PAGES_REPORT = "pages_report.csv"
 
@@ -59,23 +63,29 @@ def _page_images(folder: str) -> Dict[Tuple[str, str], int]:
     out: Dict[Tuple[str, str], int] = {}
     if not os.path.isfile(path):
         return out
-    with open(path, encoding="utf-8", newline="") as fh:
-        for row in csv.DictReader(fh):
-            try:
-                out[(row["file"], str(row["page"]))] = int(row.get("images") or 0)
-            except (KeyError, ValueError):
-                continue
+    try:
+        with open(path, encoding="utf-8", newline="") as fh:
+            for row in csv.DictReader(fh):
+                try:
+                    out[(row["file"], str(row["page"]))] = int(row.get("images") or 0)
+                except (KeyError, ValueError):
+                    continue
+    except (OSError, UnicodeDecodeError, csv.Error) as exc:
+        print(f"WARNING: ignoring unreadable {path} ({exc}); illustrations are counted as 0", file=sys.stderr)
+        return {}
     return out
 
 
-def _process_single_txt(path: str, images: Dict[Tuple[str, str], int]) -> Tuple[Optional[Dict], Optional[str]]:
+def _process_single_txt(
+    path: str, images: Dict[Tuple[str, str], int], fallbacks: Sequence[str] = ReaderOptions.fallback_encodings
+) -> Tuple[Optional[Dict], Optional[str]]:
     """(row, None) for a usable page file, (None, reason) otherwise."""
     file_id, page = file_page_from_path(path)
     if not page:
         return None, "no numeric page suffix (expected <doc_id>-<n>.txt)"
     try:
         with open(path, "rb") as fh:
-            text, _enc, _flags = decode_bytes(fh.read())
+            text, _enc, _flags = decode_bytes(fh.read(), fallbacks)
     except (OSError, IngestError) as exc:
         return None, f"unreadable ({exc})"
     lines = text.splitlines()
@@ -93,30 +103,38 @@ def _process_single_txt(path: str, images: Dict[Tuple[str, str], int]) -> Tuple[
     )
 
 
-def _page_files(input_folder: str) -> List[str]:
-    """`*.txt` in the root and in each (non-hidden) immediate subdirectory, sorted."""
-    found = []
+def _page_files(input_folder: str) -> Tuple[List[str], List[Tuple[str, str]]]:
+    """(`*.txt` in the root and in each non-hidden immediate subdirectory, sorted;
+    [(subdirectory, reason)] that could not be listed)."""
+    found: List[str] = []
+    skipped: List[Tuple[str, str]] = []
     with os.scandir(input_folder) as it:
         entries = sorted(it, key=lambda e: e.name)
     for entry in entries:
         if entry.name.startswith("."):
-            continue  # hidden files and text_split's .tmp-<doc> staging dirs
+            continue  # hidden files and text_split's .tmp-/.old-<doc> directories
         if entry.is_file() and entry.name.lower().endswith(".txt"):
             found.append(entry.path)
         elif entry.is_dir(follow_symlinks=False):
-            with os.scandir(entry.path) as sub:
-                for f in sorted(sub, key=lambda e: e.name):
-                    if f.is_file() and not f.name.startswith(".") and f.name.lower().endswith(".txt"):
-                        found.append(f.path)
-    return found
+            try:
+                with os.scandir(entry.path) as sub:
+                    for f in sorted(sub, key=lambda e: e.name):
+                        if f.is_file() and not f.name.startswith(".") and f.name.lower().endswith(".txt"):
+                            found.append(f.path)
+            except OSError as exc:
+                skipped.append((entry.path, f"unreadable directory ({exc})"))
+    return found, skipped
 
 
-def process_text_files(input_folder: str) -> Tuple[List[Dict], List[Tuple[str, str]]]:
+def process_text_files(
+    input_folder: str, fallbacks: Sequence[str] = ReaderOptions.fallback_encodings
+) -> Tuple[List[Dict], List[Tuple[str, str]]]:
     """(rows sorted by file then page, [(path, reason)] skipped)."""
     images = _page_images(input_folder)
-    rows, skipped = [], []
-    for path in _page_files(input_folder):
-        row, reason = _process_single_txt(path, images)
+    rows = []
+    paths, skipped = _page_files(input_folder)
+    for path in paths:
+        row, reason = _process_single_txt(path, images, fallbacks)
         if row is None:
             skipped.append((path, reason))
         else:
@@ -139,6 +157,13 @@ def main(argv=None) -> int:
     if not os.path.isdir(args.input_folder):
         print(f"Error: input folder not found: {args.input_folder}", file=sys.stderr)
         return 1
+    cfg = configparser.ConfigParser(inline_comment_prefixes=None)
+    cfg.read(CONFIG_PATH, encoding="utf-8")
+    try:
+        _limits, options = load_settings(cfg)
+    except ValueError as exc:
+        print(f"Error: invalid configuration in {CONFIG_PATH}: {exc}", file=sys.stderr)
+        return 2
 
     logger = ParadataLogger(
         program="alto-postprocess",
@@ -150,16 +175,24 @@ def main(argv=None) -> int:
     rows: List[Dict] = []
     skipped: List[Tuple[str, str]] = []
     try:
-        rows, skipped = process_text_files(args.input_folder)
+        try:
+            rows, skipped = process_text_files(args.input_folder, options.fallback_encodings)
+        except OSError as exc:
+            print(f"Error: cannot list {args.input_folder}: {exc}", file=sys.stderr)
+            return 1
         for path, reason in skipped:
             logger.log_skip(path, reason)
             print(f"  skipped {path}: {reason}", file=sys.stderr)
-        out_dir = os.path.dirname(os.path.abspath(args.output))
-        os.makedirs(out_dir, exist_ok=True)
-        with open(args.output, "w", encoding="utf-8", newline="") as fh:
-            writer = csv.DictWriter(fh, fieldnames=COLUMNS)
-            writer.writeheader()
-            writer.writerows(rows)
+        try:
+            out_dir = os.path.dirname(os.path.abspath(args.output))
+            os.makedirs(out_dir, exist_ok=True)
+            with open(args.output, "w", encoding="utf-8", newline="") as fh:
+                writer = csv.DictWriter(fh, fieldnames=COLUMNS)
+                writer.writeheader()
+                writer.writerows(rows)
+        except OSError as exc:
+            print(f"Error: cannot write {args.output}: {exc}", file=sys.stderr)
+            return 1
         logger.log_success("csv", count=len(rows))
         print(f"Wrote {len(rows)} page rows to {args.output} ({len(skipped)} file(s) skipped).")
     finally:

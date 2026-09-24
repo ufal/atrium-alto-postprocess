@@ -21,8 +21,10 @@ ONE summary JSON. Supports three input formats, selected implicitly via
     3. extract_JSON_2_TXT.py    <stats>.csv      -> PAGE_TXT_JSON/    (text extraction)   [paradata]
 
   Any other text-bearing file (--method text-lines, #31): PDF, DOCX, ODT, XLSX/ODS,
-  PPTX/ODP, EPUB, RTF, HTML/hOCR, PAGE XML, TEI, XML, JSON/JSONL, CSV/TSV, Markdown,
-  plain text — recognised by content (text_formats.py; docs/text_inputs.md):
+  PPTX/ODP, EPUB, RTF, HTML/hOCR, PAGE XML, TEI, ABBYY/DjVu XML, Tesseract TSV, XML,
+  JSON/JSONL, CSV/TSV, Markdown, SRT/VTT, EML/MBOX, plain text, gzip/bz2/xz-wrapped
+  files and ZIP bundles of page files — recognised by content (text_formats.py;
+  docs/text_inputs.md). Input dir: --input-dir, else [PIPELINE].INPUT_DIR_TEXT:
     1. text_split.py            TEXT/            -> PAGE_TEXT/        (pages + reports)   [paradata]
     2. text_stats_create.py     PAGE_TEXT/       -> <stats>.csv       (page statistics)   [paradata]
     3. extract_TEXT_2_TXT.py    <stats>.csv      -> PAGE_TXT_TEXT/    (+ DOC_LINES_TEXT/ line tables) [paradata]
@@ -48,13 +50,16 @@ only the stages that actually ran.
 Configuration
 -------------
 Every setting is read from config.txt. Precedence: CLI flag > config > default.
+For text-lines, --input-csv also reaches extract_TEXT_2_TXT.py (classify still reads
+[CLASSIFY].INPUT_CSV), and --strict/--no-strict reach text_split.py and
+extract_TEXT_2_TXT.py. --source-origin reaches the split stage of any method.
 
 Usage
 -----
   python3 run_pipeline.py                        # all settings from config ([PIPELINE].METHOD)
   python3 run_pipeline.py --method glm           # override just the extraction backend
   python3 run_pipeline.py --method json-keys --input-dir data_samples/JSON  # generic JSON input
-  python3 run_pipeline.py --method text-lines --input-dir data_samples/TEXT  # PDF/DOCX/TXT/... (#31)
+  python3 run_pipeline.py --method text-lines    # PDF/DOCX/TXT/... from [PIPELINE].INPUT_DIR_TEXT (#31)
   python3 run_pipeline.py --skip-split           # PAGE_ALTO already populated
   python3 run_pipeline.py --skip-extract         # PAGE_TXT* already populated (avoids model load)
   python3 run_pipeline.py --start-from classify  # run classify + aggregate only
@@ -109,6 +114,7 @@ INPUT_FORMATS = {
 _DEFAULTS = {
     "method": "layoutreader",
     "input_dir": "data_samples/ALTO",
+    "input_dir_text": "data_samples/TEXT",
     "page_alto_dir": "data_samples/PAGE_ALTO",
     "page_json_dir": "data_samples/PAGE_JSON",
     "page_text_dir": "data_samples/PAGE_TEXT",
@@ -188,7 +194,18 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         getattr(args, "page_text_dir", None) or _cfg_get(cfg, "PIPELINE", "PAGE_TEXT_DIR", _DEFAULTS["page_text_dir"])
     ).strip()
 
-    input_dir = (args.input_dir or _cfg_get(cfg, "PIPELINE", "INPUT_DIR", _DEFAULTS["input_dir"])).strip()
+    if input_format == "text":
+        # (#31 Phase 4) text-lines has its own default input dir, so a bare
+        # `--method text-lines` no longer ingests the ALTO samples; an older config
+        # that only sets INPUT_DIR keeps working.
+        input_dir = (
+            args.input_dir
+            or (_cfg_get(cfg, "PIPELINE", "INPUT_DIR_TEXT", "") or "").strip()
+            or (_cfg_get(cfg, "PIPELINE", "INPUT_DIR", "") or "").strip()
+            or _DEFAULTS["input_dir_text"]
+        ).strip()
+    else:
+        input_dir = (args.input_dir or _cfg_get(cfg, "PIPELINE", "INPUT_DIR", _DEFAULTS["input_dir"])).strip()
     page_alto = (args.page_alto_dir or _cfg_get(cfg, "PIPELINE", "PAGE_ALTO_DIR", _DEFAULTS["page_alto_dir"])).strip()
     # page_json = (
     #     getattr(args, "page_json_dir", None) or _cfg_get(cfg, "PIPELINE", "PAGE_JSON_DIR", _DEFAULTS["page_json_dir"])
@@ -233,6 +250,9 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         # Back-compat: callers/tests that read settings["skip_split"] still work.
         "skip_split": skip["split"],
         "start_from": getattr(args, "start_from", None),
+        # (#31 Phase 4) pass-throughs: None = not given (the stage uses its config).
+        "strict": getattr(args, "strict", None),
+        "source_origin": (getattr(args, "source_origin", None) or "").strip() or None,
         # Resolved output location per stage (used for the pre-flight existence check).
         # "split" is the per-format page dir for every format (#31); None
         # remains supported here for a format with no split-stage concept.
@@ -246,12 +266,15 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
     }
 
 
-def input_csv_mismatches(cli_input_csv: Optional[str], cfg: configparser.ConfigParser) -> List[str]:
-    """Warnings for each config INPUT_CSV that a --input-csv override does NOT reach."""
+def input_csv_mismatches(
+    cli_input_csv: Optional[str], cfg: configparser.ConfigParser, sections=("EXTRACT", "CLASSIFY")
+) -> List[str]:
+    """Warnings for each config INPUT_CSV that a --input-csv override does NOT reach
+    (text-lines passes it to its extract stage, so only [CLASSIFY] is checked there)."""
     if not cli_input_csv:
         return []
     out = []
-    for section in ("EXTRACT", "CLASSIFY"):
+    for section in sections:
         configured = (_cfg_get(cfg, section, "INPUT_CSV", "") or "").strip()
         if configured and os.path.abspath(configured) != os.path.abspath(cli_input_csv.strip()):
             out.append(
@@ -368,12 +391,16 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
     split_script = INPUT_FORMATS[fmt]["split_script"]
     stats_script = INPUT_FORMATS[fmt]["stats_script"]
 
+    strict = settings.get("strict")
+    strict_flag = [] if strict is None or fmt != "text" else ["--strict" if strict else "--no-strict"]
+    origin_flag = ["--source-origin", settings["source_origin"]] if settings.get("source_origin") else []
+
     if split_script:
         page_out_dir = _page_dir_for(settings, fmt)
         split_stage = {
             "key": "split",
             "name": f"1. {split_script} ({fmt} -> {page_out_dir})",
-            "cmd": [py, split_script, settings["input_dir"], page_out_dir],
+            "cmd": [py, split_script, settings["input_dir"], page_out_dir] + origin_flag + strict_flag,
             # text_split.py always emits paradata; page_split's tag is left as it was.
             "logged": fmt == "text",
         }
@@ -396,7 +423,10 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
         {
             "key": "extract",
             "name": f"3. extract text [{settings['method']}] (stats.csv -> {settings['text_dir']})",
-            "cmd": [py, extract_script],
+            # (#31 Phase 4) extract_TEXT_2_TXT.py takes the stats CSV as an argument, so
+            # --input-csv reaches it; the ALTO/JSON extractors read the config only.
+            "cmd": [py, extract_script]
+            + (["--input-csv", settings["input_csv"]] + strict_flag if fmt == "text" else []),
             "logged": True,
         },
         {
@@ -435,8 +465,8 @@ def main() -> int:
     ap.add_argument(
         "--input-dir",
         default=None,
-        help="Override [PIPELINE].INPUT_DIR (document-level ALTO XMLs, JSON files for --method json-keys, or "
-        "any text-bearing files — PDF, DOCX, TXT, ... — for --method text-lines).",
+        help="Override [PIPELINE].INPUT_DIR (document-level ALTO XMLs, or JSON files for --method json-keys) or, "
+        "for --method text-lines, [PIPELINE].INPUT_DIR_TEXT (any text-bearing files — PDF, DOCX, TXT, ...).",
     )
     ap.add_argument("--page-alto-dir", default=None, help="Override [PIPELINE].PAGE_ALTO_DIR (per-page ALTO dir).")
     ap.add_argument("--page-json-dir", default=None, help="Override [PIPELINE].PAGE_JSON_DIR (per-page JSON dir, #31).")
@@ -461,12 +491,15 @@ def main() -> int:
         help="Run from this stage onward; skip every earlier stage (e.g. 'classify').",
     )
     ap.add_argument(
-        "--skip-split", action="store_true", help="Skip page_split (also [PIPELINE].SKIP_SPLIT). PAGE_ALTO ready."
+        "--skip-split",
+        action="store_true",
+        help="Skip stage 1, the page split (page_split.py; text_split.py for text-lines; also [PIPELINE].SKIP_SPLIT)."
+        " PAGE_ALTO / PAGE_JSON / PAGE_TEXT must be ready.",
     )
     ap.add_argument(
         "--skip-stats",
         action="store_true",
-        help="Skip alto_stats_create (also [PIPELINE].SKIP_STATS). stats CSV ready.",
+        help="Skip stage 2 (alto_/json_/text_stats_create.py; also [PIPELINE].SKIP_STATS). The stats CSV must be ready.",
     )
     ap.add_argument(
         "--skip-extract",
@@ -484,6 +517,19 @@ def main() -> int:
         help="Path for the merged run summary (default: <paradata-dir>/<run_id>_pipeline-run.json).",
     )
     ap.add_argument("--dry-run", action="store_true", help="Print the resolved plan without running anything.")
+    ap.add_argument(
+        "--strict",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="text-lines only: passed to text_split.py and extract_TEXT_2_TXT.py, which then exit non-zero (and "
+        "stop the pipeline) when a file failed or was read partially (default: [TEXT_INGEST].STRICT).",
+    )
+    ap.add_argument(
+        "--source-origin",
+        default=None,
+        help="Passed to the split stage (page_split.py / text_split.py): the source.origin recorded for every "
+        "input of this run, e.g. ocr:pero.",
+    )
     ap.add_argument(
         "--document-json",
         type=str,
@@ -558,8 +604,12 @@ def main() -> int:
     # classify_TEXT read [EXTRACT].INPUT_CSV / [CLASSIFY].INPUT_CSV from the config file
     # themselves (run_pipeline passes them no arguments). Say so when the two disagree —
     # otherwise the later stages silently process whatever CSV the config names.
-    for warning in input_csv_mismatches(args.input_csv, cfg):
+    sections = ("CLASSIFY",) if settings["input_format"] == "text" else ("EXTRACT", "CLASSIFY")
+    for warning in input_csv_mismatches(args.input_csv, cfg, sections):
         print(f"  ! WARNING: {warning}", file=sys.stderr)
+    if args.strict is not None and settings["input_format"] != "text":
+        print(f"  ! WARNING: --strict/--no-strict only applies to --method text-lines; ignored for {settings['method']}.",
+              file=sys.stderr)  # fmt: skip
 
     # Pre-flight: a skipped stage's output must already exist for downstream stages.
     # A None output (e.g. "split" for formats with no split stage) has nothing

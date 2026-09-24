@@ -5,7 +5,7 @@
 # the DOCUMENT_JSON_DIR env var (see document_hook.resolve_document_json_dir).
 JSON_DIR =
 # atrium-project#10 (D5): how the ORIGINAL input was acquired, written once by
-# page_split.py as `source.origin`. Since Issue #18 §1a that value is what
+# page_split.py / text_split.py as `source.origin`. Since Issue #18 §1a that value is what
 # AUTHORISES this repo to write the positional blocks (pages/content/lines/tables),
 # so it must start with an ORIGIN_ORIGINATORS prefix this repo owns — ABBYY-ALTO,
 # ocr:<engine> or vlm:<engine>; anything else makes the mixed-plane check abstain
@@ -21,6 +21,18 @@ JSON_DIR =
 # this repo then writes only `source` into it (document_hook guard); CSV outputs are
 # unaffected. A value set HERE overrides that default for every text-lines input too.
 SOURCE_ORIGIN =
+# (#31 Phase 4) Per-kind origin for text-lines inputs (text_split.py and /process):
+# `<kind> = <origin>` pairs separated by commas, kinds as in text_formats.READERS
+# (txt, md, csv, tsv, json, jsonl, xml, tei, html, docx, xlsx, pptx, odt, ods, odp,
+# epub, rtf, eml, mbox, srt, vtt, …). Precedence: --source-origin > the
+# DOCUMENT_SOURCE_ORIGIN env var > this key > SOURCE_ORIGIN > the truthful default.
+# The use case: llm-enrich's digital-convert reads only PDF and DOCX, so a
+# digital-born XLSX/PPTX/ODT/ODS/ODP/EPUB/RTF/HTML/e-mail record ends up with `source`
+# only. When files of such a kind are really OCR or transcription exports, say so,
+# e.g. `xlsx = ocr:generic, pptx = ocr:generic`, and this repo writes their
+# pages/content/lines. Keep it truthful: `source.origin` is provenance other tools
+# read. An unknown kind or an origin no originator claims stops the run (exit 2).
+SOURCE_ORIGIN_BY_KIND =
 
 [EXTRACT]
 INPUT_CSV          = ./data_samples/test_alto_stats.csv
@@ -479,22 +491,26 @@ PPL_GARBAGE_ABSOLUTE        = 30000.0
 GHOST_HITS_INVERTED_MIN     = 1
 
 [TEXT_INGEST]
-# (#31) Input reading for --method text-lines (text_split.py, extract_TEXT_2_TXT.py)
-# and for /process uploads that are not ALTO/TXT/JSON. docs/text_inputs.md has the
-# per-format page/line rules and the reason codes these limits produce.
+# (#31) Input reading for --method text-lines (text_split.py, text_stats_create.py,
+# extract_TEXT_2_TXT.py) and for /process uploads (read once at service start;
+# KEEP_BLANK_LINES and STRICT are batch-only). docs/text_inputs.md has the per-format
+# page/line rules and the reason codes these limits produce.
 #
 # Hard caps — a file over any of them is refused (reason `too_large` or
 # `zip_limits_exceeded`) and the run continues with the next file.
 MAX_FILE_MB        = 256
-# ZIP containers (DOCX/XLSX/PPTX/ODF/EPUB): declared sizes are checked BEFORE reading
-# anything, so a zip bomb costs nothing. RATIO applies to members over 1 MiB.
+# ZIP containers (DOCX/XLSX/PPTX/ODF/EPUB, ZIP bundles of page files): declared sizes
+# are checked BEFORE reading anything, so a zip bomb costs nothing. RATIO applies to
+# members over 1 MiB. The same MAX_FILE_MB and RATIO bound what a gzip/bzip2/xz file
+# may decompress to; ZIP_MAX_TOTAL_MB also bounds the text a spreadsheet expands to.
 ZIP_MAX_MEMBERS    = 10000
 ZIP_MAX_TOTAL_MB   = 1024
 ZIP_MAX_MEMBER_MB  = 256
 ZIP_MAX_RATIO      = 200
 MAX_PAGES          = 20000
 # A block (sheet, JSON child, form-feed section) longer than this is continued on
-# extra pages; a real page (PDF, ALTO, PAGE XML, hOCR) longer than this is refused.
+# extra pages (<label>+1, +2, …); a real page (PDF, ALTO, PAGE XML, hOCR, ABBYY,
+# DjVu, Tesseract TSV) longer than this is refused.
 MAX_LINES_PER_PAGE = 100000
 # PDFs are read in a child process; a hung or crashed PDF costs that file only.
 READER_TIMEOUT_S   = 300
@@ -510,6 +526,11 @@ FALLBACK_ENCODINGS = cp1250, iso8859_2, cp1252
 # Word/LibreOffice rendered when the file was last saved (lastRenderedPageBreak,
 # soft-page-break); explicit = only breaks the author inserted; none = one page.
 PAGE_BREAKS        = auto
+# (#31 Phase 4) DOCX/ODT footnotes and endnotes: page = a footnote's lines end the
+# page that references it, endnotes end the document; end = every note at the end;
+# skip = not read (counted in the ingest report's notes). Headers and footers are
+# never read (counted).
+NOTES              = page
 # PDF per-page text-layer classes (pages_report.csv, text_layer): fewer than
 # MIN_TEXT_CHARS characters = no text layer; more than GARBLE_THRESHOLD of U+FFFD/
 # control/private-use characters = garbled; at least OCR_LAYER_MIN_RATIO of the text
@@ -517,7 +538,9 @@ PAGE_BREAKS        = auto
 PDF_MIN_TEXT_CHARS      = 3
 PDF_GARBLE_THRESHOLD    = 0.15
 PDF_OCR_LAYER_MIN_RATIO = 0.5
-# Exit status 1 from text_split.py when any file failed (CLI: --strict).
+# Exit status 1 from text_split.py when any file failed or was read partially
+# (status `partial`), and from extract_TEXT_2_TXT.py when a page or a document
+# record failed (CLI: --strict / --no-strict; run_pipeline passes either through).
 STRICT             = false
 
 [PIPELINE]
@@ -531,6 +554,9 @@ PAGE_JSON_DIR = data_samples/PAGE_JSON
 # text_split.py writes <doc_id>/<doc_id>-<n>.txt plus ingest_report.csv and
 # pages_report.csv here.
 PAGE_TEXT_DIR = data_samples/PAGE_TEXT
+# (#31 Phase 4) Input dir for --method text-lines when --input-dir is not given
+# (falls back to INPUT_DIR when this key is absent or empty).
+INPUT_DIR_TEXT = data_samples/TEXT
 PARADATA_DIR  = paradata
 # Per-stage skip flags (#6): skip a stage whose outputs already exist. CLI
 # --skip-<stage> / --start-from override these. A skipped stage's outputs must

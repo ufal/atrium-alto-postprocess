@@ -59,7 +59,7 @@ from atrium_service import (  # noqa: E402
     resolve_max_upload_mb,
     serve_lifecycle,
 )
-from text_inference import text_manager  # noqa: E402
+from text_inference import ingest_settings, text_manager  # noqa: E402
 
 # Bare like its siblings above, for the same reason: `utils` is service/utils.py,
 # reached through the sys.path bootstrap, so the import resolves under
@@ -75,7 +75,7 @@ from utils import parse_alto_page_labels  # noqa: E402
 from atrium_document import canonical_doc_id, resolve_originator  # noqa: E402
 from atrium_paradata import ParadataLogger  # noqa: E402
 from document_hook import PROGRAM_NAME, quality_band, write_document_block  # noqa: E402
-from text_formats import READERS, IngestError, sniff_kind  # noqa: E402
+from text_formats import READERS, IngestError, compression_of, sniff_kind  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +87,24 @@ MAX_UPLOAD_BYTES = int(MAX_UPLOAD_MB * 1024 * 1024)
 #: Readiness/draining/in-flight state for the §4.6 disposability contract (issue #55).
 _state = ServiceState()
 
+#: (#31 Phase 4) Reason codes that mean "this service does not read this kind of
+#: file" — a 400, and a retry will not help. Every other code (corrupt, encrypted,
+#: malformed, no_text, a limit, a timeout, ...) means the file is of a supported kind
+#: but unreadable — a 422. One mapping for every path, sniffed or explicit.
+UNSUPPORTED_REASONS = frozenset(
+    {"binary_content", "legacy_office_unsupported", "image_needs_ocr", "archive_unsupported", "dependency_missing"}
+)
+
+
+def _ingest_http_error(exc: IngestError, *, sniffing: bool = False) -> HTTPException:
+    status = 400 if exc.code in UNSUPPORTED_REASONS else 422
+    detail = f"{exc.code}: {exc.message}"
+    if sniffing and status == 400:
+        detail = (
+            f"Cannot auto-detect a supported file type ({detail}). Set task_type='alto', 'text', 'json' or 'document'."
+        )
+    return HTTPException(status_code=status, detail=detail)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -97,6 +115,12 @@ async def lifespan(app: FastAPI):
     surfaces as a crash-loop on the startupProbe, which is the correct signal for a
     misconfigured deployment — see docs/k8s_deployment.md's "Known limits" in the hub.
     """
+    try:
+        # (#31 Phase 4) A malformed [TEXT_INGEST]/[DOCUMENT] key fails the start, like a
+        # missing model, rather than the first upload that needs it.
+        await asyncio.to_thread(ingest_settings)
+    except ValueError as exc:
+        raise RuntimeError(f"invalid [TEXT_INGEST]/[DOCUMENT] configuration: {exc}") from exc
     try:
         # Off the event loop (issue #55): load_models() pulls several torch models, and
         # the loop should be free to answer the /ready probe a startupProbe is polling.
@@ -370,10 +394,17 @@ async def process_document(
     """
     Upload an ALTO XML, plain-text or generic JSON file — or (#31) any other text-bearing
     document: PDF, DOCX, ODT, XLSX/ODS, PPTX/ODP, EPUB, RTF, HTML/hOCR, PAGE XML, TEI,
-    Markdown, CSV/TSV, JSON Lines. `task_type="auto"` keeps `.txt` → text and
-    `.json` → json; `.xml` and every other extension are decided from the bytes
-    (an ALTO root → alto, anything readable → document). Document results carry
-    `page`/`page_label` per line and a `pages` summary.
+    Markdown, CSV/TSV, JSON Lines, ABBYY/DjVu XML, Tesseract TSV, SRT/VTT, EML/MBOX,
+    gzip/bz2/xz-compressed files and ZIP bundles of page files. `task_type="auto"`
+    keeps `.txt` → text and `.json` → json; `.xml` and every other extension are
+    decided from the bytes (an uncompressed ALTO root → alto, anything readable →
+    document). Document results carry `page`/`page_label` per line and a `pages`
+    summary. The readers use the config's [TEXT_INGEST] settings.
+
+    Errors name the reason code: 400 for a file of a kind this service does not read
+    (binary_content, legacy_office_unsupported, image_needs_ocr, archive_unsupported,
+    dependency_missing), 422 for a supported kind that cannot be read (corrupt,
+    encrypted, malformed, no_text, a size limit, ...).
 
     Returns a list of classified lines.  Each entry carries:
 
@@ -437,14 +468,12 @@ async def process_document(
 
         if task_type == "sniff":
             try:
-                kind = await asyncio.to_thread(sniff_kind, tmp_path)
+                kind = await asyncio.to_thread(sniff_kind, tmp_path, ingest_settings()[0])
             except IngestError as exc:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Cannot auto-detect a supported file type ({exc.code}: {exc.message}). "
-                    "Set task_type='alto', 'text', 'json' or 'document'.",
-                ) from exc
-            task_type = "alto" if kind == "alto" else "document"
+                raise _ingest_http_error(exc, sniffing=True) from exc
+            # A compressed ALTO (.alto.xml.gz) is decompressed by the document reader;
+            # the ALTO path parses the uploaded bytes directly.
+            task_type = "alto" if kind == "alto" and not compression_of(tmp_path) else "document"
 
         # Execute text inference, off the event loop (issue #55). These are synchronous
         # torch calls (LayoutReader + Qwen perplexity + fastText); run inline in an
@@ -459,9 +488,12 @@ async def process_document(
             try:
                 result = await asyncio.to_thread(text_manager.process_document, tmp_path)
             except IngestError as exc:
-                raise HTTPException(status_code=422, detail=f"{exc.code}: {exc.message}") from exc
+                raise _ingest_http_error(exc) from exc
         else:
-            result = await asyncio.to_thread(text_manager.process_text_file, tmp_path)
+            try:
+                result = await asyncio.to_thread(text_manager.process_text_file, tmp_path)
+            except IngestError as exc:
+                raise _ingest_http_error(exc) from exc
 
         result["filename"] = file.filename
 

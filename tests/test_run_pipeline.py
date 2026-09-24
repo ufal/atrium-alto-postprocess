@@ -237,7 +237,8 @@ def test_build_plan_text_lines_routes_all_three_new_stages():
     assert plan["split"]["cmd"] == [py, "text_split.py", "data/TEXT", "data_samples/PAGE_TEXT"]
     assert plan["split"]["logged"] is True
     assert plan["stats"]["cmd"][:3] == [py, "text_stats_create.py", "data_samples/PAGE_TEXT"]
-    assert plan["extract"]["cmd"] == [py, "extract_TEXT_2_TXT.py"]
+    # (#31 Phase 4) the stats CSV is passed to the text-lines extractor, so --input-csv reaches it
+    assert plan["extract"]["cmd"] == [py, "extract_TEXT_2_TXT.py", "--input-csv", "test_alto_stats.csv"]
     assert plan["classify"]["cmd"] == [py, "classify_TEXT.py"]
 
 
@@ -269,3 +270,68 @@ def test_input_csv_mismatch_warns_for_each_stage_that_reads_the_config():
     assert input_csv_mismatches("a.csv", cfg) == []
     warnings = input_csv_mismatches("b.csv", cfg)
     assert len(warnings) == 2 and "[EXTRACT].INPUT_CSV" in warnings[0] and "[CLASSIFY].INPUT_CSV" in warnings[1]
+
+
+# ── (#31 Phase 4) text-lines input dir, pass-throughs, ALTO/JSON plans unchanged ─
+
+
+def test_text_lines_input_dir_precedence():
+    cfg = configparser.ConfigParser()
+    assert resolve_settings(_args(method="text-lines"), cfg)["input_dir"] == "data_samples/TEXT"
+    cfg.read_dict({"PIPELINE": {"INPUT_DIR": "cfg/ANY"}})
+    assert resolve_settings(_args(method="text-lines"), cfg)["input_dir"] == "cfg/ANY"  # an older config
+    cfg.read_dict({"PIPELINE": {"INPUT_DIR": "cfg/ALTO", "INPUT_DIR_TEXT": "cfg/TEXT"}})
+    assert resolve_settings(_args(method="text-lines"), cfg)["input_dir"] == "cfg/TEXT"
+    assert resolve_settings(_args(method="text-lines", input_dir="cli/IN"), cfg)["input_dir"] == "cli/IN"
+
+
+def test_alto_and_json_input_dirs_ignore_input_dir_text():
+    cfg = configparser.ConfigParser()
+    cfg.read_dict({"PIPELINE": {"INPUT_DIR": "cfg/ALTO", "INPUT_DIR_TEXT": "cfg/TEXT"}})
+    for method in ("layoutreader", "alto-tools", "glm", "json-keys"):
+        assert resolve_settings(_args(method=method), cfg)["input_dir"] == "cfg/ALTO"
+
+
+def test_strict_and_source_origin_pass_through():
+    py = sys.executable or "python3"
+    text = resolve_settings(
+        _args(method="text-lines", input_dir="in", strict=False, source_origin="ocr:pero"), configparser.ConfigParser()
+    )
+    plan = {s["key"]: s for s in build_plan(text, "config.txt")}
+    assert plan["split"]["cmd"] == [
+        py, "text_split.py", "in", "data_samples/PAGE_TEXT", "--source-origin", "ocr:pero", "--no-strict"
+    ]  # fmt: skip
+    assert plan["extract"]["cmd"][-1] == "--no-strict"
+    alto = resolve_settings(
+        _args(method="alto-tools", strict=True, source_origin="ocr:pero"), configparser.ConfigParser()
+    )
+    plan = {s["key"]: s for s in build_plan(alto, "config.txt")}
+    assert plan["split"]["cmd"][1:] == ["page_split.py", "data_samples/ALTO", "data_samples/PAGE_ALTO",
+                                        "--source-origin", "ocr:pero"]  # fmt: skip
+    assert plan["extract"]["cmd"] == [py, "extract_ALTO_2_TXT.py"]
+
+
+def test_alto_and_json_plans_are_unchanged_without_the_new_flags():
+    py = sys.executable or "python3"
+    expected_extract = {
+        "layoutreader": "extract_LytRdr_ALTO_2_TXT.py",
+        "alto-tools": "extract_ALTO_2_TXT.py",
+        "glm": "extract_LLM_ALTO_2_TXT.py",
+        "json-keys": "extract_JSON_2_TXT.py",
+    }
+    for method, script in expected_extract.items():
+        settings = resolve_settings(_args(method=method), configparser.ConfigParser())
+        plan = {s["key"]: s for s in build_plan(settings, "config.txt")}
+        page_dir = "data_samples/PAGE_JSON" if method == "json-keys" else "data_samples/PAGE_ALTO"
+        assert plan["split"]["cmd"] == [py, "page_split.py", "data_samples/ALTO", page_dir]
+        assert plan["extract"]["cmd"] == [py, script]
+        assert plan["classify"]["cmd"] == [py, "classify_TEXT.py"]
+
+
+def test_text_lines_only_warns_about_the_classify_input_csv():
+    from run_pipeline import input_csv_mismatches
+
+    cfg = configparser.ConfigParser()
+    cfg.read_dict({"EXTRACT": {"INPUT_CSV": "a.csv"}, "CLASSIFY": {"INPUT_CSV": "a.csv"}})
+    warnings = input_csv_mismatches("b.csv", cfg, ("CLASSIFY",))
+    assert len(warnings) == 1 and "[CLASSIFY].INPUT_CSV" in warnings[0]

@@ -13,7 +13,7 @@ import pytest
 
 import text_split
 from atrium_document import load_document
-from tests.text_format_fixtures import docx_bytes, pdf_bytes, w_p, w_t
+from tests.text_format_fixtures import compress_bytes, docx_bytes, make_zip, pdf_bytes, w_p, w_t, xlsx_bytes
 
 
 @pytest.fixture
@@ -25,8 +25,11 @@ def workdir(tmp_path, monkeypatch):
     return tmp_path
 
 
-def _config(tmp_path, monkeypatch, *, json_dir="", origin="", strict=None, extra=""):
-    lines = ["[DOCUMENT]", f"JSON_DIR = {json_dir}", f"SOURCE_ORIGIN = {origin}", "", "[TEXT_INGEST]"]
+def _config(tmp_path, monkeypatch, *, json_dir="", origin="", strict=None, extra="", by_kind=""):
+    lines = ["[DOCUMENT]", f"JSON_DIR = {json_dir}", f"SOURCE_ORIGIN = {origin}"]
+    if by_kind:
+        lines.append(f"SOURCE_ORIGIN_BY_KIND = {by_kind}")
+    lines += ["", "[TEXT_INGEST]"]
     if strict is not None:
         lines.append(f"STRICT = {'true' if strict else 'false'}")
     lines.append(extra)
@@ -137,8 +140,8 @@ def test_strict_exit_code_from_flag_and_config(workdir, monkeypatch):
     assert text_split.main([str(inp), str(out)]) == 1
 
 
-def test_rerun_replaces_a_document_atomically(workdir, monkeypatch):
-    """A re-run with a shorter version leaves no stale page 3, and no staging dir."""
+def test_rerun_replaces_a_document_by_renaming_it_aside(workdir, monkeypatch):
+    """A re-run with a shorter version leaves no stale page 3, no staging and no set-aside dir."""
     _config(workdir, monkeypatch)
     inp, out = workdir / "in", workdir / "out"
     (inp / "d.txt").write_text("1\f2\f3\n", encoding="utf-8")
@@ -147,7 +150,7 @@ def test_rerun_replaces_a_document_atomically(workdir, monkeypatch):
     (inp / "d.txt").write_text("1\f2\n", encoding="utf-8")
     text_split.main([str(inp), str(out)])
     assert sorted(os.listdir(out / "d")) == ["d-1.txt", "d-2.txt"]
-    assert not [n for n in os.listdir(out) if n.startswith(".tmp-")]
+    assert not [n for n in os.listdir(out) if n.startswith((".tmp-", ".old-"))]
 
 
 def test_invalid_config_and_missing_input_dir(workdir, monkeypatch):
@@ -223,3 +226,154 @@ def test_paradata_records_the_pdf_component(workdir, monkeypatch):
     text_split.main([str(inp), str(out)])
     logs = [json.loads(p.read_text(encoding="utf-8")) for p in (workdir / "paradata").glob("*.json")]
     assert any("pypdfium2" in json.dumps(log) for log in logs)
+
+
+# ── (#31 Phase 4) output safety, partial reads, strictness, origins ───────────
+
+
+def test_a_directory_text_split_did_not_write_is_never_replaced(workdir, monkeypatch):
+    """Output dir `.` and an input `setup.txt` used to rmtree ./setup."""
+    _config(workdir, monkeypatch)
+    inp, out = workdir / "in", workdir / "out"
+    (out / "setup").mkdir(parents=True)
+    (out / "setup" / "config.txt").write_text("precious", encoding="utf-8")
+    (inp / "setup.txt").write_text("text\n", encoding="utf-8")
+    assert text_split.main([str(inp), str(out)]) == 0
+    row = _report(out)["setup.txt"]
+    assert (row["status"], row["reason"]) == ("error", "output_failed") and "did not write" in row["notes"]
+    assert (out / "setup" / "config.txt").read_text(encoding="utf-8") == "precious"
+    assert not [n for n in os.listdir(out) if n.startswith((".tmp-", ".old-"))]
+
+
+def test_a_symlinked_page_dir_is_refused(workdir, monkeypatch):
+    _config(workdir, monkeypatch)
+    inp, out = workdir / "in", workdir / "out"
+    elsewhere = workdir / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "d-1.txt").write_text("keep", encoding="utf-8")
+    out.mkdir()
+    os.symlink(elsewhere, out / "d")
+    (inp / "d.txt").write_text("text\n", encoding="utf-8")
+    text_split.main([str(inp), str(out)])
+    assert _report(out)["d.txt"]["reason"] == "output_failed"
+    assert (elsewhere / "d-1.txt").read_text(encoding="utf-8") == "keep"
+
+
+def test_a_failed_rerun_removes_the_documents_stale_pages(workdir, monkeypatch):
+    _config(workdir, monkeypatch)
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "d.txt").write_text("1\f2\n", encoding="utf-8")
+    text_split.main([str(inp), str(out)])
+    assert (out / "d" / "d-2.txt").exists()
+    (inp / "d.txt").write_bytes(bytes(range(256)) * 8)  # now unreadable
+    text_split.main([str(inp), str(out)])
+    row = _report(out)["d.txt"]
+    assert (row["status"], row["reason"]) == ("error", "binary_content") and "stale_pages_removed" in row["notes"]
+    assert not (out / "d").exists()
+
+
+def test_the_record_is_written_before_the_pages_are_swapped_in(workdir, monkeypatch):
+    _config(workdir, monkeypatch, json_dir=str(workdir / "docs"))
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "d.txt").write_text("text\n", encoding="utf-8")
+
+    def boom(*a, **k):
+        raise RuntimeError("record write failed")
+
+    monkeypatch.setattr(text_split.document_hook, "write_document_block", boom)
+    assert text_split.main([str(inp), str(out)]) == 0
+    row = _report(out)["d.txt"]
+    assert (row["status"], row["reason"]) == ("error", "output_failed")
+    assert not (out / "d").exists() and not [n for n in os.listdir(out) if n.startswith((".tmp-", ".old-"))]
+    assert _pages_report(out) == []
+
+
+def test_a_lossy_read_is_partial_and_counts_for_strict(workdir, monkeypatch):
+    _config(workdir, monkeypatch)
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "r.jsonl").write_text('{"text": "dobrý"}\n{broken\n{"text": "den"}\n', encoding="utf-8")
+    assert text_split.main([str(inp), str(out)]) == 0
+    row = _report(out)["r.jsonl"]
+    assert (row["status"], row["reason"]) == ("partial", "jsonl_bad_records")
+    assert (out / "r" / "r-1.txt").exists()  # partial documents are processed downstream
+    assert text_split.main([str(inp), str(out), "--strict"]) == 1
+
+
+def test_no_strict_overrides_the_config_and_strict_must_be_a_boolean(workdir, monkeypatch):
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "bad.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 8)
+    _config(workdir, monkeypatch, strict=True)
+    assert text_split.main([str(inp), str(out)]) == 1
+    assert text_split.main([str(inp), str(out), "--no-strict"]) == 0
+    _config(workdir, monkeypatch, extra="STRICT = ture")
+    assert text_split.main([str(inp), str(out)]) == 2
+
+
+def test_source_origin_by_kind_and_its_precedence(workdir, monkeypatch):
+    docs = workdir / "docs"
+    docs.mkdir()
+    _config(workdir, monkeypatch, json_dir=str(docs), origin="ocr:from-config", by_kind="xlsx = ocr:generic")
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "s.xlsx").write_bytes(xlsx_bytes([("S", [["buňka"]])]))
+    (inp / "w.docx").write_bytes(docx_bytes(w_p(w_t("x"))))
+
+    def origin(name):
+        return load_document(str(docs / f"{name}.document.json"))["source"]["origin"]
+
+    text_split.main([str(inp), str(out)])
+    assert origin("s") == "ocr:generic"  # the per-kind entry beats [DOCUMENT].SOURCE_ORIGIN
+    assert origin("w") == "ocr:from-config"
+    for f in docs.iterdir():
+        f.unlink()
+    monkeypatch.setenv("DOCUMENT_SOURCE_ORIGIN", "ocr:from-env")
+    text_split.main([str(inp), str(out)])
+    assert origin("s") == "ocr:from-env"  # a per-run statement beats every config key
+    for f in docs.iterdir():
+        f.unlink()
+    text_split.main([str(inp), str(out), "--source-origin", "ocr:from-cli"])
+    assert origin("s") == "ocr:from-cli"
+
+
+@pytest.mark.parametrize("value", ["xls = ocr:generic", "xlsx ocr:generic", "xlsx = nonsense", "xlsx=a:b, xlsx=ocr:x"])
+def test_a_bad_source_origin_by_kind_exits_2(workdir, monkeypatch, value):
+    _config(workdir, monkeypatch, by_kind=value)
+    assert text_split.main([str(workdir / "in"), str(workdir / "out")]) == 2
+
+
+def test_the_born_digital_note_needs_a_record_and_names_the_override(workdir, monkeypatch):
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "s.xlsx").write_bytes(xlsx_bytes([("S", [["buňka"]])]))
+    (inp / "w.docx").write_bytes(docx_bytes(w_p(w_t("x"))))
+    _config(workdir, monkeypatch)
+    text_split.main([str(inp), str(out)])
+    assert "born-digital" not in _report(out)["s.xlsx"]["notes"]  # no record, nothing held back
+    _config(workdir, monkeypatch, json_dir=str(workdir / "docs"))
+    text_split.main([str(inp), str(out)])
+    report = _report(out)
+    assert "SOURCE_ORIGIN_BY_KIND" in report["s.xlsx"]["notes"]
+    assert (
+        "born-digital origin" in report["w.docx"]["notes"] and "SOURCE_ORIGIN_BY_KIND" not in report["w.docx"]["notes"]
+    )
+
+
+def test_paradata_records_the_reader_options(workdir, monkeypatch):
+    _config(workdir, monkeypatch, extra="PAGE_BREAKS = explicit")
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "a.txt").write_text("x\n", encoding="utf-8")
+    text_split.main([str(inp), str(out)])
+    logs = [json.loads(p.read_text(encoding="utf-8")) for p in (workdir / "paradata").glob("*text*split*.json")]
+    logs = logs or [json.loads(p.read_text(encoding="utf-8")) for p in (workdir / "paradata").glob("*.json")]
+    assert any('"page_breaks": "explicit"' in json.dumps(log) for log in logs)
+
+
+def test_compressed_files_and_zip_bundles_are_one_document_each(workdir, monkeypatch):
+    _config(workdir, monkeypatch)
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "g.txt.gz").write_bytes(compress_bytes("Komprimovaný\ntext\n"))
+    (inp / "b.zip").write_bytes(make_zip([("p/1.txt", "strana jedna"), ("p/2.txt", "strana dvě")]))
+    assert text_split.main([str(inp), str(out)]) == 0
+    report = _report(out)
+    assert (report["g.txt.gz"]["doc_id"], report["g.txt.gz"]["kind"]) == ("g", "txt")
+    assert (report["b.zip"]["kind"], report["b.zip"]["pages"]) == ("zip-bundle", "2")
+    assert (out / "b" / "b-2.txt").read_text(encoding="utf-8") == "strana dvě\n"
+    assert [r["page_label"] for r in _pages_report(out) if r["file"] == "b"] == ["1", "2"]

@@ -128,3 +128,66 @@ def test_document_record_is_schema_valid(workdir, monkeypatch):
     assert [p["page"] for p in record["pages"]] == ["1", "2"]
     assert record["pages"][0]["ocr"] == {"engine": "text-lines"}
     assert record["content"]["text"] == "line one\n\nline two"
+
+
+# ── (#31 Phase 4) per-document isolation, labels per directory, strictness ────
+
+
+def test_a_failing_document_record_costs_that_document_only(workdir, monkeypatch):
+    out, lines_dir = _setup(workdir, monkeypatch, {("a", 1): b"jedna\n", ("b", 1): b"dva\n"}, json_dir=str(workdir))
+    calls = []
+
+    def record(dir_, doc_id, *a, **k):
+        calls.append(doc_id)
+        if doc_id == "a":
+            raise ValueError("does not validate")
+
+    monkeypatch.setattr(ext.document_hook, "write_document_block", record)
+    assert ext.main([]) == 0
+    assert calls == ["a", "b"] and (lines_dir / "b.csv").exists() and (out / "b" / "b-1.txt").exists()
+    assert ext.main(["--strict"]) == 1
+
+
+def test_an_unreadable_stats_csv_stops_the_stage_with_a_message(workdir, monkeypatch, capsys):
+    _setup(workdir, monkeypatch, {("a", 1): b"x\n"})
+    bad = workdir / "bad.csv"
+    bad.write_text('file,page,path\n"unterminated,1,x\n', encoding="utf-8")
+    assert ext.main(["--input-csv", str(bad)]) == 1
+    assert "cannot read" in capsys.readouterr().err
+
+
+def test_page_labels_are_looked_up_next_to_each_documents_folder(workdir, monkeypatch):
+    out, lines_dir = _setup(workdir, monkeypatch, {("a", 1): b"x\n"})
+    other = workdir / "OTHER" / "b"
+    other.mkdir(parents=True)
+    (other / "b-1.txt").write_bytes(b"y\n")
+    (workdir / "OTHER" / "pages_report.csv").write_text(
+        "file,page,page_label,text_layer,needs_ocr_reason,lines,images,flags\nb,1,List B,,,1,0,\n", encoding="utf-8"
+    )
+    (workdir / "PAGE_TEXT" / "pages_report.csv").write_text(
+        "file,page,page_label,text_layer,needs_ocr_reason,lines,images,flags\na,1,List A,,,1,0,\n", encoding="utf-8"
+    )
+    stats = workdir / "stats.csv"
+    stats.write_text(stats.read_text(encoding="utf-8") + f"b,1,0,0,0,0,{other / 'b-1.txt'}\n", encoding="utf-8")
+    assert ext.main([]) == 0
+    assert _table(lines_dir / "a.csv")[0]["page_label"] == "List A"
+    assert _table(lines_dir / "b.csv")[0]["page_label"] == "List B"
+
+
+def test_a_damaged_pages_report_costs_only_the_labels(workdir, monkeypatch):
+    out, lines_dir = _setup(workdir, monkeypatch, {("a", 1): b"x\n"})
+    (workdir / "PAGE_TEXT" / "pages_report.csv").write_bytes(b"\xff\xfe\x00broken")
+    assert ext.main([]) == 0
+    assert _table(lines_dir / "a.csv")[0]["page_label"] == "1"
+
+
+def test_strict_exit_code_from_the_flag_and_the_config(workdir, monkeypatch):
+    _setup(workdir, monkeypatch, {("a", 1): b"x\n"})
+    stats = workdir / "stats.csv"
+    stats.write_text(stats.read_text(encoding="utf-8") + "gone,1,0,0,0,0,/nonexistent/gone-1.txt\n", encoding="utf-8")
+    assert ext.main([]) == 0
+    assert ext.main(["--strict"]) == 1
+    _setup(workdir, monkeypatch, {("a", 1): b"x\n"}, extra_ingest="STRICT = true")
+    stats.write_text(stats.read_text(encoding="utf-8") + "gone,1,0,0,0,0,/nonexistent/gone-1.txt\n", encoding="utf-8")
+    assert ext.main([]) == 1
+    assert ext.main(["--no-strict"]) == 0

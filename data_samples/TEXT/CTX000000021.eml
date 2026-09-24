@@ -1,0 +1,24 @@
+From: Eva Prochazkova <eva@example.org>
+To: Jan Novotny <jan@example.org>
+Subject: =?utf-8?b?UMWZZWTDoW7DrSBuw6FsZXpvdsOpIHpwcsOhdnkgQ1RYMDAwMDAwMDIx?=
+Date: Mon, 2 Sep 2024 10:00:00 +0200
+Message-ID: <sample-1@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="==atrium-boundary=="
+
+--==atrium-boundary==
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Dobr=C3=BD den,
+pos=C3=ADl=C3=A1m n=C3=A1lezovou zpr=C3=A1vu ze sondy IV.
+S pozdravem
+Eva Proch=C3=A1zkov=C3=A1
+
+--==atrium-boundary==
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<p>Dobr=C3=BD den,</p><p>pos=C3=ADl=C3=A1m n=C3=A1lezovou zpr=C3=A1vu ze so=
+ndy IV.</p>
+--==atrium-boundary==--
