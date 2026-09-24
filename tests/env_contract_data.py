@@ -11,7 +11,8 @@ from __future__ import annotations
 # reason. All four are batch/tools-layer scripts the api entrypoint
 # (service/text_api.py -> text_inference, utils, document_hook) never imports.
 NOT_PUBLISHED: dict[str, str] = {
-    "DOCUMENT_SOURCE_ORIGIN": "batch-pipeline knob read by page_split.py; not reachable from the service entrypoint",
+    "DOCUMENT_SOURCE_ORIGIN": "batch-pipeline knob read by page_split.py and text_split.py; the service reads only "
+    "[DOCUMENT].SOURCE_ORIGIN(_BY_KIND) from setup/config.txt, never this variable",
     "KOREKTOR_URL": "read only by tools/quality_model/correct.py, a batch/tools-layer script; not reachable from the service entrypoint",
     "LANGID_TEXT_DIR": "batch-pipeline knob read by classify_TEXT.py and run_pipeline.py; not reachable from the service entrypoint",
     "MAX_WORKERS": "batch-pipeline knob read by extract_ALTO_2_TXT.py and extract_JSON_2_TXT.py; not reachable from the service entrypoint",
