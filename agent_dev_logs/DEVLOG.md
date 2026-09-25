@@ -1,5 +1,5 @@
 # 📓 atrium-alto-postprocess — agent_dev_logs/DEVLOG.md (timeline index)
-> _OCR/ALTO post-processing + line categorization. 7 open issues (#2, #3, #4, #23, #30, #31, #37); #5/#6 closed. **v1.5.1-beta** released 2026-09-22 at `09c9640`; `master` is at `3b02959` and `test` at `68fcbcb` (the same tree plus an issue-log refresh), carrying the post-tag #30 work as `5b27900` (docs, D40, the tie-break, D43, D44), `0c30517` (the word lists) and `3b02959` (D45, the grid guard restored). Next tag needs the version bump in `CITATION.cff` + `setup/para_config.txt`. Since 2026-09-24 `test` is at `103e30a` (#31's `--method text-lines`, unreleased), then `4378c9f` (issue exports) and `fb72526` (the #31 TEITOK follow-ups). #31 Phase 4 (2026-09-24, second entry) is on `test` since `267e334`; its docs, dev logs and the `tests/test_env_contract.py` restore follow._
+> _OCR/ALTO post-processing + line categorization. 7 open issues (#2, #3, #4, #23, #30, #31, #37); #5/#6 closed. **v1.5.1-beta** released 2026-09-22 at `09c9640`. `test` = `master` = `2e2794d` (2026-09-24, CI green): the post-tag #30 work (`5b27900`, `0c30517`, `3b02959`, `858be91`), #31's `--method text-lines` (`103e30a`), its TEITOK follow-ups (`fb72526`) and #31 Phase 4 (`267e334`, `3bd10f9`, `2e2794d`), all unreleased. Next tag needs the version bump in `CITATION.cff` + `setup/para_config.txt`. #37 is ready to close._
 > _Per-issue detail: `digests/{id}.digest.md` · `plans/{id}.plan.md` · `issues/` exports (source of truth). Cross-repo/hub history lives in `ufal/atrium-project/agent_dev_logs/DEVLOG.md` (deduplicated out of this file)._
 
 ## 2026-03-13
@@ -1104,3 +1104,28 @@ K4TEL re-scoped the issue:
   * ALTO-only hub docs;
   * the hub `ORIGIN_ORIGINATORS` `digital-born` prefix, which covers kinds digital-convert cannot read;
   * llm-enrich V-1.
+* _Status 2026-09-24 (round 5):_ the ALTO-only hub docs are fixed (see the next entry).
+
+## 2026-09-24 (third entry): pushed; #30 answers; round 5 — input formats reference
+
+* **Pushed and green.** Phase 4 landed as `267e334`, then `3bd10f9` (the env-contract test restored — Paradata
+Canonical Drift green again) and `2e2794d` (docs); `test` = `master` = `2e2794d`, CI green on both. Unreleased.
+* **#30** — two answers arrived on 2026-09-23 after the last revision: @david-spacil's Q8 (5795411354: ~73 % of short
+umlaut lines are German, ~13 % misread Czech, ~10 % rubbish — a German-letter exemption would keep a mild existing
+error, so the left-out veto is worth measuring) and @DanaKriv's Q3 (5798302434: the 357 decisions by the end of next
+week, ≈ 2026-10-02). Recorded in the #30 digest and plan; nothing switched on.
+* **Round 5 (docs only in this repo).**
+  * `docs/text_inputs.md` opens with **Formats and their standards**: for every adopted input (ALTO, PAGE XML, hOCR,
+    ABBYY FineReader XML, DjVuXML, Tesseract TSV, OCR JSON, PDF text layers, TEI/TEITOK; office, EPUB, RTF, HTML,
+    Markdown, CSV, JSON, text, subtitles, e-mail, bundles) the standard and its steward, typical producers, what the
+    format records (pages, lines, coordinates, confidences, typography), what this repo keeps and the `source.origin`;
+    and where the coordinates go (atrium-nlp-enrich's TEITOK takes boxes from ALTO or flexiconv conversions only).
+  * **Found:** `page_split.py` splits ALTO in the **v3 namespace only** — a v2/v4 file gets `No <Page> elements found`
+    and no pages (verified on synthetic v2/v3/v4 files). Documented in §8 and a README note; the fix (derive the
+    namespace from the root, as `service/utils.py` does) is proposed, not made.
+  * §2 *Page ids* now says that nlp-enrich numbers TEITOK pages by their order in the ALTO file, not by
+    `PHYSICAL_IMG_NR`, and that `DOC_LINE_CATEG` has no `page_label`.
+  * README: intro sentence on the other inputs, the Step 1 pointer, the ALTO v3 note, one broken anchor
+    (`#-paradata-logging`) fixed; CONTRIBUTING's unreleased row notes the docs.
+  * Dev logs: #2/#3/#4 (milestones; the rules and docs moved on with #30), #30 (answers), #31 (merge state, round 5),
+    **#37 ready to close** (llm-enrich's `json_to_md.py` reads a json-keys record without an adapter, checked).

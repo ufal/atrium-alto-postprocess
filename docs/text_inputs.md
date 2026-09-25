@@ -1,9 +1,11 @@
-# Text-bearing inputs other than ALTO XML (#31)
+# Input formats: standards, producers and readers (#31)
 
 `--method text-lines` accepts any text-bearing file and turns it into an ordered list of **pages**,
 each an ordered list of **lines**. Those lines become the rows of the categorized CSV output: first
 `DOC_LINES_TEXT/<doc>.csv`, then, after Step 4, `DOC_LINE_CATEG/<doc>.csv`. This page is the reference for
-what the readers in [`text_formats.py`](../text_formats.py) do. The pipeline mechanics are in the
+the input formats. [Formats and their standards](#formats-and-their-standards) says which standard
+defines each format, which tools write it and what this repo keeps of it; §1–§8 say what the readers
+in [`text_formats.py`](../text_formats.py) do. The pipeline mechanics are in the
 [README](../README.md#any-other-text-bearing-input-pdf-docx-txt--31-).
 
 ```
@@ -19,6 +21,131 @@ order, when they arrive mixed with other files; see §2 for how its page numbers
 
 Without `--input-dir`, `run_pipeline.py --method text-lines` reads `[PIPELINE].INPUT_DIR_TEXT`
 (default `data_samples/TEXT`; it falls back to `INPUT_DIR` when that key is absent).
+
+## Formats and their standards
+
+The inputs come in two families. **OCR and layout formats** are the output of text recognition on
+a page image. They have real pages and record where each line sits on the image, often each word or
+character too, how sure the engine was, and sometimes the typography. **Text-bearing documents**
+carry text and a logical structure (paragraphs, cells, slides, messages), but no page image and no
+coordinates. Many of them (DOCX, ODT, EPUB, HTML) do not fix pages at all.
+
+This repository keeps the **text** of every format, cut into pages and lines, and each page's
+original label (§2). Its outputs keep no coordinates, engine confidences or typography (fonts,
+sizes, bold, italics). The quality score of Step 4 is computed from the text alone. The ALTO
+methods are the exception: LayoutReader orders the lines by their word boxes, and the page statistics
+count ALTO's lines, strings, illustrations and graphics.
+
+### OCR and layout formats
+
+| Format                     | Standard (steward)                                                                                                                                                                          | Typical producers                                                                                           | Read by                                                                             | `source.origin`                                        |
+|----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|--------------------------------------------------------|
+| ALTO XML                   | ALTO (Analyzed Layout and Text Object), an XML schema of the ALTO Editorial Board with the Library of Congress as maintenance agency; v2–v4 in `http://www.loc.gov/standards/alto/ns-v<N>#` | ABBYY FineReader (the ATRIUM collections), Tesseract (`alto`), Kraken / eScriptorium, Transkribus, PERO-OCR | the ALTO methods (`page_split.py`, Step 3; v3 only, below), text-lines, the service | `ABBYY-ALTO`                                           |
+| PAGE XML                   | PAGE (Page Analysis and Ground-truth Elements), PRImA Research Lab, University of Salford; dated schema versions, e.g. `http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15`    | Transkribus, eScriptorium / Kraken, OCR-D, PERO-OCR, Aletheia (ground truth)                                | text-lines, the service                                                             | `ocr:page-xml`                                         |
+| hOCR                       | hOCR, a microformat that puts OCR results into HTML class and `title` attributes (Thomas Breuel; community specification 1.2)                                                               | Tesseract (`hocr`), Kraken, OCRopus                                                                         | text-lines, the service                                                             | `ocr:hocr`                                             |
+| ABBYY FineReader XML       | ABBYY's own export schema, versioned in its namespace (the sample: `http://www.abbyy.com/FineReader_xml/FineReader10-schema-v1.xml`)                                                        | ABBYY FineReader Engine and Server                                                                          | text-lines, the service                                                             | `ocr:abbyy-finereader`                                 |
+| DjVuXML                    | the XML form of a DjVu file's hidden text layer, defined by DjVuLibre's DTD                                                                                                                 | DjVuLibre `djvutoxml`; the Internet Archive's `_djvu.xml` files                                             | text-lines, the service                                                             | `ocr:djvu`                                             |
+| Tesseract TSV              | Tesseract's tab-separated output (`tesseract … tsv`, `pytesseract.image_to_data`): 12 fixed columns                                                                                         | Tesseract                                                                                                   | text-lines, the service                                                             | `ocr:tesseract`                                        |
+| OCR / Doc-AI JSON          | no common standard: every service has its own schema                                                                                                                                        | Azure AI Document Intelligence, Google Cloud Vision / Document AI, AWS Textract, docTR, pero-ocr, OCR.space | json-keys (`page_split.py`, Step 3), text-lines, the service                        | `ocr:generic`                                          |
+| PDF with an OCR text layer | PDF (ISO 32000); the recognised text is drawn invisibly (text render mode 3) over the scanned page image                                                                                    | ABBYY FineReader, OCRmyPDF (Tesseract), Adobe Acrobat, scanner software                                     | text-lines, the service                                                             | `ocr:pdf-text-layer`, decided per document (§5)        |
+| TEI / TEITOK               | TEI P5 Guidelines (TEI Consortium, `http://www.tei-c.org/ns/1.0`); TEITOK is the TEI-based format of the TEITOK corpus platform, usually written without the namespace                      | atrium-nlp-enrich (TEITOK format 2), flexiconv, the TEITOK platform, TEI editors, Transkribus TEI export    | text-lines, the service                                                             | `ocr:generic` (TEI does not say how the text was made) |
+
+What each of them records, and what this repo keeps:
+
+* **ALTO.** `Layout/Page` (`PHYSICAL_IMG_NR`, `WIDTH`, `HEIGHT`) → `PrintSpace` → `TextBlock` /
+  `ComposedBlock` → `TextLine` → `String` (`CONTENT`), with `SP` for spaces and `HYP` for a line-end
+  hyphen; `Illustration` and `GraphicalElement` mark regions without text. Every element has
+  `HPOS`/`VPOS`/`WIDTH`/`HEIGHT`, in the unit of `Description/MeasurementUnit` (`pixel`, `mm10` =
+  1/10 mm, `inch1200` = 1/1200 inch). Typography sits in `Styles/TextStyle` (`FONTFAMILY`,
+  `FONTSIZE`, `FONTSTYLE`), referenced by `STYLEREFS`. Confidence is in `WC` (word) and `CC`
+  (characters), and the full form of a hyphenated word in `SUBS_CONTENT`. The ALTO methods split the
+  file into one ALTO per page with its header (Step 1), extract the text with LayoutReader (reading
+  order from the boxes, the full form for split words), alto-tools (ALTO order) or GLM (which reads
+  the page image again), and count lines, strings, illustrations and graphics per page (Step 2).
+  text-lines keeps each `TextLine`'s strings in document order. **`page_split.py` splits ALTO v3
+  only**: it looks for pages in the `ns-v3#` namespace, so a v2, v4 or namespace-less ALTO file gets
+  `No <Page> elements found … Skipping.` and no pages (§8). text-lines and the service read every
+  version.
+* **PAGE XML.** `PcGts/Page` (`imageFilename`, `imageWidth`, `imageHeight`) → `ReadingOrder`
+  (`OrderedGroup` / `UnorderedGroup` of `RegionRefIndexed`) and the regions (`TextRegion`,
+  `TableRegion` with its cells, `ImageRegion`, `GraphicRegion`, …) → `TextLine` (a `Coords@points`
+  polygon and a `Baseline`) → `Word` → `Glyph`. Text is in `TextEquiv/Unicode` on every level, with
+  alternatives ranked by `@index` and a `@conf`. Typography is in `TextStyle`. Kept: each
+  `TextLine`'s first `TextEquiv` (the lowest `@index`), else its `Word`s, in reading order (§2); the
+  page label is the image file's stem.
+* **hOCR.** Ordinary HTML whose elements carry OCR classes: `ocr_page` → `ocr_carea` → `ocr_par` →
+  `ocr_line` (also `ocr_caption`, `ocr_header`, `ocr_textfloat`) → `ocrx_word`. Geometry and metadata
+  are properties in the `title` attribute: `bbox x0 y0 x1 y1` in image pixels, `image`, `ppageno`
+  (0-based), `baseline`, `x_wconf` (word confidence), `x_font` / `x_fsize`. Kept: the text of each
+  line element; the page label is `ppageno` + 1.
+* **ABBYY FineReader XML.** `document` → `page` (`width`, `height`, `resolution`) → `block`
+  (`blockType` Text, Table, Picture, …, with an `l`/`t`/`r`/`b` box) → `text` → `par` → `line`
+  (`baseline` and a box) → `formatting` (language, font and style) → `charParams`, one per
+  character, with its box, `wordStart` and `charConfidence`. Kept: each line's characters
+  concatenated, a missing space restored at `wordStart`, a line-final `¬` read as a hyphen; tables
+  row by row.
+* **DjVuXML.** `DjVuXML/BODY/OBJECT`, one per page (`width`, `height`, `PARAM name="PAGE"` naming the
+  page file) → `HIDDENTEXT` → `PAGECOLUMN` → `REGION` → `PARAGRAPH` → `LINE` → `WORD` with `coords`
+  in page pixels. There is no typography or confidence. Kept: each `LINE`'s words joined by spaces
+  (a page without lines: its paragraphs); the label comes from the `PAGE` parameter or `usemap`.
+* **Tesseract TSV.** One row per element: `level` (1 page, 2 block, 3 paragraph, 4 line, 5 word),
+  `page_num`, `block_num`, `par_num`, `line_num`, `word_num`, the box `left`/`top`/`width`/`height` in
+  image pixels, `conf` (0–100 for words, −1 otherwise) and `text`. Kept: the level-5 words of each
+  (block, paragraph, line), joined by spaces; every `page_num` is a page, a blank one too.
+* **OCR / Doc-AI JSON.** Each service nests pages, blocks, lines and words its own way and gives
+  coordinates in its own shape. Azure: `pages[].lines[].content` with a `polygon` in the page's
+  `unit`. Textract: a flat `Blocks` list typed `PAGE`/`LINE`/`WORD` with a relative
+  `Geometry.BoundingBox`. docTR: `pages[].blocks[].lines[].words[]` with a relative `geometry`. Google
+  Vision: `fullTextAnnotation.pages[].blocks[].paragraphs[].words[].symbols[]`. Kept: json-keys
+  splits pages by the page-list and page-tag heuristics of Step 1 and takes every text leaf;
+  text-lines takes each text once, at the line (JSON granularity, §2).
+* **PDF text layer.** The page's content stream places each character at a position in some font.
+  Its Unicode value comes from the font's encoding, usually a `/ToUnicode` map; a subset font
+  without one gives the `garbled` class. The printed page numbers are in `/PageLabels`. Kept: the
+  text-layer lines in PDFium's order, the page label, and a class per page (`none` / `garbled` /
+  `ocr` / `digital`, §5). Positions and fonts are not kept.
+* **TEI / TEITOK.** TEI marks the structure (`<text>`, `<div>`, `<p>`, `<head>`, `<l>`), page and
+  line breaks (`<pb/>`, `<lb/>`, often with `@facs`), editorial choices (`<choice>` with `sic`/`corr`,
+  `orig`/`reg`, `abbr`/`expan`) and typography (`<hi rend>`). TEITOK adds tokens (`<tok>` with their
+  annotations as attributes, `<dtok>` for the parts of a multi-word token), sentences (`<s>`), named
+  entities (`<name>`) and page geometry (`bbox` on `pb`/`lb`/`tok`, `<facsimile>` surfaces). ATRIUM's
+  TEITOK is atrium-nlp-enrich's format 2 (`teitok-2`), described in that repository's README (section
+  "TEITOK XML — Unified Output Format") and checked against its `schemas/teitok`. Kept: the text
+  between `<pb/>`s as pages (label `pb@n`), lines at `<lb/>` and block ends. In tokenized TEITOK a
+  sentence is not a line. `<choice>` gives its edited reading. The header, `facsimile`, `standOff` and
+  `sourceDoc` are skipped, and token annotations and boxes are not kept. A TEITOK file that
+  nlp-enrich wrote is read back into the pages nlp-enrich's own readers count.
+
+**Where the coordinates go.** This repo writes text only. The page geometry that a TEITOK file shows
+over the page image comes from atrium-nlp-enrich. Its writer reads the ALTO file itself
+(`INPUT_ALTO_DIR`) or a flexiconv conversion of ALTO, PAGE XML or hOCR (`api_flexiconv.sh`). The
+boxes of ABBYY FineReader XML, DjVuXML, Tesseract TSV and OCR JSON reach no ATRIUM output. When a
+TEITOK view over the page image is wanted, export ALTO, PAGE XML or hOCR from the engine as well.
+
+### Text-bearing documents
+
+| Format            | Standard (steward)                                                                        | Pages in the format                                                                                                         | Typical producers                                                        | `source.origin`                         |
+|-------------------|-------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|-----------------------------------------|
+| DOCX, XLSX, PPTX  | Office Open XML: ECMA-376, also ISO/IEC 29500 (Ecma TC45)                                 | DOCX stores none: explicit breaks, plus the breaks Word rendered when it last saved the file (§2); XLSX sheets; PPTX slides | Microsoft Office, LibreOffice, Google Docs exports, OCR engines' exports | `digital-born-docx` / `-xlsx` / `-pptx` |
+| ODT, ODS, ODP     | OpenDocument Format (OASIS; ODF 1.2 is ISO/IEC 26300)                                     | ODT stores none: page-break styles, plus `text:soft-page-break` where LibreOffice last laid it out; sheets; slides          | LibreOffice, Apache OpenOffice, Google Docs exports                      | `digital-born-odt` / `-ods` / `-odp`    |
+| EPUB              | EPUB 3 (W3C, formerly IDPF): a ZIP whose package document lists XHTML chapters in a spine | none; each spine chapter is a page                                                                                          | publishing tools, Calibre, Sigil                                         | `digital-born-epub`                     |
+| RTF               | Rich Text Format Specification 1.9.1 (Microsoft)                                          | `\page`                                                                                                                     | Word, WordPad, TextEdit                                                  | `digital-born-rtf`                      |
+| HTML / XHTML      | HTML Living Standard (WHATWG); XHTML                                                      | only CSS page breaks                                                                                                        | "save as web page", CMS exports                                          | `digital-born-html`                     |
+| Markdown          | CommonMark; tables as in GitHub Flavored Markdown                                         | form feeds                                                                                                                  | editors, pandoc                                                          | `ocr:generic`                           |
+| CSV / TSV         | RFC 4180 (CSV); the IANA `text/tab-separated-values` registration                         | a `page` / `page_num` column                                                                                                | spreadsheets, transcription and annotation tools                         | `ocr:generic`                           |
+| JSON / JSON Lines | RFC 8259; JSON Lines (one value per line)                                                 | a page list or page tag, else top-level children / records                                                                  | APIs, annotation tools                                                   | `ocr:generic`                           |
+| Other XML         | any vocabulary without a reader of its own                                                | root children                                                                                                               | —                                                                        | `ocr:generic`                           |
+| Plain text        | Unicode (UTF-8/16/32) or a legacy code page (`FALLBACK_ENCODINGS`, §3)                    | form feeds, as `pdftotext` and Tesseract write them between pages                                                           | any                                                                      | `ocr:generic`                           |
+| SRT / WebVTT      | SubRip (de facto); WebVTT (W3C)                                                           | none                                                                                                                        | subtitle editors, speech recognition                                     | `ocr:generic`                           |
+| EML / MBOX        | Internet Message Format (RFC 5322) with MIME (RFC 2045–2049); mbox (RFC 4155)             | one message per page                                                                                                        | mail clients and archives                                                | `digital-born-eml` / `-mbox`            |
+| ZIP bundle        | ZIP (PKWARE APPNOTE) of per-page files                                                    | the member files                                                                                                            | Transkribus (`page/*.xml` with `mets.xml`), eScriptorium (ALTO or PAGE)  | its members'                            |
+| gzip, bzip2, xz   | gzip (RFC 1952), bzip2, xz: one compressed file                                           | the inner file's                                                                                                            | any                                                                      | the inner file's                        |
+
+`ocr:generic` stands for text whose making the file does not record: it may be OCR output, a
+transcription or typed text. Set a truthful origin per kind when it is known (§6). Images, legacy
+binary Office files (`.doc`, `.xls`, `.ppt`) and other archives (tar, 7z, RAR, zstd) are refused with
+a reason (§1, §4). An image needs OCR first; feed its ALTO, PAGE XML, hOCR, TSV or text output
+instead.
 
 ## 1. How a file is recognised
 
@@ -115,8 +242,11 @@ page label, JSON page number, bundle member …) is kept in `pages_report.csv` a
 **Page ids.** text-lines numbers pages 1..N in reading order, for every format. The ALTO and JSON
 methods (`page_split.py`) name ALTO pages by `PHYSICAL_IMG_NR` and JSON pages by their page number.
 So the same ALTO/JSON file read through text-lines can get other `page_num`s than through its own
-method, while the source's label is kept in `page_label`. nlp-enrich takes its pages from these
-tables' `page_num`, so read one document through one method.
+method, while the source's label is kept in `page_label`. nlp-enrich takes its pages from the layout
+when it has one, numbered by their order in the ALTO file, and else from these tables' `page_num`,
+so read one document through one method. When an ALTO file's `PHYSICAL_IMG_NR`s are not 1, 2, 3 … in
+order, the ALTO methods' `page_num`s, which also key the record's `pages[]`, differ from the TEITOK
+page numbers (atrium-nlp-enrich README, Pitfalls 14). `DOC_LINE_CATEG` has no `page_label` column.
 
 **DOCX/ODT pagination** is set by `[TEXT_INGEST].PAGE_BREAKS`:
 * `auto` (default): explicit breaks plus the breaks Word or LibreOffice rendered when the file was
@@ -363,6 +493,11 @@ var is not read. Errors name the reason code: `400` for a file of a kind this se
 
 ## 8. Known limitations
 
+* The ALTO methods: `page_split.py` finds pages only in the ALTO v3 namespace
+  (`http://www.loc.gov/standards/alto/ns-v3#`, what the ATRIUM ABBYY exports use). An ALTO v2, v4 or
+  namespace-less file, and any other `.xml` in the ALTO input directory (PAGE XML, TEI), prints
+  `No <Page> elements found … Skipping.`, gets no page files and no document record, and the run goes
+  on. Read such files with text-lines, or through the service; both read every ALTO version.
 * PDF: no OCR (image-only pages are reported, not recognised) and no multi-column reordering.
   Annotations and form fields are not read. A page's `/Rotate` is not part of `rotated_text`.
 * DOCX/ODT: style-inherited page breaks, headers/footers and comments are not read (headers and

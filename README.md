@@ -19,6 +19,11 @@ The core of the quality filtering relies on **language identification** 🌐 and
 score** 📈 — combining structural detectors, **perplexity** 📉, and character-level metrics — to identify
 and categorize noisy or unreliable **OCR** 🔍 output.
 
+Besides ALTO, the same categorization takes the other OCR formats (PAGE XML, hOCR, ABBYY FineReader
+XML, DjVuXML, Tesseract TSV, OCR/Doc-AI JSON) and PDF, office, e-mail and plain-text files — see
+[Step 1](#-step-1-split-document-specific-inputs-into-pages-) and the
+[input formats reference 📚](docs/text_inputs.md#formats-and-their-standards).
+
 ---
 
 ## 📖 Table of Contents
@@ -159,6 +164,12 @@ Each page-specific file retains the header from its original source document �
 * **Input 📥:** `../ALTO/` (input directory with **ALTO XML** 📄 documents)
 * **Output 📤:** `../PAGE_ALTO/` (output directory with **ALTO XML** 📄 files split into pages)
 
+> [!NOTE]
+> `page_split.py` splits ALTO in the **v3** namespace (`http://www.loc.gov/standards/alto/ns-v3#`), the
+> one the ATRIUM ABBYY exports use. An ALTO v2 or v4 file gets `No <Page> elements found` and no pages.
+> Read such files with the [text-lines method](#any-other-text-bearing-input-pdf-docx-txt--31-), which
+> reads every ALTO version ([docs/text_inputs.md §8](docs/text_inputs.md#8-known-limitations)).
+
 Example of the output directory with divided per-page XML files: [PAGE_ALTO](data_samples/PAGE_ALTO) 📁.
 
 ```
@@ -214,8 +225,10 @@ Every file becomes an ordered list of **pages**, each an ordered list of **lines
 real page where the format has one (PDF, PAGE XML, hOCR, ALTO, DOCX/ODT page breaks). Otherwise
 it is the format's natural block: a sheet, a slide, a JSON child object, a JSONL record, an EPUB
 chapter, a form-feed section of a text file. A line is the format's own unit: a physical
-line, a paragraph, a table cell or a spreadsheet row. The full per-format matrix, the
-normalisation rules, the limits and the reason codes are in
+line, a paragraph, a table cell or a spreadsheet row. The standard behind each format, the tools
+that write it and what this repo keeps of it
+([Formats and their standards](docs/text_inputs.md#formats-and-their-standards)), the full
+per-format matrix, the normalisation rules, the limits and the reason codes are in
 **[docs/text_inputs.md](docs/text_inputs.md)** 📚.
 
 * **Input 📥:** `../TEXT/` (any mix of the formats above — example: [data_samples/TEXT](data_samples/TEXT) 📁)
@@ -472,7 +485,7 @@ PAGE_TXT_JSON/
 
 ##### `doc.json` accretion (issue #37)
 
-When [`[DOCUMENT].JSON_DIR`](#-paradata-logging) (or the `DOCUMENT_JSON_DIR` env var) is
+When [`[DOCUMENT].JSON_DIR`](#paradata-logging) (or the `DOCUMENT_JSON_DIR` env var) is
 configured, a second, separate **Accretion Layer** runs after extraction: for every document,
 it reads back that document's already-written `.txt` pages and merges them into
 `<doc_id>.document.json` as this repo's owned fields — `pages[].ocr`
