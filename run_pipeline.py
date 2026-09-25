@@ -8,7 +8,7 @@ ONE summary JSON. Supports three input formats, selected implicitly via
 --method (each method is tagged with the format it consumes):
 
   ALTO XML (--method alto-tools|layoutreader|glm):
-    1. page_split.py            ALTO/            -> PAGE_ALTO/        (split into pages)
+    1. page_split.py            ALTO/            -> PAGE_ALTO/        (split into pages)  [paradata]
     2. alto_stats_create.py     PAGE_ALTO/       -> <stats>.csv       (page statistics)   [paradata]
     3. extract text             <stats>.csv      -> PAGE_TXT*/        (text extraction)   [paradata]
          --method alto-tools  -> extract_ALTO_2_TXT.py        (PAGE_TXT/,     Apache-2.0)
@@ -16,7 +16,7 @@ ONE summary JSON. Supports three input formats, selected implicitly via
          --method glm         -> extract_LLM_ALTO_2_TXT.py    (PAGE_TXT_LLM/, glm-4)
 
   Generic JSON (--method json-keys):
-    1. page_split.py            JSON/            -> PAGE_JSON/        (split into pages)  (#31)
+    1. page_split.py            JSON/            -> PAGE_JSON/        (split into pages)  [paradata]
     2. json_stats_create.py     PAGE_JSON/       -> <stats>.csv       (page statistics)   [paradata]
     3. extract_JSON_2_TXT.py    <stats>.csv      -> PAGE_TXT_JSON/    (text extraction)   [paradata]
 
@@ -50,8 +50,11 @@ only the stages that actually ran.
 Configuration
 -------------
 Every setting is read from config.txt. Precedence: CLI flag > config > default.
-For text-lines, --input-csv also reaches extract_TEXT_2_TXT.py (classify still reads
-[CLASSIFY].INPUT_CSV), and --strict/--no-strict reach text_split.py and
+--input-csv (the page statistics CSV) reaches every stage that reads it — stats,
+extract and classify_TEXT.py (#31 Phase 5); without it the ALTO/JSON extractors and
+classify read [EXTRACT]/[CLASSIFY].INPUT_CSV as before. text-lines always passes its
+own stats CSV, [EXTRACT].INPUT_CSV_TEXT (else INPUT_CSV), so it no longer overwrites
+the ALTO methods' CSV. --strict/--no-strict reach text_split.py and
 extract_TEXT_2_TXT.py. --source-origin reaches the split stage of any method.
 
 Usage
@@ -217,7 +220,14 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         getattr(args, "document_json_dir", None) or _cfg_get(cfg, "PIPELINE", "DOCUMENT_JSON_DIR", "")
     ).strip()
 
-    input_csv = (args.input_csv or _cfg_get(cfg, "EXTRACT", "INPUT_CSV", _DEFAULTS["input_csv"])).strip()
+    # (#31 Phase 5) text-lines has its own stats CSV key, so a text-lines run with the
+    # stock config no longer overwrites the ALTO methods' CSV; an older config without
+    # INPUT_CSV_TEXT keeps sharing INPUT_CSV.
+    input_csv = (
+        args.input_csv
+        or ((_cfg_get(cfg, "EXTRACT", "INPUT_CSV_TEXT", "") or "").strip() if input_format == "text" else "")
+        or _cfg_get(cfg, "EXTRACT", "INPUT_CSV", _DEFAULTS["input_csv"])
+    ).strip()
     text_dir = _resolve_extract_outdir(method, cfg)
     categ_dir = (
         _cfg_get(cfg, "CLASSIFY", "OUTPUT_LINES_LOG", _DEFAULTS["categ_dir"]) or _DEFAULTS["categ_dir"]
@@ -245,6 +255,9 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
         "paradata_dir": paradata_dir,
         "document_json_dir": document_json_dir,
         "input_csv": input_csv,
+        # (#31 Phase 5) passed on to extract/classify: always for text-lines (its CSV
+        # differs from the config's [CLASSIFY].INPUT_CSV), on --input-csv for the rest.
+        "pass_input_csv": input_format == "text" or bool(getattr(args, "input_csv", None)),
         "text_dir": text_dir,
         "skip": skip,
         # Back-compat: callers/tests that read settings["skip_split"] still work.
@@ -264,24 +277,6 @@ def resolve_settings(args, cfg: configparser.ConfigParser) -> Dict:
             "aggregate": stats_dir,
         },
     }
-
-
-def input_csv_mismatches(
-    cli_input_csv: Optional[str], cfg: configparser.ConfigParser, sections=("EXTRACT", "CLASSIFY")
-) -> List[str]:
-    """Warnings for each config INPUT_CSV that a --input-csv override does NOT reach
-    (text-lines passes it to its extract stage, so only [CLASSIFY] is checked there)."""
-    if not cli_input_csv:
-        return []
-    out = []
-    for section in sections:
-        configured = (_cfg_get(cfg, section, "INPUT_CSV", "") or "").strip()
-        if configured and os.path.abspath(configured) != os.path.abspath(cli_input_csv.strip()):
-            out.append(
-                f"--input-csv {cli_input_csv} is written by the stats stage, but [{section}].INPUT_CSV "
-                f"is {configured} and that is what the {section.lower()} stage reads — set it in the config too."
-            )
-    return out
 
 
 def _snapshot(paradata_dir: Path) -> set:
@@ -394,6 +389,7 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
     strict = settings.get("strict")
     strict_flag = [] if strict is None or fmt != "text" else ["--strict" if strict else "--no-strict"]
     origin_flag = ["--source-origin", settings["source_origin"]] if settings.get("source_origin") else []
+    csv_flag = ["--input-csv", settings["input_csv"]] if settings.get("pass_input_csv") else []
 
     if split_script:
         page_out_dir = _page_dir_for(settings, fmt)
@@ -401,8 +397,8 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
             "key": "split",
             "name": f"1. {split_script} ({fmt} -> {page_out_dir})",
             "cmd": [py, split_script, settings["input_dir"], page_out_dir] + origin_flag + strict_flag,
-            # text_split.py always emits paradata; page_split's tag is left as it was.
-            "logged": fmt == "text",
+            # Both split scripts emit paradata (page_split's tag said "[no log]" until #31 Phase 5).
+            "logged": True,
         }
     else:
         split_stage = {
@@ -423,16 +419,15 @@ def build_plan(settings: Dict, config_path: str) -> List[Dict]:
         {
             "key": "extract",
             "name": f"3. extract text [{settings['method']}] (stats.csv -> {settings['text_dir']})",
-            # (#31 Phase 4) extract_TEXT_2_TXT.py takes the stats CSV as an argument, so
-            # --input-csv reaches it; the ALTO/JSON extractors read the config only.
-            "cmd": [py, extract_script]
-            + (["--input-csv", settings["input_csv"]] + strict_flag if fmt == "text" else []),
+            # (#31 Phase 5) every extractor takes --input-csv; a plan without the flag
+            # (ALTO/JSON, no --input-csv) is unchanged: the extractor reads the config.
+            "cmd": [py, extract_script] + csv_flag + strict_flag,
             "logged": True,
         },
         {
             "key": "classify",
             "name": "4. classify_TEXT (PAGE_TXT* -> DOC_LINE_CATEG)",
-            "cmd": [py, "classify_TEXT.py"],
+            "cmd": [py, "classify_TEXT.py"] + csv_flag,
             "logged": True,
         },
         {
@@ -475,7 +470,12 @@ def main() -> int:
         default=None,
         help="Override [PIPELINE].PAGE_TEXT_DIR (per-page text dir written by text_split.py, --method text-lines, #31).",
     )
-    ap.add_argument("--input-csv", default=None, help="Override [EXTRACT].INPUT_CSV (page-stats CSV).")
+    ap.add_argument(
+        "--input-csv",
+        default=None,
+        help="The page statistics CSV the stats stage writes and the extract and classify stages read "
+        "(default: [EXTRACT].INPUT_CSV; [EXTRACT].INPUT_CSV_TEXT for --method text-lines).",
+    )
     ap.add_argument("--paradata-dir", default=None, help="Override [PIPELINE].PARADATA_DIR.")
     ap.add_argument(
         "--document-json-dir",
@@ -600,13 +600,6 @@ def main() -> int:
         + (f" page_text_dir={settings['page_text_dir']}" if settings["input_format"] == "text" else "")
     )
 
-    # (#31) --input-csv only redirects the stats stage's `-o`: the extract scripts and
-    # classify_TEXT read [EXTRACT].INPUT_CSV / [CLASSIFY].INPUT_CSV from the config file
-    # themselves (run_pipeline passes them no arguments). Say so when the two disagree —
-    # otherwise the later stages silently process whatever CSV the config names.
-    sections = ("CLASSIFY",) if settings["input_format"] == "text" else ("EXTRACT", "CLASSIFY")
-    for warning in input_csv_mismatches(args.input_csv, cfg, sections):
-        print(f"  ! WARNING: {warning}", file=sys.stderr)
     if args.strict is not None and settings["input_format"] != "text":
         print(f"  ! WARNING: --strict/--no-strict only applies to --method text-lines; ignored for {settings['method']}.",
               file=sys.stderr)  # fmt: skip

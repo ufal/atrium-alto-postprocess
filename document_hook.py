@@ -354,6 +354,69 @@ def group_tasks_by_doc(tasks: Iterable[Sequence[Any]]) -> "OrderedDict[str, List
     return by_doc
 
 
+def read_page_index(csv_path: str):
+    """Read the page statistics CSV that drives the extract and classify stages.
+
+    `file` is read as a string: with pandas' default type inference a document id such
+    as `0001` became the integer 1 and `NA`/`null` became NaN, so the pages were written
+    under `1/` (or `nan/`) and the next stage, looking under `0001/`, skipped the
+    document in silence. Only `file` changes — `page` stays numeric (the sorts and the
+    `<doc>-<page>.txt` names rely on it) and an empty cell is still NaN; ALTO ids
+    (`CTX…`) are unaffected. (#31; shared by every extractor and classify_TEXT since
+    Phase 5 — it lives here because classify_TEXT is too heavy to import.)
+    """
+    import pandas as pd
+
+    return pd.read_csv(csv_path, dtype={"file": str}, keep_default_na=False, na_values=[""])
+
+
+def output_is_current(output_path: Any, input_paths: Iterable[Any]) -> bool:
+    """True when `output_path` exists and is at least as new as every input that exists.
+
+    (#31 Phase 5) The resume check of the extract and classify stages. They used to skip
+    a page or document whenever its output existed, so a re-ingested (changed) input kept
+    the old text or categories. An input that does not exist is ignored — the stage
+    decides what a missing input means.
+    """
+    try:
+        out_mtime = os.stat(output_path).st_mtime_ns
+    except OSError:
+        return False
+    for path in input_paths:
+        try:
+            if os.stat(path).st_mtime_ns > out_mtime:
+                return False
+        except OSError:
+            continue
+    return True
+
+
+def write_bytes_if_changed(path: Any, data: bytes) -> bool:
+    """Write `data` to `path` unless the file already holds exactly these bytes; True when
+    written. (#31 Phase 5) The resume checks compare file times (``output_is_current``), so
+    the split and extract stages leave an unchanged file untouched: rewriting it on every run
+    would make each later stage redo its work."""
+    try:
+        with open(path, "rb") as fh:
+            if fh.read() == data:
+                return False
+    except OSError:
+        pass
+    with open(path, "wb") as fh:
+        fh.write(data)
+    return True
+
+
+def write_text_if_changed(path: Any, text: str, newline: Optional[str] = None) -> bool:
+    """``write_bytes_if_changed`` for text, with the bytes `open(path, "w", encoding="utf-8",
+    newline=newline)` would write (so a call site keeps its newline handling)."""
+    if newline is None:
+        text = text.replace("\n", os.linesep)
+    elif newline not in ("", "\n"):
+        text = text.replace("\n", newline)
+    return write_bytes_if_changed(path, text.encode("utf-8"))
+
+
 def read_page_text(output_text_dir: str, file_id: str, page_id: Any) -> Optional[str]:
     """Read back one page's extracted text, mirroring classify_TEXT.py's own lookup
     (hyphen filename first, underscore fallback for older layouts).

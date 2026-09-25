@@ -55,7 +55,7 @@ def test_main_graceful_exit(mock_cfg_class, mock_read_csv):
     from classify_TEXT import main
 
     with pytest.raises(FileNotFoundError, match="Missing INPUT_CSV"):
-        main()
+        main([])
 
 
 def test_load_page_index_keeps_file_ids_as_strings(tmp_path):

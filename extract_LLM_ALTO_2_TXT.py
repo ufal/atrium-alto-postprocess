@@ -6,6 +6,7 @@ Extract text from Page Images using GLM-4v (Multimodal LLM).
 Refactored to fix ChatGLMConfig errors and input formatting.
 """
 
+import argparse
 import configparser
 import os
 from pathlib import Path
@@ -181,12 +182,24 @@ def extract_single_page_glm(tokenizer, model, image_path):
         return None
 
 
-def main():
-    if not os.path.exists(INPUT_CSV):
-        print(f"Error: {INPUT_CSV} not found.")
+def _parse_args(argv=None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Transcribe page images with GLM-4V (--method glm).")
+    parser.add_argument(
+        "--input-csv",
+        default=None,
+        help=f"Page statistics CSV to extract (default: [EXTRACT].INPUT_CSV, now {INPUT_CSV}).",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    # (#31 Phase 5) --input-csv: run_pipeline passes its --input-csv here too.
+    input_csv = _parse_args(argv).input_csv or INPUT_CSV
+    if not os.path.exists(input_csv):
+        print(f"Error: {input_csv} not found.")
         return
 
-    df = pd.read_csv(INPUT_CSV)
+    df = document_hook.read_page_index(input_csv)  # (#31 Phase 5) `0001` stays `0001`
     has_image_col = "image_path" in df.columns
 
     # Logger is initialised here, after df is loaded, so that page_alto_dir
@@ -199,7 +212,7 @@ def main():
         config={
             "script": "extract_LLM_ALTO_2_TXT",
             "method": "glm",
-            "input_csv": str(INPUT_CSV),
+            "input_csv": str(input_csv),
             "input_dir": str(page_alto_dir),
             "output_dir": str(OUTPUT_TEXT_DIR),
             "llm_model": str(MODEL_PATH),
@@ -253,7 +266,8 @@ def main():
             save_dir.mkdir(parents=True, exist_ok=True)
             txt_path = save_dir / f"{file_id}-{page_id}.txt"
 
-            if txt_path.exists():
+            # Resume — unless the page image is newer than its text (#31 Phase 5).
+            if document_hook.output_is_current(txt_path, [image_path]):
                 continue
 
             # --- Inference ---
@@ -261,8 +275,7 @@ def main():
 
             if text:
                 _logger.log_success("txt")
-                with open(txt_path, "w", encoding="utf-8") as f:
-                    f.write(text)
+                document_hook.write_text_if_changed(txt_path, text)  # unchanged text keeps its time (resume)
             else:
                 _logger.log_skip(str(image_path), "failed to extract text with GLM")
 

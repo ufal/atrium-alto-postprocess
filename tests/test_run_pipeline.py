@@ -239,7 +239,8 @@ def test_build_plan_text_lines_routes_all_three_new_stages():
     assert plan["stats"]["cmd"][:3] == [py, "text_stats_create.py", "data_samples/PAGE_TEXT"]
     # (#31 Phase 4) the stats CSV is passed to the text-lines extractor, so --input-csv reaches it
     assert plan["extract"]["cmd"] == [py, "extract_TEXT_2_TXT.py", "--input-csv", "test_alto_stats.csv"]
-    assert plan["classify"]["cmd"] == [py, "classify_TEXT.py"]
+    # (#31 Phase 5) ... and to classify, which used to read [CLASSIFY].INPUT_CSV only
+    assert plan["classify"]["cmd"] == [py, "classify_TEXT.py", "--input-csv", "test_alto_stats.csv"]
 
 
 def test_resolve_settings_page_text_dir_cli_and_config():
@@ -256,20 +257,48 @@ def test_alto_and_json_page_dirs_unchanged_by_the_text_format():
     assert alto["stats_scan_dir"] == alto["outputs"]["split"] == "data_samples/PAGE_ALTO"
     plan = {s["key"]: s for s in build_plan(alto, "config.txt")}
     assert plan["split"]["cmd"][1:] == ["page_split.py", "data_samples/ALTO", "data_samples/PAGE_ALTO"]
-    assert plan["split"]["logged"] is False
+    assert plan["split"]["logged"] is True  # page_split writes paradata (the tag said "[no log]")
 
 
-def test_input_csv_mismatch_warns_for_each_stage_that_reads_the_config():
-    """(#31) --input-csv reaches only the stats stage; say so instead of letting extract
-    and classify silently read another CSV."""
-    from run_pipeline import input_csv_mismatches
+def test_input_csv_reaches_extract_and_classify_for_every_method():
+    """(#31 Phase 5) --input-csv used to redirect only the stats stage's output; the
+    extract and classify stages kept reading the config's CSV (a warning said so)."""
+    py = sys.executable or "python3"
+    scripts = {
+        "layoutreader": "extract_LytRdr_ALTO_2_TXT.py",
+        "alto-tools": "extract_ALTO_2_TXT.py",
+        "glm": "extract_LLM_ALTO_2_TXT.py",
+        "json-keys": "extract_JSON_2_TXT.py",
+        "text-lines": "extract_TEXT_2_TXT.py",
+    }
+    for method, script in scripts.items():
+        settings = resolve_settings(_args(method=method, input_csv="cli/stats.csv"), configparser.ConfigParser())
+        plan = {s["key"]: s for s in build_plan(settings, "config.txt")}
+        assert plan["stats"]["cmd"][-2:] == ["-o", "cli/stats.csv"]
+        assert plan["extract"]["cmd"] == [py, script, "--input-csv", "cli/stats.csv"]
+        assert plan["classify"]["cmd"] == [py, "classify_TEXT.py", "--input-csv", "cli/stats.csv"]
 
+
+def test_text_lines_has_its_own_stats_csv():
+    """The stock config wrote text-lines' stats CSV over the ALTO methods' one."""
     cfg = configparser.ConfigParser()
-    cfg.read_dict({"EXTRACT": {"INPUT_CSV": "a.csv"}, "CLASSIFY": {"INPUT_CSV": "a.csv"}})
-    assert input_csv_mismatches(None, cfg) == []
-    assert input_csv_mismatches("a.csv", cfg) == []
-    warnings = input_csv_mismatches("b.csv", cfg)
-    assert len(warnings) == 2 and "[EXTRACT].INPUT_CSV" in warnings[0] and "[CLASSIFY].INPUT_CSV" in warnings[1]
+    cfg.read_dict({"EXTRACT": {"INPUT_CSV": "alto.csv", "INPUT_CSV_TEXT": "text.csv"}})
+    assert resolve_settings(_args(method="text-lines"), cfg)["input_csv"] == "text.csv"
+    assert resolve_settings(_args(method="alto-tools"), cfg)["input_csv"] == "alto.csv"
+    assert resolve_settings(_args(method="json-keys"), cfg)["input_csv"] == "alto.csv"
+    assert resolve_settings(_args(method="text-lines", input_csv="cli.csv"), cfg)["input_csv"] == "cli.csv"
+    cfg.remove_option("EXTRACT", "INPUT_CSV_TEXT")  # an older config keeps sharing INPUT_CSV
+    assert resolve_settings(_args(method="text-lines"), cfg)["input_csv"] == "alto.csv"
+
+
+def test_the_stock_config_separates_the_text_lines_stats_csv():
+    from pathlib import Path
+
+    cfg = configparser.ConfigParser(inline_comment_prefixes=None)
+    cfg.read(Path(__file__).resolve().parent.parent / "setup" / "config.txt", encoding="utf-8")
+    text = resolve_settings(_args(method="text-lines"), cfg)["input_csv"]
+    alto = resolve_settings(_args(method="alto-tools"), cfg)["input_csv"]
+    assert text != alto
 
 
 # ── (#31 Phase 4) text-lines input dir, pass-throughs, ALTO/JSON plans unchanged ─
@@ -326,12 +355,3 @@ def test_alto_and_json_plans_are_unchanged_without_the_new_flags():
         assert plan["split"]["cmd"] == [py, "page_split.py", "data_samples/ALTO", page_dir]
         assert plan["extract"]["cmd"] == [py, script]
         assert plan["classify"]["cmd"] == [py, "classify_TEXT.py"]
-
-
-def test_text_lines_only_warns_about_the_classify_input_csv():
-    from run_pipeline import input_csv_mismatches
-
-    cfg = configparser.ConfigParser()
-    cfg.read_dict({"EXTRACT": {"INPUT_CSV": "a.csv"}, "CLASSIFY": {"INPUT_CSV": "a.csv"}})
-    warnings = input_csv_mismatches("b.csv", cfg, ("CLASSIFY",))
-    assert len(warnings) == 1 and "[CLASSIFY].INPUT_CSV" in warnings[0]

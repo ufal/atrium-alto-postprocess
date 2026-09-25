@@ -214,12 +214,33 @@ def _stage_pages(output_dir: str, doc_id: str, doc: text_formats.TextDocument) -
     return tmp_dir
 
 
+def _keep_unchanged_times(staged: str, final_dir: str) -> None:
+    """Give a staged page the file time of the page it replaces when the two are byte for
+    byte the same. (#31 Phase 5) The extract and classify stages resume by file time, so
+    a re-run that re-reads unchanged inputs must not make every page look new."""
+    if not os.path.isdir(final_dir) or os.path.islink(final_dir):
+        return
+    for name in os.listdir(staged):
+        new, old = os.path.join(staged, name), os.path.join(final_dir, name)
+        try:
+            if os.path.isfile(old) and not os.path.islink(old):
+                with open(new, "rb") as a, open(old, "rb") as b:
+                    if a.read() != b.read():
+                        continue
+                st = os.stat(old)
+                os.utime(new, ns=(st.st_atime_ns, st.st_mtime_ns))
+        except OSError:
+            continue
+
+
 def _swap_in(output_dir: str, doc_id: str, staged: str) -> None:
     """Put the staged pages in place: the old directory is renamed aside first, so a
-    failure never leaves a half-replaced one (a POSIX directory swap is not atomic)."""
+    failure never leaves a half-replaced one (a POSIX directory swap is not atomic).
+    Unchanged pages keep their file times (``_keep_unchanged_times``)."""
     final_dir = os.path.join(output_dir, doc_id)
     old_dir = os.path.join(output_dir, f".old-{doc_id}")
     try:
+        _keep_unchanged_times(staged, final_dir)
         _clear_owned(old_dir, doc_id)
         if os.path.lexists(final_dir):
             os.replace(final_dir, old_dir)

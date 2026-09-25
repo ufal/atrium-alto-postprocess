@@ -121,12 +121,12 @@ JSON; `text-lines` for every other text-bearing format (#31). The method also se
 Step 1/2 scripts for its input format. The choice flows through to the merged license: a
 **LayoutReader** 📐 run resolves to **CC BY-NC-SA 4.0**, an **alto-tools** 🧰 run to
 **CC BY-NC 4.0**.
-* **`--input-csv` ⚠️:** redirects the stats CSV written by Step 2. For `text-lines` it also
-reaches Step 3 (`extract_TEXT_2_TXT.py --input-csv`); otherwise Step 3 reads
-`[EXTRACT].INPUT_CSV`, and Step 4 always reads `[CLASSIFY].INPUT_CSV`, from the config. The
-orchestrator warns when those differ from the flag — set them in the config for a run that must
-use another CSV. The stock config points text-lines at the same `data_samples/test_alto_stats.csv`
-as the ALTO methods, so give text-lines runs their own config.
+* **`--input-csv`:** the page statistics CSV. Step 2 writes it, and Steps 3 and 4 read it — every
+extractor and `classify_TEXT.py` take `--input-csv` (#31 Phase 5; the flag used to reach Step 2
+only). Without the flag the ALTO/JSON methods read `[EXTRACT].INPUT_CSV` / `[CLASSIFY].INPUT_CSV`
+as before, and `text-lines` uses its own CSV, `[EXTRACT].INPUT_CSV_TEXT`
+(`data_samples/text_stats.csv`), which the orchestrator passes to Steps 3 and 4 — so a text-lines
+run no longer overwrites the ALTO methods' `data_samples/test_alto_stats.csv`.
 * **text-lines extras (#31):** without `--input-dir` it reads `[PIPELINE].INPUT_DIR_TEXT`
 (`data_samples/TEXT`); `--strict` / `--no-strict` reach `text_split.py` and
 `extract_TEXT_2_TXT.py` (a strict failure stops the pipeline); `--source-origin ocr:<engine>`
@@ -136,9 +136,9 @@ directory, alongside the individual per-stage logs.
 
 > [!NOTE]
 > Every stage — Step 1 (`page_split.py` / `text_split.py`) included — writes its own paradata
-> log, so a full run merges **five** logged stages. (The dry-run still tags `page_split.py`
-> `[no log]`; the tag is kept so the ALTO/JSON dry-run output stays byte-identical.) The merged license is re-derived from the
-> **union** of components used across all stages, so the end-to-end most-restrictive rule holds.
+> log, so a full run merges **five** logged stages, and the dry-run tags all five `[paradata]`.
+> The merged license is re-derived from the **union** of components used across all stages, so
+> the end-to-end most-restrictive rule holds.
 
 > [!TIP]
 > Prefer to inspect or re-run a single stage? The individual scripts below remain fully usable on
@@ -165,10 +165,13 @@ Each page-specific file retains the header from its original source document �
 * **Output 📤:** `../PAGE_ALTO/` (output directory with **ALTO XML** 📄 files split into pages)
 
 > [!NOTE]
-> `page_split.py` splits ALTO in the **v3** namespace (`http://www.loc.gov/standards/alto/ns-v3#`), the
-> one the ATRIUM ABBYY exports use. An ALTO v2 or v4 file gets `No <Page> elements found` and no pages.
-> Read such files with the [text-lines method](#any-other-text-bearing-input-pdf-docx-txt--31-), which
-> reads every ALTO version ([docs/text_inputs.md §8](docs/text_inputs.md#8-known-limitations)).
+> `page_split.py` splits every ALTO version: the namespace is the root element's (v2, v3 — what
+> the ATRIUM ABBYY exports use — v4, BnF), and each page file keeps it. A `.xml` whose root is not a
+> namespaced `<alto>` (PAGE XML, TEI, namespace-less ALTO) is skipped with its root named; the
+> [text-lines method](#any-other-text-bearing-input-pdf-docx-txt--31-) reads those. A re-split
+> replaces a document's page files: pages the input no longer yields are removed, also when the
+> input now fails. Tesseract numbers its ALTO pages from 0 (`PHYSICAL_IMG_NR="0"`), so its page
+> files are `<doc>-0.alto.xml`, `<doc>-1.alto.xml`, …
 
 Example of the output directory with divided per-page XML files: [PAGE_ALTO](data_samples/PAGE_ALTO) 📁.
 
@@ -281,7 +284,9 @@ mismatch warns 📣.
 | JSON     | `ocr:generic`    | Generic OCR/Doc-AI export whose specific engine the file does not name                           |
 
 For `text_split.py` (#31) the default is **truthful per format**. The OCR outputs are
-`ABBYY-ALTO` (ALTO), `ocr:page-xml`, `ocr:hocr`, `ocr:abbyy-finereader`, `ocr:djvu`,
+`ABBYY-ALTO` (ALTO), `ocr:page-xml`, `ocr:hocr` — for an ALTO or hOCR file that names its engine
+in its header, that engine instead (`ocr:tesseract`, `ocr:pero`, `ocr:kraken`, `ocr:transkribus`,
+`ocr:ocrd`, …; #31 Phase 5) —, `ocr:abbyy-finereader`, `ocr:djvu`,
 `ocr:tesseract`, `ocr:pdf-text-layer` (a PDF whose text is an invisible OCR layer under the page
 image) and `ocr:generic` (TXT, Markdown, CSV/TSV, JSON/JSONL, TEI, XML, subtitles); a ZIP bundle
 takes its members' origin. Born-digital documents are `digital-born-<kind>` (DOCX, ODT/ODS/ODP,
@@ -353,7 +358,9 @@ No external binary is called and nothing is downloaded at run time.
 ### ▶️ Step 3: Extract text from ALTO XML ⛏️
 
 This script runs in parallel ⚡ (using multiple **CPU** 💻 cores) to extract text from **ALTO XMLs** 📄 into `.txt` 📝 files.
-It reads the **CSV** 📊 from Step 2.
+It reads the **CSV** 📊 from Step 2 — `--input-csv <stats.csv>`, else `[EXTRACT].INPUT_CSV` — and every
+extractor keeps document ids such as `0001` as text. A page whose `.txt` is older than its input page
+file is extracted again on the next run; one that is current is skipped (resume).
 
 * **Input 1 📥:** `output.csv` (from Step 2)
 * **Input 2 📥:** `../PAGE_ALTO/` (input directory with **ALTO XML** 📄 files split into pages from Step 1)
@@ -459,18 +466,20 @@ python3 extract_JSON_2_TXT.py
 
 Reads each page's generic OCR/Doc-AI **JSON** 📄 and walks a whitelist of informative keys
 (`content`, `text`, `line`, `word`, ... — no assumption about a particular vendor's schema
-beyond "text lives under a key named roughly `text`/`line`/`word`"), yielding every string
-leaf in document order. This is the **Extraction Layer**: it makes no other change to the
+beyond "text lives under a key named roughly `text`/`line`/`word`"), yielding the page's text
+in document order, each text once at line granularity (see the note below). This is the **Extraction Layer**: it makes no other change to the
 JSON and does not know about `doc.json` at all.
 
 Example input: [data_samples/JSON](data_samples/JSON) 📁 (an Azure-style `analyzeResult.pages` document).
 
 > [!NOTE]
-> json-keys re-serialises each split page **with its document header**, so header text leaves
-> (e.g. Azure's whole-document `analyzeResult.content`) and word-level duplicates of line text
-> (`words[].content` next to `lines[].content`) appear on every page. The
-> [text-lines method](#5th-alternative-text-lines-method-any-text-bearing-input-31-) reads the same
-> JSON page by page, without the header and preferring lines over words.
+> json-keys re-serialises each split page **with its document header**, but reads only the page:
+> the page object a page file holds (Azure's whole-document `analyzeResult.content` no longer
+> opens every page), each text once at line granularity (a line's `words[]` are not repeated
+> after it; AWS Textract's `WORD` blocks are dropped when `LINE` blocks exist) — the rules the
+> [text-lines method](#5th-alternative-text-lines-method-any-text-bearing-input-31-) uses for the
+> same JSON (#31 Phase 5). On real AWS Textract responses and Microsoft's Azure example result both
+> methods give exactly the engine's `LINE`s per page; json-keys used to write 3–6× as many lines.
 
 ```
 PAGE_TXT_JSON/
@@ -703,16 +712,21 @@ processes, running **language identification** 🌐 concurrently.
 > collection to work as a default replacement of ambiguous language recognition predictions.
 
 ```bash
-python3 classify_TEXT.py
+python3 classify_TEXT.py [--input-csv <stats.csv>]
 
 ```
 
 * **Input 1 📥:** `../PAGE_TXT/` from Step 3
-* **Input 2 📥:** `output.csv` from Step 2
+* **Input 2 📥:** `output.csv` from Step 2 (`--input-csv`, else `[CLASSIFY].INPUT_CSV`)
 * **Output 📤:** `DOC_LINE_LANG_CLASS/` containing per-document **CSVs** 📊 (e.g., [DOC_LINE_CATEG](data_samples/DOC_LINE_CATEG) 📁)
 
 > [!TIP]
-> This script is resume-capable. If interrupted, run it again and already-present output files will be skipped.
+> This script is resume-capable. If interrupted, run it again and documents whose output CSV is
+> at least as new as all of their page texts are skipped; a document with a page text newer than
+> its output (re-ingested, re-extracted) is classified again. Output CSVs of documents that are not
+> in the page CSV are listed in a warning, never deleted — `aggregate_STAT.py` aggregates every CSV
+> in the directory. The Step 3 extractors resume the same way, page by page, and Steps 1 and 3 rewrite a
+> page file only when its content changed, so a full re-run over unchanged inputs skips everything again.
 
 `<doc_name>.csv` 📊: Detailed classification results for every single line within a document, **columns**:
 

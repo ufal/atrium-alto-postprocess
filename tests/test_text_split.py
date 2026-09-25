@@ -120,12 +120,14 @@ def test_doc_id_collisions_first_sorted_file_wins(workdir, monkeypatch):
     inp, out = workdir / "in", workdir / "out"
     (inp / "Report.txt").write_text("upper\n", encoding="utf-8")
     (inp / "report.md").write_text("lower\n", encoding="utf-8")
-    (inp / "report.v2.pdf").write_bytes(b"%PDF-1.4")  # canonical_doc_id -> "report" too
+    # canonical_doc_id -> "report" too. (A dotted "report.v2.pdf" collided only while the hub's
+    # KNOWN_PIPELINE_SUFFIXES lacked ".pdf" — atrium-alto-postprocess#31 Phase 5.)
+    (inp / "report.pdf").write_bytes(b"%PDF-1.4")
 
     assert text_split.main([str(inp), str(out)]) == 0
     report = _report(out)
     assert report["Report.txt"]["status"] == "ok"
-    assert report["report.md"]["reason"] == report["report.v2.pdf"]["reason"] == "doc_id_collision"
+    assert report["report.md"]["reason"] == report["report.pdf"]["reason"] == "doc_id_collision"
     assert (out / "Report" / "Report-1.txt").read_text(encoding="utf-8") == "upper\n"
 
 
@@ -377,3 +379,29 @@ def test_compressed_files_and_zip_bundles_are_one_document_each(workdir, monkeyp
     assert (report["b.zip"]["kind"], report["b.zip"]["pages"]) == ("zip-bundle", "2")
     assert (out / "b" / "b-2.txt").read_text(encoding="utf-8") == "strana dvě\n"
     assert [r["page_label"] for r in _pages_report(out) if r["file"] == "b"] == ["1", "2"]
+
+
+def _backdate(path, seconds=3600):
+    st = os.stat(path)
+    os.utime(path, ns=(st.st_atime_ns - seconds * 10**9, st.st_mtime_ns - seconds * 10**9))
+    return os.stat(path).st_mtime_ns
+
+
+def test_a_rerun_keeps_the_file_times_of_unchanged_pages(workdir, monkeypatch):
+    """(#31 Phase 5) Extract and classify resume by file time; a re-run that re-reads an
+    unchanged input must not make its pages look new, and a changed page must."""
+    _config(workdir, monkeypatch)
+    inp, out = workdir / "in", workdir / "out"
+    (inp / "doc.txt").write_text("strana jedna\fstrana dva\n", encoding="utf-8")
+    assert text_split.main([str(inp), str(out)]) == 0
+    p1, p2 = out / "doc" / "doc-1.txt", out / "doc" / "doc-2.txt"
+    t1, t2 = _backdate(p1), _backdate(p2)
+
+    assert text_split.main([str(inp), str(out)]) == 0
+    assert (os.stat(p1).st_mtime_ns, os.stat(p2).st_mtime_ns) == (t1, t2)
+
+    (inp / "doc.txt").write_text("strana jedna\fstrana dva, opravená\n", encoding="utf-8")
+    assert text_split.main([str(inp), str(out)]) == 0
+    assert os.stat(p1).st_mtime_ns == t1
+    assert os.stat(p2).st_mtime_ns > t2
+    assert p2.read_text(encoding="utf-8") == "strana dva, opravená\n"

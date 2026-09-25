@@ -35,8 +35,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd  # To easily create the final CSV
 
 import alto_tools  # Vendored `alto-tools -s` statistics path (issue #50)
-from atrium_document import canonical_doc_id
 from atrium_paradata import ParadataLogger
+from page_split import doc_page_from_path, page_sort_key
 
 
 def run_alto_tools_stats(xml_path):
@@ -79,7 +79,7 @@ def _process_single_xml(xml_path, fname):
         return None, xml_path
 
     # --- Derive file ID and page ID from the filename ---
-    # e.g., "doc123-001.alto.xml"
+    # e.g., "doc123/doc123-001.alto.xml" -> ("doc123", "001")
     #
     # (atrium-project#10 D3) COMPOSED with the hub's canonical_doc_id() rather than
     # replaced by it: what page_split.py wrote is "<doc_id>-<page>.alto.xml", so this
@@ -87,12 +87,12 @@ def _process_single_xml(xml_path, fname):
     # only does the first half (KNOWN_PIPELINE_SUFFIXES has no notion of a page
     # suffix). The old `split(".")[0]` also truncated any doc_id containing a dot —
     # "sbn.2019-1.alto.xml" became "sbn", so the stats CSV keyed a document that no
-    # other stage had ever heard of. Suffix stripping now comes from the one shared
-    # derivation; the page split stays local, because it is local knowledge.
-    base = canonical_doc_id(os.path.basename(fname))  # "doc123-001"
-    parts = base.split("-")  # ["doc123", "001"]
-    file_id = parts[0]  # "doc123"
-    page = parts[1] if len(parts) > 1 else ""  # "001"
+    # other stage had ever heard of.
+    #
+    # (#31 Phase 5) page_split.doc_page_from_path() does both halves and takes the
+    # doc_id from the page directory's name, so a hyphenated doc_id survives
+    # ("my-doc/my-doc-3.alto.xml" -> "my-doc", "3"; `split("-")` gave "my", "doc").
+    file_id, page = doc_page_from_path(xml_path)
 
     rec = {
         "file": file_id,
@@ -147,6 +147,8 @@ def process_alto_files_with_alto_tools(directory_path, max_workers=8):
             else:
                 results.append(rec)
 
+    # (#31 Phase 5) rows in reading order: the extractors join a document's pages in CSV order.
+    results.sort(key=lambda rec: (rec["file"], page_sort_key(rec["page"])))
     return results, _total_inputs, _skips
 
 
@@ -167,7 +169,7 @@ def main(argv=None):
     # one level of subdirectories.
     subdirs = [
         os.path.join(args.input_folder, d)
-        for d in os.listdir(args.input_folder)
+        for d in sorted(os.listdir(args.input_folder))
         if os.path.isdir(os.path.join(args.input_folder, d))
     ]
 

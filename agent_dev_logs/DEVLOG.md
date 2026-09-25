@@ -1129,3 +1129,35 @@ week, ≈ 2026-10-02). Recorded in the #30 digest and plan; nothing switched on.
     (`#-paradata-logging`) fixed; CONTRIBUTING's unreleased row notes the docs.
   * Dev logs: #2/#3/#4 (milestones; the rules and docs moved on with #30), #30 (answers), #31 (merge state, round 5),
     **#37 ready to close** (llm-enrich's `json_to_md.py` reads a json-keys record without an adapter, checked).
+
+## 2026-09-25: #31 Phase 5 — the remaining gaps, and a first run on real engine output
+
+* **Asked:** cover all remaining gaps of #31; deliverables are full files in chat (no patch files, no remote actions),
+  so nothing below is pushed. Decisions with K4TEL: this repo + hub + llm-enrich (page-classification joined for two
+  tests), json-keys fixed by default, `ORIGIN_ORIGINATORS` kept, only our own Tesseract output committed, and the hub
+  suffix list extended although `CTX01.scan.pdf` becomes `CTX01.scan`.
+* **ALTO/JSON traps closed (D36–D44):** `page_split.py` splits every ALTO version and skips non-ALTO roots by name,
+  and a re-split removes stale page files; hyphenated doc ids survive the stats stage; json-keys reads only the split
+  page, each text once (`page_text_lines`, also the service's JSON path); **found** — the stats rows followed the
+  directory listing, so `content.text` could start with page 2 — rows are in page order now; `0001` ids reach every
+  extractor; `--input-csv` reaches extract and classify, and text-lines has `[EXTRACT].INPUT_CSV_TEXT`; resume only
+  while the output is newer than its input (classify re-classifies a changed document, lists foreign outputs), and
+  split/extract rewrite a page file only when it changed, so an unchanged full re-run still skips; the
+  dry-run tags page_split `[paradata]`; the dead commented-out `split_json_document` is gone.
+* **Real engine output (D45–D47):** Tesseract 5.3.4 installed in-session; two rendered Czech pages → TSV/hOCR/ALTO read
+  exactly; **found** — PDFium's line-end hyphen marker (`\x02`, U+FFFE) was stripped and merged two lines; restored;
+  **found** — a Tesseract ALTO was `ABBYY-ALTO`: text-lines now records the engine an ALTO/hOCR file names. New
+  samples `CTX000000025.tsv`/`CTX000000026.hocr` + `tools/make_tesseract_samples.py`. Four AWS Textract responses and
+  Azure's example result (in-session only): both JSON methods give exactly the engine's LINEs; json-keys used to write
+  3–6× as many.
+* **Cross-repo (D48–D49), as files:** hub `KNOWN_PIPELINE_SUFFIXES` (+ skeleton mirror, tests), `test_document_required.py`
+  (function anchors, the text-lines writers), V-1 docs, the origin decision; llm-enrich V-1 (`DROP_CATEGORIES` =
+  `UNTRUSTWORTHY_LINE_CATEGORIES` — the hub had called it done on 09-16, the code had not changed); page-classification's
+  two doc-id tests.
+* **Verified:** suite 1707 → 1750 passed, 0 failed; `ruff` clean; coverage 75.4 %; dry-run diffs only as intended; v3
+  ALTO/JSON splits byte-identical; strict text-lines E2E 22/22 `ok`, 128/128 line-table rows, 22 valid records; json-keys
+  and alto-tools E2E (v2, v4, `0001`, hyphenated, Tesseract ALTO) correct and in page order; the new hub files swapped
+  into all five tool repos move only page-classification's two tests. Categorization not run.
+* **Still open:** the re-vendor sequence (hub merge → retag `v1` → three files into five repos, page-classification's
+  tests with them); nlp-enrich's TEITOK page numbering (Pitfall 14, certain for Tesseract ALTO); ABBYY/DjVu XML
+  synthetic-only; a classify output left by a crash counts as current.

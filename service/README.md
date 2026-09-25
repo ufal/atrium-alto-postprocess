@@ -160,9 +160,10 @@ curl -X POST "http://localhost:8000/process" \
   -F "task_type=auto"
 ```
 
-For a generic JSON OCR-engine export, the endpoint walks the same key whitelist
-(`content`, `text`, `line`, `word`, …) as the batch pipeline's `extract_JSON_2_TXT.py`,
-treating each matched string as one line:
+For a generic JSON OCR-engine export, the endpoint reads the lines exactly as the batch
+pipeline's `extract_JSON_2_TXT.py` reads one page (`page_text_lines`): the same key whitelist
+(`content`, `text`, `line`, `word`, …), the page object of a split page, and each text once at
+line granularity — a line's words and a page's whole-text field are not repeated (#31 Phase 5):
 
 ```bash
 curl -X POST "http://localhost:8000/process" \

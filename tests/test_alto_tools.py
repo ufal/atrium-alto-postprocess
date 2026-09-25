@@ -223,3 +223,24 @@ def test_run_alto_tools_stats_returns_none_on_bad_xml(tmp_path, capsys):
     bad.write_text("<alto><unclosed>", encoding="utf-8")
     assert run_alto_tools_stats(str(bad)) is None
     assert "Error reading ALTO statistics" in capsys.readouterr().out
+
+
+def test_extract_single_page_redoes_a_page_whose_alto_is_newer(tmp_path):
+    """(#31 Phase 5) Resume used to keep any existing text; a re-split page is newer."""
+    import os
+
+    from extract_ALTO_2_TXT import _dehyphenate, extract_single_page
+
+    xml_path = _FIXTURES / "readingorder.alto.xml"
+    txt = tmp_path / "DOC1" / "DOC1-1.txt"
+    txt.parent.mkdir()
+    txt.write_text("old text", encoding="utf-8")
+    old = xml_path.stat().st_mtime_ns - 60 * 10**9
+    os.utime(txt, ns=(old, old))
+
+    assert extract_single_page(("DOC1", "1", str(xml_path), str(tmp_path))) is True
+    assert txt.read_text(encoding="utf-8") == _dehyphenate(CLI_TEXT_READINGORDER)
+
+    txt.write_text("kept", encoding="utf-8")  # now newer than the ALTO: resumed
+    assert extract_single_page(("DOC1", "1", str(xml_path), str(tmp_path))) is True
+    assert txt.read_text(encoding="utf-8") == "kept"

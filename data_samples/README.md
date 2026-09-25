@@ -34,11 +34,17 @@ Inputs for the other two methods (#31) — same fictional world, new ids so noth
   - CTX000000023.txt.gz — a gzip-compressed page transcript (read through)
   - CTX000000024.zip — a Transkribus-style export: two PAGE XML pages plus METS and doc metadata, read as one
     two-page document
+  - CTX000000025.tsv — **real** Tesseract 5.3.4 TSV of two rendered Czech report pages (a line-end hyphen,
+    page footers), the engine's own output
+  - CTX000000026.hocr — the same two pages as **real** Tesseract hOCR (`ocr-system` names the engine, so the
+    origin is `ocr:tesseract`)
 
   The binary members (DOCX, PDF, XLSX, ODT, `.txt.gz`, `.zip`) are generated, byte-for-byte reproducibly, by
-  `tests/text_format_fixtures.write_samples()`; the tests never read this directory. The
-  text-lines outputs go to PAGE_TEXT/ (pages + ingest_report.csv/pages_report.csv), PAGE_TXT_TEXT/
-  (classify-ready text) and DOC_LINES_TEXT/ (per-document line tables) — not committed.
+  `tests/text_format_fixtures.write_samples()`; CTX000000025/26 by `tools/make_tesseract_samples.py` (needs
+  `tesseract` with `ces`; output depends on its version, so they are committed as generated). The tests read
+  only those two real samples here. The text-lines outputs go to PAGE_TEXT/ (pages +
+  ingest_report.csv/pages_report.csv), PAGE_TXT_TEXT/ (classify-ready text) and DOC_LINES_TEXT/
+  (per-document line tables), with the stats CSV `text_stats.csv` (`[EXTRACT].INPUT_CSV_TEXT`) — not committed.
 
 Directory roles mirror the real pipeline: ALTO/ (source) -> A-PAGE/, PAGE_ALTO/
 (page splits) -> PAGE_TXT*, (text extraction) -> DOC_LINE_CATEG*, DOC_LINE_STATS*

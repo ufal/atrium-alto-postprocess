@@ -22,13 +22,13 @@ History / fixes
   tests/test_alto_tools.py.
 """
 
+import argparse
 import concurrent.futures
 import configparser
 import os
 import sys
 from pathlib import Path
 
-import pandas as pd
 from tqdm import tqdm
 
 import alto_tools
@@ -101,8 +101,9 @@ def extract_single_page(args: tuple) -> bool:
     save_dir.mkdir(parents=True, exist_ok=True)
     txt_path = save_dir / f"{file_id}-{page_id}.txt"
 
-    # Resume support: skip pages already extracted.
-    if txt_path.exists():
+    # Resume support: skip pages already extracted — unless the page's ALTO is newer
+    # than its text (a re-split, changed input; #31 Phase 5).
+    if document_hook.output_is_current(txt_path, [xml_path]):
         return True
 
     # (#50) Run extraction in-process via the vendored `alto-tools -t` code path.
@@ -117,22 +118,37 @@ def extract_single_page(args: tuple) -> bool:
     # (#1) Persist the result — previously the output was discarded.
     page_text = _dehyphenate(extracted or "")
     try:
-        with open(txt_path, "w", encoding="utf-8") as f:
-            f.write(page_text)
+        document_hook.write_text_if_changed(txt_path, page_text)  # unchanged text keeps its time (resume)
     except OSError:
         return False
     return True
 
 
-def main() -> None:
+def _parse_args(argv=None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Extract page text from split ALTO XML with the vendored alto-tools (--method alto-tools)."
+    )
+    parser.add_argument(
+        "--input-csv",
+        default=None,
+        help=f"Page statistics CSV to extract (default: [EXTRACT].INPUT_CSV, now {INPUT_CSV}).",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None) -> None:
+    # (#31 Phase 5) --input-csv: run_pipeline passes its --input-csv here, so the
+    # stats stage's CSV is the one extracted (it used to reach the stats stage only).
+    input_csv = _parse_args(argv).input_csv or INPUT_CSV
+
     # 1. (#50) No external-binary check: the extractor is vendored in alto_tools.py
     #    and ships inside the image, so it can no longer be missing from PATH.
 
     # 2. Parse and Process
     try:
-        df = pd.read_csv(INPUT_CSV)
+        df = document_hook.read_page_index(input_csv)  # (#31 Phase 5) `0001` stays `0001`
     except FileNotFoundError:
-        print(f"CRITICAL ERROR: Could not find input file {INPUT_CSV}")
+        print(f"CRITICAL ERROR: Could not find input file {input_csv}")
         sys.exit(1)
 
     print(f"Loaded {len(df)} pages to extract.")
@@ -152,7 +168,7 @@ def main() -> None:
         config={
             "script": "extract_ALTO_2_TXT",
             "method": "alto-tools",
-            "input_csv": str(INPUT_CSV),
+            "input_csv": str(input_csv),
             "input_dir": str(page_alto_dir),
             "output_dir": str(OUTPUT_TEXT_DIR),
             "n_workers": MAX_WORKERS,

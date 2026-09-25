@@ -63,7 +63,9 @@ def _parse_args(argv: Optional[list] = None) -> argparse.Namespace:
         description="Step 3 of the text-lines method (#31): write classify-ready page text and a per-document "
         "line table (file,page_num,line_num,text,page_label) from the page statistics CSV."
     )
-    parser.add_argument("--input-csv", default=None, help="Page statistics CSV (default: [EXTRACT].INPUT_CSV).")
+    parser.add_argument(
+        "--input-csv", default=None, help="Page statistics CSV (default: [EXTRACT].INPUT_CSV_TEXT, else INPUT_CSV)."
+    )
     parser.add_argument(
         "--output-dir",
         default=None,
@@ -148,7 +150,12 @@ def main(argv: Optional[list] = None) -> int:
         print(f"CRITICAL ERROR: invalid configuration in {CONFIG_PATH}: {exc}", file=sys.stderr)
         return 2
 
-    input_csv = args.input_csv or cfg.get("EXTRACT", "INPUT_CSV", fallback="./data_samples/test_alto_stats.csv")
+    # (#31 Phase 5) text-lines' own stats CSV first ([EXTRACT].INPUT_CSV_TEXT), as in run_pipeline.
+    input_csv = (
+        args.input_csv
+        or cfg.get("EXTRACT", "INPUT_CSV_TEXT", fallback="").strip()
+        or cfg.get("EXTRACT", "INPUT_CSV", fallback="./data_samples/test_alto_stats.csv")
+    )
     output_dir = args.output_dir or cfg.get("EXTRACT", "OUTPUT_TXT_TEXT", fallback=DEFAULT_OUTPUT_DIR)
     lines_dir = args.lines_dir or cfg.get("EXTRACT", "OUTPUT_LINES_TEXT", fallback=DEFAULT_LINES_DIR)
 
@@ -164,12 +171,8 @@ def main(argv: Optional[list] = None) -> int:
             )
             return 2
 
-    # Imported here, not at module level: classify_TEXT pulls in pandas/numpy, and
-    # `--help` should not pay for that.
-    from classify_TEXT import load_page_index
-
     try:
-        df = load_page_index(input_csv)
+        df = document_hook.read_page_index(input_csv)  # imports pandas lazily
     except FileNotFoundError:
         print(f"CRITICAL ERROR: Could not find input file {input_csv}", file=sys.stderr)
         return 1
@@ -233,8 +236,8 @@ def main(argv: Optional[list] = None) -> int:
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 # No final newline, like the other extractors: document_hook joins pages
                 # into content.text verbatim, and classify's readlines() does not need it.
-                with open(out_path, "w", encoding="utf-8", newline="\n") as fh:
-                    fh.write("\n".join(lines))
+                # Unchanged text keeps its file time, so classify's resume still skips it.
+                document_hook.write_text_if_changed(out_path, "\n".join(lines), newline="\n")
             except (OSError, text_formats.IngestError) as exc:
                 failed += 1
                 _logger.log_skip(path, f"text-lines extraction failed: {exc}")

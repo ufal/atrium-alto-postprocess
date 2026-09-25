@@ -36,8 +36,8 @@ import os
 import sys
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from atrium_document import canonical_doc_id
 from atrium_paradata import ParadataLogger
+from page_split import doc_page_from_path
 from text_formats import IngestError, ReaderOptions, decode_bytes, load_settings
 
 CONFIG_PATH = os.getenv("LANGID_CONFIG", os.path.join("setup", "config.txt"))
@@ -46,15 +46,9 @@ PAGES_REPORT = "pages_report.csv"
 
 
 def file_page_from_path(path: str) -> Tuple[str, str]:
-    """(file, page) for one page text file; page is "" when there is no numeric suffix."""
-    parent = os.path.basename(os.path.dirname(os.path.abspath(path)))
-    base = canonical_doc_id(os.path.basename(path))
-    if parent and base.startswith(parent + "-") and base[len(parent) + 1 :].isdigit():
-        return parent, base[len(parent) + 1 :]
-    head, sep, tail = base.rpartition("-")
-    if sep and head and tail.isdigit():
-        return head, tail
-    return base, ""
+    """(file, page) for one page text file; page is "" when there is no numeric suffix.
+    The split stages' one derivation (page_split.doc_page_from_path), digits only."""
+    return doc_page_from_path(path, numeric=True)
 
 
 def _page_images(folder: str) -> Dict[Tuple[str, str], int]:

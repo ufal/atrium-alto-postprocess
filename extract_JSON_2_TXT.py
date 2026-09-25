@@ -8,6 +8,13 @@ Walks a whitelist of informative keys (TARGET_KEYS) and yields every string
 leaf whose parent key matches, in document order. This makes no assumption
 about a particular OCR engine's JSON schema beyond "text lives under a
 key named roughly 'text'/'line'/'word'/etc." — see TARGET_KEYS below.
+
+(#31 Phase 5) Each text is read once, at the page and at line granularity
+(``page_text_lines``): page_split.py keeps the document's header in every page
+file, so a split page is read from its own page object only — Azure's
+whole-document ``analyzeResult.content`` no longer opens every page — and a
+line's words are not repeated after the line (text_formats.json_text_lines,
+the rules the text-lines method uses for the same JSON).
 """
 
 import argparse
@@ -16,13 +23,14 @@ import configparser
 import json
 import os
 from pathlib import Path
-from typing import Any, Generator, Optional, Set
+from typing import Any, List, Optional, Set
 
-import pandas as pd
 from tqdm import tqdm
 
 import document_hook
 from atrium_paradata import ParadataLogger
+from page_split import PAGE_LIST_KEYS
+from text_formats import json_text_lines
 
 CONFIG_PATH = os.getenv("LANGID_CONFIG", "setup/config.txt")
 
@@ -51,20 +59,43 @@ TARGET_KEYS: Set[str] = {
     "page_texts",
     "text_lines",
 }
+_TARGET_KEYS_FROZEN = frozenset(TARGET_KEYS)
 
 
-def _yield_json_text_by_keys(data: Any, target_keys: Set[str], current_key: str = None) -> Generator[str, None, None]:
-    """Recursively yields text from string leaves if their parent key is in the target_keys."""
-    if isinstance(data, dict):
-        for k, v in data.items():
-            yield from _yield_json_text_by_keys(v, target_keys, current_key=k)
-    elif isinstance(data, list):
-        for item in data:
-            yield from _yield_json_text_by_keys(item, target_keys, current_key=current_key)
-    elif isinstance(data, str):
-        text = data.strip()
-        if text and current_key and current_key.lower() in target_keys:
-            yield text
+def page_scope(data: Any) -> Any:
+    """The part of one page JSON that belongs to the page.
+
+    page_split.split_json_document() writes a Family-A page (Azure, docTR, Google
+    Document AI) as the whole document with its page list replaced by that ONE page
+    object, so every page file carries the document's header — for Azure,
+    ``analyzeResult.content``, the text of the whole document. The page object is the
+    dict under a PAGE_LIST_KEYS key at depth <= 2 (page_split._find_family_a's scan,
+    which finds a list there before the split). Anything else — a Family-B page (its
+    tagged items), a Family-C document — is read whole.
+    """
+    if not isinstance(data, dict):
+        return data
+    for k, v in data.items():
+        if isinstance(k, str) and k.lower() in PAGE_LIST_KEYS and isinstance(v, dict):
+            return v
+    for v in data.values():
+        if isinstance(v, dict):
+            for k2, v2 in v.items():
+                if isinstance(k2, str) and k2.lower() in PAGE_LIST_KEYS and isinstance(v2, dict):
+                    return v2
+    return data
+
+
+def page_text_lines(data: Any) -> List[str]:
+    """The ordered text lines of one (split) page JSON: its page object only
+    (``page_scope``), each text once at line granularity. When the page object holds
+    no text under TARGET_KEYS (a `pages` dict that is only a page count, say), the
+    whole document is read instead, so no text is lost to the scoping."""
+    scoped = page_scope(data)
+    lines = json_text_lines(scoped, _TARGET_KEYS_FROZEN)
+    if scoped is not data and not any(line.strip() for line in lines):
+        lines = json_text_lines(data, _TARGET_KEYS_FROZEN)
+    return lines
 
 
 def process_json_to_txt(input_file: Path, output_file: Path, join_char: str = "\n") -> None:
@@ -72,10 +103,11 @@ def process_json_to_txt(input_file: Path, output_file: Path, join_char: str = "\
     with open(input_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    extracted_leaves = list(_yield_json_text_by_keys(data, TARGET_KEYS))
+    extracted_leaves = page_text_lines(data)
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(join_char.join(extracted_leaves))
+    document_hook.write_text_if_changed(
+        output_file, join_char.join(extracted_leaves)
+    )  # (resume: see output_is_current)
 
 
 def _load_extract_config(config_path: str = CONFIG_PATH) -> dict:
@@ -117,8 +149,9 @@ def extract_single_page(args: tuple) -> bool:
     save_dir.mkdir(parents=True, exist_ok=True)
     txt_path = save_dir / f"{file_id}-{page_id}.txt"
 
-    # Resume support: skip pages already extracted.
-    if txt_path.exists():
+    # Resume support: skip pages already extracted — unless the page JSON is newer
+    # than its text (a re-split, changed input; #31 Phase 5).
+    if document_hook.output_is_current(txt_path, [json_path]):
         return True
 
     try:
@@ -157,17 +190,24 @@ def _parse_args(argv: Optional[list] = None) -> argparse.Namespace:
             "that config value (default: false) is used instead."
         ),
     )
+    parser.add_argument(
+        "--input-csv",
+        default=None,
+        help=f"Page statistics CSV to extract (default: [EXTRACT].INPUT_CSV, now {INPUT_CSV}).",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[list] = None) -> None:
     args = _parse_args(argv)
     force_single_page = args.force_single_page if args.force_single_page is not None else FORCE_SINGLE_PAGE_DEFAULT
+    # (#31 Phase 5) --input-csv: run_pipeline passes its --input-csv here too.
+    input_csv = args.input_csv or INPUT_CSV
 
     try:
-        df = pd.read_csv(INPUT_CSV)
+        df = document_hook.read_page_index(input_csv)  # (#31 Phase 5) `0001` stays `0001`
     except FileNotFoundError as e:
-        print(f"CRITICAL ERROR: Could not find input file {INPUT_CSV}")
+        print(f"CRITICAL ERROR: Could not find input file {input_csv}")
         raise SystemExit(1) from e
 
     print(f"Loaded {len(df)} pages to extract.")
@@ -187,7 +227,7 @@ def main(argv: Optional[list] = None) -> None:
         config={
             "script": "extract_JSON_2_TXT",
             "method": "json-keys",
-            "input_csv": str(INPUT_CSV),
+            "input_csv": str(input_csv),
             "input_dir": str(input_dir),
             "output_dir": str(OUTPUT_TEXT_DIR),
             "n_workers": MAX_WORKERS,

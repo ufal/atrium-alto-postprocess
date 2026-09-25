@@ -259,7 +259,8 @@ def test_json_single_page_and_all_strings_fallback(tmp_path):
 
 
 def test_json_pages_match_the_json_keys_split_for_header_free_documents(tmp_path):
-    """Parity with json-keys (page_split + extract_JSON_2_TXT) where no header text exists."""
+    """Parity with json-keys (page_split + extract_JSON_2_TXT). Since #31 Phase 5 it
+    holds with header text and word duplicates too (tests/test_extract_json.py)."""
     import page_split
     from extract_JSON_2_TXT import process_json_to_txt
 
@@ -418,6 +419,9 @@ def test_hocr_pages_and_lines(tmp_path):
         ("1", ["Line A", "Line B"]),
         ("2", ["Page 2"]),
     ]
+    # (#31 Phase 5) the engine named in `ocr-system` is the origin; an unknown one keeps ocr:hocr
+    assert tf.default_source_origin(doc) == "ocr:tesseract"
+    doc = _read(tmp_path, "u.hocr", html.replace('content="tesseract"', 'content="SomeEngine 2"'))
     assert tf.default_source_origin(doc) == "ocr:hocr"
 
 
@@ -1246,3 +1250,63 @@ def test_origin_hint_and_native_pages_survive_the_worker_round_trip(tmp_path):
     doc = _read(tmp_path, "b.zip", make_zip([("1.xml", _page("Jedna", "1.jpg"))]))
     again = tf.TextDocument.from_dict(json.loads(json.dumps(doc.to_dict())))
     assert again == doc and again.origin_hint == "ocr:page-xml" and again.native_pages is True
+
+
+# ── (#31 Phase 5) findings on real engine output ─────────────────────────────
+
+
+def test_pdfium_line_end_hyphen_keeps_both_lines(tmp_path):
+    """PDFium reports a hyphen that ends a text line as \\x02 (or U+FFFE, in Tesseract's
+    PDFs) and drops the line break after it; the marker used to be stripped, so the two
+    lines became one ("zelezny nuz") and the page lost a line."""
+    path = _write(tmp_path, "h.pdf", pdf_bytes([["Nalezy: strepy nadob a zelez-", "ny nuz v depozitari."]]))
+    doc = tf.read_document(str(path))
+    assert _lines(doc) == [["Nalezy: strepy nadob a zelez-", "ny nuz v depozitari."]]
+
+
+def test_the_ocr_engine_an_alto_file_names_is_its_origin(tmp_path):
+    def alto(software):
+        desc = (
+            "<Description><OCRProcessing><ocrProcessingStep><processingSoftware>"
+            f"<softwareName>{software}</softwareName></processingSoftware></ocrProcessingStep></OCRProcessing>"
+            "</Description>"
+            if software
+            else ""
+        )
+        return (
+            f'<alto xmlns="http://www.loc.gov/standards/alto/ns-v3#">{desc}<Layout><Page ID="p1">'
+            '<TextLine><String CONTENT="Ahoj"/></TextLine></Page></Layout></alto>'
+        )
+
+    cases = [
+        ("tesseract 5.3.4", "ocr:tesseract"),
+        ("PERO OCR", "ocr:pero"),
+        ("ABBYY FineReader Engine 12", "ABBYY-ALTO"),
+        ("DemoScanner Pro", "ABBYY-ALTO"),  # unknown engine: the ALTO default
+        ("", "ABBYY-ALTO"),
+    ]
+    for n, (software, origin) in enumerate(cases):
+        doc = _read(tmp_path, f"a{n}.alto.xml", alto(software))
+        assert (doc.kind, tf.default_source_origin(doc)) == ("alto", origin), software
+    bundle = make_zip([("x/0001.xml", alto("tesseract 5.3.4")), ("x/0002.xml", alto("tesseract 5.3.4"))])
+    doc = tf.read_document(str(_write(tmp_path, "b.zip", bundle)))
+    assert doc.kind == "zip-bundle" and tf.default_source_origin(doc) == "ocr:tesseract"
+
+
+@pytest.mark.parametrize("name,kind", [("CTX000000025.tsv", "tesseract-tsv"), ("CTX000000026.hocr", "hocr")])
+def test_real_tesseract_output_reads_as_its_own_text(name, kind):
+    """data_samples/TEXT/CTX000000025/26 are real Tesseract 5.3.4 output
+    (tools/make_tesseract_samples.py): one line per Tesseract line, pages as Tesseract
+    numbered them, and the engine as the origin."""
+    import pathlib
+
+    path = pathlib.Path(tf.__file__).resolve().parent / "data_samples" / "TEXT" / name
+    doc = tf.read_document(str(path))
+    assert (doc.kind, tf.default_source_origin(doc), doc.notes) == (kind, "ocr:tesseract", [])
+    assert [len(p.lines) for p in doc.pages] == [10, 7]
+    assert doc.pages[0].lines[:2] == ["HRADIŠTĚ U HORNÍ MEZÍ", "Zpráva o archeologickém výzkumu 2024"]
+    assert doc.pages[0].lines[6:8] == [
+        "Nálezy: střepy nádob, přeslen, zvířecí kosti a želez-",
+        "ný nůž. Všechny nálezy byly uloženy v depozitáři",
+    ]
+    assert doc.pages[1].lines[-2] == "Eva Procházková. Děkujeme obci Horní Mez."

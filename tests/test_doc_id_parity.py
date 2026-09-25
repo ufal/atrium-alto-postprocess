@@ -113,6 +113,41 @@ def test_json_stats_create_composes_canonical_with_the_page_split(name, doc_id, 
     assert "-".join(p for p in (record["file"], record["page"]) if p) == canonical_doc_id(name)
 
 
+@pytest.mark.parametrize(
+    "parent,name,doc_id,page",
+    [
+        # (#31 Phase 5) A hyphenated doc_id: page_split names the directory after it, so
+        # both stats scripts keep it whole (their old split("-") said "my", "doc").
+        ("my-doc", "my-doc-3", "my-doc", "3"),
+        ("a-b-c", "a-b-c-0007", "a-b-c", "0007"),
+        # A non-numeric page label (a JSON engine's) still splits off.
+        ("my-doc", "my-doc-p2", "my-doc", "p2"),
+        # Not in a doc_id directory: the LAST hyphen separates the page.
+        ("loose", "a-b-12", "a-b", "12"),
+        ("loose", "CTX000000001-1", "CTX000000001", "1"),
+    ],
+)
+@pytest.mark.parametrize("fmt", ["alto", "json"])
+def test_alto_and_json_stats_keep_hyphenated_doc_ids(fmt, parent, name, doc_id, page, tmp_path, monkeypatch):
+    pytest.importorskip("pandas")
+    path = tmp_path / parent / (name + (".alto.xml" if fmt == "alto" else ".json"))
+    path.parent.mkdir()
+    if fmt == "alto":
+        import alto_stats_create
+
+        monkeypatch.setattr(alto_stats_create, "run_alto_tools_stats", lambda _path: {"textlines": "3"})
+        record, skipped = alto_stats_create._process_single_xml(str(path), path.name)
+    else:
+        import json_stats_create
+
+        path.write_text('{"text": "one line"}', encoding="utf-8")
+        record, skipped = json_stats_create._process_single_json(str(path), path.name)
+
+    assert skipped is None
+    assert (record["file"], record["page"]) == (doc_id, page)
+    assert f"{doc_id}-{page}" == canonical_doc_id(path.name)
+
+
 def test_split_output_directory_is_named_by_the_same_derivation(tmp_path):
     """page_split's per-document output directory IS the doc_id — every later stage
     re-derives `file` from it — so the splitter and the record key must not be two
@@ -141,7 +176,7 @@ def test_split_output_directory_is_named_by_the_same_derivation(tmp_path):
         ("CTX000000001", "CTX000000001-1.txt", "CTX000000001", "1"),
         ("sbn.2019", "sbn.2019-7.txt", "sbn.2019", "7"),
         # A hyphenated doc_id: text_split names the directory after it, so the stats
-        # stage keeps it whole (the ALTO/JSON scripts' split("-") would say "my", "doc").
+        # stage keeps it whole (page_split.doc_page_from_path, shared with ALTO/JSON).
         ("my-doc", "my-doc-3.txt", "my-doc", "3"),
         # Not in a doc_id directory: the LAST hyphen separates the page.
         ("loose", "a-b-12.txt", "a-b", "12"),

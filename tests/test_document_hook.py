@@ -408,3 +408,43 @@ def test_resolve_input_origin_precedence():
     assert resolve("xlsx", "digital-born-xlsx", **{**kw, "override": "", "env": ""}) == "ocr:kind"
     assert resolve("docx", "digital-born-docx", **{**kw, "override": "", "env": ""}) == "ocr:cfg"
     assert resolve("docx", "digital-born-docx") == "digital-born-docx"
+
+
+# ── (#31 Phase 5) resume helpers ─────────────────────────────────────────────
+
+
+def test_write_if_changed_keeps_an_unchanged_file_untouched(tmp_path):
+    import os
+
+    path = tmp_path / "p.txt"
+    assert document_hook.write_text_if_changed(path, "řádek\nřádek 2", newline="\n") is True
+    st = os.stat(path)
+    os.utime(path, ns=(st.st_atime_ns - 10**12, st.st_mtime_ns - 10**12))
+    old = os.stat(path).st_mtime_ns
+    assert document_hook.write_text_if_changed(path, "řádek\nřádek 2", newline="\n") is False
+    assert os.stat(path).st_mtime_ns == old
+    assert document_hook.write_text_if_changed(path, "jiný řádek", newline="\n") is True
+    assert path.read_text(encoding="utf-8") == "jiný řádek"
+    assert document_hook.write_bytes_if_changed(tmp_path / "b.bin", b"\x00") is True
+
+
+def test_output_is_current_compares_file_times(tmp_path):
+    import os
+
+    src, out = tmp_path / "in.txt", tmp_path / "out.csv"
+    assert document_hook.output_is_current(out, [src]) is False  # no output yet
+    src.write_text("x", encoding="utf-8")
+    out.write_text("y", encoding="utf-8")
+    st = os.stat(src)
+    os.utime(src, ns=(st.st_atime_ns - 10**12, st.st_mtime_ns - 10**12))
+    assert document_hook.output_is_current(out, [src, tmp_path / "missing.txt"]) is True
+    os.utime(src, ns=(st.st_atime_ns + 10**12, st.st_mtime_ns + 10**12))
+    assert document_hook.output_is_current(out, [src]) is False
+
+
+def test_read_page_index_keeps_doc_ids_as_text(tmp_path):
+    path = tmp_path / "stats.csv"
+    path.write_text("file,page,path\n0001,1,a\nNA,2,b\n12,3,c\n", encoding="utf-8")
+    df = document_hook.read_page_index(str(path))
+    assert list(df["file"]) == ["0001", "NA", "12"]
+    assert list(df["page"]) == [1, 2, 3]

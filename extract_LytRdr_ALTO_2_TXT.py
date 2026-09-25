@@ -7,6 +7,7 @@ Fixed: Switched from word-level to line-level extraction. Trusts ABBYY's <TextLi
        grouping to preserve tables and justified text structures.
 """
 
+import argparse
 import concurrent.futures
 import configparser
 import os
@@ -15,7 +16,6 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import LayoutLMv3ForTokenClassification
@@ -276,25 +276,28 @@ def extract_single_page(args):
     save_dir.mkdir(parents=True, exist_ok=True)
     txt_path = save_dir / f"{file_id}-{page_id}.txt"
 
-    if txt_path.exists():
-        return True
-
     xml_path = Path(xml_path_str)
     # Basic fallback logic
     if not xml_path.exists():
         backup_xml_path = xml_path.parents[1] / "onepagers" / xml_path.name
         if backup_xml_path.exists():
             xml_path = backup_xml_path
+        elif txt_path.exists():
+            return True  # resume: the text exists and its ALTO is gone
         else:
             return False
+
+    # Resume support: skip pages already extracted — unless the page's ALTO is newer
+    # than its text (a re-split, changed input; #31 Phase 5).
+    if document_hook.output_is_current(txt_path, [xml_path]):
+        return True
 
     try:
         # 1. Parse content (Now yielding lines, not words)
         lines, boxes, (page_w, page_h) = parse_alto_xml(xml_path)
 
         if not lines:
-            with open(txt_path, "w", encoding="utf-8") as f:
-                f.write("")
+            document_hook.write_text_if_changed(txt_path, "")
             return True
 
         # 2. Normalize boxes
@@ -366,8 +369,7 @@ def extract_single_page(args):
         # 4. Generate text
         final_text = post_process_text(full_ordered_lines, full_ordered_boxes)
 
-        with open(txt_path, "w", encoding="utf-8") as f:
-            f.write(final_text)
+        document_hook.write_text_if_changed(txt_path, final_text)  # unchanged text keeps its time (resume)
 
         return True
 
@@ -376,12 +378,26 @@ def extract_single_page(args):
         return False
 
 
-def main():
-    if not Path(INPUT_CSV).exists():
-        print(f"Error: {INPUT_CSV} not found.")
+def _parse_args(argv=None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Extract page text from split ALTO XML in LayoutReader reading order (--method layoutreader)."
+    )
+    parser.add_argument(
+        "--input-csv",
+        default=None,
+        help=f"Page statistics CSV to extract (default: [EXTRACT].INPUT_CSV, now {INPUT_CSV}).",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    # (#31 Phase 5) --input-csv: run_pipeline passes its --input-csv here too.
+    input_csv = _parse_args(argv).input_csv or INPUT_CSV
+    if not Path(input_csv).exists():
+        print(f"Error: {input_csv} not found.")
         sys.exit(1)
 
-    df = pd.read_csv(INPUT_CSV)
+    df = document_hook.read_page_index(input_csv)  # (#31 Phase 5) `0001` stays `0001`
     print(f"Loaded {len(df)} pages to extract.")
 
     tasks = []
@@ -400,7 +416,7 @@ def main():
         config={
             "script": "extract_LytRdr_ALTO_2_TXT",
             "method": "layoutreader",
-            "input_csv": str(INPUT_CSV),
+            "input_csv": str(input_csv),
             "input_dir": str(page_alto_dir),
             "output_dir": str(OUTPUT_TEXT_DIR),
             "lr_model": str(LR_MODEL),

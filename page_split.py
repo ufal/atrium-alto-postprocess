@@ -7,15 +7,18 @@ This script takes a multi-page document as input and splits it into multiple
 single-page files, ordered plain-text-adjacent stage 1 of the pipeline for
 BOTH input formats it supports:
 
-- ALTO XML: a document-level `<file>.alto.xml` (multiple `<Page>` elements
-  under one `<Layout>`) is split into one `<base>-<page>.alto.xml` per page
-  (``split_alto_xml``). Each output file keeps the full header and style
-  information from the original file, but the <Layout> section only contains
-  the data for a single page.
+- ALTO XML (any version: the namespace is the root's): a document-level
+  `<file>.alto.xml` (multiple `<Page>` elements under one `<Layout>`) is split
+  into one `<base>-<page>.alto.xml` per page (``split_alto_xml``). Each output
+  file keeps the full header and style information from the original file, but
+  the <Layout> section only contains the data for a single page.
 - Generic JSON OCR/Doc-AI output (#31): a document-level JSON file is split
   into one `<base>-<page>.json` per page (``split_json_document``), detecting
   the page boundary heuristically since OCR/Doc-AI engines don't agree on how
   multi-page documents are represented (see that function's docstring).
+
+A re-split replaces a document's page files: pages an earlier run wrote that the
+current input no longer yields are removed (``remove_stale_pages``).
 
 Usage:
     python page_split.py <input_directory> <output_directory>
@@ -24,11 +27,12 @@ Usage:
 import argparse
 import configparser
 import hashlib
+import io
 import json
 import os
 import sys
 import xml.etree.ElementTree as ET  # For parsing and creating XML
-from typing import Optional
+from typing import Iterable, Optional, Tuple
 
 import document_hook
 from atrium_document import canonical_doc_id, resolve_originator
@@ -123,6 +127,74 @@ def _sha256_of(path: str) -> str:
     return h.hexdigest()
 
 
+#: The page-file suffixes this stage writes: `<out>/<doc_id>/<doc_id>-<page><suffix>`.
+ALTO_PAGE_SUFFIX = ".alto.xml"
+JSON_PAGE_SUFFIX = ".json"
+
+
+def doc_page_from_path(path: str, numeric: bool = False) -> Tuple[str, str]:
+    """(doc_id, page) for one page file written by a split stage
+    (`<out>/<doc_id>/<doc_id>-<page><suffix>`); page is "" when there is none.
+
+    (#31 Phase 5) The page directory's name is the doc_id, so a doc_id with hyphens
+    (`my-doc/my-doc-3.alto.xml` -> `my-doc`, `3`) survives; the old `split("-")` of
+    the ALTO/JSON stats scripts gave `my`, `doc`. A file outside such a directory is
+    split at its LAST hyphen. `numeric=True` accepts only a digit page (text-lines,
+    whose pages are always 1..N); ALTO pages are `PHYSICAL_IMG_NR`s and JSON pages
+    the engine's page numbers, so any non-empty label counts for them.
+    """
+    parent = os.path.basename(os.path.dirname(os.path.abspath(path)))
+    base = canonical_doc_id(os.path.basename(path))
+
+    def ok(page: str) -> bool:
+        return page.isdigit() if numeric else bool(page)
+
+    if parent and base.startswith(parent + "-") and ok(base[len(parent) + 1 :]):
+        return parent, base[len(parent) + 1 :]
+    head, sep, tail = base.rpartition("-")
+    if sep and head and ok(tail):
+        return head, tail
+    return base, ""
+
+
+def page_sort_key(page) -> Tuple[int, int, str]:
+    """Reading order of page labels: numeric labels by value (`2` before `10`), then any
+    other label as text. (#31 Phase 5) The ALTO/JSON stats scripts sort their rows by it,
+    so the extractors — which assemble a document's `content.text` in CSV row order — see
+    the pages in order; the rows used to follow directory listing / thread completion
+    order."""
+    text = str(page).strip()
+    return (0, int(text), text) if text.isdigit() else (1, 0, text)
+
+
+def remove_stale_pages(page_output_dir: str, base_name: str, suffix: str, keep: Iterable[str] = ()) -> int:
+    """(#31 Phase 5) Delete the page files an earlier split of this document left in
+    its directory, so a re-split with fewer or renumbered pages (or an input that now
+    yields none) leaves no old pages for the stats stage to pick up. Only regular files
+    named `<doc_id>-<page><suffix>` directly in `<out>/<doc_id>/` are removed, except the
+    names in `keep` (the pages this run wrote); other files, sub-directories and symlinks
+    are left alone. Returns how many went."""
+    keep = set(keep)
+    prefix = f"{base_name}-"
+    try:
+        entries = list(os.scandir(page_output_dir))
+    except (FileNotFoundError, NotADirectoryError):
+        return 0
+    removed = 0
+    for entry in entries:
+        name = entry.name
+        if (
+            name not in keep
+            and name.startswith(prefix)
+            and name.endswith(suffix)
+            and len(name) > len(prefix) + len(suffix)
+            and entry.is_file(follow_symlinks=False)
+        ):
+            os.remove(entry.path)
+            removed += 1
+    return removed
+
+
 def _assert_no_doctype(input_file_path):
     """Reject any input containing a DOCTYPE declaration.
 
@@ -140,20 +212,50 @@ def _assert_no_doctype(input_file_path):
         raise ET.ParseError(f"DOCTYPE is not allowed in ALTO inputs: {input_file_path}")
 
 
+def _alto_namespace(root) -> str:
+    """The namespace URI of an ALTO root element (`{uri}alto`), or "" when the root is
+    not a namespaced `<alto>` (PAGE XML, TEI, a namespace-less file, ...)."""
+    tag = root.tag if isinstance(root.tag, str) else ""
+    if not tag.startswith("{"):
+        return ""
+    uri, _, local = tag[1:].partition("}")
+    return uri if local == "alto" else ""
+
+
+def _local_name(tag) -> str:
+    return tag.rpartition("}")[2] if isinstance(tag, str) else str(tag)
+
+
 def split_alto_xml(input_file_path, output_dir):
     """
     Splits a single multi-page ALTO XML file into single-page files.
 
+    (#31 Phase 5) Every ALTO version is split: the namespace is taken from the root
+    element (v2, v3, v4, BnF, CCS ALTO 1), as `service/utils.py` and the LayoutReader
+    extractor already do; it used to be hard-coded to v3, so a v2/v4 file printed
+    "No <Page> elements found" and got no pages. A root that is not a namespaced
+    `<alto>` (PAGE XML, TEI, namespace-less ALTO, which the stats stage's alto_tools
+    rejects anyway) is skipped with its root named — the text-lines method reads those.
+
     Returns:
         int: The number of pages written (0 if no pages were found).
     """
-    namespace = {"alto": "http://www.loc.gov/standards/alto/ns-v3#"}
-    ET.register_namespace("", "http://www.loc.gov/standards/alto/ns-v3#")
-
     # --- Parse the Input XML (DOCTYPE rejected up front, see #5) ---
     _assert_no_doctype(input_file_path)
     tree = ET.parse(input_file_path)
     root = tree.getroot()
+
+    ns_uri = _alto_namespace(root)
+    if not ns_uri:
+        print(
+            f"  -> Not a namespaced ALTO document (root <{_local_name(root.tag)}>) in {input_file_path}. "
+            f"Skipping; read it with --method text-lines."
+        )
+        return 0
+    namespace = {"alto": ns_uri}
+    # Serialise the pages with the document's own namespace as the default one, as
+    # the v3-only code always did (so v3 output is byte-identical).
+    ET.register_namespace("", ns_uri)
 
     description = root.find("alto:Description", namespace)
     styles = root.find("alto:Styles", namespace)
@@ -172,11 +274,12 @@ def split_alto_xml(input_file_path, output_dir):
 
     page_output_dir = os.path.join(output_dir, base_name)
     os.makedirs(page_output_dir, exist_ok=True)
+    written = []
 
     print(f"  -> Found {len(pages)} page(s). Splitting...")
     for i, page in enumerate(pages, 1):
         page_number = page.get("PHYSICAL_IMG_NR", str(i))
-        output_filename = f"{base_name}-{page_number}.alto.xml"
+        output_filename = f"{base_name}-{page_number}{ALTO_PAGE_SUFFIX}"
         output_filepath = os.path.join(page_output_dir, output_filename)
 
         new_root = ET.Element(root.tag, root.attrib)
@@ -185,12 +288,20 @@ def split_alto_xml(input_file_path, output_dir):
         if styles is not None:
             new_root.append(styles)
 
-        new_layout = ET.SubElement(new_root, "Layout")
+        # In the document's namespace: a bare "Layout" only re-parsed as ALTO while
+        # the namespace was the registered default, i.e. for v3.
+        new_layout = ET.SubElement(new_root, f"{{{ns_uri}}}Layout")
         new_layout.append(page)
 
         new_tree = ET.ElementTree(new_root)
-        new_tree.write(output_filepath, encoding="UTF-8", xml_declaration=True)
+        # (#31 Phase 5) The same bytes as writing to the path, written only when they changed:
+        # the later stages resume by file time, so an unchanged page keeps its time.
+        buffer = io.BytesIO()
+        new_tree.write(buffer, encoding="UTF-8", xml_declaration=True)
+        document_hook.write_bytes_if_changed(output_filepath, buffer.getvalue())
+        written.append(output_filename)
 
+    remove_stale_pages(page_output_dir, base_name, ALTO_PAGE_SUFFIX, keep=written)
     print(f"  -> Successfully split into {len(pages)} file(s) in '{page_output_dir}'.")
     return len(pages)
 
@@ -338,10 +449,13 @@ def _replace_container_value(data, parent, key, new_value):
     return {k: (new_parent if v is parent else v) for k, v in data.items()}
 
 
-def _write_json_page(page_output_dir, base_name, page_number, doc):
-    output_filepath = os.path.join(page_output_dir, f"{base_name}-{page_number}.json")
-    with open(output_filepath, "w", encoding="utf-8") as f:
-        json.dump(doc, f, ensure_ascii=False)
+def _write_json_page(page_output_dir, base_name, page_number, doc) -> str:
+    """Write one page file (only when its content changed, #31 Phase 5); returns its name."""
+    output_filename = f"{base_name}-{page_number}{JSON_PAGE_SUFFIX}"
+    document_hook.write_text_if_changed(
+        os.path.join(page_output_dir, output_filename), json.dumps(doc, ensure_ascii=False)
+    )
+    return output_filename
 
 
 def split_json_document(input_file_path, output_dir):
@@ -359,6 +473,7 @@ def split_json_document(input_file_path, output_dir):
     base_name = _doc_id_from_filename(os.path.basename(input_file_path))  # (#10 D3)
     page_output_dir = os.path.join(output_dir, base_name)
     os.makedirs(page_output_dir, exist_ok=True)
+    written = []
 
     # 1. Family A (Azure, docTR, Google Doc AI)
     family_a = _find_family_a(data)
@@ -368,73 +483,21 @@ def split_json_document(input_file_path, output_dir):
             page_number = _get_field_ci(page_obj, PAGE_NUMBER_FIELD_KEYS)
             page_number = str(page_number) if page_number is not None else str(i)
             doc = _replace_container_value(data, parent, key, page_obj)
-            _write_json_page(page_output_dir, base_name, page_number, doc)
-        return len(page_list)
+            written.append(_write_json_page(page_output_dir, base_name, page_number, doc))
+    else:
+        # 2. Family B (AWS Textract)
+        family_b = _find_family_b(data)
+        if family_b is not None:
+            parent, key, _lst, _tag_field, groups = family_b
+            for page_number, items in groups.items():
+                doc = _replace_container_value(data, parent, key, items)
+                written.append(_write_json_page(page_output_dir, base_name, str(page_number), doc))
+        else:
+            # 3. Family C fallback (pero-ocr, OCR.space)
+            written.append(_write_json_page(page_output_dir, base_name, "1", data))
 
-    # 2. Family B (AWS Textract)
-    family_b = _find_family_b(data)
-    if family_b is not None:
-        parent, key, _lst, _tag_field, groups = family_b
-        for page_number, items in groups.items():
-            doc = _replace_container_value(data, parent, key, items)
-            _write_json_page(page_output_dir, base_name, str(page_number), doc)
-        return len(groups)
-
-    # 3. Family C fallback (pero-ocr, OCR.space)
-    _write_json_page(page_output_dir, base_name, "1", data)
-    return 1
-
-
-# def split_json_document(input_file_path, output_dir):
-#     """
-#     Splits a single JSON OCR/Doc-AI document into single-page JSON files,
-#     mirroring split_alto_xml()'s contract exactly (same naming pattern,
-#     same directory shape, same int page-count return) — see 31.plan.md.
-#
-#     Detection order (never assume, never break today's single-page fixtures):
-#       1. Family A — a nested page-list container (D1-D3, D5).
-#       2. Family B — a flat list tagged with a per-item page field (D6).
-#       3. Family C — neither pattern found: today's behaviour, one output
-#          file, page number "1", full document unchanged (D4).
-#
-#     Returns:
-#         int: The number of pages written (always >= 1; a JSON document has
-#         no "no pages found" case the way an ALTO file can have none).
-#     """
-#     with open(input_file_path, "r", encoding="utf-8") as f:
-#         data = json.load(f)
-#
-#     base_name = os.path.splitext(os.path.basename(input_file_path))[0]
-#     page_output_dir = os.path.join(output_dir, base_name)
-#     os.makedirs(page_output_dir, exist_ok=True)
-#
-#     family_a = _find_family_a(data)
-#     if family_a is not None:
-#         parent, key, page_list = family_a
-#         print(f"  -> Found {len(page_list)} page(s) (nested list). Splitting...")
-#         for i, page_obj in enumerate(page_list, 1):
-#             page_number = _get_field_ci(page_obj, PAGE_NUMBER_FIELD_KEYS)
-#             page_number = str(page_number) if page_number is not None else str(i)
-#             doc = _replace_container_value(data, parent, key, page_obj)
-#             _write_json_page(page_output_dir, base_name, page_number, doc)
-#         print(f"  -> Successfully split into {len(page_list)} file(s) in '{page_output_dir}'.")
-#         return len(page_list)
-#
-#     family_b = _find_family_b(data)
-#     if family_b is not None:
-#         parent, key, _lst, _tag_field, groups = family_b
-#         print(f"  -> Found {len(groups)} page(s) (tagged flat list). Splitting...")
-#         for page_number, items in groups.items():
-#             doc = _replace_container_value(data, parent, key, items)
-#             _write_json_page(page_output_dir, base_name, str(page_number), doc)
-#         print(f"  -> Successfully split into {len(groups)} file(s) in '{page_output_dir}'.")
-#         return len(groups)
-#
-#     # Family C fallback (D4): neither pattern found, route through the same
-#     # writer as a single page — preserves 100% of current behaviour.
-#     print("  -> No multi-page pattern detected. Writing as single page.")
-#     _write_json_page(page_output_dir, base_name, "1", data)
-#     return 1
+    remove_stale_pages(page_output_dir, base_name, JSON_PAGE_SUFFIX, keep=written)
+    return len(written)
 
 
 def main(argv=None):
@@ -519,9 +582,12 @@ def main(argv=None):
             input_file_path = os.path.join(args.input_dir, filename)
             print(f"Processing '{filename}'...")
             _total_inputs += 1
+            page_suffix = ALTO_PAGE_SUFFIX if fmt == "xml" else JSON_PAGE_SUFFIX
             try:
                 page_count = split_fn(input_file_path, args.output_dir)
                 _logger.log_success(fmt, count=page_count)  # pages produced
+                if page_count == 0:
+                    _drop_stale_pages(args.output_dir, filename, page_suffix)
                 if page_count > 0:
                     _docs_ok += 1
                     # (atrium-llm-enrich#13) page_split is the first stage to see the
@@ -552,9 +618,20 @@ def main(argv=None):
                         },
                     )
             except Exception as e:
+                print(f"  -> Failed: {e}. Skipping.")
                 _logger.log_skip(str(filename), str(e))
+                _drop_stale_pages(args.output_dir, filename, page_suffix)
     finally:
         _logger.finalize(input_total=_total_inputs, processed_total=_docs_ok)
+
+
+def _drop_stale_pages(output_dir: str, filename: str, suffix: str) -> None:
+    """(#31 Phase 5) An input that now fails or yields no pages must not leave the pages
+    of an earlier run behind for the stats stage (text_split's `stale_pages_removed`)."""
+    doc_id = _doc_id_from_filename(filename)
+    removed = remove_stale_pages(os.path.join(output_dir, doc_id), doc_id, suffix)
+    if removed:
+        print(f"  -> Removed {removed} page file(s) left by an earlier run of '{doc_id}'.")
 
 
 if __name__ == "__main__":

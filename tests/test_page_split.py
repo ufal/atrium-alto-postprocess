@@ -183,6 +183,144 @@ def test_split_preserves_root_attributes(workdir):
     assert root.get("SCHEMAVERSION") == "3.1"
 
 
+# ── (#31 Phase 5) every ALTO version; non-ALTO roots; stale pages ───────────
+
+
+@pytest.mark.parametrize(
+    "ns",
+    [
+        "http://www.loc.gov/standards/alto/ns-v2#",
+        "http://www.loc.gov/standards/alto/ns-v4#",
+        "http://bibnum.bnf.fr/ns/alto_prod",
+    ],
+)
+def test_split_reads_the_namespace_from_the_root(workdir, ns):
+    """page_split used to know only the v3 namespace: a v2/v4 file printed "No <Page>
+    elements found" and got no pages. The page files keep the document's namespace, and
+    their <Layout> is in it too (a bare Layout re-parsed as ALTO only for v3)."""
+    src = workdir / "in" / "doc.alto.xml"
+    src.write_text(_TWO_PAGE_DOC.replace(_ALTO_NS, ns), encoding="utf-8")
+
+    assert split_alto_xml(str(src), str(workdir / "out")) == 2
+
+    for name, page_id in (("doc-7.alto.xml", "P1"), ("doc-8.alto.xml", "P2")):
+        root = ET.parse(workdir / "out" / "doc" / name).getroot()
+        assert root.tag == f"{{{ns}}}alto"
+        layout = root.find(f"{{{ns}}}Layout")
+        assert layout is not None
+        assert [p.get("ID") for p in layout.findall(f"{{{ns}}}Page")] == [page_id]
+        assert root.find(f"{{{ns}}}Description") is not None
+
+
+def test_split_v3_after_another_version_keeps_the_v3_default_namespace(workdir):
+    """register_namespace() is process-global: a v4 document split first must not
+    change how a later v3 document is written."""
+    v4 = "http://www.loc.gov/standards/alto/ns-v4#"
+    (workdir / "in" / "a.alto.xml").write_text(_TWO_PAGE_DOC.replace(_ALTO_NS, v4), encoding="utf-8")
+    (workdir / "in" / "b.alto.xml").write_text(_TWO_PAGE_DOC, encoding="utf-8")
+    split_alto_xml(str(workdir / "in" / "a.alto.xml"), str(workdir / "out"))
+    split_alto_xml(str(workdir / "in" / "b.alto.xml"), str(workdir / "out"))
+
+    text = (workdir / "out" / "b" / "b-7.alto.xml").read_text(encoding="utf-8")
+    assert f'<alto xmlns="{_ALTO_NS}">' in text
+    assert "<Layout>" in text and "ns0:" not in text
+
+
+@pytest.mark.parametrize(
+    "doc,root_name",
+    [
+        (
+            '<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15">'
+            '<Page imageFilename="a.jpg"/></PcGts>',
+            "PcGts",
+        ),
+        ('<TEI xmlns="http://www.tei-c.org/ns/1.0"><text/></TEI>', "TEI"),
+        ('<alto><Layout><Page ID="P1"/></Layout></alto>', "alto"),
+    ],
+)
+def test_split_skips_a_root_that_is_not_namespaced_alto(workdir, capsys, doc, root_name):
+    """PAGE XML has <Page> elements too: with the namespace taken from the root it would
+    otherwise be split as if it were ALTO. The text-lines method reads all of these."""
+    src = workdir / "in" / "other.xml"
+    src.write_text(doc, encoding="utf-8")
+    assert split_alto_xml(str(src), str(workdir / "out")) == 0
+    out = capsys.readouterr().out
+    assert f"Not a namespaced ALTO document (root <{root_name}>)" in out
+    assert "--method text-lines" in out
+    assert not (workdir / "out" / "other").exists()
+
+
+def test_resplit_removes_pages_the_input_no_longer_has(workdir):
+    """A re-split with fewer pages used to leave the old extra page files behind, and the
+    stats stage picked them up. Only `<doc>-<page>.alto.xml` files of this document go."""
+    src = workdir / "in" / "doc.alto.xml"
+    src.write_text(_TWO_PAGE_DOC, encoding="utf-8")
+    split_alto_xml(str(src), str(workdir / "out"))
+    doc_dir = workdir / "out" / "doc"
+    (doc_dir / "notes.txt").write_text("keep", encoding="utf-8")
+    (doc_dir / "other-1.alto.xml").write_text("keep", encoding="utf-8")
+    (doc_dir / "doc-sub.alto.xml").mkdir()
+
+    src.write_text(
+        _TWO_PAGE_DOC.replace('<Page ID="P2" PHYSICAL_IMG_NR="8"><PrintSpace/></Page>', ""), encoding="utf-8"
+    )
+    assert split_alto_xml(str(src), str(workdir / "out")) == 1
+
+    assert sorted(p.name for p in doc_dir.iterdir()) == [
+        "doc-7.alto.xml",
+        "doc-sub.alto.xml",
+        "notes.txt",
+        "other-1.alto.xml",
+    ]
+
+
+def test_main_removes_old_pages_of_a_document_that_now_fails(workdir, capsys):
+    """An input that now fails (or yields no pages) must not leave the pages of an earlier
+    run for the stats stage — text_split's `stale_pages_removed`, here too."""
+    src = workdir / "in" / "doc.alto.xml"
+    src.write_text(_TWO_PAGE_DOC, encoding="utf-8")
+    main([str(workdir / "in"), str(workdir / "out")])
+    assert len(list((workdir / "out" / "doc").glob("doc-*.alto.xml"))) == 2
+
+    src.write_text("<alto>", encoding="utf-8")  # damaged
+    main([str(workdir / "in"), str(workdir / "out")])
+
+    assert list((workdir / "out" / "doc").glob("doc-*.alto.xml")) == []
+    out = capsys.readouterr().out
+    assert "Failed:" in out
+    assert "Removed 2 page file(s) left by an earlier run of 'doc'" in out
+
+
+def test_resplit_leaves_unchanged_page_files_untouched(workdir):
+    """(#31 Phase 5) Extract and classify resume by file time: a re-split of an unchanged
+    document must not make every page look new (it used to rewrite them all)."""
+    import os
+
+    src = workdir / "in" / "doc.alto.xml"
+    src.write_text(_TWO_PAGE_DOC, encoding="utf-8")
+    split_alto_xml(str(src), str(workdir / "out"))
+    page = workdir / "out" / "doc" / "doc-7.alto.xml"
+    st = os.stat(page)
+    os.utime(page, ns=(st.st_atime_ns - 10**12, st.st_mtime_ns - 10**12))
+    before = os.stat(page).st_mtime_ns
+
+    split_alto_xml(str(src), str(workdir / "out"))
+    assert os.stat(page).st_mtime_ns == before
+
+    src.write_text(_TWO_PAGE_DOC.replace('<Page ID="P1" PHYSICAL_IMG_NR="7">', '<Page ID="P1b" PHYSICAL_IMG_NR="7">'))
+    split_alto_xml(str(src), str(workdir / "out"))
+    assert os.stat(page).st_mtime_ns > before
+
+
+def test_resplit_json_removes_pages_the_input_no_longer_has(workdir):
+    src = workdir / "in" / "doc.json"
+    src.write_text(json.dumps({"pages": [{"text": "a"}, {"text": "b"}, {"text": "c"}]}), encoding="utf-8")
+    assert split_json_document(str(src), str(workdir / "out")) == 3
+    src.write_text(json.dumps({"text": "single page now"}), encoding="utf-8")
+    assert split_json_document(str(src), str(workdir / "out")) == 1
+    assert sorted(p.name for p in (workdir / "out" / "doc").iterdir()) == ["doc-1.json"]
+
+
 # ── (#31) split_json_document unit behaviour ─────────────────────────────────
 
 

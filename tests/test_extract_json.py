@@ -197,3 +197,148 @@ def test_json_keys_accretion_output_is_schema_valid(tmp_path, document_schema, f
 
     record = load_document(str(doc_dir / "CTXschema.document.json"))
     jsonschema.validate(instance=record, schema=document_schema)
+
+
+# ── (#31 Phase 5) one page, each text once ───────────────────────────────────
+
+_AZURE_DOC = {
+    "apiVersion": "2024-11-30",
+    "analyzeResult": {
+        "modelId": "prebuilt-read",
+        "content": "Titulní strana\nZpráva o výzkumu\nDruhá strana",
+        "pages": [
+            {
+                "pageNumber": 1,
+                "lines": [{"content": "Titulní strana"}, {"content": "Zpráva o výzkumu"}],
+                "words": [{"content": "Titulní"}, {"content": "strana"}, {"content": "Zpráva"}],
+            },
+            {"pageNumber": 2, "lines": [{"content": "Druhá strana"}], "words": [{"content": "Druhá"}]},
+        ],
+    },
+}
+
+
+def _split_and_extract(tmp_path: Path, name: str, data) -> list:
+    import page_split
+
+    src = tmp_path / "in" / f"{name}.json"
+    src.parent.mkdir(exist_ok=True)
+    src.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    out = tmp_path / "split"
+    count = page_split.split_json_document(str(src), str(out))
+    pages = []
+    for n in range(1, count + 1):
+        txt = tmp_path / f"{name}-{n}.txt"
+        process_json_to_txt(out / name / f"{name}-{n}.json", txt)
+        pages.append(txt.read_text(encoding="utf-8").split("\n"))
+    return pages
+
+
+def test_split_azure_pages_carry_neither_the_header_text_nor_the_words(tmp_path: Path):
+    """page_split keeps the document header in every page file; json-keys used to print
+    Azure's whole-document `content` at the top of every page and each line's words
+    after the lines. A page is now its own lines, once."""
+    assert _split_and_extract(tmp_path, "az", _AZURE_DOC) == [
+        ["Titulní strana", "Zpráva o výzkumu"],
+        ["Druhá strana"],
+    ]
+    split_page = json.loads((tmp_path / "split" / "az" / "az-1.json").read_text(encoding="utf-8"))
+    assert split_page["analyzeResult"]["content"] == _AZURE_DOC["analyzeResult"]["content"]  # header still kept
+
+
+def test_json_keys_agrees_with_text_lines_on_an_azure_document(tmp_path: Path):
+    import text_formats as tf
+
+    src = tmp_path / "doc.json"
+    src.write_text(json.dumps(_AZURE_DOC, ensure_ascii=False), encoding="utf-8")
+    text_lines = [page.lines for page in tf.read_document(str(src)).pages]
+    assert _split_and_extract(tmp_path, "az", _AZURE_DOC) == text_lines
+
+
+def test_textract_flat_blocks_keep_the_lines_and_drop_the_words(tmp_path: Path):
+    """Family B (AWS Textract): a LINE block's text is followed by its WORD blocks."""
+    blocks = [
+        {"BlockType": "PAGE", "Page": 1},
+        {"BlockType": "LINE", "Page": 1, "Text": "První řádek"},
+        {"BlockType": "WORD", "Page": 1, "Text": "První"},
+        {"BlockType": "WORD", "Page": 1, "Text": "řádek"},
+        {"BlockType": "PAGE", "Page": 2},
+        {"BlockType": "LINE", "Page": 2, "Text": "Druhý řádek"},
+        {"BlockType": "WORD", "Page": 2, "Text": "Druhý"},
+    ]
+    data = {"DocumentMetadata": {"Pages": 2}, "Blocks": blocks}
+    assert _split_and_extract(tmp_path, "tx", data) == [["První řádek"], ["Druhý řádek"]]
+
+
+def test_a_page_object_without_text_falls_back_to_the_whole_document(tmp_path: Path):
+    """`pages` that is a dict without text (a page count) must not hide the text."""
+    data = {"pages": {"count": 1}, "text": "Jediný řádek"}
+    src = tmp_path / "d.json"
+    src.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    out = tmp_path / "d.txt"
+    process_json_to_txt(src, out)
+    assert out.read_text(encoding="utf-8") == "Jediný řádek"
+
+
+def test_embedded_binary_strings_are_not_text(tmp_path: Path):
+    b64 = "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejAxMjM0NTY3ODk="
+    src = tmp_path / "b.json"
+    src.write_text(json.dumps({"text": "Skutečný text", "data": b64}), encoding="utf-8")
+    out = tmp_path / "b.txt"
+    process_json_to_txt(src, out)
+    assert out.read_text(encoding="utf-8") == "Skutečný text"
+
+
+def test_json_stats_counts_the_lines_that_will_be_extracted(tmp_path: Path):
+    pytest.importorskip("pandas")
+    import json_stats_create
+    import page_split
+
+    src = tmp_path / "in" / "az.json"
+    src.parent.mkdir()
+    src.write_text(json.dumps(_AZURE_DOC, ensure_ascii=False), encoding="utf-8")
+    page_split.split_json_document(str(src), str(tmp_path / "split"))
+    page = tmp_path / "split" / "az" / "az-1.json"
+    record, skipped = json_stats_create._process_single_json(str(page), page.name)
+    assert skipped is None
+    assert (record["file"], record["page"], record["strings"]) == ("az", "1", 2)
+
+
+# ── (#31 Phase 5) resume notices a changed page; `0001` ids; --input-csv ─────
+
+
+def test_extract_single_page_redoes_a_page_whose_json_is_newer(tmp_path: Path):
+    import os
+
+    src = tmp_path / "doc9-1.json"
+    src.write_text(json.dumps({"text": "new text"}), encoding="utf-8")
+    txt = tmp_path / "out" / "doc9" / "doc9-1.txt"
+    txt.parent.mkdir(parents=True)
+    txt.write_text("old text", encoding="utf-8")
+    st = txt.stat()
+    os.utime(txt, ns=(st.st_atime_ns, st.st_mtime_ns - 60 * 10**9))  # older than its input
+
+    assert extract_single_page(("doc9", 1, str(src), str(tmp_path / "out"))) is True
+    assert txt.read_text(encoding="utf-8") == "new text"
+
+
+def test_main_keeps_zero_padded_doc_ids_and_takes_input_csv(tmp_path: Path, monkeypatch):
+    """`0001` used to be read as 1, so the text went to `1/1-1.txt` and classify, looking
+    under `0001/`, found nothing. --input-csv now reaches this stage (run_pipeline)."""
+    import extract_JSON_2_TXT as ext
+
+    monkeypatch.chdir(tmp_path)
+    page = tmp_path / "PAGE_JSON" / "0001" / "0001-1.json"
+    page.parent.mkdir(parents=True)
+    page.write_text(json.dumps({"text": "Řádek"}), encoding="utf-8")
+    csv_path = tmp_path / "stats.csv"
+    csv_path.write_text(f"file,page,textlines,illustrations,graphics,strings,path\n0001,1,0,0,0,1,{page}\n")
+    out_dir = tmp_path / "PAGE_TXT_JSON"
+    monkeypatch.setattr(ext, "OUTPUT_TEXT_DIR", str(out_dir))
+    monkeypatch.setattr(ext, "MAX_WORKERS", 1)
+    monkeypatch.setattr(ext, "INPUT_CSV", str(tmp_path / "not-this.csv"))
+
+    ext.main(["--input-csv", str(csv_path)])
+
+    assert (out_dir / "0001" / "0001-1.txt").read_text(encoding="utf-8") == "Řádek"
+    assert not (out_dir / "1").exists()

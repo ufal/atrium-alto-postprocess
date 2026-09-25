@@ -102,3 +102,23 @@ def test_main_writes_csv_with_alto_compatible_columns(tmp_path, monkeypatch):
     for col in ["file", "page", "textlines", "illustrations", "graphics", "strings", "path"]:
         assert col in header
     assert "doc1,1,0,0,0,3" in content
+
+
+def test_rows_are_in_page_reading_order(tmp_path, monkeypatch):
+    """(#31 Phase 5) The extractors join a document's pages in CSV row order into
+    `content.text`; the rows used to follow the directory listing (and, for ALTO, thread
+    completion), so page 2 could come before page 1 and 10 before 2."""
+    import alto_stats_create
+    import json_stats_create
+
+    doc = tmp_path / "doc"
+    doc.mkdir()
+    for n in (10, 2, 1, 11, 3):
+        (doc / f"doc-{n}.json").write_text('{"text": "x"}', encoding="utf-8")
+        (doc / f"doc-{n}.alto.xml").write_text("<alto/>", encoding="utf-8")
+    rows, _total, _skips = json_stats_create.process_json_files(str(doc))
+    assert [r["page"] for r in rows] == ["1", "2", "3", "10", "11"]
+
+    monkeypatch.setattr(alto_stats_create, "run_alto_tools_stats", lambda _path: {"textlines": 1})
+    rows, _total, _skips = alto_stats_create.process_alto_files_with_alto_tools(str(doc))
+    assert [r["page"] for r in rows] == ["1", "2", "3", "10", "11"]

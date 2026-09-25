@@ -49,7 +49,7 @@ except ImportError:
 # module that must stay importable without ML libraries installed.
 from classify_TEXT import score_line  # noqa: E402
 from document_hook import parse_origin_by_kind, resolve_input_origin  # noqa: E402
-from extract_JSON_2_TXT import TARGET_KEYS, _yield_json_text_by_keys  # noqa: E402
+from extract_JSON_2_TXT import page_text_lines  # noqa: E402
 from service.utils import normalize_boxes, parse_alto_xml_lines, post_process_text  # noqa: E402
 
 # (#31) The text-lines readers (PDF, DOCX, ODT, XLSX, PPTX, EPUB, RTF, HTML/hOCR, PAGE
@@ -246,14 +246,15 @@ class TextModelManager:
     def process_json(self, path: str) -> Dict[str, Any]:
         """Classify a generic JSON OCR upload.
 
-        Extracts ordered text leaves with the same TARGET_KEYS whitelist walk
-        extract_JSON_2_TXT.py uses for the batch pipeline, so a given file
-        yields the same lines through either path. Each leaf is treated as
-        one line, matching the pipeline's "one JSON file = one page" model.
+        Extracts ordered text lines with the same walk extract_JSON_2_TXT.py
+        uses for one page of the batch pipeline (page_text_lines: TARGET_KEYS,
+        each text once at line granularity), so a given file yields the same
+        lines through either path, matching the pipeline's "one JSON file = one
+        page" model.
         """
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        lines = list(_yield_json_text_by_keys(data, TARGET_KEYS))
+        lines = page_text_lines(data)
         return {"type": "json", "cleaned_lines": self._classify_lines(lines)}
 
     def process_alto(self, path: str) -> Dict[str, Any]:

@@ -13,11 +13,11 @@ post-split, per-page JSON (`<file>-<page>.json`) — no different in shape from
 what alto_stats_create.py already scans. Unlike ALTO XML, a generic JSON OCR
 export has no external element-counting tool (there is no "alto-tools -s"
 equivalent), so this produces one CSV row per JSON file: file/page derived
-from the split filename (mirrors alto_stats_create._process_single_xml's
-`basename.split(".")[0].split("-")`), textlines/illustrations/graphics=0 (no
-structural equivalent exists for JSON), and strings=the number of text leaves
-extract_JSON_2_TXT.py would pull out of that file (reusing its TARGET_KEYS
-whitelist walk, so the count matches what will actually be extracted).
+from the split filename (page_split.doc_page_from_path, shared with
+alto_stats_create.py), textlines/illustrations/graphics=0 (no
+structural equivalent exists for JSON), and strings=the number of text lines
+extract_JSON_2_TXT.py will pull out of that file (its page_text_lines walk, so
+the count matches what will actually be extracted).
 
 This CSV has the same columns as the ALTO stats CSV (file, page, textlines,
 illustrations, graphics, strings, path), so it's a drop-in input for the same
@@ -34,9 +34,9 @@ import os
 
 import pandas as pd
 
-from atrium_document import canonical_doc_id
 from atrium_paradata import ParadataLogger
-from extract_JSON_2_TXT import TARGET_KEYS, _yield_json_text_by_keys
+from extract_JSON_2_TXT import page_text_lines
+from page_split import doc_page_from_path, page_sort_key
 
 
 def _process_single_json(json_path, fname):
@@ -53,21 +53,15 @@ def _process_single_json(json_path, fname):
     except (OSError, json.JSONDecodeError) as e:
         return None, f"could not parse JSON: {e}"
 
-    n_strings = sum(1 for _ in _yield_json_text_by_keys(data, TARGET_KEYS))
+    n_strings = len(page_text_lines(data))
 
     # --- (D7) Derive file ID and page ID from the split filename ---
-    # e.g. "doc123-1.json" -> file="doc123", page="1" — same convention as
-    # alto_stats_create._process_single_xml, since page_split.py now names
-    # split JSON pages identically to split ALTO pages.
-    #
-    # (atrium-project#10 D3) Suffix stripping delegated to the hub's
-    # canonical_doc_id(), composed with the local page split — see the longer note at
-    # alto_stats_create._process_single_xml, whose derivation this deliberately mirrors
-    # (the two must agree, so they now agree by calling the same function).
-    base = canonical_doc_id(os.path.basename(fname))  # "doc123-1"
-    parts = base.split("-")  # ["doc123", "1"]
-    file_id = parts[0]  # "doc123"
-    page = parts[1] if len(parts) > 1 else ""  # "1"
+    # e.g. "doc123/doc123-1.json" -> file="doc123", page="1" — same convention as
+    # alto_stats_create._process_single_xml, since page_split.py names split JSON
+    # pages identically to split ALTO pages. Both call page_split.doc_page_from_path()
+    # (hub canonical_doc_id() for the suffix, the page directory for the doc_id, so a
+    # hyphenated doc_id survives — #31 Phase 5).
+    file_id, page = doc_page_from_path(json_path)
 
     rec = {
         "file": file_id,
@@ -111,6 +105,8 @@ def process_json_files(directory_path):
         else:
             results.append(rec)
 
+    # (#31 Phase 5) rows in reading order: the extractors join a document's pages in CSV order.
+    results.sort(key=lambda rec: (rec["file"], page_sort_key(rec["page"])))
     return results, _total_inputs, _skips
 
 
@@ -125,7 +121,7 @@ def main(argv=None):
 
     subdirs = [
         os.path.join(args.input_folder, d)
-        for d in os.listdir(args.input_folder)
+        for d in sorted(os.listdir(args.input_folder))
         if os.path.isdir(os.path.join(args.input_folder, d))
     ]
 

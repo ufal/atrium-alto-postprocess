@@ -62,6 +62,11 @@ FORCE_SINGLE_PAGE_JSON = false
 # tables OUT of [CLASSIFY].OUTPUT_LINES_LOG (the script refuses to write there).
 OUTPUT_TXT_TEXT    = ./data_samples/PAGE_TXT_TEXT
 OUTPUT_LINES_TEXT  = ./data_samples/DOC_LINES_TEXT
+# (#31 Phase 5) The text-lines page statistics CSV: run_pipeline writes it in the stats
+# stage and passes it to extract_TEXT_2_TXT.py and classify_TEXT.py (--input-csv), so a
+# text-lines run no longer overwrites INPUT_CSV, the ALTO/JSON methods' CSV. Unset:
+# text-lines shares INPUT_CSV, as before.
+INPUT_CSV_TEXT     = ./data_samples/text_stats.csv
 
 [CLASSIFY]
 INPUT_CSV = data_samples/test_alto_stats.csv

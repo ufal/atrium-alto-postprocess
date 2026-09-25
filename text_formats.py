@@ -626,7 +626,12 @@ _STRIP_CHARS = dict.fromkeys(
     map(ord, "\u200b\u2060\ufeff\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"), None
 )
 _SPACE_CHARS = dict.fromkeys(map(ord, "\u00a0\u2007\u202f"), " ")
-_HYPHEN_MARKS = ("\u00ad", "\x02")  # soft hyphen; PDFium's end-of-line hyphen marker
+_HYPHEN_MARKS = ("\u00ad", "\x02", "\ufffe")  # soft hyphen; PDFium's end-of-line hyphen markers
+#: (#31 Phase 5, found on a real Tesseract PDF) PDFium reports a hyphen that ends a text
+#: line as \x02 (or U+FFFE) and drops the line break after it, so "želez-" / "ný nůž"
+#: came out as one line, "železný nůž", and the page lost a line. The marker becomes
+#: "-" plus the line break it replaced; classify re-joins split words as for ALTO.
+_PDFIUM_LINE_HYPHEN = re.compile("[\x02\ufffe](?:\r\n|\n|\r)?")
 _WS_RUN = re.compile(r"\s+")
 # A lone UTF-16 surrogate (an RTF \u pair split by a bad writer, a JSON "\ud83d" escape)
 # cannot be written as UTF-8: left in, it failed the whole document's page write.
@@ -2031,6 +2036,15 @@ def _json_leaves_flat(node: Any, keys: Optional[frozenset], key: Optional[str], 
     return out
 
 
+def json_text_lines(data: Any, keys: Optional[frozenset] = _JSON_TEXT_KEYS) -> List[str]:
+    """The ordered text lines of one parsed JSON value, read once at line granularity
+    (`_json_leaves`): a line's words and a page's or paragraph's full text are not
+    repeated, and embedded binary strings are skipped. `keys=None` reads every string
+    with a letter. (#31 Phase 5) The json-keys walk of extract_JSON_2_TXT.py and the
+    service's JSON path, so json-keys and text-lines agree on a page's lines."""
+    return _json_leaves(data, keys)
+
+
 def _json_pages(data: Any, ctx: "_Ctx", keys: Optional[frozenset]) -> List[TextPage]:
     """Pages for one parsed JSON value: Family A/B (same detection as json-keys),
     else top-level children as blocks. Header siblings are NOT copied into every
@@ -2145,14 +2159,56 @@ def read_jsonl(text: str, ctx: "_Ctx") -> List[TextPage]:
 # ── readers: XML / HTML family ────────────────────────────────────────────────
 
 
+#: (#31 Phase 5) OCR engines an ALTO file (`processingSoftware/softwareName`,
+#: `softwareCreator`) or an hOCR file (`<meta name="ocr-system">`) names → the
+#: `source.origin` it gets. ALTO is not only ABBYY's: Tesseract, PERO, Kraken, Transkribus
+#: and OCR-D write it too, and a real Tesseract export was recorded as `ABBYY-ALTO`. An
+#: engine not listed keeps the format's default (`ABBYY-ALTO`, what the ATRIUM exports
+#: are; `ocr:hocr`).
+_OCR_PRODUCERS = (
+    (re.compile(r"\b(abbyy|fine\s*reader)"), "ABBYY-ALTO"),
+    (re.compile(r"\btesseract\b"), "ocr:tesseract"),
+    (re.compile(r"\bpero\b"), "ocr:pero"),
+    (re.compile(r"\bkraken\b"), "ocr:kraken"),
+    (re.compile(r"\btranskribus\b"), "ocr:transkribus"),
+    (re.compile(r"\bescriptorium\b"), "ocr:escriptorium"),
+    (re.compile(r"\bocr-?d\b"), "ocr:ocrd"),
+    (re.compile(r"\bcalamari\b"), "ocr:calamari"),
+)
+
+
+def producer_origin(names: Iterable[str]) -> Optional[str]:
+    """The `source.origin` of the first OCR engine this repo knows among `names` (software
+    names as a file records them), or None (the caller keeps its default)."""
+    folded = [name.strip().lower() for name in names if name and name.strip()]
+    for pattern, origin in _OCR_PRODUCERS:
+        if any(pattern.search(name) for name in folded):
+            return origin
+    return None
+
+
+def alto_producer_origin(root) -> Optional[str]:
+    """``producer_origin`` of the software an ALTO root names in its Description."""
+    names = []
+    for child in root:
+        if _local(child.tag) != "Description":
+            continue
+        for el in child.iter():
+            if _local(el.tag) in ("softwareName", "softwareCreator"):
+                names.append(el.text or "")
+    return producer_origin(names)
+
+
 def read_alto(root, ctx: "_Ctx") -> List[TextPage]:
     """ALTO v2/v3/v4 or namespace-less: Page → TextLine → String@CONTENT, HYP → '-'.
 
     A deliberately small reader of its own (not alto_tools.alto_text, which keys
     blocks by ID and needs a document-level ReadingOrder): document order, one line
     per TextLine — the ALTO methods of the pipeline remain the way to get reading-
-    order reconstruction and dehyphenation.
+    order reconstruction and dehyphenation. The origin names the engine the file's
+    Description names, when this repo knows it (``alto_producer_origin``).
     """
+    ctx.origin_hint = alto_producer_origin(root) or ctx.origin_hint
     pages_el = list(root.iter("{*}Page")) or [root]
     pages = []
     for i, page in enumerate(pages_el, 1):
@@ -2585,6 +2641,10 @@ def read_html(text: str, ctx: "_Ctx") -> List[TextPage]:
     pages_el = [el for el in root.iter() if isinstance(el.tag, str) and "ocr_page" in _classes(el)]
     if pages_el:
         ctx.kind = "hocr"
+        systems = [
+            el.get("content") or "" for el in root.iter("meta") if (el.get("name") or "").lower() == "ocr-system"
+        ]
+        ctx.origin_hint = producer_origin(systems) or ctx.origin_hint
         pages = []
         for i, page in enumerate(pages_el, 1):
             lines = [
@@ -2698,7 +2758,7 @@ def classify_text_layer(raw: str, n_text_objs: int, n_invisible: int, opts: Read
               (render mode 3): the classic OCR layer under a page image
     digital — anything else: born-digital text
     """
-    chars = [ch for ch in raw if not ch.isspace() and ch != "\x02"]
+    chars = [ch for ch in raw if not ch.isspace() and ch not in "\x02\ufffe"]
     if len(chars) < max(1, opts.pdf_min_text_chars):
         return "none", "no extractable text layer"
     bad = sum(1 for ch in chars if ch == "\ufffd" or unicodedata.category(ch) in ("Cc", "Cf", "Co", "Cn"))
@@ -2779,7 +2839,7 @@ def read_pdf(path: str, ctx: "_Ctx") -> List[TextPage]:
                 if page is not None:
                     page.close()
             layer, reason = classify_text_layer(raw, n_text, n_invisible, ctx.options)
-            lines = normalize_newlines(raw).replace("\f", "\n").split("\n")
+            lines = normalize_newlines(_PDFIUM_LINE_HYPHEN.sub("-\n", raw)).replace("\f", "\n").split("\n")
             if lines and lines[-1] == "":
                 lines.pop()
             flags = [
@@ -3816,6 +3876,7 @@ def read_zip_bundle(path: str, ctx: "_Ctx") -> List[TextPage]:
         pages: List[TextPage] = []
         kinds_read: List[str] = []
         encodings: set = set()
+        member_origins: set = set()
         for info, kind in members:
             mctx = _Ctx(
                 f"{path}!{info.filename}", ctx.limits, ctx.options, kind=kind, name=posixpath.basename(info.filename)
@@ -3826,6 +3887,7 @@ def read_zip_bundle(path: str, ctx: "_Ctx") -> List[TextPage]:
                 skipped.append((info.filename, exc.code))
                 continue
             kinds_read.append(mctx.kind or kind)
+            member_origins.add(mctx.origin_hint or READERS[mctx.kind or kind].default_origin or "ocr:generic")
             if encoding:
                 encodings.add(encoding)
             ctx.notes.extend(n for n in mctx.notes if not n.startswith("extension ") and n not in ctx.notes)
@@ -3852,8 +3914,7 @@ def read_zip_bundle(path: str, ctx: "_Ctx") -> List[TextPage]:
         raise IngestError(worst, f"no member of the bundle could be read ({worst}: {names[:300]})")
 
     ctx.native_pages = all(READERS[k].native_pages for k in kinds_read)
-    origins = {READERS[k].default_origin or "ocr:generic" for k in kinds_read}
-    ctx.origin_hint = origins.pop() if len(origins) == 1 else "ocr:generic"
+    ctx.origin_hint = member_origins.pop() if len(member_origins) == 1 else "ocr:generic"
     ctx.encoding = encodings.pop() if len(encodings) == 1 else None
     ctx.notes.append(f"bundle_members={len(kinds_read)}")
     ctx.notes.append("bundle_kinds=" + ",".join(sorted(set(kinds_read))))

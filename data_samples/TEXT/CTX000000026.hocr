@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <title></title>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+  <meta name='ocr-system' content='tesseract 5.3.4' />
+  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par ocr_line ocrx_word ocrp_wconf'/>
+ </head>
+ <body>
+  <div class='ocr_page' id='page_1' title='image "page1.png"; bbox 0 0 1700 2200; ppageno 0; scan_res 200 200'>
+   <div class='ocr_carea' id='block_1_1' title="bbox 162 181 824 222">
+    <p class='ocr_par' id='par_1_1' lang='ces' title="bbox 162 181 824 222">
+     <span class='ocr_line' id='line_1_1' title="bbox 162 181 824 222; baseline 0 0; x_size 46.415386; x_descenders 5.4153848; x_ascenders 9">
+      <span class='ocrx_word' id='word_1_1' title='bbox 162 181 427 222; x_wconf 95'>HRADIŠTĚ</span>
+      <span class='ocrx_word' id='word_1_2' title='bbox 445 190 481 222; x_wconf 95'>U</span>
+      <span class='ocrx_word' id='word_1_3' title='bbox 500 181 674 222; x_wconf 93'>HORNÍ</span>
+      <span class='ocrx_word' id='word_1_4' title='bbox 693 181 824 222; x_wconf 91'>MEZÍ</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_1_2' title="bbox 161 255 925 289">
+    <p class='ocr_par' id='par_1_2' lang='ces' title="bbox 161 255 925 289">
+     <span class='ocr_line' id='line_1_2' title="bbox 161 255 925 289; baseline 0 -7; x_size 34; x_descenders 7; x_ascenders 9">
+      <span class='ocrx_word' id='word_1_5' title='bbox 161 255 289 289; x_wconf 96'>Zpráva</span>
+      <span class='ocrx_word' id='word_1_6' title='bbox 303 264 323 282; x_wconf 96'>o</span>
+      <span class='ocrx_word' id='word_1_7' title='bbox 338 255 640 289; x_wconf 96'>archeologickém</span>
+      <span class='ocrx_word' id='word_1_8' title='bbox 651 255 819 289; x_wconf 95'>výzkumu</span>
+      <span class='ocrx_word' id='word_1_9' title='bbox 834 257 925 282; x_wconf 96'>2024</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_1_3' title="bbox 161 348 927 474">
+    <p class='ocr_par' id='par_1_3' lang='ces' title="bbox 161 348 927 474">
+     <span class='ocr_line' id='line_1_3' title="bbox 163 348 927 378; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_1_10' title='bbox 163 349 254 372; x_wconf 96'>Sonda</span>
+      <span class='ocrx_word' id='word_1_11' title='bbox 267 350 286 372; x_wconf 96'>II</span>
+      <span class='ocrx_word' id='word_1_12' title='bbox 299 349 361 378; x_wconf 92'>byla</span>
+      <span class='ocrx_word' id='word_1_13' title='bbox 371 348 505 378; x_wconf 92'>vytyčena</span>
+      <span class='ocrx_word' id='word_1_14' title='bbox 515 357 532 372; x_wconf 96'>v</span>
+      <span class='ocrx_word' id='word_1_15' title='bbox 543 348 645 372; x_wconf 96'>červnu</span>
+      <span class='ocrx_word' id='word_1_16' title='bbox 658 350 731 372; x_wconf 96'>2024</span>
+      <span class='ocrx_word' id='word_1_17' title='bbox 743 357 778 372; x_wconf 96'>na</span>
+      <span class='ocrx_word' id='word_1_18' title='bbox 790 348 927 372; x_wconf 96'>severním</span>
+     </span>
+     <span class='ocr_line' id='line_1_4' title="bbox 161 396 910 426; baseline 0 -6; x_size 29; x_descenders 6; x_ascenders 8">
+      <span class='ocrx_word' id='word_1_19' title='bbox 161 397 247 426; x_wconf 96'>okraji</span>
+      <span class='ocrx_word' id='word_1_20' title='bbox 258 396 368 426; x_wconf 95'>plošiny,</span>
+      <span class='ocrx_word' id='word_1_21' title='bbox 381 397 433 420; x_wconf 95'>kde</span>
+      <span class='ocrx_word' id='word_1_22' title='bbox 447 405 476 420; x_wconf 96'>se</span>
+      <span class='ocrx_word' id='word_1_23' title='bbox 487 405 504 420; x_wconf 96'>v</span>
+      <span class='ocrx_word' id='word_1_24' title='bbox 515 405 579 420; x_wconf 96'>roce</span>
+      <span class='ocrx_word' id='word_1_25' title='bbox 592 398 665 420; x_wconf 96'>2019</span>
+      <span class='ocrx_word' id='word_1_26' title='bbox 677 397 794 426; x_wconf 95'>objevily</span>
+      <span class='ocrx_word' id='word_1_27' title='bbox 804 397 910 426; x_wconf 96'>zlomky</span>
+     </span>
+     <span class='ocr_line' id='line_1_5' title="bbox 161 444 925 474; baseline 0 -6; x_size 29; x_descenders 6; x_ascenders 8">
+      <span class='ocrx_word' id='word_1_28' title='bbox 161 445 301 474; x_wconf 96'>keramiky</span>
+      <span class='ocrx_word' id='word_1_29' title='bbox 312 453 328 468; x_wconf 93'>a</span>
+      <span class='ocrx_word' id='word_1_30' title='bbox 339 447 489 468; x_wconf 92'>mazanice.</span>
+      <span class='ocrx_word' id='word_1_31' title='bbox 504 445 595 468; x_wconf 96'>Sonda</span>
+      <span class='ocrx_word' id='word_1_32' title='bbox 606 453 622 468; x_wconf 96'>o</span>
+      <span class='ocrx_word' id='word_1_33' title='bbox 634 444 795 468; x_wconf 96'>rozměrech</span>
+      <span class='ocrx_word' id='word_1_34' title='bbox 806 446 823 468; x_wconf 96'>4</span>
+      <span class='ocrx_word' id='word_1_35' title='bbox 838 450 855 467; x_wconf 83'>x</span>
+      <span class='ocrx_word' id='word_1_36' title='bbox 870 446 884 468; x_wconf 95'>2</span>
+      <span class='ocrx_word' id='word_1_37' title='bbox 898 453 925 468; x_wconf 95'>m</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_1_4' title="bbox 161 492 851 522">
+    <p class='ocr_par' id='par_1_4' lang='ces' title="bbox 161 492 851 522">
+     <span class='ocr_line' id='line_1_6' title="bbox 161 492 851 522; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_1_38' title='bbox 161 493 295 522; x_wconf 96'>zachytila</span>
+      <span class='ocrx_word' id='word_1_39' title='bbox 305 492 406 516; x_wconf 96'>vnitřní</span>
+      <span class='ocrx_word' id='word_1_40' title='bbox 417 492 450 516; x_wconf 96'>líc</span>
+      <span class='ocrx_word' id='word_1_41' title='bbox 462 493 524 516; x_wconf 96'>valu</span>
+      <span class='ocrx_word' id='word_1_42' title='bbox 536 501 552 516; x_wconf 96'>a</span>
+      <span class='ocrx_word' id='word_1_43' title='bbox 563 492 615 516; x_wconf 96'>dvě</span>
+      <span class='ocrx_word' id='word_1_44' title='bbox 628 492 745 516; x_wconf 96'>sídlištní</span>
+      <span class='ocrx_word' id='word_1_45' title='bbox 755 496 851 522; x_wconf 96'>vrstvy.</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_1_5' title="bbox 161 580 993 706">
+    <p class='ocr_par' id='par_1_5' lang='ces' title="bbox 161 580 993 706">
+     <span class='ocr_line' id='line_1_7' title="bbox 161 580 941 610; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_1_46' title='bbox 161 580 271 610; x_wconf 96'>Nálezy:</span>
+      <span class='ocrx_word' id='word_1_47' title='bbox 286 580 380 610; x_wconf 96'>střepy</span>
+      <span class='ocrx_word' id='word_1_48' title='bbox 390 580 490 608; x_wconf 96'>nádob,</span>
+      <span class='ocrx_word' id='word_1_49' title='bbox 503 580 622 610; x_wconf 96'>přeslen,</span>
+      <span class='ocrx_word' id='word_1_50' title='bbox 635 580 735 604; x_wconf 96'>zvířecí</span>
+      <span class='ocrx_word' id='word_1_51' title='bbox 746 581 817 604; x_wconf 96'>kosti</span>
+      <span class='ocrx_word' id='word_1_52' title='bbox 828 589 844 604; x_wconf 96'>a</span>
+      <span class='ocrx_word' id='word_1_53' title='bbox 856 580 941 604; x_wconf 96'>želez-</span>
+     </span>
+     <span class='ocr_line' id='line_1_8' title="bbox 161 626 901 658; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_1_54' title='bbox 161 628 196 658; x_wconf 96'>ný</span>
+      <span class='ocrx_word' id='word_1_55' title='bbox 207 626 267 652; x_wconf 96'>nůž.</span>
+      <span class='ocrx_word' id='word_1_56' title='bbox 279 628 407 658; x_wconf 96'>Všechny</span>
+      <span class='ocrx_word' id='word_1_57' title='bbox 417 628 513 658; x_wconf 96'>nálezy</span>
+      <span class='ocrx_word' id='word_1_58' title='bbox 524 629 586 658; x_wconf 96'>byly</span>
+      <span class='ocrx_word' id='word_1_59' title='bbox 596 628 712 658; x_wconf 96'>uloženy</span>
+      <span class='ocrx_word' id='word_1_60' title='bbox 722 637 739 652; x_wconf 96'>v</span>
+      <span class='ocrx_word' id='word_1_61' title='bbox 749 628 901 658; x_wconf 96'>depozitáři</span>
+     </span>
+     <span class='ocr_line' id='line_1_9' title="bbox 161 674 993 706; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_1_62' title='bbox 161 685 258 700; x_wconf 96'>muzea</span>
+      <span class='ocrx_word' id='word_1_63' title='bbox 269 685 286 700; x_wconf 96'>v</span>
+      <span class='ocrx_word' id='word_1_64' title='bbox 297 676 382 700; x_wconf 96'>Horní</span>
+      <span class='ocrx_word' id='word_1_65' title='bbox 393 678 466 700; x_wconf 96'>Mezi</span>
+      <span class='ocrx_word' id='word_1_66' title='bbox 477 677 531 706; x_wconf 93'>pod</span>
+      <span class='ocrx_word' id='word_1_67' title='bbox 543 674 744 706; x_wconf 92'>přírůstkovým</span>
+      <span class='ocrx_word' id='word_1_68' title='bbox 755 676 851 700; x_wconf 96'>číslem</span>
+      <span class='ocrx_word' id='word_1_69' title='bbox 865 678 993 703; x_wconf 96'>17/2024.</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_1_6' title="bbox 808 766 892 785">
+    <p class='ocr_par' id='par_1_6' lang='ces' title="bbox 808 766 892 785">
+     <span class='ocr_line' id='line_1_10' title="bbox 808 766 892 785; baseline 0 -6; x_size 28; x_descenders 7; x_ascenders 7">
+      <span class='ocrx_word' id='word_1_70' title='bbox 808 777 828 779; x_wconf 17'>—</span>
+      <span class='ocrx_word' id='word_1_71' title='bbox 845 766 892 785; x_wconf 17'>1—</span>
+     </span>
+    </p>
+   </div>
+  </div>
+  <div class='ocr_page' id='page_2' title='image "page2.png"; bbox 0 0 1700 2200; ppageno 1; scan_res 200 200'>
+   <div class='ocr_carea' id='block_2_1' title="bbox 162 186 543 219">
+    <p class='ocr_par' id='par_2_1' lang='ces' title="bbox 162 186 543 219">
+     <span class='ocr_line' id='line_2_1' title="bbox 162 186 543 219; baseline 0 -7; x_size 33; x_descenders 7; x_ascenders 8">
+      <span class='ocrx_word' id='word_2_1' title='bbox 162 186 377 219; x_wconf 91'>Stratigrafie</span>
+      <span class='ocrx_word' id='word_2_2' title='bbox 392 186 502 219; x_wconf 95'>sondy</span>
+      <span class='ocrx_word' id='word_2_3' title='bbox 515 187 543 212; x_wconf 95'>II</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_2_2' title="bbox 160 278 862 356">
+    <p class='ocr_par' id='par_2_2' lang='ces' title="bbox 160 278 862 356">
+     <span class='ocr_line' id='line_2_2' title="bbox 160 278 845 308; baseline 0 -6; x_size 28; x_descenders 4; x_ascenders 9">
+      <span class='ocrx_word' id='word_2_4' title='bbox 160 280 257 302; x_wconf 96'>Vrstva</span>
+      <span class='ocrx_word' id='word_2_5' title='bbox 272 280 294 302; x_wconf 96'>1:</span>
+      <span class='ocrx_word' id='word_2_6' title='bbox 308 281 409 306; x_wconf 96'>ornice,</span>
+      <span class='ocrx_word' id='word_2_7' title='bbox 423 278 513 302; x_wconf 96'>tmavě</span>
+      <span class='ocrx_word' id='word_2_8' title='bbox 525 278 617 302; x_wconf 96'>hnědá</span>
+      <span class='ocrx_word' id='word_2_9' title='bbox 628 278 702 302; x_wconf 96'>hlína</span>
+      <span class='ocrx_word' id='word_2_10' title='bbox 714 287 726 302; x_wconf 96'>s</span>
+      <span class='ocrx_word' id='word_2_11' title='bbox 738 278 845 308; x_wconf 96'>kořeny.</span>
+     </span>
+     <span class='ocr_line' id='line_2_3' title="bbox 160 326 862 356; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_2_12' title='bbox 160 328 257 350; x_wconf 96'>Vrstva</span>
+      <span class='ocrx_word' id='word_2_13' title='bbox 270 328 294 350; x_wconf 96'>2:</span>
+      <span class='ocrx_word' id='word_2_14' title='bbox 309 326 470 350; x_wconf 96'>šedohnědá</span>
+      <span class='ocrx_word' id='word_2_15' title='bbox 481 326 555 350; x_wconf 96'>hlína</span>
+      <span class='ocrx_word' id='word_2_16' title='bbox 567 335 579 350; x_wconf 96'>s</span>
+      <span class='ocrx_word' id='word_2_17' title='bbox 591 326 683 356; x_wconf 96'>uhlíky</span>
+      <span class='ocrx_word' id='word_2_18' title='bbox 694 335 710 350; x_wconf 93'>a</span>
+      <span class='ocrx_word' id='word_2_19' title='bbox 721 326 862 350; x_wconf 92'>mazanicí.</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_2_3' title="bbox 160 372 735 404">
+    <p class='ocr_par' id='par_2_3' lang='ces' title="bbox 160 372 735 404">
+     <span class='ocr_line' id='line_2_4' title="bbox 160 372 735 404; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_2_20' title='bbox 160 376 257 398; x_wconf 96'>Vrstva</span>
+      <span class='ocrx_word' id='word_2_21' title='bbox 270 376 294 398; x_wconf 96'>3:</span>
+      <span class='ocrx_word' id='word_2_22' title='bbox 308 374 380 404; x_wconf 96'>žlutý</span>
+      <span class='ocrx_word' id='word_2_23' title='bbox 387 374 425 404; x_wconf 94'>jíl,</span>
+      <span class='ocrx_word' id='word_2_24' title='bbox 438 374 554 404; x_wconf 96'>podloží,</span>
+      <span class='ocrx_word' id='word_2_25' title='bbox 567 375 618 398; x_wconf 96'>bez</span>
+      <span class='ocrx_word' id='word_2_26' title='bbox 629 372 735 398; x_wconf 96'>nálezů.</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_2_4' title="bbox 160 462 842 540">
+    <p class='ocr_par' id='par_2_4' lang='ces' title="bbox 160 462 842 540">
+     <span class='ocr_line' id='line_2_5' title="bbox 160 462 811 492; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_2_27' title='bbox 160 462 279 492; x_wconf 96'>Výzkum</span>
+      <span class='ocrx_word' id='word_2_28' title='bbox 289 463 352 486; x_wconf 96'>vedl</span>
+      <span class='ocrx_word' id='word_2_29' title='bbox 359 464 411 492; x_wconf 96'>Jan</span>
+      <span class='ocrx_word' id='word_2_30' title='bbox 422 462 551 492; x_wconf 96'>Novotný,</span>
+      <span class='ocrx_word' id='word_2_31' title='bbox 564 463 665 492; x_wconf 96'>kresby</span>
+      <span class='ocrx_word' id='word_2_32' title='bbox 676 463 811 486; x_wconf 96'>zhotovila</span>
+     </span>
+     <span class='ocr_line' id='line_2_6' title="bbox 162 510 842 540; baseline 0 -6; x_size 30; x_descenders 6; x_ascenders 9">
+      <span class='ocrx_word' id='word_2_33' title='bbox 162 512 216 534; x_wconf 96'>Eva</span>
+      <span class='ocrx_word' id='word_2_34' title='bbox 228 510 427 534; x_wconf 96'>Procházková.</span>
+      <span class='ocrx_word' id='word_2_35' title='bbox 441 510 590 540; x_wconf 96'>Děkujeme</span>
+      <span class='ocrx_word' id='word_2_36' title='bbox 602 511 664 534; x_wconf 96'>obci</span>
+      <span class='ocrx_word' id='word_2_37' title='bbox 676 510 761 534; x_wconf 96'>Horní</span>
+      <span class='ocrx_word' id='word_2_38' title='bbox 772 512 842 534; x_wconf 96'>Mez.</span>
+     </span>
+    </p>
+   </div>
+   <div class='ocr_carea' id='block_2_5' title="bbox 808 600 892 619">
+    <p class='ocr_par' id='par_2_5' lang='ces' title="bbox 808 600 892 619">
+     <span class='ocr_line' id='line_2_7' title="bbox 808 600 892 619; baseline 0 -6; x_size 28; x_descenders 7; x_ascenders 7">
+      <span class='ocrx_word' id='word_2_39' title='bbox 808 600 892 619; x_wconf 78'>—2—</span>
+     </span>
+    </p>
+   </div>
+  </div>
+ </body>
+</html>

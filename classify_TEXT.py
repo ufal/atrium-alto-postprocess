@@ -21,6 +21,12 @@ Input directory (#4): the text source defaults to [CLASSIFY] TEXT_DIR but is
 overridden by the LANGID_TEXT_DIR env var, which run_pipeline.py sets to the
 selected extraction method's output directory.
 
+Input CSV (#31 Phase 5): the page statistics CSV defaults to [CLASSIFY] INPUT_CSV;
+`--input-csv` overrides it (run_pipeline.py passes its own --input-csv, and the
+text-lines stats CSV). Resume: a document is skipped when its output CSV is at
+least as new as every one of its page texts; an output older than a page text is
+deleted and the document classified again.
+
 Output columns (#3): rows are emitted dict-keyed against CSV_HEADER so the scored
 and fast-track (Empty/Non-text) writers can never drift out of column alignment.
 `categ`/`quality_score` lead the file; `original_text`, `original_lang`,
@@ -29,6 +35,7 @@ values. The page aggregator reads strictly by column NAME, so this reorder is
 safe; every aggregate-consumed name is retained verbatim.
 """
 
+import argparse
 import configparser
 import csv
 import multiprocessing as mp
@@ -38,6 +45,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from itertools import groupby
 from pathlib import Path
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -999,6 +1007,17 @@ def _lines_records_from_df(df) -> list:
     return records
 
 
+def page_text_path(text_dir, file_id, page_id) -> Path:
+    """One page's text file: `<text_dir>/<file>/<file>-<page>.txt`, with the older
+    underscore layout as a fallback (the hyphen path when neither exists)."""
+    path = Path(text_dir) / file_id / f"{file_id}-{page_id}.txt"
+    if not path.exists():
+        legacy = Path(text_dir) / file_id / f"{file_id}_{page_id}.txt"
+        if legacy.exists():
+            return legacy
+    return path
+
+
 def process_document(task):
     """
     Worker function executed by CPU pool.
@@ -1025,13 +1044,20 @@ def process_document(task):
 
     try:
         out_path = Path(output_dir) / f"{file_id}.csv"
+        reclassified = False
         if out_path.exists():
-            return {
-                "status": "skipped",
-                "file_id": file_id,
-                "lines": 0,
-                "reason": "output already exists (resume)",
-            }
+            # (#31 Phase 5) Resume only while the output is at least as new as every page
+            # text; a re-ingested (changed) document used to keep its old categories.
+            page_paths = [page_text_path(text_dir, file_id, str(row["page"])) for _, row in group.iterrows()]
+            if document_hook.output_is_current(out_path, page_paths):
+                return {
+                    "status": "skipped",
+                    "file_id": file_id,
+                    "lines": 0,
+                    "reason": "output already exists (resume)",
+                }
+            out_path.unlink()  # rows are appended below: start from an empty file
+            reclassified = True
 
         batch_lines = []
         batch_meta = []
@@ -1040,9 +1066,7 @@ def process_document(task):
 
         for _, row in group.iterrows():
             page_id = str(row["page"])
-            txt_path = Path(text_dir) / file_id / f"{file_id}-{page_id}.txt"
-            if not txt_path.exists():
-                txt_path = Path(text_dir) / file_id / f"{file_id}_{page_id}.txt"
+            txt_path = page_text_path(text_dir, file_id, page_id)
 
             if not txt_path.exists():
                 continue
@@ -1146,10 +1170,21 @@ def process_document(task):
                 merge_blocks={"lines": _lines_records_from_df(df)},
             )
 
-        return {"status": "success", "file_id": file_id, "lines": processed_count}
+        return {"status": "success", "file_id": file_id, "lines": processed_count, "reclassified": reclassified}
 
     except Exception as e:
         return {"status": "error", "file_id": file_id, "reason": str(e)}
+
+
+def outputs_outside_the_index(output_dir, doc_ids) -> List[str]:
+    """The `<doc>.csv` files in `output_dir` whose document is not in this run's page
+    index, sorted. (#31 Phase 5) They may belong to another batch — or to an input that
+    was deleted, and aggregate_STAT aggregates every CSV in the directory, so say so."""
+    out = Path(output_dir)
+    if not out.is_dir():
+        return []
+    wanted = {str(d) for d in doc_ids}
+    return sorted(p.name for p in out.glob("*.csv") if p.is_file() and p.stem not in wanted)
 
 
 #: The dtypes classify re-reads its own per-document CSV with (see read_doc_line_csv).
@@ -1181,25 +1216,35 @@ def read_doc_line_csv(path, file_id) -> "pd.DataFrame":
 
 
 def load_page_index(csv_path) -> "pd.DataFrame":
-    """Read the page statistics CSV that drives this stage (and extract_TEXT_2_TXT.py).
+    """Read the page statistics CSV that drives this stage.
 
-    (#31) `file` is read as a string: with pandas' default type inference a document
-    id such as `0001` became the integer 1 and `NA`/`null` became NaN, so the page
-    files under `<TEXT_DIR>/0001/` were never found and the document was skipped in
-    silence. Only `file` changes — `page` stays numeric (the sort below relies on it)
-    and an empty cell is still NaN, exactly as before; ALTO ids (`CTX…`) are
-    unaffected. Text-lines inputs are named by users, so their ids can be anything.
+    (#31) `file` is read as a string, so ids such as `0001` or `NA` survive; `page`
+    stays numeric (the sort below relies on it). The one reader every extractor
+    shares, `document_hook.read_page_index` (#31 Phase 5).
     """
-    return pd.read_csv(csv_path, dtype={"file": str}, keep_default_na=False, na_values=[""])
+    return document_hook.read_page_index(csv_path)
 
 
-def main():
+def _parse_args(argv=None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Classify every extracted text line (stage 4 of run_pipeline.py).")
+    parser.add_argument(
+        "--input-csv",
+        default=None,
+        help="Page statistics CSV that lists the pages to classify (default: [CLASSIFY].INPUT_CSV).",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
     """Initializes queue managers, sets up models, and maps CPU document tasks."""
+    args = _parse_args(argv)
     config_path = os.getenv("LANGID_CONFIG", "setup/config.txt")
     config = configparser.ConfigParser()
     config.read(config_path)
 
-    INPUT_CSV = config.get("CLASSIFY", "INPUT_CSV")
+    # (#31 Phase 5) --input-csv: run_pipeline's --input-csv (and text-lines' own stats
+    # CSV) now reaches this stage too; it used to read the config only.
+    INPUT_CSV = args.input_csv or config.get("CLASSIFY", "INPUT_CSV")
     # (#4) LANGID_TEXT_DIR (set by run_pipeline for the chosen extraction method)
     # takes precedence over the config default.
     TEXT_DIR = os.getenv("LANGID_TEXT_DIR") or config.get("CLASSIFY", "TEXT_DIR")
@@ -1257,6 +1302,7 @@ def main():
         config={
             "batch_size": BATCH_SIZE,
             "max_workers": WORKERS_MAX,
+            "input_csv": INPUT_CSV,
             "text_dir": TEXT_DIR,
             "output_dir": OUTPUT_DIR,
             "model_name": MODEL_NAME,
@@ -1300,6 +1346,14 @@ def main():
             )
         )
 
+    _foreign = outputs_outside_the_index(OUTPUT_DIR, (t[0] for t in grouped_tasks))
+    if _foreign:
+        print(
+            f"[Main] WARNING: {len(_foreign)} categorized CSV(s) in {OUTPUT_DIR} belong to documents not in "
+            f"{INPUT_CSV} (e.g. {', '.join(_foreign[:5])}). aggregate_STAT aggregates every CSV there: "
+            f"remove those whose inputs were deleted."
+        )
+
     # Size the pool from the CPUs actually allocated to this process (SLURM cgroup /
     # --cpus-per-task) rather than the node's total core count, and reserve one core for
     # the GPU worker + manager so the GPU engine isn't starved while it initialises CUDA.
@@ -1335,6 +1389,8 @@ def main():
                     if status == "success":
                         total_processed += result["lines"]
                         logger.log_success("csv")
+                        if result.get("reclassified"):
+                            tqdm.write(f"Re-classified (a page text changed since its output): {result['file_id']}")
                     elif status == "skipped":
                         # (#11) record resume-skips so paradata reflects real work
                         logger.log_skip(result["file_id"], result.get("reason", "output already exists (resume)"))
