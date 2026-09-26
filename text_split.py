@@ -404,8 +404,10 @@ def main(argv=None) -> int:
                 source = {"sha256": sha256, "filename": name, "media_type": doc.media_type, "origin": origin}
                 if doc.native_pages:
                     # Only for formats whose pages are real pages: a DOCX "page" here is a
-                    # break-delimited block, and llm-enrich records a DOCX as one page — a
-                    # page_count we invented would conflict with theirs in set_source().
+                    # break-delimited block, and how many there are depends on PAGE_BREAKS.
+                    # llm-enrich counts DOCX pages with the same `auto` rules since its #18,
+                    # but the two settings are separate and set_source() keeps the first
+                    # writer's value, so the count is left to the plane's originator.
                     source["page_count"] = len(doc.pages)
                 try:
                     # The record is written before the pages are swapped in, so a failed

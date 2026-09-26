@@ -58,7 +58,8 @@ POSITIONAL_BLOCKS = ("pages", "content", "lines", "tables")
 _FOREIGN_ORIGIN_WARNED: set = set()
 
 #: (#31 Phase 4) The text-lines kinds llm-enrich's digital-convert can read (its
-#: api_util/digital_to_json.py dispatches by extension: .pdf, .docx/.docm). A
+#: api_util/digital_to_json.py sniffs content, not the extension: a PDF, or a
+#: WordprocessingML package — .docx, .docm, .dotx, .dotm — since its #18). A
 #: `digital-born-<kind>` origin for any OTHER kind hands the positional plane to an
 #: originator that cannot produce it, so the record keeps `source` only — which is
 #: what `[DOCUMENT].SOURCE_ORIGIN_BY_KIND` exists to let an operator decide.

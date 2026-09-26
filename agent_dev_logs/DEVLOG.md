@@ -1161,3 +1161,19 @@ week, ≈ 2026-10-02). Recorded in the #30 digest and plan; nothing switched on.
 * **Still open:** the re-vendor sequence (hub merge → retag `v1` → three files into five repos, page-classification's
   tests with them); nlp-enrich's TEITOK page numbering (Pitfall 14, certain for Tesseract ALTO); ABBYY/DjVu XML
   synthetic-only; a classify output left by a crash counts as current.
+
+## 2026-09-25 (later): what llm-enrich's converter does now — docs corrected (llm-enrich #18)
+
+* llm-enrich #18 is on its `test` @ `c3575f5`. Three statements here about its `digital_to_json` stopped being true:
+  that it reads a DOCX as one page (`docs/text_inputs.md` §6, `text_split.py`), has no column detection (§5), and
+  dispatches by extension (`document_hook.py`). Now it counts DOCX pages with this repo's `auto` rules, detects PDF
+  columns, sniffs content and applies this repo's mojibake guard (the same thresholds). Text corrected; **no code
+  change**. `page_count` stays unwritten for a DOCX: the two tools' `PAGE_BREAKS` settings are separate, and
+  `set_source()` keeps the first writer's value, so the count is left to the plane's originator.
+  `DIGITAL_CONVERT_KINDS` is unchanged.
+* Re-vendored with the hub's #18 follow-ups: `atrium_document.schema.json` (`lines[].style.region` declared, a closed
+  enum no code here writes), `para_licenses.py` (CDLA-Permissive-2.0 ranked 1), `tests/test_para_licenses.py`.
+* [`digests/31.digest.md`](digests/31.digest.md) gains a dated correction.
+* Verified: `ruff` clean; `tests/test_para_licenses.py`, `tests/test_document_originators.py`,
+  `tests/test_text_split.py`, `tests/test_document_hook.py` and `tests/test_text_formats.py`: 324 passed, 0 failed.
+  **Not pushed: files delivered in chat.**

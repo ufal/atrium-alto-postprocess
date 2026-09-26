@@ -433,11 +433,15 @@ The HTTP column is the status the service answers with (§7).
 A garbled layer is still extracted, because its lines are exactly what the categorizer is meant to
 flag as `Trash`. A document whose text-bearing pages are mostly `ocr` gets `source.origin`
 `ocr:pdf-text-layer`; any other PDF gets `digital-born-pdf`. PDFium returns text in content-stream
-order, so multi-column pages are not re-ordered (no column detection). That is the same limitation
-as llm-enrich's `digital_to_json`. Both ratio thresholds must lie in [0, 1].
+order, so multi-column pages are not re-ordered (no column detection). llm-enrich's `digital_to_json`
+does detect columns since its #18, so for a born-digital PDF the record's `lines[]` (written by that
+converter, the plane's originator) follow the columns, while this repo's line tables follow the
+content stream. Both ratio thresholds must lie in [0, 1].
 
 The `flags` column reports what the text layer looks like. The flags never set a category, since the
-categories stay classify's and the shared vocabulary keeps the tools' category sets apart:
+categories stay classify's and the shared vocabulary keeps the tools' category sets apart. The
+`mojibake_cp1252` test is the same one llm-enrich's `digital_to_json` applies to a line before calling
+it `Garbage` (same thresholds, same letter evidence, since its #18):
 
 | Flag                                 | Set when                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 |--------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -450,8 +454,11 @@ categories stay classify's and the shared vocabulary keeps the tools' category s
 
 With `[DOCUMENT].JSON_DIR` set, `text_split.py` writes the record's `source`: `sha256`, `filename`,
 `media_type`, `origin`, and `page_count` for formats with real pages only (PDF, ALTO, PAGE XML,
-hOCR, ABBYY, DjVu, Tesseract TSV, a bundle of such pages). llm-enrich records a DOCX as one page, and
-an invented count would conflict in `set_source()`. The origin is **truthful per class**:
+hOCR, ABBYY, DjVu, Tesseract TSV, a bundle of such pages). A DOCX or ODT has no page count of its
+own: its pages are the breaks a reader chooses to count. Since its #18, llm-enrich counts DOCX pages
+with the same rules as `PAGE_BREAKS = auto` here, but each tool's setting can differ, and
+`set_source()` keeps the first writer's value. So the count is left to the positional plane's
+originator, which for a born-digital DOCX is llm-enrich. The origin is **truthful per class**:
 
 | Class                      | Formats                                                                                                                  | Default origin                                                                                                                                                                                              | Positional blocks written by this repo |
 |----------------------------|--------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|
