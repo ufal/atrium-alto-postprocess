@@ -1,5 +1,5 @@
 # 📓 atrium-alto-postprocess — agent_dev_logs/DEVLOG.md (timeline index)
-> _OCR/ALTO post-processing + line categorization. 7 open issues (#2, #3, #4, #23, #30, #31, #37); #5/#6 closed. **v1.5.1-beta** released 2026-09-22 at `09c9640`. `test` = `master` = `2e2794d` (2026-09-24, CI green): the post-tag #30 work (`5b27900`, `0c30517`, `3b02959`, `858be91`), #31's `--method text-lines` (`103e30a`), its TEITOK follow-ups (`fb72526`) and #31 Phase 4 (`267e334`, `3bd10f9`, `2e2794d`), all unreleased. Next tag needs the version bump in `CITATION.cff` + `setup/para_config.txt`. #37 is ready to close._
+> _OCR/ALTO post-processing + line categorization. 6 open issues (#2, #3, #4, #23, #30, #31); #5/#6/#37/#50 closed. AMČR baseline (atrium-project#67, 2026-09-26): #2, #3, #4, #30 finish, time-boxed (proposed 2026-10-16) · #31 close · #23 defer. **v1.6.0-beta** released 2026-09-25 (#31 Phase 5, `e256e2d`). `test` = `bcd7e01` (2026-09-26: the `doc-schema-v1` freeze files and the re-vendored freeze test)._
 > _Per-issue detail: `digests/{id}.digest.md` · `plans/{id}.plan.md` · `issues/` exports (source of truth). Cross-repo/hub history lives in `ufal/atrium-project/agent_dev_logs/DEVLOG.md` (deduplicated out of this file)._
 
 ## 2026-03-13
@@ -1176,4 +1176,31 @@ week, ≈ 2026-10-02). Recorded in the #30 digest and plan; nothing switched on.
 * [`digests/31.digest.md`](digests/31.digest.md) gains a dated correction.
 * Verified: `ruff` clean; `tests/test_para_licenses.py`, `tests/test_document_originators.py`,
   `tests/test_text_split.py`, `tests/test_document_hook.py` and `tests/test_text_formats.py`: 324 passed, 0 failed.
+  **Not pushed: files delivered in chat.**
+
+## 2026-09-26: AMČR baseline (atrium-project#67) — every digest+plan pair refreshed
+
+* **What arrived:** [atrium-project#67](https://github.com/ufal/atrium-project/issues/67) (motyc, AMČR): close #31
+  (*"released in 1.6.0-beta"*); finish #2, #3, #4 and #30, *time-boxed*; defer #23. No AMČR comment on this repo's
+  threads — the ruling is in #67 only. **Adopted by ÚFAL as binding.**
+* **Also 2026-09-26:** `atrium_document.schema.doc-schema-v1.json` added (`6e865a2`); `tests/test_schema_freeze.py`
+  re-vendored as blob `7c35fbf1` (`b0b93b8`), which turned para-drift green again after the hub's re-wrap.
+* **Dev logs:**
+  * `31.*` 🔒 **close-out** — released in v1.6.0-beta; K4TEL's 09-25 11:45 and 13:32 comments added. Phase 4's
+    either/or is decided: **extend digital-convert** (llm-enrich#10 §12 W2). What continues here for the pilot is
+    listed in the plan's close-out section: the page-subset merge of AMČR's OCR ALTO (W4), scoring born-digital lines
+    (W3), `--record-only` for the bulk PSNC ALTO import (#67 R3), the seed read-back fix, `CreateAction` in the
+    response, the `[TEXT_INGEST]` caps as environment settings (hub #53).
+  * `2.*`, `3.*`, `4.*`, `30.*` ✅ **finish, time-boxed** — proposed box **2026-10-16**, to confirm on 30 Sept. #2 closes
+    on `docs/categorization_logic.md` (two invariants, two opening prompts), no longer on the deferred gold set; #3's
+    review round moved to #30, its three edge cases go to #30's annotation round or after the pilot; #4's source of
+    truth corrected to `docs/categorization_logic.md`; #30's open list split into *inside the box* (@DanaKriv's
+    decisions, Q1/Q2/Q4–Q6 answered or defaulted, one release) and *after the pilot* (German veto, Z5, re-grade,
+    rotation re-measure, stages 9a/9c/9e).
+  * `23.*` ⏸️ **defer** — with the gold-set training (#5/B1).
+* **Found (hub #67 plan §B):** `service/text_api.py:502` names the saved seed after the filename-derived id and reads
+  it back at `:527-528`, while `finalize()` writes under the seed's id — `/process` returns an AMČR seed without
+  alto's blocks when the two ids differ. Same shape in `run_pipeline.py:346-377`. Read, not reproduced.
+* **Pair to remove** (issue closed 2026-09-25): `37.*`.
+
   **Not pushed: files delivered in chat.**
