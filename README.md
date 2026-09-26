@@ -47,6 +47,7 @@ XML, DjVuXML, Tesseract TSV, OCR/Doc-AI JSON) and PDF, office, e-mail and plain-
     - [4.2 Aggregate Statistics (Memory Bound) 🧠](#42-aggregate-statistics-memory-bound-)
   - [Paradata logging 🗒️](#paradata-logging)
     - [Output licensing ⚖️](#output-licensing-)
+    - [Document record schema 📑](#document-record-schema-)
 - [Vendored code 📦](#vendored-code-)
 - [Acknowledgements 🙏](#acknowledgements-)
 
@@ -992,6 +993,28 @@ permissive components would resolve to **Apache-2.0**.
 > The restrictiveness ordering encoded in [para_licenses.py](para_licenses.py) 📎 is a mechanical engineering
 > approximation, **not legal advice**; unrecognised licenses are treated conservatively as maximally restrictive so a
 > missing entry can never silently relax the recorded output license.
+
+### Document record schema 📑
+
+The per-document record this tool reads and writes — `<doc_id>.document.json`, the pair of the
+paradata above — follows [atrium_document.schema.json](atrium_document.schema.json) 📎, schema
+version **`1.0`**. That version is frozen as the hub tag
+[`doc-schema-v1`](https://github.com/ufal/atrium-project/releases/tag/doc-schema-v1)
+(ufal/atrium-project@`544298b`), and it is the baseline this tool implements:
+
+* [tests/test_schema_freeze.py](tests/test_schema_freeze.py) 📎 checks this repository's schema
+  against the frozen copy beside it,
+  [atrium_document.schema.doc-schema-v1.json](atrium_document.schema.doc-schema-v1.json) 📎: the
+  copy is exactly the tagged file, nothing declared at the freeze has been removed or renamed, and
+  every change made since is registered;
+* all three files, like `atrium_document.py`, are vendored from the hub and kept byte-identical to
+  its `v1` tag by the `para-drift` CI check, so they are never edited in this repository. The hub
+  additionally checks that every record shape the tools write validates under both the frozen and
+  the current schema.
+
+What may change after the freeze, and what a new major version takes, is in the hub's
+[Freeze & conformance](https://github.com/ufal/atrium-project/blob/main/docs/document_schema.md#freeze--conformance).
+[CITATION.cff](CITATION.cff) 📎 carries the same reference under `references`.
 
 ---
 

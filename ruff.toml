@@ -59,4 +59,5 @@ exclude = [
     "tests/test_dockerfile_security_layer.py",
     "tests/test_logging_contract.py",
     "tests/test_env_contract.py",
+    "tests/test_schema_freeze.py",
 ]
