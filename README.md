@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> **This repository is archived and has moved to [ufal/atrium-ocr-postprocess](https://github.com/ufal/atrium-ocr-postprocess)** (a rename: same pipeline, new name, from release 2.0.0-beta).
+> New issues, pull requests and releases go there. The old images `ghcr.io/ufal/atrium-alto-postprocess` and `-api` stay published for consumers that pin them; new versions appear only under `ghcr.io/ufal/atrium-ocr-postprocess`.
+> Records written by this tool keep the program id `alto-postprocess`; the ATRIUM contract accepts it next to `ocr-postprocess`.
+
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11-blue.svg" title="Python Version"></a>
   <a href="https://huggingface.co/facebook/fasttext-language-identification"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20HF-fasttext--langID-yellow.svg" title="FastText Language Identification"></a>
