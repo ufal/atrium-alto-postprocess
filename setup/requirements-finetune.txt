@@ -1,4 +1,4 @@
-pyarrow>=25.0.1
+pyarrow>=26.0.0
 # scikit-learn 1.8+ is published for Python >= 3.11 ONLY (3.10 caps at 1.7.2),
 # so this floor is the same interpreter boundary documented at length in
 # setup/requirements-sweep.txt. The repo standardises on 3.11 (CI, Dockerfile,

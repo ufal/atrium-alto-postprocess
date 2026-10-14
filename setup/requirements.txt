@@ -35,5 +35,5 @@ accelerate>=1.15.0
 # matches pdfplumber 0.11.10's own requirement in atrium-llm-enrich, so a shared
 # environment resolves one version. charset-normalizer (MIT) detects the encoding of
 # non-UTF-8 plain text. DOCX/XLSX/PPTX/ODF/EPUB/HTML/XML need only lxml (above).
-pypdfium2>=5.13.0,<6.0
-charset-normalizer>=3.5.1,<4.0
+pypdfium2>=5.14.0,<6.0
+charset-normalizer>=3.5.2,<4.0
